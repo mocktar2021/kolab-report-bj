@@ -10,6 +10,7 @@ export type Database = {
           id: string;
           mime_type: string;
           parse_error: string | null;
+          parse_meta: Json | null;
           parse_status: Database["public"]["Enums"]["parse_status"];
           parsed_at: string | null;
           parsed_content: string | null;
@@ -28,6 +29,7 @@ export type Database = {
           id?: string;
           mime_type: string;
           parse_error?: string | null;
+          parse_meta?: Json | null;
           parse_status?: Database["public"]["Enums"]["parse_status"];
           parsed_at?: string | null;
           parsed_content?: string | null;
@@ -45,6 +47,7 @@ export type Database = {
           id?: string;
           mime_type?: string;
           parse_error?: string | null;
+          parse_meta?: Json | null;
           parse_status?: Database["public"]["Enums"]["parse_status"];
           parsed_at?: string | null;
           parsed_content?: string | null;
@@ -549,7 +552,7 @@ export type Database = {
       };
     };
     Enums: {
-      parse_status: "pending" | "processing" | "parsed" | "failed";
+      parse_status: "pending" | "processing" | "parsed" | "failed" | "skipped";
       report_status: "draft" | "in_review" | "final";
       section_status: "not_started" | "in_progress" | "completed";
       workspace_role: "owner" | "admin" | "expert" | "viewer";
@@ -668,7 +671,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      parse_status: ["pending", "processing", "parsed", "failed"],
+      parse_status: ["pending", "processing", "parsed", "failed", "skipped"],
       report_status: ["draft", "in_review", "final"],
       section_status: ["not_started", "in_progress", "completed"],
       workspace_role: ["owner", "admin", "expert", "viewer"],
