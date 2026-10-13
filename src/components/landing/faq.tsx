@@ -1,12 +1,7 @@
 import { useTranslations } from "next-intl";
 import { LogoMark } from "@/components/brand/logo";
 import { FadeIn } from "@/components/motion/fade-in";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { EdgeLines } from "./edge-lines";
 
 const QUESTIONS = ["security", "formats", "ai", "offline", "roles", "progress"] as const;

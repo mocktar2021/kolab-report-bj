@@ -28,7 +28,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale: hasLocale(routing.locales, locale) ? locale : routing.defaultLocale, namespace: "Metadata" });
+  const t = await getTranslations({
+    locale: hasLocale(routing.locales, locale) ? locale : routing.defaultLocale,
+    namespace: "Metadata",
+  });
 
   return {
     metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
@@ -76,7 +79,11 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
-    <html lang={locale} className={`${interTight.variable} ${instrumentSans.variable}`} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={`${interTight.variable} ${instrumentSans.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh">
         <ThemeProvider>
           <NextIntlClientProvider>

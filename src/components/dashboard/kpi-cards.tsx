@@ -66,9 +66,7 @@ export function KpiCards({
                     />
                   )}
                 </span>
-                <span className={valueClass}>
-                  {format.number(counts[status])}
-                </span>
+                <span className={valueClass}>{format.number(counts[status])}</span>
                 <span className="mt-auto pt-2 text-xs tabular-nums text-muted-foreground">
                   {t("share", { percent: format.number(share, "percent") })}
                 </span>
@@ -81,9 +79,7 @@ export function KpiCards({
             <span className="text-[0.8125rem] font-medium text-muted-foreground sm:text-sm">
               {t("completion")}
             </span>
-            <span className={valueClass}>
-              {format.number(completionPercent / 100, "percent")}
-            </span>
+            <span className={valueClass}>{format.number(completionPercent / 100, "percent")}</span>
             <span aria-hidden="true" className="mt-3 block h-1.5 overflow-hidden rounded-full bg-muted">
               <span
                 className="block h-full origin-left rounded-full bg-highlight motion-safe:animate-in motion-safe:slide-in-from-left-full motion-safe:duration-1000 motion-safe:ease-out-expo"

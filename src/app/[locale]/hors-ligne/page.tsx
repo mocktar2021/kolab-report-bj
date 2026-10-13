@@ -10,11 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // Precached by the service worker and served as the document fallback.
 export const dynamic = "force-static";
 
-export default async function HorsLignePage({
-  params,
-}: {
-  params: Promise<{ locale: "fr" }>;
-}) {
+export default async function HorsLignePage({ params }: { params: Promise<{ locale: "fr" }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Offline");

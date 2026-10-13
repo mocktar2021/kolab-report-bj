@@ -27,7 +27,9 @@ test("protected pages send visitors to sign-in with a next parameter", async ({ 
 
 test("wrong credentials show one generic error", async ({ page }) => {
   await signIn(page, "pas-le-bon-mot-de-passe");
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Adresse e-mail ou mot de passe incorrect.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Adresse e-mail ou mot de passe incorrect.",
+  );
 });
 
 test("sign-up validates fields next to each input", async ({ page }) => {
@@ -51,7 +53,9 @@ test("sign-up sends a French confirmation e-mail that signs the user in", async 
 
   // Not confirmed yet: sign-in explains why.
   await signIn(page, firstPassword);
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Confirmez d'abord votre adresse e-mail avec le lien reçu.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Confirmez d'abord votre adresse e-mail avec le lien reçu.",
+  );
 
   const link = await waitForAuthLink(email, "Confirmez votre adresse e-mail");
   await page.goto(link);
@@ -97,10 +101,14 @@ test("password reset works once and the old password stops working", async ({ pa
   // The same link cannot be used twice.
   await page.goto(link);
   await expect(page).toHaveURL(/\/fr\/connexion\?erreur=lien-invalide$/);
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Ce lien n'est plus valide. Demandez-en un nouveau.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Ce lien n'est plus valide. Demandez-en un nouveau.",
+  );
 
   await signIn(page, firstPassword);
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Adresse e-mail ou mot de passe incorrect.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Adresse e-mail ou mot de passe incorrect.",
+  );
   await signIn(page, newPassword);
   await expect(page).toHaveURL(/\/fr\/tableau-de-bord$/);
 });

@@ -31,14 +31,20 @@ export default async function ConnexionPage({
       footer={
         <>
           {t("noAccount")}{" "}
-          <Link href="/inscription" className="font-medium text-foreground underline-offset-4 hover:underline">
+          <Link
+            href="/inscription"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
             {t("register")}
           </Link>
         </>
       }
     >
       {erreur === "lien-invalide" ? (
-        <p role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+        >
           {t("linkInvalid")}
         </p>
       ) : null}

@@ -9,7 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 
 const resetSchema = z
   .object({ password: newPasswordSchema, confirmPassword: z.string() })
-  .refine((v) => v.password === v.confirmPassword, { message: "passwordMismatch", path: ["confirmPassword"] });
+  .refine((v) => v.password === v.confirmPassword, {
+    message: "passwordMismatch",
+    path: ["confirmPassword"],
+  });
 
 type Field = "password" | "confirmPassword";
 

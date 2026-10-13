@@ -29,11 +29,7 @@ export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> 
   if (!user) return null;
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle();
   const profile = profileSchema.safeParse(data);
 
   const email = profile.success ? profile.data.email : (user.email ?? "");

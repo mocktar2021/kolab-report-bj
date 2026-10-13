@@ -30,9 +30,7 @@ export default async function TableauDeBordLayout({
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
-      <AppShell user={{ name: profile.name, email: profile.email }}>
-        {children}
-      </AppShell>
+      <AppShell user={{ name: profile.name, email: profile.email }}>{children}</AppShell>
     </>
   );
 }

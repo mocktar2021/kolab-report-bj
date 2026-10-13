@@ -3,7 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 
-const OTP_TYPES: readonly EmailOtpType[] = ["email", "signup", "invite", "magiclink", "recovery", "email_change"];
+const OTP_TYPES: readonly EmailOtpType[] = [
+  "email",
+  "signup",
+  "invite",
+  "magiclink",
+  "recovery",
+  "email_change",
+];
 
 function isOtpType(value: string | null): value is EmailOtpType {
   return value !== null && (OTP_TYPES as readonly string[]).includes(value);

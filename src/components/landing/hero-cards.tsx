@@ -58,7 +58,9 @@ function OutlineCard() {
           <li key={section.key} className="flex items-center gap-3 rounded-lg px-1 py-1.5 text-[13px]">
             <span className="w-3 text-right tabular-nums text-muted-foreground">{index + 1}</span>
             <span className="truncate">{sections(section.key)}</span>
-            <span className={cn("ml-auto size-1.5 shrink-0 rounded-full", STATUS_DOT_STYLES[section.status])} />
+            <span
+              className={cn("ml-auto size-1.5 shrink-0 rounded-full", STATUS_DOT_STYLES[section.status])}
+            />
           </li>
         ))}
       </ol>
@@ -246,13 +248,22 @@ export function HeroCards() {
   return (
     <>
       {/* Two faded cards beside the subtitle, from lg up. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[21rem] hidden lg:block xl:top-[22.5rem]">
-        <div className={cn("absolute left-[8%] w-60 xl:left-[12%]", ENTER)} style={{ animationDelay: "300ms" }}>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-[21rem] hidden lg:block xl:top-[22.5rem]"
+      >
+        <div
+          className={cn("absolute left-[8%] w-60 xl:left-[12%]", ENTER)}
+          style={{ animationDelay: "300ms" }}
+        >
           <div className="opacity-60 motion-safe:animate-float [animation-duration:10s]">
             <AcceptedCard />
           </div>
         </div>
-        <div className={cn("absolute right-[8%] w-60 xl:right-[12%]", ENTER)} style={{ animationDelay: "340ms" }}>
+        <div
+          className={cn("absolute right-[8%] w-60 xl:right-[12%]", ENTER)}
+          style={{ animationDelay: "340ms" }}
+        >
           <div className="opacity-60 motion-safe:animate-float [animation-delay:-4s] [animation-duration:11s]">
             <DoneCard />
           </div>

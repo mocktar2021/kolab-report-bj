@@ -25,7 +25,15 @@ type FeatureCardProps = {
  * other with a small card overlapping it. The card fades in once; its small
  * card follows a beat later.
  */
-function FeatureCard({ id, title, description, action, visual, floating, reverse = false }: FeatureCardProps) {
+function FeatureCard({
+  id,
+  title,
+  description,
+  action,
+  visual,
+  floating,
+  reverse = false,
+}: FeatureCardProps) {
   return (
     <FadeIn
       id={id}
@@ -178,7 +186,9 @@ function AiVisual() {
             key={key}
             className={cn(
               "rounded-xl border px-3.5 py-2",
-              key === SELECTED_PROMPT ? "border-highlight/50 bg-highlight/[0.06] ring-1 ring-highlight/30" : "bg-background/60",
+              key === SELECTED_PROMPT
+                ? "border-highlight/50 bg-highlight/[0.06] ring-1 ring-highlight/30"
+                : "bg-background/60",
             )}
           >
             <span className="block text-[13px] font-medium">{t(`prompts.${key}.name`)}</span>

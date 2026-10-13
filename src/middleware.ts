@@ -28,8 +28,7 @@ function stripLocale(pathname: string) {
 
 function isPublicPath(path: string) {
   return (
-    PUBLIC_EXACT_PATHS.includes(path) ||
-    PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
+    PUBLIC_EXACT_PATHS.includes(path) || PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
   );
 }
 
