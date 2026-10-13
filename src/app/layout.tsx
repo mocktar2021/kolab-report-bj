@@ -1,0 +1,5 @@
+// The real <html> shell lives in app/[locale]/layout.tsx. This pass-through
+// root layout exists so app/not-found.tsx can render for non-localized paths.
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return children;
+}

@@ -1,0 +1,42 @@
+{
+  "Metadata": {
+    "title": "KolabReport",
+    "titleTemplate": "%s · KolabReport",
+    "description": "Rédigez, consolidez et suivez vos rapports d'experts en équipe, avec l'assistance de l'IA."
+  },
+  "Common": {
+    "appName": "KolabReport",
+    "loading": "Chargement…",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "signOut": "Se déconnecter"
+  },
+  "Auth": {
+    "signInTitle": "Connexion",
+    "signInSubtitle": "Accédez à vos espaces de travail et rapports.",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "forgotPassword": "Mot de passe oublié ?",
+    "noAccount": "Pas encore de compte ?",
+    "register": "Créer un compte",
+    "invalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
+    "invalidInput": "Veuillez saisir une adresse e-mail valide et un mot de passe."
+  },
+  "Dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue, {name}",
+    "emptyState": "Aucun espace de travail pour le moment."
+  },
+  "SectionStatus": {
+    "not_started": "Non commencée",
+    "in_progress": "En cours",
+    "completed": "Terminée"
+  },
+  "Offline": {
+    "title": "Vous êtes hors ligne",
+    "description": "Cette page n'est pas disponible sans connexion. Les pages déjà consultées restent accessibles ; la synchronisation reprendra automatiquement au retour du réseau.",
+    "retry": "Réessayer"
+  }
+}
