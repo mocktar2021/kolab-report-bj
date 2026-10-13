@@ -115,6 +115,12 @@ GitHub Actions runs on every PR and every push to `master`:
 
 Dependabot opens update PRs every Monday. `docs/ci.md` has the details and the branch protection setup.
 
+## Deployment
+
+Staging and production each have their own Supabase project and Vercel settings. After CI passes on `master`, `.github/workflows/deploy.yml` applies the migrations to staging, then deploys staging. A `v*` tag does the same for production. Every PR also gets a Vercel preview on the staging database. `docs/deployment.md` has the one-time setup, the secrets map, the release steps, the migration rules and the rollback runbook.
+
+Every page sends a Content-Security-Policy, HSTS and the usual security headers (`next.config.mjs`).
+
 ## Data model and security
 
 Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports`, `report_sections`, `deliverables`, `prompt_library`, plus the `report_progress` view.
