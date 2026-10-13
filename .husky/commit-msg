@@ -1,0 +1,2 @@
+# Commit messages follow the write-like-mocktar rules: no em dashes, no AI phrasing.
+sh scripts/check-prose.sh "$1"

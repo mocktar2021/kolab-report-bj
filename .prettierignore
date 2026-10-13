@@ -1,0 +1,14 @@
+.next/
+node_modules/
+public/sw.js
+public/workbox-*.js
+public/swe-worker-*.js
+public/fallback-*.js
+package-lock.json
+supabase/.temp/
+supabase/.branches/
+test-results/
+playwright-report/
+docs/jira/
+*.md
+supabase/templates/
