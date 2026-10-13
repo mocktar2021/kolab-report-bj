@@ -13,9 +13,15 @@
 -- Users can no longer write anything that check relies on:
 --   * deliverables: users insert the file description and can rename a file.
 --     uploaded_at and the parse results are written by the service role only.
---   * storage: an object can only be created for an unchecked file the caller
---     registered, it is never replaced, and its owner can delete it only once
---     its row is gone. The object the app checked is the one that stays.
+--   * storage: users create an object only for an unchecked file they
+--     registered, never replace or delete one, and read only checked files.
+--     The app deletes objects with the service role once their row is gone.
+--     So while a row exists, its object is the one the app checked.
+--
+-- Signed upload URLs are checked against these policies when they are
+-- signed, then upload with storage's own rights for 2 hours. With no update
+-- or delete for users, such a URL can only ever create an object at a path
+-- that is free, which nobody can read until the app checks it.
 -- =============================================================================
 
 alter table public.deliverables add column uploaded_at timestamptz;
@@ -49,45 +55,46 @@ as $$
   );
 $$;
 
--- Whether a deliverables row still points at the object, whoever is asking.
-create or replace function private.deliverable_object_in_use(object_name text)
+-- A checked file of a workspace the caller belongs to.
+create or replace function private.can_read_deliverable(object_name text)
 returns boolean
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select exists (select 1 from public.deliverables d where d.storage_path = object_name);
+  select exists (
+    select 1 from public.deliverables d
+    where d.storage_path = object_name
+      and d.uploaded_at is not null
+      and private.is_workspace_member(d.workspace_id)
+  );
 $$;
 
 revoke all on function private.can_upload_deliverable(text) from public;
-revoke all on function private.deliverable_object_in_use(text) from public;
+revoke all on function private.can_read_deliverable(text) from public;
 grant execute on function private.can_upload_deliverable(text) to authenticated, service_role;
-grant execute on function private.deliverable_object_in_use(text) to authenticated, service_role;
+grant execute on function private.can_read_deliverable(text) to authenticated, service_role;
 
+drop policy "deliverables bucket: members read" on storage.objects;
 drop policy "deliverables bucket: section editors upload" on storage.objects;
 drop policy "deliverables bucket: section editors replace" on storage.objects;
 drop policy "deliverables bucket: uploader or manager deletes" on storage.objects;
+
+create policy "deliverables bucket: members read checked files"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'deliverables' and private.can_read_deliverable(name));
 
 create policy "deliverables bucket: upload a registered file"
   on storage.objects for insert to authenticated
   with check (bucket_id = 'deliverables' and private.can_upload_deliverable(name));
 
--- No update policy: a stored file is never replaced.
-
-create policy "deliverables bucket: managers or owners of unused files delete"
-  on storage.objects for delete to authenticated
-  using (
-    bucket_id = 'deliverables'
-    and (
-      private.is_workspace_manager(private.storage_workspace_id(name))
-      or (owner_id = (select auth.uid())::text and not private.deliverable_object_in_use(name))
-    )
-  );
+-- No update or delete policy: users never replace or remove a stored file.
 
 -- Only used by the policies dropped above.
 drop function private.can_upload_to_path(text);
 drop function private.storage_section_id(text);
+drop function private.storage_workspace_id(text);
 
 -- -----------------------------------------------------------------------------
 -- Accepted types, kept in sync with src/lib/deliverables/file-types.ts.

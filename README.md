@@ -149,7 +149,7 @@ Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports
   1. `upload-url` checks the role, the type and the size, adds a `deliverables` row with `uploaded_at` empty, and signs an upload URL for that exact path.
   2. The browser sends the file to that URL.
   3. `complete` reads the stored object and compares its size, its type and its first bytes with the extension. SVG files are read whole and refused when they contain scripts or event handlers. A file that passes gets `uploaded_at` (written by the service role only). Otherwise the object and its row are deleted.
-- Users cannot write `uploaded_at` or the parse results, cannot write to storage without a pending row of their own, cannot replace a stored file, and can delete their object only once its row is gone. The file the server checked is the one that stays.
+- Users cannot write `uploaded_at` or the parse results. In storage they can only create the object of a pending row of their own, never replace or delete one, and read only checked files of their workspaces. The app deletes objects with the service role once their row is gone. So the file the server checked is the one that stays, and an unchecked file cannot be shared.
 - `report_progress` computes weighted completion (completed = 1, in progress = 0.5, not started = 0) and runs with the caller's permissions. `report_sections` is published to Supabase Realtime for the live dashboard.
 
 Serverless code must connect through the Supavisor pooler in transaction mode (port 6543, `DATABASE_URL`). Use the direct connection (port 5432, `DIRECT_URL`) only for migrations and admin tools.

@@ -31,8 +31,8 @@ export type PendingUpload = {
 
 /**
  * Deletes the caller's unfinished uploads in a section that are more than a
- * day old, with the user's own rights (RLS lets uploaders delete their rows,
- * and owners delete objects no row points at).
+ * day old. RLS lets uploaders delete their rows. Users never delete stored
+ * objects, so the service role removes the ones those rows pointed at.
  */
 export async function removeStaleUploads(supabase: UserClient, userId: string, sectionId: string) {
   const cutoff = new Date(Date.now() - STALE_UPLOAD_MS).toISOString();
@@ -49,8 +49,14 @@ export async function removeStaleUploads(supabase: UserClient, userId: string, s
     return;
   }
   if (data.length > 0) {
-    await supabase.storage.from(DELIVERABLES_BUCKET).remove(data.map((row) => row.storage_path));
+    await removeObjects(data.map((row) => row.storage_path));
   }
+}
+
+/** Service role: only for paths of rows the caller was allowed to delete. */
+async function removeObjects(paths: string[]) {
+  const { error } = await createAdminClient().storage.from(DELIVERABLES_BUCKET).remove(paths);
+  if (error) console.error("deliverables: could not remove stored files", error.message);
 }
 
 /** Reads up to `limit` bytes of the body, then stops the download. */
@@ -93,14 +99,15 @@ export type UploadCheck = { ok: true } | { ok: false; error: DeliverableErrorKey
 /**
  * Checks the stored object against what was registered: same size, same
  * type, and first bytes that match the extension. SVG files are read whole
- * and refused when they contain scripts.
+ * and refused when they contain scripts. Nobody can read an unchecked file,
+ * so the service role signs the URL, for the path of a row the caller owns.
  */
-export async function checkStoredFile(supabase: UserClient, upload: PendingUpload): Promise<UploadCheck> {
+export async function checkStoredFile(upload: PendingUpload): Promise<UploadCheck> {
   const type = fileTypeFor(upload.file_name);
   if (!type || type.mime !== upload.mime_type) return { ok: false, error: "typeMismatch" };
 
-  const { data: signed, error } = await supabase.storage
-    .from(DELIVERABLES_BUCKET)
+  const { data: signed, error } = await createAdminClient()
+    .storage.from(DELIVERABLES_BUCKET)
     .createSignedUrl(upload.storage_path, 60);
   if (error || !signed) return { ok: false, error: "notReceived" };
 
@@ -132,20 +139,17 @@ export async function checkStoredFile(supabase: UserClient, upload: PendingUploa
 }
 
 /**
- * Removes a file that failed the checks, object first. Service role, scoped
- * by workspace: the uploader can no longer delete the object while its row
- * exists.
+ * Removes a file that failed the checks: the row first, so the path is no
+ * longer registered, then the object. Service role, scoped by workspace.
  */
 export async function discardUpload(upload: PendingUpload) {
-  const admin = createAdminClient();
-  const { error: storageError } = await admin.storage.from(DELIVERABLES_BUCKET).remove([upload.storage_path]);
-  if (storageError) console.error("deliverables: could not remove a rejected file", storageError.message);
-  await admin
+  await createAdminClient()
     .from("deliverables")
     .delete()
     .eq("id", upload.id)
     .eq("workspace_id", upload.workspace_id)
     .is("uploaded_at", null);
+  await removeObjects([upload.storage_path]);
 }
 
 /** Marks a checked file as uploaded. Only the service role may set uploaded_at. */
