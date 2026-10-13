@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard } from "lucide-react";
+import { BookText, LayoutDashboard } from "lucide-react";
 import { motion } from "motion/react";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -14,11 +14,13 @@ const DASHBOARD_PATH = "/tableau-de-bord";
 type NavItemsProps = {
   /** "sidebar" hides labels when the desktop sidebar is collapsed; "sheet" never does. */
   variant: "sidebar" | "sheet";
+  /** The workspace picked in the switcher, for the links that belong to one workspace. */
+  workspaceId: string | null;
   onNavigate?: () => void;
 };
 
 /** Links of the app navigation, shared by the desktop sidebar and the mobile sheet. */
-export function NavItems({ variant, onNavigate }: NavItemsProps) {
+export function NavItems({ variant, workspaceId, onNavigate }: NavItemsProps) {
   const t = useTranslations("AppShell");
   const tFilters = useTranslations("Dashboard.filters");
   const pathname = usePathname();
@@ -26,6 +28,7 @@ export function NavItems({ variant, onNavigate }: NavItemsProps) {
   const parsedStatus = sectionStatusSchema.safeParse(searchParams.get("statut"));
   const activeStatus = parsedStatus.success ? parsedStatus.data : null;
   const onDashboard = pathname === DASHBOARD_PATH;
+  const promptsPath = workspaceId ? `/espaces/${workspaceId}/modeles` : null;
   const collapsible = variant === "sidebar";
 
   return (
@@ -39,6 +42,16 @@ export function NavItems({ variant, onNavigate }: NavItemsProps) {
           onNavigate={onNavigate}
           icon={<LayoutDashboard className="size-4" aria-hidden="true" />}
         />
+        {promptsPath ? (
+          <NavItem
+            href={promptsPath}
+            label={t("promptLibrary")}
+            active={pathname === promptsPath || pathname.startsWith(`${promptsPath}/`)}
+            variant={variant}
+            onNavigate={onNavigate}
+            icon={<BookText className="size-4" aria-hidden="true" />}
+          />
+        ) : null}
       </ul>
       <div>
         <p

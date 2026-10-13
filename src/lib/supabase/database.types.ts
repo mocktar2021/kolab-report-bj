@@ -140,13 +140,18 @@ export type Database = {
       };
       prompt_library: {
         Row: {
-          category: string;
+          changelog: string | null;
           created_at: string;
           created_by: string | null;
           description: string | null;
           id: string;
-          is_active: boolean;
+          max_output_tokens: number | null;
+          model_tier: string;
+          output_schema: string;
+          status: Database["public"]["Enums"]["prompt_status"];
+          temperature: number | null;
           template: string;
+          template_key: string;
           title: string;
           updated_at: string;
           variables: NonNullable<Json>;
@@ -155,27 +160,37 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
-          category?: string;
+          changelog?: string | null;
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
           id?: string;
-          is_active?: boolean;
+          max_output_tokens?: number | null;
+          model_tier?: string;
+          output_schema?: string;
+          status?: Database["public"]["Enums"]["prompt_status"];
+          temperature?: number | null;
           template: string;
+          template_key: string;
           title: string;
           updated_at?: string;
           variables?: NonNullable<Json>;
-          version?: number;
+          version: number;
           workspace_id?: string | null;
         };
         Update: {
-          category?: string;
+          changelog?: string | null;
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
           id?: string;
-          is_active?: boolean;
+          max_output_tokens?: number | null;
+          model_tier?: string;
+          output_schema?: string;
+          status?: Database["public"]["Enums"]["prompt_status"];
+          temperature?: number | null;
           template?: string;
+          template_key?: string;
           title?: string;
           updated_at?: string;
           variables?: NonNullable<Json>;
@@ -504,6 +519,31 @@ export type Database = {
       };
     };
     Views: {
+      prompt_templates: {
+        Row: {
+          description: string | null;
+          id: string | null;
+          latest_version: number | null;
+          output_schema: string | null;
+          state: Database["public"]["Enums"]["prompt_status"] | null;
+          status: Database["public"]["Enums"]["prompt_status"] | null;
+          template_key: string | null;
+          title: string | null;
+          version: number | null;
+          version_count: number | null;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "prompt_library_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       report_progress: {
         Row: {
           completed_sections: number | null;
@@ -553,6 +593,7 @@ export type Database = {
     };
     Enums: {
       parse_status: "pending" | "processing" | "parsed" | "failed" | "skipped";
+      prompt_status: "draft" | "published" | "archived";
       report_status: "draft" | "in_review" | "final";
       section_status: "not_started" | "in_progress" | "completed";
       workspace_role: "owner" | "admin" | "expert" | "viewer";
@@ -672,6 +713,7 @@ export const Constants = {
   public: {
     Enums: {
       parse_status: ["pending", "processing", "parsed", "failed", "skipped"],
+      prompt_status: ["draft", "published", "archived"],
       report_status: ["draft", "in_review", "final"],
       section_status: ["not_started", "in_progress", "completed"],
       workspace_role: ["owner", "admin", "expert", "viewer"],

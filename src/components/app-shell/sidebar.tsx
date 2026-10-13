@@ -49,7 +49,7 @@ export function Sidebar({ user, workspaces, currentWorkspaceId, onOpenPalette }:
       </div>
 
       <nav aria-label={t("navLabel")} className="mt-6 flex-1 px-3">
-        <NavItems variant="sidebar" />
+        <NavItems variant="sidebar" workspaceId={currentWorkspaceId} />
       </nav>
 
       <div className="space-y-1 border-t p-3">

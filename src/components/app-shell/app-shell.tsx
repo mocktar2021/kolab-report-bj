@@ -114,7 +114,11 @@ export function AppShell({ user, workspaces, currentWorkspaceId, children }: App
           </div>
           <nav aria-label={t("navLabel")} className="mt-6 flex-1 overflow-y-auto px-3">
             <Suspense>
-              <NavItems variant="sheet" onNavigate={() => setMenuOpen(false)} />
+              <NavItems
+                variant="sheet"
+                workspaceId={currentWorkspaceId}
+                onNavigate={() => setMenuOpen(false)}
+              />
             </Suspense>
           </nav>
           <div className="space-y-1 border-t p-3">
