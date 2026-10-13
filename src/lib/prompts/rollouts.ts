@@ -63,14 +63,19 @@ export async function getActiveRollout(
   return data ? toRollout(data as RolloutRecord) : null;
 }
 
-/** Active rollouts of a workspace's templates and of the global ones that reach it, by template key. */
+/**
+ * Active rollouts of a workspace's templates and of the global ones that
+ * reach it, by template key. A global rollout aimed at another workspace the
+ * user also belongs to is left out.
+ */
 export async function listActiveRollouts(workspaceId: string): Promise<Map<string, ActiveRollout>> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("prompt_rollouts")
     .select(`template_key, workspace_id, ${ROLLOUT_COLUMNS}`)
     .eq("status", "active")
-    .or(`workspace_id.is.null,workspace_id.eq.${workspaceId.toLowerCase()}`);
+    .or(`workspace_id.is.null,workspace_id.eq.${workspaceId.toLowerCase()}`)
+    .or(`target_workspace_id.is.null,target_workspace_id.eq.${workspaceId.toLowerCase()}`);
   const rollouts = new Map<string, ActiveRollout>();
   for (const row of data ?? []) {
     const scope = row.workspace_id ? "workspace" : "global";

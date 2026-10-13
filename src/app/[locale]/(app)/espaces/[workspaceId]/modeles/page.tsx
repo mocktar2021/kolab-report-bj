@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { ArrowLeft, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, ChevronRight, Plus, Split } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { listActiveRollouts, type ActiveRollout } from "@/lib/prompts/rollouts";
 import { listPromptTemplates, type PromptTemplateSummary } from "@/lib/prompts/server";
 import { createClient } from "@/lib/supabase/server";
 import { isManager } from "@/lib/workspaces/roles";
@@ -34,11 +35,20 @@ export default async function PromptLibraryPage({
   if (!access) notFound();
 
   const supabase = await createClient();
-  const [{ data: workspace }, templates] = await Promise.all([
+  const [{ data: workspace }, templates, allRollouts] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     listPromptTemplates(workspaceId),
+    listActiveRollouts(workspaceId),
   ]);
   if (!workspace || !templates) notFound();
+
+  // A global rollout limited to another workspace of the user doesn't reach this one.
+  const rollouts: RolloutMap = new Map(
+    [...allRollouts].filter(
+      ([, rollout]) =>
+        rollout.targetWorkspaceId === null || rollout.targetWorkspaceId === workspaceId.toLowerCase(),
+    ),
+  );
 
   const manager = isManager(access.role);
   const own = templates.filter((template) => template.scope === "workspace");
@@ -84,6 +94,7 @@ export default async function PromptLibraryPage({
         title={t("workspaceGroup")}
         templates={active}
         workspaceId={workspaceId}
+        rollouts={rollouts}
         empty={manager ? t("emptyManager") : t("emptyMember")}
       />
       <TemplateGroup
@@ -92,6 +103,7 @@ export default async function PromptLibraryPage({
         help={t("globalGroupHelp")}
         templates={globals}
         workspaceId={workspaceId}
+        rollouts={rollouts}
       />
       {archived.length > 0 ? (
         <TemplateGroup
@@ -100,11 +112,15 @@ export default async function PromptLibraryPage({
           help={t("archivedGroupHelp")}
           templates={archived}
           workspaceId={workspaceId}
+          rollouts={rollouts}
         />
       ) : null}
     </div>
   );
 }
+
+/** Active rollouts by "workspace:<key>" or "global:<key>", as listActiveRollouts gives them. */
+type RolloutMap = ReadonlyMap<string, ActiveRollout>;
 
 type TemplateGroupProps = {
   id: string;
@@ -112,10 +128,11 @@ type TemplateGroupProps = {
   help?: string;
   templates: PromptTemplateSummary[];
   workspaceId: string;
+  rollouts: RolloutMap;
   empty?: string;
 };
 
-function TemplateGroup({ id, title, help, templates, workspaceId, empty }: TemplateGroupProps) {
+function TemplateGroup({ id, title, help, templates, workspaceId, rollouts, empty }: TemplateGroupProps) {
   const t = useTranslations("Prompts");
 
   return (
@@ -141,6 +158,7 @@ function TemplateGroup({ id, title, help, templates, workspaceId, empty }: Templ
               key={`${template.scope}/${template.templateKey}`}
               template={template}
               workspaceId={workspaceId}
+              rollout={rollouts.get(`${template.scope}:${template.templateKey}`) ?? null}
             />
           ))}
         </ul>
@@ -149,8 +167,15 @@ function TemplateGroup({ id, title, help, templates, workspaceId, empty }: Templ
   );
 }
 
-function TemplateItem({ template, workspaceId }: { template: PromptTemplateSummary; workspaceId: string }) {
+type TemplateItemProps = {
+  template: PromptTemplateSummary;
+  workspaceId: string;
+  rollout: ActiveRollout | null;
+};
+
+function TemplateItem({ template, workspaceId, rollout }: TemplateItemProps) {
   const t = useTranslations("Prompts");
+  const format = useFormatter();
   const { current } = template;
   // The published version can be older than the latest one, a draft for example.
   const olderPublished = template.state === "published" && current.version !== template.latestVersion;
@@ -177,6 +202,17 @@ function TemplateItem({ template, workspaceId }: { template: PromptTemplateSumma
           <span>{t("itemVersions", { version: template.latestVersion, count: template.versionCount })}</span>
           {olderPublished ? <span>{t("itemPublished", { version: current.version })}</span> : null}
         </p>
+        {rollout && rollout.candidateVersion !== null ? (
+          <p className="mt-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20">
+              <Split className="size-3.5" aria-hidden="true" />
+              {t(rollout.targetWorkspaceId ? "rollout.listBadgePreview" : "rollout.listBadge", {
+                version: rollout.candidateVersion,
+                percent: format.number(rollout.percent / 100, { style: "percent", maximumFractionDigits: 0 }),
+              })}
+            </span>
+          </p>
+        ) : null}
       </div>
       <ChevronRight
         className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"

@@ -6,6 +6,7 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { ArrowLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getActiveRollout, hasPreviousPublished } from "@/lib/prompts/rollouts";
 import { getPromptTemplate, type PromptVersionRow } from "@/lib/prompts/server";
 import { cn } from "@/lib/utils";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -13,6 +14,14 @@ import { isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { GlobalBadge, PromptStatusBadge } from "../prompt-badges";
+import {
+  RollbackPublish,
+  RolloutBanner,
+  StartRollout,
+  type RolloutInfo,
+  type RolloutReach,
+  type VersionRef,
+} from "./rollout-controls";
 import { VersionActions } from "./version-actions";
 import { VersionDiff } from "./version-diff";
 
@@ -30,6 +39,23 @@ const DATE_FORMAT = {
 
 // Shared by the metadata and the page within one request.
 const loadTemplate = cache(getPromptTemplate);
+
+function refOf(row: PromptVersionRow): VersionRef {
+  return { id: row.id, version: row.version };
+}
+
+/** The version a rollback puts back: the last one published before `version`, as the database picks it. */
+function previousPublished(version: PromptVersionRow, history: PromptVersionRow[]): PromptVersionRow | null {
+  if (!version.publishedAt) return null;
+  const publishedAt = Date.parse(version.publishedAt);
+  let previous: { row: PromptVersionRow; at: number } | null = null;
+  for (const row of history) {
+    if (row.status !== "archived" || !row.publishedAt) continue;
+    const at = Date.parse(row.publishedAt);
+    if (at < publishedAt && (!previous || at > previous.at)) previous = { row, at };
+  }
+  return previous?.row ?? null;
+}
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { workspaceId, promptId } = await params;
@@ -58,6 +84,32 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
   const global = version.workspaceId === null;
   const manager = isManager(access.role);
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
+  const published = history.find((row) => row.status === "published") ?? null;
+  const [activeRollout, canRollback] = await Promise.all([
+    getActiveRollout(version.workspaceId, version.templateKey),
+    manager && !global && version.status === "published" ? hasPreviousPublished(version) : false,
+  ]);
+  // A global rollout limited to another workspace of the user doesn't reach this one.
+  const rollout =
+    activeRollout &&
+    (activeRollout.targetWorkspaceId === null ||
+      activeRollout.targetWorkspaceId === workspaceId.toLowerCase())
+      ? activeRollout
+      : null;
+  const candidateVersion = rollout
+    ? (history.find((row) => row.id === rollout.candidateId)?.version ?? rollout.candidateVersion)
+    : null;
+  const rolloutInfo: RolloutInfo | null =
+    rollout && candidateVersion !== null
+      ? {
+          id: rollout.id,
+          candidate: { id: rollout.candidateId, version: candidateVersion },
+          percent: rollout.percent,
+          createdAt: rollout.createdAt,
+        }
+      : null;
+  const reach: RolloutReach = !global ? "workspace" : rollout?.targetWorkspaceId ? "preview" : "global";
+  const rollbackTarget = canRollback ? previousPublished(version, history) : null;
   const authorOf = (row: PromptVersionRow) =>
     row.workspaceId === null
       ? t("globalAuthor")
@@ -108,6 +160,18 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
           </p>
         ) : null}
 
+        {rolloutInfo ? (
+          <RolloutBanner
+            workspaceId={workspaceId}
+            libraryHref={libraryHref}
+            rollout={rolloutInfo}
+            reach={reach}
+            currentVersionId={version.id}
+            base={published ? refOf(published) : null}
+            canManage={manager && !global}
+          />
+        ) : null}
+
         {global ? (
           <>
             <p className="mt-4 max-w-3xl text-sm text-muted-foreground">
@@ -123,12 +187,33 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
             ) : null}
           </>
         ) : manager ? (
-          <VersionActions
-            workspaceId={workspaceId}
-            versionId={version.id}
-            status={version.status}
-            newVersionHref={`${libraryHref}/${version.id}/modifier`}
-          />
+          <>
+            <VersionActions
+              workspaceId={workspaceId}
+              versionId={version.id}
+              status={version.status}
+              newVersionHref={`${libraryHref}/${version.id}/modifier`}
+              canPublish={rolloutInfo?.candidate.id !== version.id}
+            />
+            {version.status === "published" && rollbackTarget ? (
+              <RollbackPublish
+                workspaceId={workspaceId}
+                libraryHref={libraryHref}
+                current={refOf(version)}
+                previous={refOf(rollbackTarget)}
+              />
+            ) : null}
+            {/* The candidate of an active rollout is managed from the banner. */}
+            {version.status === "draft" && rolloutInfo?.candidate.id !== version.id ? (
+              <StartRollout
+                workspaceId={workspaceId}
+                versionId={version.id}
+                libraryHref={libraryHref}
+                published={published ? refOf(published) : null}
+                otherRollout={rolloutInfo?.candidate ?? null}
+              />
+            ) : null}
+          </>
         ) : null}
       </header>
 

@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { BookText, ChevronsUpDown, Plus, Users } from "lucide-react";
+import { BookText, ChevronsUpDown, Gauge, Plus, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +43,7 @@ export function WorkspaceMark({ name, className }: { name: string; className?: s
   );
 }
 
-/** Menu to switch the current workspace, open its members or prompt templates, or create a new one. */
+/** Menu to switch the current workspace, open its members, prompt templates or AI dashboard, or create a new one. */
 export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
@@ -131,6 +131,14 @@ export function WorkspaceSwitcher({
             {tShell("promptLibrary")}
           </Link>
         </DropdownMenuItem>
+        {isManager(current.role) ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/espaces/${current.id}/ia`} onClick={onNavigate}>
+              <Gauge aria-hidden="true" />
+              {tShell("aiDashboard")}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild>
           <Link href="/espaces/nouveau" onClick={onNavigate}>
             <Plus aria-hidden="true" />
