@@ -1,0 +1,453 @@
+Issue ID,Issue Type,Summary,Description,Parent,Priority,Story Points,Labels,Epic Name
+KRB-EPIC-1,Epic,EPIC 1: Project Foundation & PWA Infrastructure,"Goal: Stand up a production-grade Next.js 15 (App Router, TypeScript, Tailwind) PWA with French as the default locale and a Supabase Postgres schema secured by Row Level Security, so every later epic builds on a stable, multi-tenant base.
+
+Scope:
+- Next.js 15 App Router + TypeScript strict + Tailwind + shadcn/ui primitives
+- PWA: manifest.webmanifest, service worker (@ducanh2912/next-pwa), offline fallback route /fr/hors-ligne
+- i18n with next-intl, `fr` default locale, French metadata and `<html lang=""fr"">`
+- SQL migrations for the core domain tables, enums, RLS policies, storage bucket, report_progress view
+- Supabase clients (browser, server, middleware, service role) using @supabase/ssr; pooled connections via Supavisor transaction mode (port 6543)
+- Local dev tooling: Supabase CLI, generated DB types, test harness (unit, RLS, e2e)
+
+Definition of Done:
+- `npm run lint`, `npm run typecheck` and `npm run build` pass on a clean clone
+- `supabase db reset` applies all migrations from scratch without error
+- RLS is enabled on every public table and covered by automated policy tests
+- App installs as a PWA on Android/Chrome and iOS Safari and shows /fr/hors-ligne when offline
+- README documents local setup end to end",,Highest,,foundation pwa,Project Foundation & PWA Infrastructure
+KRB-1.1,Story,Story 1.1: Next.js & PWA Initialization,"As a developer on the KolabReport team, I want a Next.js 15 App Router project with TypeScript, Tailwind, an installable PWA shell and French as the default locale, so that every feature is built on a consistent, offline-capable, French-first foundation.
+
+Dependencies: None (first story).
+
+Acceptance criteria:
+1. GIVEN a fresh clone with `.env.local` populated from `.env.example` WHEN I run `npm install && npm run dev` THEN the app serves on http://localhost:3000 and `/` redirects to `/fr/...` (French default locale)
+2. GIVEN the production build WHEN Chrome DevTools > Application is opened THEN `manifest.webmanifest` is valid (name, short_name, icons 192/512 + maskable, `lang: ""fr""`, `start_url: ""/fr/tableau-de-bord""`, `display: ""standalone""`) and a service worker is registered
+3. GIVEN the app has been visited once and the network goes offline WHEN the user navigates to an uncached page THEN the offline fallback page `/fr/hors-ligne` is shown with French copy
+4. GIVEN any page WHEN the HTML is inspected THEN `<html lang=""fr"">` is set, title/description come from French metadata (messages/fr.json) and no hard-coded English UI strings exist
+5. GIVEN an authenticated API route or Supabase request WHEN the service worker handles it THEN it is NOT cached (NetworkOnly) so no private data is persisted in the SW cache",KRB-EPIC-1,Highest,5,foundation pwa i18n frontend,
+KRB-1.1.1,Sub-task,"Initialize Next.js 15 App Router + TypeScript strict mode + ESLint config (scaffolded in initial commit, verify)","create-next-app equivalent setup, `tsconfig` strict, path alias `@/*`.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.2,Sub-task,"Configure Tailwind CSS + shadcn/ui (components.json) and base design tokens (scaffolded in initial commit, verify)","Tailwind config, tailwindcss-animate, `cn()` helper, base Button/Input/Label/Toast primitives.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.3,Sub-task,"Set up next-intl with `fr` as default locale and `[locale]` route segment (scaffolded in initial commit, verify)","`src/i18n` routing/request config, `messages/fr.json`, locale prefix `/fr`.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.4,Sub-task,"Add manifest.webmanifest and app icons (192, 512, maskable) (scaffolded in initial commit, verify)","French name/short_name/description, theme colour, `start_url` `/fr/tableau-de-bord`.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.5,Sub-task,"Configure service worker via @ducanh2912/next-pwa with runtime caching strategy (scaffolded in initial commit, verify)","Precache app shell; StaleWhileRevalidate for static assets; NetworkOnly for `/api/*` and Supabase; disabled in dev.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.6,Sub-task,"Create offline fallback page /fr/hors-ligne (scaffolded in initial commit, verify)","Static French page used as document fallback by the SW.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.7,Sub-task,"French root layout and metadata (title template, description, viewport/themeColor) (scaffolded in initial commit, verify)","`generateMetadata` reading from fr messages; `lang=""fr""`.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.1.8,Sub-task,Manual PWA install test on Android Chrome and iOS Safari,Document results and screenshots in the PR.,KRB-1.1,Highest,,foundation pwa i18n frontend,
+KRB-1.2,Story,Story 1.2: Supabase Client & Database Schema Migration,"As a developer, I want versioned SQL migrations that create the KolabReport schema with RLS keyed on workspace membership, plus typed Supabase clients using pooled connections, so that tenant data is isolated by construction and the schema can be promoted reliably across environments.
+
+Dependencies: 1.1
+
+Acceptance criteria:
+1. GIVEN an empty local Supabase instance WHEN `supabase db reset` runs THEN tables organizations, workspaces, profiles, workspace_members, reports, report_sections, deliverables, prompt_library, the enums (workspace_role, section_status, report_status, parse_status) and the view report_progress are created with no errors
+2. GIVEN any table in the `public` schema WHEN `select relname from pg_class where relrowsecurity = false` is run against public tables THEN no table is returned (RLS enabled everywhere)
+3. GIVEN user A who is a member of workspace W1 only WHEN A selects from reports, report_sections or deliverables THEN only rows with workspace_id = W1 are returned
+4. GIVEN an expert E assigned to section S1 but not S2 in the same workspace WHEN E updates S1 and then S2 THEN the S1 update succeeds and the S2 update affects 0 rows; an owner/admin can update both
+5. GIVEN a new auth.users row WHEN the signup trigger fires THEN a matching profiles row is created
+6. GIVEN the app's server-side DB access outside of supabase-js (e.g. scripts, future ORM) WHEN it connects THEN it uses the Supavisor transaction-mode pooled URL on port 6543 (prepared statements disabled), while migrations use the direct/session connection",KRB-EPIC-1,Highest,8,foundation database supabase rls security,
+KRB-1.2.1,Sub-task,"Migration: enums workspace_role, section_status, report_status, parse_status (scaffolded in initial commit, verify)","owner|admin|expert|viewer; not_started|in_progress|completed; draft|in_review|final; pending|processing|parsed|failed.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.2,Sub-task,"Migration: core tables (organizations, workspaces, profiles, workspace_members, reports, report_sections, deliverables, prompt_library) (scaffolded in initial commit, verify)","FKs, `created_at/updated_at` triggers, indexes on every workspace_id and assigned_to; report_sections has assigned_to, status, weight, content.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.3,Sub-task,"Helper SQL functions (SECURITY DEFINER, stable): is_workspace_member(ws), has_workspace_role(ws, roles[]) (scaffolded in initial commit, verify)","Avoid recursive RLS on workspace_members; set `search_path = ''`.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.4,Sub-task,"RLS policies on every table keyed on workspace_id (scaffolded in initial commit, verify)","Select for members; insert/update/delete per role; experts update only report_sections where assigned_to = auth.uid().
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.5,Sub-task,"Trigger handle_new_user to create profiles on signup (scaffolded in initial commit, verify)","Copy full_name from raw_user_meta_data.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.6,Sub-task,"View report_progress (weighted completion %) (scaffolded in initial commit, verify)","completed = 1, in_progress = 0.5, not_started = 0, weighted by weight; `security_invoker = true` so RLS applies.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.7,Sub-task,"Storage bucket `deliverables` (private, 50 MB) + storage.objects policies on first path segment (scaffolded in initial commit, verify)","Path `{workspace_id}/{section_id}/{uuid}-{filename}`; membership checked from the first path segment (`private.storage_workspace_id(name)`).
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.8,Sub-task,"Supabase clients: browser, server (cookies), middleware, service-role (server-only) (scaffolded in initial commit, verify)","@supabase/ssr; service-role key never imported in client bundles.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.9,Sub-task,"Document and configure pooled connection strings (Supavisor transaction mode :6543 vs direct :5432) (scaffolded in initial commit, verify)","`.env.example` entries; note `prepareThreshold=0` / `pgbouncer=true` for ORMs.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.10,Sub-task,Generate TypeScript DB types (`npm run db:types`) and commit database.types.ts,Wire generics into all Supabase clients.,KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.2.11,Sub-task,"Seed script with demo organization, workspace, report and sections (French content)",`supabase/seed.sql` for local dev and e2e tests.,KRB-1.2,Highest,,foundation database supabase rls security,
+KRB-1.3,Story,Story 1.3: Developer Tooling & Test Harness,"As a developer, I want a ready-to-use test harness for unit, database (RLS) and end-to-end tests, so that security-critical behaviour (RLS, RBAC) and key user flows are regression-tested from day one.
+
+Dependencies: 1.1, 1.2
+
+Acceptance criteria:
+1. GIVEN the repository WHEN I run `npm test` THEN Vitest unit tests run and pass
+2. GIVEN a local Supabase instance WHEN I run `supabase test db` THEN pgTAP tests assert RLS for each role (owner, admin, expert, viewer, non-member)
+3. GIVEN the dev server and seed data WHEN I run `npm run test:e2e` THEN a Playwright smoke test loads `/fr/connexion` and passes",KRB-EPIC-1,High,3,foundation testing dx,
+KRB-1.3.1,Sub-task,Add Vitest + Testing Library config and first unit test,Add Vitest + Testing Library config and first unit test,KRB-1.3,High,,foundation testing dx,
+KRB-1.3.2,Sub-task,Add pgTAP RLS test suite under supabase/tests,"One file per table; non-member, viewer, expert, admin, owner cases.",KRB-1.3,High,,foundation testing dx,
+KRB-1.3.3,Sub-task,Add Playwright with a French-locale smoke test,Add Playwright with a French-locale smoke test,KRB-1.3,High,,foundation testing dx,
+KRB-1.3.4,Sub-task,"Add Prettier, lint-staged and husky pre-commit hook","Add Prettier, lint-staged and husky pre-commit hook",KRB-1.3,High,,foundation testing dx,
+KRB-1.3.5,Sub-task,"Update README with local setup (Supabase CLI, env vars, scripts)","Update README with local setup (Supabase CLI, env vars, scripts)",KRB-1.3,High,,foundation testing dx,
+KRB-EPIC-2,Epic,EPIC 2: Authentication & Workspace RBAC,"Goal: Let users securely sign up, sign in and recover their account in French, and enforce workspace-scoped role-based access so experts only ever see the workspaces and sections they are assigned to.
+
+Scope:
+- Supabase Auth email/password: /fr/connexion, /fr/inscription, /fr/mot-de-passe-oublie, /fr/reinitialiser-mot-de-passe, /fr/auth/callback
+- Next.js middleware session refresh + route guards
+- Workspace creation wizard, member invitations, role management
+- RBAC enforced in three layers: RLS (source of truth), server actions/route handlers, UI affordances
+
+Definition of Done:
+- All auth flows work end to end in French with French Supabase email templates
+- Unauthenticated access to any protected route redirects to /fr/connexion
+- RBAC matrix (see top of document) is covered by pgTAP + e2e tests
+- No privilege escalation possible by calling Supabase directly from the browser with the anon key",,Highest,,auth rbac,Authentication & Workspace RBAC
+KRB-2.1,Story,Story 2.1: Supabase Auth Flow (French UI),"As a consultant or expert, I want to register, log in and recover my password through a French interface, so that I can securely access my reports.
+
+Dependencies: 1.1, 1.2
+
+Acceptance criteria:
+1. GIVEN an unauthenticated visitor WHEN they open `/fr/tableau-de-bord` or any protected route THEN middleware redirects them to `/fr/connexion?next=/fr/tableau-de-bord`
+2. GIVEN a visitor on `/fr/inscription` WHEN they submit a valid name, email and password (min 8 chars) THEN an account is created, a French confirmation email is sent and the page shows a French confirmation message
+3. GIVEN a confirmed user on `/fr/connexion` WHEN they submit correct credentials THEN a session cookie is set and they land on the `next` URL or `/fr/tableau-de-bord`
+4. GIVEN a user on `/fr/connexion` WHEN they submit wrong credentials THEN a generic French error (""Identifiants invalides"") is shown without revealing whether the email exists
+5. GIVEN a user on `/fr/mot-de-passe-oublie` WHEN they request a reset THEN a reset email is sent; the link goes through `/fr/auth/callback` to `/fr/reinitialiser-mot-de-passe`, where a new password can be set
+6. GIVEN an authenticated user WHEN they visit `/fr/connexion` or `/fr/inscription` THEN they are redirected to `/fr/tableau-de-bord`
+7. GIVEN an authenticated user WHEN they click ""Se déconnecter"" THEN the session is revoked server-side and they return to `/fr/connexion`",KRB-EPIC-2,Highest,5,auth frontend i18n security,
+KRB-2.1.1,Sub-task,"Middleware: refresh Supabase session + redirect unauthenticated users to /fr/connexion (scaffolded in initial commit, verify)","Combine next-intl middleware with @supabase/ssr `updateSession`; public route allowlist.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.2,Sub-task,"Route /fr/auth/callback (exchangeCodeForSession / verifyOtp) with safe `next` redirect (scaffolded in initial commit, verify)","Reject absolute/external `next` values (open redirect).
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.3,Sub-task,"Page /fr/connexion with server action signInWithPassword (scaffolded in initial commit, verify)","zod validation, French error messages.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.4,Sub-task,Page /fr/inscription with server action signUp,Collect full_name into user metadata.,KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.5,Sub-task,Pages /fr/mot-de-passe-oublie and /fr/reinitialiser-mot-de-passe,resetPasswordForEmail + updateUser.,KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.6,Sub-task,Sign-out server action and user menu,Sign-out server action and user menu,KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.7,Sub-task,"Translate Supabase email templates (confirmation, reset, invite, magic link) to French",Configure in supabase/config.toml and hosted projects.,KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.8,Sub-task,"Configure auth settings: site URL, redirect allowlist, password policy, rate limits, CAPTCHA (hCaptcha/Turnstile) on signup","Configure auth settings: site URL, redirect allowlist, password policy, rate limits, CAPTCHA (hCaptcha/Turnstile) on signup",KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.1.9,Sub-task,Playwright e2e: signup → confirm (Inbucket) → login → logout → reset,Playwright e2e: signup → confirm (Inbucket) → login → logout → reset,KRB-2.1,Highest,,auth frontend i18n security,
+KRB-2.2,Story,Story 2.2: Workspace Management & RBAC,"As a workspace owner or admin, I want to create workspaces, assign roles and assign report sections to experts, so that each expert only accesses the workspaces and sections they are responsible for.
+
+Dependencies: 2.1
+
+Acceptance criteria:
+1. GIVEN an authenticated user with no workspace WHEN they complete the creation wizard (organization name, workspace name, first report title) THEN an organization, workspace and report are created atomically and the creator is `owner` of the workspace
+2. GIVEN an owner or admin WHEN they change a member's role or remove a member THEN the change is persisted; the last owner of a workspace can never be demoted or removed
+3. GIVEN an expert WHEN they list workspaces THEN only workspaces where they are a member are returned
+4. GIVEN an expert in workspace W WHEN they open the report THEN they can read all sections but can edit content/status only on sections where `assigned_to` = them
+5. GIVEN a viewer WHEN they try to update any section via the API with the anon key THEN RLS rejects the write (0 rows / 403)
+6. GIVEN an admin WHEN they assign section S to an expert who is not a member of W THEN the assignment is rejected (assigned_to must be a member of the same workspace)",KRB-EPIC-2,Highest,8,rbac workspace security backend frontend,
+KRB-2.2.1,Sub-task,RPC create_workspace_with_owner (transactional org + workspace + owner membership + report),"SECURITY DEFINER, validates auth.uid().",KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.2,Sub-task,Workspace creation wizard UI (3 steps) in French,Workspace creation wizard UI (3 steps) in French,KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.3,Sub-task,Workspace switcher + workspace list on /fr/tableau-de-bord,Workspace switcher + workspace list on /fr/tableau-de-bord,KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.4,Sub-task,Members & roles management page (owner/admin only),"Role select, remove member, last-owner guard.",KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.5,Sub-task,"Section assignment UI (assign/unassign expert, set weight)","Section assignment UI (assign/unassign expert, set weight)",KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.6,Sub-task,Server-side authorization helpers (requireWorkspaceRole) for server actions/route handlers,Defence in depth on top of RLS.,KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.7,Sub-task,DB constraint/trigger: assigned_to must be a workspace member; last-owner protection,DB constraint/trigger: assigned_to must be a workspace member; last-owner protection,KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.2.8,Sub-task,pgTAP + Playwright tests for the RBAC matrix,pgTAP + Playwright tests for the RBAC matrix,KRB-2.2,Highest,,rbac workspace security backend frontend,
+KRB-2.3,Story,Story 2.3: Member Invitations,"As a workspace owner or admin, I want to invite experts by email with a predefined role, so that they can join the right workspace without manual database work.
+
+Dependencies: 2.2
+
+Acceptance criteria:
+1. GIVEN an owner/admin WHEN they invite `expert@example.com` as `expert` THEN an invitation row (token hash, role, expiry 7 days) is created and a French invitation email is sent
+2. GIVEN an invitee without an account WHEN they follow the link THEN they register via `/fr/inscription` and are added to the workspace with the invited role on first login
+3. GIVEN an expired or already-used invitation WHEN it is opened THEN a French error is shown and no membership is created
+4. GIVEN an admin WHEN they try to invite someone as `owner` THEN it is rejected (only owners can grant owner)",KRB-EPIC-2,High,5,rbac workspace auth email,
+KRB-2.3.1,Sub-task,Migration: workspace_invitations table + RLS,Migration: workspace_invitations table + RLS,KRB-2.3,High,,rbac workspace auth email,
+KRB-2.3.2,Sub-task,Server action to create invitation and send email (Supabase inviteUserByEmail or Resend),Server action to create invitation and send email (Supabase inviteUserByEmail or Resend),KRB-2.3,High,,rbac workspace auth email,
+KRB-2.3.3,Sub-task,Accept-invitation route and membership creation,Accept-invitation route and membership creation,KRB-2.3,High,,rbac workspace auth email,
+KRB-2.3.4,Sub-task,Pending invitations list with revoke/resend,Pending invitations list with revoke/resend,KRB-2.3,High,,rbac workspace auth email,
+KRB-EPIC-3,Epic,EPIC 3: Expert Deliverables & File Ingestion Pipeline,"Goal: Let assigned experts upload their deliverables (.docx, .xlsx, images, diagrams) directly to Supabase Storage and turn them into parsed, previewable text that the AI engine can consume.
+
+Scope:
+- Private `deliverables` bucket, strict MIME/extension/size validation, signed upload URLs
+- deliverables metadata rows with parse_status lifecycle (pending → processing → parsed | failed)
+- Server-side parsing: mammoth (.docx), exceljs (.xlsx); images/diagrams stored with metadata
+- Expert section workspace UI: upload, list, preview, delete, retry parsing
+
+Definition of Done:
+- Files never transit through the Next.js server body (direct-to-storage upload)
+- Disallowed MIME types and files > 50 MB are rejected client- and server-side
+- Storage policies verified: a non-member cannot read/write another workspace's objects
+- Parsing is idempotent, retried on failure and visible to the user via parse_status",,High,,deliverables ingestion,Expert Deliverables & File Ingestion Pipeline
+KRB-3.1,Story,Story 3.1: Multi-format Upload Pipeline,"As a assigned expert, I want to upload .docx, .xlsx, images and diagram files directly to secure cloud storage, so that my deliverables are stored safely and quickly regardless of file size.
+
+Dependencies: 1.2, 2.2
+
+Acceptance criteria:
+1. GIVEN an expert assigned to section S in workspace W WHEN they request an upload for `rapport.docx` (≤ 50 MB, allowed MIME) THEN the server validates role, MIME and size, inserts a deliverables row (parse_status = pending) and returns a signed upload URL for `{W}/{S}/{uuid}-rapport.docx`
+2. GIVEN the signed upload URL WHEN the browser uploads the file THEN the object lands in the private `deliverables` bucket and the row is marked uploaded
+3. GIVEN a file with a disallowed type (e.g. .exe, .js, .html) or a spoofed extension WHEN upload is requested or completed THEN it is rejected; the server sniffs magic bytes after upload and deletes mismatching objects
+4. GIVEN a file > 50 MB WHEN the user selects it THEN the UI rejects it before upload and the bucket limit rejects it server-side
+5. GIVEN a user who is not a member of W WHEN they try to read or write `{W}/...` with the anon key THEN storage RLS denies it
+6. GIVEN an expert not assigned to S (and not owner/admin) WHEN they request an upload for S THEN the server returns 403",KRB-EPIC-3,High,8,deliverables storage security backend,
+KRB-3.1.1,Sub-task,"Define allow-list: .docx, .xlsx, .png, .jpg/.jpeg, .webp, .svg (sanitized), .drawio/.vsdx (diagrams), .pdf (optional)",Shared zod schema + MIME map used by client and server.,KRB-3.1,High,,deliverables storage security backend,
+KRB-3.1.2,Sub-task,"Route handler POST /api/deliverables/upload-url: validate, insert row, createSignedUploadUrl","Filename sanitization (NFC normalize, strip path chars), uuid prefix.",KRB-3.1,High,,deliverables storage security backend,
+KRB-3.1.3,Sub-task,"Client upload component with progress, drag-and-drop, French errors",uploadToSignedUrl; resumable (TUS) for files > 6 MB.,KRB-3.1,High,,deliverables storage security backend,
+KRB-3.1.4,Sub-task,"Post-upload verification: magic-byte sniffing + size check, mark row or delete object","Post-upload verification: magic-byte sniffing + size check, mark row or delete object",KRB-3.1,High,,deliverables storage security backend,
+KRB-3.1.5,Sub-task,"Bucket config: private, 50 MB, allowed_mime_types (verify migration) (scaffolded in initial commit, verify)","bucket + policies from Story 1.2.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-3.1,High,,deliverables storage security backend,
+KRB-3.1.6,Sub-task,Signed download URLs (short TTL) for previews,Signed download URLs (short TTL) for previews,KRB-3.1,High,,deliverables storage security backend,
+KRB-3.1.7,Sub-task,Tests: storage policy pgTAP + upload e2e with fixtures,Tests: storage policy pgTAP + upload e2e with fixtures,KRB-3.1,High,,deliverables storage security backend,
+KRB-3.2,Story,Story 3.2: Expert Section Workspace,"As a assigned expert, I want a dedicated workspace for my section where I manage deliverables and preview their parsed content, so that I can check what the AI will use before generating a draft.
+
+Dependencies: 3.1
+
+Acceptance criteria:
+1. GIVEN an expert WHEN they open `/fr/espaces/{workspaceId}/sections/{sectionId}` THEN they see section title, status, their deliverables with parse_status badges (En attente, En cours, Analysé, Échec)
+2. GIVEN an uploaded .docx WHEN parsing completes THEN parsed_content contains the document text/HTML (mammoth) and the preview renders it sanitized
+3. GIVEN an uploaded .xlsx WHEN parsing completes THEN parsed_content contains each sheet as a table (exceljs) with sheet names, capped rows per sheet
+4. GIVEN a parse failure WHEN the expert views the deliverable THEN status shows ""Échec"" with an error message and a ""Relancer l'analyse"" button
+5. GIVEN the expert WHEN they change section status (À faire / En cours / Terminé) THEN report_sections.status is updated (not_started / in_progress / completed)
+6. GIVEN a viewer or unassigned expert WHEN they open the section THEN it is read-only (no upload, delete, status change)",KRB-EPIC-3,High,8,deliverables frontend parsing,
+KRB-3.2.1,Sub-task,Section workspace page and layout (French UI),Section workspace page and layout (French UI),KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.2,Sub-task,"Deliverables list with parse_status badges, delete, download","Deliverables list with parse_status badges, delete, download",KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.3,Sub-task,"Parsing worker: mammoth for .docx, exceljs for .xlsx, storing parsed_content (+ parse_error)",Triggered after upload verification (route handler / background job via Vercel `after()` or Supabase Edge Function + queue). Set processing → parsed/failed. Idempotent by deliverable id. Images/diagrams: store dimensions and optional caption; OCR out of scope for v1.,KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.4,Sub-task,"Normalize parsed output to a common structure (markdown text + tables + metadata, token estimate)",Feeds Story 4.2 context building.,KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.5,Sub-task,Sanitized preview renderer (DOMPurify) for parsed HTML/markdown and tables,Sanitized preview renderer (DOMPurify) for parsed HTML/markdown and tables,KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.6,Sub-task,Section status control and optimistic UI,Section status control and optimistic UI,KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.7,Sub-task,Retry parsing action and parse timeouts / max size safeguards,Retry parsing action and parse timeouts / max size safeguards,KRB-3.2,High,,deliverables frontend parsing,
+KRB-3.2.8,Sub-task,"Fixture-based tests for parsers (French docs with accents, tables, merged cells)","Fixture-based tests for parsers (French docs with accents, tables, merged cells)",KRB-3.2,High,,deliverables frontend parsing,
+KRB-EPIC-4,Epic,EPIC 4: AI Prompt Library & Synthesis Engine,"Goal: Generate high-quality, structured French section drafts from experts' parsed deliverables using versioned prompt templates, with measurable quality (offline evals), cost control and full observability.
+
+Scope:
+- prompt_library: global (workspace_id NULL) and workspace-scoped templates, versioned and immutable once published
+- Generation via Vercel AI SDK `streamObject`/`generateObject` with zod schemas; provider-agnostic (Anthropic / OpenAI)
+- Context building with token budgeting and truncation; rate limiting and per-workspace quotas
+- Golden-set evaluation harness, human review rubric, LLM-as-judge with calibration
+- Tracing of every generation (prompt version, model, tokens, latency, cost, outcome)
+
+Definition of Done:
+- Every generation is reproducible: stored prompt version id, model id, parameters, input hashes
+- Offline eval suite runs in CI on prompt/model changes and blocks regressions beyond agreed thresholds
+- Per-user and per-workspace rate limits and token budgets enforced server-side
+- No API keys reach the client; no deliverable content is logged to third parties without the DPA in place
+- Dashboard shows tokens, cost, latency p50/p95, failure rate and acceptance rate per prompt version",,High,,ai llm,AI Prompt Library & Synthesis Engine
+KRB-4.1,Story,Story 4.1: Prompt Library,"As a workspace owner or admin, I want to browse global prompt templates and create workspace-specific templates with versions, so that drafts follow our report conventions and changes to prompts are traceable.
+
+Dependencies: 1.2, 2.2
+
+Acceptance criteria:
+1. GIVEN any member WHEN they open the prompt library THEN they see global templates (workspace_id NULL, read-only) and their workspace's templates
+2. GIVEN an owner/admin WHEN they create or edit a workspace template THEN a new immutable version is saved (version number, author, changelog); previous versions remain selectable
+3. GIVEN an expert or viewer WHEN they try to create/edit a template THEN the UI hides the action and RLS rejects the write
+4. GIVEN a template WHEN it is saved THEN it is validated: declared variables (e.g. {{section_title}}, {{deliverables}}, {{report_context}}) are known, and an output schema key is chosen
+5. GIVEN only a service-role/admin process WHEN global templates are created or changed THEN it happens via migration/seed, never from the app UI",KRB-EPIC-4,High,5,ai prompts frontend backend,
+KRB-4.1.1,Sub-task,"Migration: prompt_library versioning (template_key, version, status draft|published|archived, body, variables, output_schema, model defaults)","Extend the scaffolded table; unique (workspace_id, template_key, version).",KRB-4.1,High,,ai prompts frontend backend,
+KRB-4.1.2,Sub-task,"RLS for prompt_library: read global + own workspace; write own workspace for owner/admin (scaffolded in initial commit, verify)","base policy from Story 1.2; extend for versions.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-4.1,High,,ai prompts frontend backend,
+KRB-4.1.3,Sub-task,"Seed 3–5 French global templates (synthèse de section, résumé exécutif, recommandations, analyse de données)","Seed 3–5 French global templates (synthèse de section, résumé exécutif, recommandations, analyse de données)",KRB-4.1,High,,ai prompts frontend backend,
+KRB-4.1.4,Sub-task,"Prompt library UI: list, detail, version history, diff between versions","Prompt library UI: list, detail, version history, diff between versions",KRB-4.1,High,,ai prompts frontend backend,
+KRB-4.1.5,Sub-task,Template editor with variable validation and preview against sample context,Template editor with variable validation and preview against sample context,KRB-4.1,High,,ai prompts frontend backend,
+KRB-4.2,Story,Story 4.2: AI Section Draft Generation,"As a assigned expert, I want to generate a structured draft of my section from a selected template and my parsed deliverables, so that I start from a solid, consistent draft instead of a blank page.
+
+Dependencies: 3.2, 4.1
+
+Acceptance criteria:
+1. GIVEN an expert assigned to section S with ≥ 1 parsed deliverable WHEN they choose a published template and click ""Générer un brouillon"" THEN a server route calls `streamObject` with the template, the parsed context and a zod schema; the draft streams into the editor progressively
+2. GIVEN the zod section schema (e.g. title, summary, key_findings[], body_markdown, recommendations[], sources[] referencing deliverable ids) WHEN the model returns output THEN it is validated; on schema failure the request is retried once with repair, then fails with a French error and nothing is overwritten
+3. GIVEN deliverables whose total tokens exceed the context budget WHEN the context is built THEN it is truncated by a deterministic strategy (priority order, per-deliverable cap, table row cap, map-reduce summarization for overflow) and the UI indicates that content was truncated
+4. GIVEN a user who exceeded their rate limit (AI_RATE_LIMIT_PER_HOUR, default 30 generations/hour) or a workspace that exceeded its monthly token budget WHEN they request a generation THEN the server returns 429 with a French message and no LLM call is made
+5. GIVEN a completed generation WHEN it is saved THEN a generation record stores prompt version id, model id, parameters, input hashes, token usage, latency, cost estimate and the raw output; the draft is saved as a proposal, and the expert must accept/edit before it replaces report_sections.content
+6. GIVEN a non-assigned expert or viewer WHEN they call the generation endpoint THEN they get 403
+7. GIVEN the golden set WHEN the eval suite runs THEN results meet the agreed baseline thresholds (see Evaluation sub-task) before the feature is released",KRB-EPIC-4,High,13,ai llm generation backend evaluation,
+KRB-4.2.1,Sub-task,Define zod output schemas per template output_schema key and shared types,Schemas versioned alongside prompts; French field descriptions to steer the model.,KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.2,Sub-task,"Migration: ai_generations table (+ RLS) for drafts, metadata, usage, feedback","Columns: section_id, prompt_version_id, model, params, input_hash, usage tokens, cost, latency_ms, status, output jsonb, accepted bool, user_rating, edit_distance.",KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.3,Sub-task,"Context builder: assemble template variables from report, section and parsed deliverables",Deterministic ordering; cite deliverable ids; strip PII fields where configured.,KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.4,Sub-task,Token budgeting & context truncation,Count tokens per provider tokenizer (approximation acceptable with safety margin); budget = model context − max_output − system overhead; per-deliverable caps; map-reduce summarization of overflow chunks; log truncation decisions.,KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.5,Sub-task,"Route handler POST /api/ai/sections/[id]/draft using AI SDK streamObject (Node runtime, maxDuration)","Provider from env (Anthropic/OpenAI), temperature/maxTokens from template; abort handling.",KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.6,Sub-task,Rate limiting & quotas,Per-user sliding window (Upstash Redis or Postgres table) + per-workspace monthly token budget; 429 with Retry-After.,KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.7,Sub-task,"Draft review UI: streaming preview, accept / edit / discard, diff vs current content",Accepting writes report_sections.content and sets status in_progress if not_started.,KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.8,Sub-task,Prompt-injection & safety guards,"Delimit untrusted deliverable content, system prompt instructions to ignore embedded instructions, output never executed; red-team fixtures in golden set.",KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.9,Sub-task,Evaluation: build golden set of sample deliverables (10–20 anonymized French cases) with reference sections,"Covers docx-only, xlsx-heavy, mixed, very long (truncation), noisy/contradictory inputs, injection attempts. Stored in repo under evals/ with licence-cleared data.",KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.10,Sub-task,Evaluation: human review rubric (1–5 scale),"Criteria: factual faithfulness to deliverables (no hallucinations), coverage of key points, structure/schema adherence, French language quality & tone, actionability of recommendations, correct source citations. Two reviewers, inter-rater agreement tracked.",KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.11,Sub-task,Evaluation: automated eval runner (script/CI job) with deterministic checks + LLM-as-judge,"Schema validity rate, citation validity, length bounds, judge scores calibrated against human rubric; outputs a report per prompt version/model; thresholds gate release.",KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.2.12,Sub-task,User feedback capture (thumbs up/down + comment) and acceptance/edit-distance metrics,Feeds online evaluation in Story 4.3.,KRB-4.2,High,,ai llm generation backend evaluation,
+KRB-4.3,Story,"Story 4.3: LLM Observability, Prompt Versioning & Evaluation Pipeline","As a product owner building AI engineering capability, I want every LLM call traced and every prompt or model change evaluated before release, so that I can measure quality, cost and latency over time and ship prompt changes with confidence.
+
+Dependencies: 4.2, 6.1
+
+Acceptance criteria:
+1. GIVEN any generation WHEN it completes or fails THEN a trace is recorded (OpenTelemetry via AI SDK `experimental_telemetry` to Langfuse/Helicone or equivalent) with prompt version, model, tokens, latency, cost and error; deliverable text is redacted or the vendor is covered by a DPA
+2. GIVEN a PR that changes a prompt template, output schema or model id WHEN CI runs THEN the eval suite runs on the golden set and posts a comparison (vs. production baseline) as a PR comment; the job fails on regression beyond thresholds
+3. GIVEN a new prompt version WHEN it is published THEN it can be rolled out to a percentage of generations or a single workspace and rolled back to the previous version in one action
+4. GIVEN the AI metrics dashboard WHEN an admin opens it THEN it shows per prompt version: generations, acceptance rate, mean rating, edit distance, tokens, cost, p50/p95 latency, failure rate",KRB-EPIC-4,Medium,8,ai observability evaluation mlops,
+KRB-4.3.1,Sub-task,Enable AI SDK telemetry and integrate a tracing backend (Langfuse self-host/cloud EU or Helicone),Enable AI SDK telemetry and integrate a tracing backend (Langfuse self-host/cloud EU or Helicone),KRB-4.3,Medium,,ai observability evaluation mlops,
+KRB-4.3.2,Sub-task,Prompt version promotion workflow (draft → published → archived) with rollout percentage & rollback,Prompt version promotion workflow (draft → published → archived) with rollout percentage & rollback,KRB-4.3,Medium,,ai observability evaluation mlops,
+KRB-4.3.3,Sub-task,CI job: run evals on prompt/schema/model changes; post results as PR comment; threshold gate,Budget-capped; uses a small subset on every PR and full set nightly.,KRB-4.3,Medium,,ai observability evaluation mlops,
+KRB-4.3.4,Sub-task,AI metrics dashboard (SQL views over ai_generations + tracing links),AI metrics dashboard (SQL views over ai_generations + tracing links),KRB-4.3,Medium,,ai observability evaluation mlops,
+KRB-4.3.5,Sub-task,Cost alerts (daily spend threshold per environment) and provider fallback strategy,Cost alerts (daily spend threshold per environment) and provider fallback strategy,KRB-4.3,Medium,,ai observability evaluation mlops,
+KRB-4.3.6,Sub-task,"Write an AI evaluation playbook in docs/ (how to add a golden case, run evals, read reports)","Write an AI evaluation playbook in docs/ (how to add a golden case, run evals, read reports)",KRB-4.3,Medium,,ai observability evaluation mlops,
+KRB-EPIC-5,Epic,EPIC 5: Master Report Synthesis & Progress Tracking,"Goal: Assemble all sections into a single master report that can be reviewed, finalized and exported, and give the team a real-time view of completion.
+
+Scope:
+- Master report view with section ordering, table of contents and export to .docx and PDF
+- Report lifecycle draft → in_review → final
+- Completion % (weighted) from report_progress view, live updates via Supabase Realtime on report_sections
+
+Definition of Done:
+- Master report renders all sections in order with French typography
+- Exports open correctly in Word/LibreOffice and PDF viewers, with accents and tables intact
+- Dashboard updates within 2 s of a section status change without page reload
+- Realtime respects RLS (users only receive changes for workspaces they belong to)",,Medium,,report dashboard,Master Report Synthesis & Progress Tracking
+KRB-5.1,Story,Story 5.1: Collaborative Master Document Builder,"As a workspace owner or admin, I want to assemble all sections into a unified master report, reorder them and export it, so that I can deliver a coherent final report to the client.
+
+Dependencies: 4.2
+
+Acceptance criteria:
+1. GIVEN a report with sections WHEN an owner/admin opens `/fr/rapports/{reportId}` THEN all sections render in `position` order with a generated table of contents, assignee and status per section
+2. GIVEN an owner/admin WHEN they drag-and-drop to reorder sections THEN positions are persisted atomically and other open sessions reflect the new order
+3. GIVEN an expert WHEN they open the master report THEN they can read all sections and jump to edit only their assigned ones
+4. GIVEN a report WHEN an owner/admin clicks ""Exporter en .docx"" or ""Exporter en PDF"" THEN a file named `{report-title}-{date}.docx|pdf` is generated server-side with cover page, TOC, headings and tables, and downloaded
+5. GIVEN two users editing different sections WHEN both save THEN no section overwrites another; concurrent edits on the same section are detected via updated_at (optimistic concurrency) with a French conflict message",KRB-EPIC-5,Medium,8,report frontend export,
+KRB-5.1.1,Sub-task,Master report page with TOC and section rendering (markdown → sanitized HTML),Master report page with TOC and section rendering (markdown → sanitized HTML),KRB-5.1,Medium,,report frontend export,
+KRB-5.1.2,Sub-task,Section reordering (dnd-kit) with RPC reorder_sections (transactional),Section reordering (dnd-kit) with RPC reorder_sections (transactional),KRB-5.1,Medium,,report frontend export,
+KRB-5.1.3,Sub-task,Optimistic concurrency on report_sections (updated_at check) + conflict UI,Optimistic concurrency on report_sections (updated_at check) + conflict UI,KRB-5.1,Medium,,report frontend export,
+KRB-5.1.4,Sub-task,"Export to .docx (docx library) with cover page, TOC, headings, tables","Route handler, Node runtime; French date formatting.",KRB-5.1,Medium,,report frontend export,
+KRB-5.1.5,Sub-task,Export to PDF (HTML print stylesheet + headless Chromium/@sparticuz/chromium or react-pdf),Validate Vercel function size/time limits.,KRB-5.1,Medium,,report frontend export,
+KRB-5.1.6,Sub-task,Store exports in Storage (`exports/` prefix) with signed download links and audit row,Store exports in Storage (`exports/` prefix) with signed download links and audit row,KRB-5.1,Medium,,report frontend export,
+KRB-5.2,Story,Story 5.2: Real-Time Completion Dashboard,"As a workspace owner, admin or expert, I want a dashboard showing report completion and section states in real time, so that I know what is left to do without asking the team.
+
+Dependencies: 1.2, 2.2
+
+Acceptance criteria:
+1. GIVEN a report with sections of weights w_i and statuses WHEN completion is computed THEN completion % = round(100 × Σ(w_i × s_i) / Σ w_i) with s = 1 for completed, 0.5 for in_progress, 0 for not_started, read from the `report_progress` view; 0 sections → 0 %
+2. GIVEN `/fr/tableau-de-bord` WHEN it loads THEN each report shows a progress bar, % and counts per state (Non commencé / En cours / Terminé)
+3. GIVEN two browsers on the same dashboard WHEN an expert sets their section to completed THEN the other browser updates the progress bar within 2 s via Supabase Realtime (postgres_changes on report_sections filtered by report_id)
+4. GIVEN a user not in the workspace WHEN they subscribe to the realtime channel THEN they receive no events (RLS-filtered)
+5. GIVEN the realtime connection drops WHEN it reconnects THEN the dashboard refetches report_progress to resync",KRB-EPIC-5,Medium,5,dashboard realtime frontend,
+KRB-5.2.1,Sub-task,"Verify report_progress view math with pgTAP (edge cases: zero weight, all completed, mixed) (scaffolded in initial commit, verify)","view defined in Story 1.2 migrations.
+
+Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-5.2,Medium,,dashboard realtime frontend,
+KRB-5.2.2,Sub-task,Enable Realtime publication for report_sections (supabase_realtime) with RLS,Enable Realtime publication for report_sections (supabase_realtime) with RLS,KRB-5.2,Medium,,dashboard realtime frontend,
+KRB-5.2.3,Sub-task,"Dashboard UI: report cards, progress bar, status counts, per-assignee breakdown","Dashboard UI: report cards, progress bar, status counts, per-assignee breakdown",KRB-5.2,Medium,,dashboard realtime frontend,
+KRB-5.2.4,Sub-task,useReportProgress hook: initial fetch + realtime subscription + resync on reconnect,useReportProgress hook: initial fetch + realtime subscription + resync on reconnect,KRB-5.2,Medium,,dashboard realtime frontend,
+KRB-5.2.5,Sub-task,e2e test with two browser contexts,e2e test with two browser contexts,KRB-5.2,Medium,,dashboard realtime frontend,
+KRB-5.3,Story,Story 5.3: Report Review & Finalization Workflow,"As a workspace owner, I want to move a report through draft, in review and final states, so that the final version is frozen and clearly identified.
+
+Dependencies: 5.1
+
+Acceptance criteria:
+1. GIVEN a report in `draft` WHEN an owner/admin submits it for review THEN status becomes `in_review` and assigned experts are notified
+2. GIVEN a report in `in_review` WHEN the owner finalizes it THEN status becomes `final`, sections become read-only for everyone except owners (who may reopen to draft), and an export snapshot is stored
+3. GIVEN a report in `final` WHEN an expert tries to edit a section THEN RLS rejects the write",KRB-EPIC-5,Medium,3,report workflow,
+KRB-5.3.1,Sub-task,RPC/server action for status transitions with allowed-transition table,RPC/server action for status transitions with allowed-transition table,KRB-5.3,Medium,,report workflow,
+KRB-5.3.2,Sub-task,RLS update: block section writes when parent report is final,RLS update: block section writes when parent report is final,KRB-5.3,Medium,,report workflow,
+KRB-5.3.3,Sub-task,UI badges and actions for report status (Brouillon / En revue / Final),UI badges and actions for report status (Brouillon / En revue / Final),KRB-5.3,Medium,,report workflow,
+KRB-5.3.4,Sub-task,Email/in-app notification on status change,Email/in-app notification on status change,KRB-5.3,Medium,,report workflow,
+KRB-EPIC-6,Epic,"EPIC 6: CI/CD, Observability & Production Deployment","Goal: Take KolabReport from repository to a secure, monitored production deployment with automated quality gates and safe database migration promotion.
+
+Scope:
+- GitHub Actions: lint, typecheck, unit tests, build, migration check, RLS tests, e2e
+- Vercel preview (per PR) and production environments; Supabase staging and production projects
+- Secrets management, error monitoring, logging, uptime, backups and restore drill
+- RLS/security review, Lighthouse PWA/performance/accessibility audit, go-live checklist
+
+Definition of Done:
+- Main branch is protected; merges require green CI and one review
+- Migrations are applied to staging automatically and to production via a gated, audited job
+- Sentry (or equivalent) captures client/server errors in production with source maps
+- PITR/backups enabled and a restore drill has been performed
+- Security review sign-off and go-live checklist completed",,High,,devops production,"CI/CD, Observability & Production Deployment"
+KRB-6.1,Story,Story 6.1: CI Pipeline (GitHub Actions),"As a developer, I want every pull request automatically linted, type-checked, tested, built and migration-checked, so that regressions are caught before merge.
+
+Dependencies: 1.1, 1.2, 1.3
+
+Acceptance criteria:
+1. GIVEN a pull request WHEN CI runs THEN jobs lint, typecheck, unit tests and `next build` pass, with npm cache, in < 10 min
+2. GIVEN a PR touching supabase/migrations WHEN the migration-check job runs THEN it starts Supabase via the CLI, runs `supabase db reset`, `supabase test db` (pgTAP), and fails on generated-types drift (`supabase gen types` diff)
+3. GIVEN the main branch WHEN branch protection is configured THEN merging requires all required checks green and 1 approving review",KRB-EPIC-6,Highest,3,devops ci,
+KRB-6.1.1,Sub-task,"Workflow ci.yml: install, lint, typecheck, test, build","Workflow ci.yml: install, lint, typecheck, test, build",KRB-6.1,Highest,,devops ci,
+KRB-6.1.2,Sub-task,Workflow job: migration check (db reset + pgTAP + types drift),Workflow job: migration check (db reset + pgTAP + types drift),KRB-6.1,Highest,,devops ci,
+KRB-6.1.3,Sub-task,Workflow job: Playwright e2e against preview deployment or local stack,Workflow job: Playwright e2e against preview deployment or local stack,KRB-6.1,Highest,,devops ci,
+KRB-6.1.4,Sub-task,Branch protection rules + CODEOWNERS + PR template,Branch protection rules + CODEOWNERS + PR template,KRB-6.1,Highest,,devops ci,
+KRB-6.1.5,Sub-task,Dependabot/Renovate and `npm audit` / CodeQL scanning,Dependabot/Renovate and `npm audit` / CodeQL scanning,KRB-6.1,Highest,,devops ci,
+KRB-6.2,Story,"Story 6.2: Environments, Secrets & Migration Promotion","As a developer, I want separate staging and production environments with automated, gated migration promotion, so that we can release safely and roll back if needed.
+
+Dependencies: 6.1
+
+Acceptance criteria:
+1. GIVEN a PR WHEN it is opened THEN Vercel creates a preview deployment wired to the staging Supabase project
+2. GIVEN a merge to main WHEN the deploy workflow runs THEN `supabase db push` applies pending migrations to staging, then Vercel deploys to staging/preview
+3. GIVEN a release tag or manual approval (GitHub Environment `production` with required reviewers) WHEN the production workflow runs THEN migrations are applied to the production project first, then Vercel promotes the production deployment
+4. GIVEN secrets (SUPABASE_SERVICE_ROLE_KEY, LLM API keys, DB passwords) WHEN they are configured THEN they live only in Vercel env vars / GitHub Environment secrets, scoped per environment, never in the repo; NEXT_PUBLIC_* contain only public values
+5. GIVEN a bad deployment WHEN rollback is needed THEN Vercel instant rollback is documented and migrations are written forward-compatible (expand/contract)",KRB-EPIC-6,High,5,devops supabase vercel security,
+KRB-6.2.1,Sub-task,"Create Supabase staging and production projects (EU region), configure auth URLs, SMTP, storage bucket","Create Supabase staging and production projects (EU region), configure auth URLs, SMTP, storage bucket",KRB-6.2,High,,devops supabase vercel security,
+KRB-6.2.2,Sub-task,Create Vercel project; map Preview → staging and Production → prod env vars,Create Vercel project; map Preview → staging and Production → prod env vars,KRB-6.2,High,,devops supabase vercel security,
+KRB-6.2.3,Sub-task,"GitHub Environments (staging, production) with secrets and required reviewers","GitHub Environments (staging, production) with secrets and required reviewers",KRB-6.2,High,,devops supabase vercel security,
+KRB-6.2.4,Sub-task,"Deploy workflow: supabase link + db push (staging on main, production on approval)","Deploy workflow: supabase link + db push (staging on main, production on approval)",KRB-6.2,High,,devops supabase vercel security,
+KRB-6.2.5,Sub-task,"Custom domain, HTTPS, security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy)","Custom domain, HTTPS, security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy)",KRB-6.2,High,,devops supabase vercel security,
+KRB-6.2.6,Sub-task,"Document migration guidelines (expand/contract, no destructive changes without backfill) and rollback runbook","Document migration guidelines (expand/contract, no destructive changes without backfill) and rollback runbook",KRB-6.2,High,,devops supabase vercel security,
+KRB-6.3,Story,"Story 6.3: Observability, Error Monitoring & Backups","As a product owner, I want production errors, performance and availability monitored and data backed up, so that incidents are detected quickly and data can be recovered.
+
+Dependencies: 6.2
+
+Acceptance criteria:
+1. GIVEN a runtime error in the browser, a server component or a route handler WHEN it occurs in production THEN it is captured in Sentry with release, environment, user id (no email/PII) and source maps
+2. GIVEN the production site WHEN it is unavailable for > 2 min THEN an uptime monitor alerts the team
+3. GIVEN the production database WHEN backups are configured THEN daily backups + PITR are enabled and a restore to a scratch project has been tested and documented
+4. GIVEN the Storage bucket WHEN a backup strategy is defined THEN a scheduled export or replication of `deliverables` exists, with documented RPO/RTO",KRB-EPIC-6,High,5,devops observability backup,
+KRB-6.3.1,Sub-task,"Integrate Sentry for Next.js (client, server, edge) with source map upload in CI","Integrate Sentry for Next.js (client, server, edge) with source map upload in CI",KRB-6.3,High,,devops observability backup,
+KRB-6.3.2,Sub-task,Structured server logging with request ids; Vercel log drain,Structured server logging with request ids; Vercel log drain,KRB-6.3,High,,devops observability backup,
+KRB-6.3.3,Sub-task,Uptime monitoring + alert routing (email/Slack),Uptime monitoring + alert routing (email/Slack),KRB-6.3,High,,devops observability backup,
+KRB-6.3.4,Sub-task,Enable Supabase PITR / daily backups; perform and document a restore drill,Enable Supabase PITR / daily backups; perform and document a restore drill,KRB-6.3,High,,devops observability backup,
+KRB-6.3.5,Sub-task,Storage backup job for deliverables bucket,Storage backup job for deliverables bucket,KRB-6.3,High,,devops observability backup,
+KRB-6.3.6,Sub-task,Supabase advisors (security & performance) check and DB metrics alerting,Supabase advisors (security & performance) check and DB metrics alerting,KRB-6.3,High,,devops observability backup,
+KRB-6.4,Story,Story 6.4: Security Review & RLS Audit,"As a product owner, I want an independent security review of RLS, storage policies, auth and AI endpoints before launch, so that client data is protected and we meet GDPR expectations.
+
+Dependencies: 2.3, 3.2, 4.2, 5.3
+
+Acceptance criteria:
+1. GIVEN every table, view, function and storage policy WHEN the audit runs THEN each policy is reviewed against the RBAC matrix, pgTAP covers every role × operation, and SECURITY DEFINER functions set search_path and check auth.uid()
+2. GIVEN the anon key and a valid low-privilege session WHEN a tester attempts cross-workspace reads/writes via the REST API, Realtime and Storage THEN all attempts fail
+3. GIVEN the Supabase security advisor WHEN it is run on production THEN no errors remain
+4. GIVEN GDPR requirements WHEN they are reviewed THEN a record of processing, DPA with LLM provider, data retention policy and user data export/deletion procedure are documented",KRB-EPIC-6,Highest,5,security rls audit,
+KRB-6.4.1,Sub-task,RLS/policy review session with checklist and findings log,RLS/policy review session with checklist and findings log,KRB-6.4,Highest,,security rls audit,
+KRB-6.4.2,Sub-task,"Penetration-style tests with anon key across REST, Realtime, Storage","Penetration-style tests with anon key across REST, Realtime, Storage",KRB-6.4,Highest,,security rls audit,
+KRB-6.4.3,Sub-task,"Review service-role usage (server-only, minimal surface)","Review service-role usage (server-only, minimal surface)",KRB-6.4,Highest,,security rls audit,
+KRB-6.4.4,Sub-task,"Review AI endpoints: authz, rate limits, prompt injection, data sent to providers","Review AI endpoints: authz, rate limits, prompt injection, data sent to providers",KRB-6.4,Highest,,security rls audit,
+KRB-6.4.5,Sub-task,"GDPR documentation: processing record, DPA, retention, account deletion flow","GDPR documentation: processing record, DPA, retention, account deletion flow",KRB-6.4,Highest,,security rls audit,
+KRB-6.4.6,Sub-task,Fix findings and re-test,Fix findings and re-test,KRB-6.4,Highest,,security rls audit,
+KRB-6.5,Story,"Story 6.5: Lighthouse PWA, Performance & Accessibility Audit","As a user on a mobile connection, I want a fast, accessible, installable app, so that I can work comfortably from the field, even with poor connectivity.
+
+Dependencies: 5.2
+
+Acceptance criteria:
+1. GIVEN the production build of /fr/connexion and /fr/tableau-de-bord WHEN Lighthouse (mobile) runs THEN Performance ≥ 85, Accessibility ≥ 95, Best Practices ≥ 95, and PWA installability checks pass
+2. GIVEN CI WHEN Lighthouse CI runs on preview deployments THEN it fails if scores drop below thresholds
+3. GIVEN keyboard and screen-reader users WHEN they complete login, upload and generation flows THEN all controls are reachable, labelled in French and announced correctly (WCAG 2.1 AA)",KRB-EPIC-6,Medium,3,pwa performance accessibility,
+KRB-6.5.1,Sub-task,Add Lighthouse CI to GitHub Actions with budgets,Add Lighthouse CI to GitHub Actions with budgets,KRB-6.5,Medium,,pwa performance accessibility,
+KRB-6.5.2,Sub-task,"Fix performance issues (bundle size, images, fonts, RSC boundaries)","Fix performance issues (bundle size, images, fonts, RSC boundaries)",KRB-6.5,Medium,,pwa performance accessibility,
+KRB-6.5.3,Sub-task,Accessibility pass (axe + manual) and fixes,Accessibility pass (axe + manual) and fixes,KRB-6.5,Medium,,pwa performance accessibility,
+KRB-6.5.4,Sub-task,"Verify SW update flow (new version prompt ""Nouvelle version disponible"")","Verify SW update flow (new version prompt ""Nouvelle version disponible"")",KRB-6.5,Medium,,pwa performance accessibility,
+KRB-6.6,Story,Story 6.6: Go-Live Checklist & Launch,"As a product owner, I want a verified go-live checklist and a controlled launch, so that the first client workspaces go live without surprises.
+
+Dependencies: 6.2, 6.3, 6.4, 6.5
+
+Acceptance criteria:
+1. GIVEN the go-live checklist WHEN it is executed THEN every item is checked and signed off (see sub-tasks)
+2. GIVEN production WHEN the smoke test suite runs post-deploy THEN signup, login, workspace creation, upload, parse, AI draft, dashboard and export all pass
+3. GIVEN the first week after launch WHEN hypercare is active THEN errors, AI cost and latency are reviewed daily and issues are triaged",KRB-EPIC-6,Highest,3,production launch,
+KRB-6.6.1,Sub-task,Production env vars and secrets verified; staging keys absent from prod,Production env vars and secrets verified; staging keys absent from prod,KRB-6.6,Highest,,production launch,
+KRB-6.6.2,Sub-task,"Auth: production site URL, redirect allowlist, French email templates, custom SMTP sender domain (SPF/DKIM/DMARC)","Auth: production site URL, redirect allowlist, French email templates, custom SMTP sender domain (SPF/DKIM/DMARC)",KRB-6.6,Highest,,production launch,
+KRB-6.6.3,Sub-task,"Legal pages in French: mentions légales, politique de confidentialité, CGU","Legal pages in French: mentions légales, politique de confidentialité, CGU",KRB-6.6,Highest,,production launch,
+KRB-6.6.4,Sub-task,Seed production global prompt templates and run eval baseline on production model,Seed production global prompt templates and run eval baseline on production model,KRB-6.6,Highest,,production launch,
+KRB-6.6.5,Sub-task,Post-deploy smoke tests on production,Post-deploy smoke tests on production,KRB-6.6,Highest,,production launch,
+KRB-6.6.6,Sub-task,"Launch communication, support channel and hypercare rota","Launch communication, support channel and hypercare rota",KRB-6.6,Highest,,production launch,
