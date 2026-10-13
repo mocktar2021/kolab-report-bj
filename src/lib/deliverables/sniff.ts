@@ -19,7 +19,8 @@ const JPEG = [0xff, 0xd8, 0xff];
 const PDF = ascii("%PDF-");
 
 function decode(bytes: Uint8Array): string {
-  return new TextDecoder("utf-8").decode(bytes).replace(/^﻿/, "");
+  // TextDecoder drops a leading byte order mark.
+  return new TextDecoder("utf-8").decode(bytes);
 }
 
 function isText(bytes: Uint8Array): boolean {
@@ -30,10 +31,36 @@ function isText(bytes: Uint8Array): boolean {
   return !bytes.includes(0);
 }
 
-// Optional XML declaration, comments and a DOCTYPE without an internal subset.
-const XML_PROLOG = String.raw`^\s*(?:<\?xml[^>]*\?>\s*)?(?:<!--[\s\S]*?-->\s*|<!DOCTYPE[^>\[]*>\s*)*`;
-const SVG_ROOT = new RegExp(`${XML_PROLOG}<svg[\\s>]`, "i");
-const DRAWIO_ROOT = new RegExp(`${XML_PROLOG}<(?:mxfile|mxGraphModel)[\\s>]`, "i");
+/**
+ * Name of the root element of an XML text, after any XML declaration,
+ * processing instructions, comments and a DOCTYPE without an internal
+ * subset. Null when the text does not start like that. A plain scan rather
+ * than a regular expression: patterns with repeated comment groups backtrack
+ * exponentially on files made of many comments.
+ */
+export function xmlRootName(text: string): string | null {
+  let index = 0;
+  while (index < text.length) {
+    while (index < text.length && /\s/.test(text.charAt(index))) index++;
+    if (text.startsWith("<?", index)) {
+      const end = text.indexOf("?>", index + 2);
+      if (end === -1) return null;
+      index = end + 2;
+    } else if (text.startsWith("<!--", index)) {
+      const end = text.indexOf("-->", index + 4);
+      if (end === -1) return null;
+      index = end + 3;
+    } else if (text.slice(index, index + 9).toUpperCase() === "<!DOCTYPE") {
+      const end = text.indexOf(">", index);
+      const subset = text.indexOf("[", index);
+      if (end === -1 || (subset !== -1 && subset < end)) return null;
+      index = end + 1;
+    } else {
+      return /^<([A-Za-z_][\w.:-]*)[\s/>]/.exec(text.slice(index, index + 256))?.[1] ?? null;
+    }
+  }
+  return null;
+}
 
 /** Whether the first bytes of a stored file match what its extension promises. */
 export function matchesSignature(signature: FileSignature, head: Uint8Array): boolean {
@@ -55,9 +82,11 @@ export function matchesSignature(signature: FileSignature, head: Uint8Array): bo
     case "webp":
       return startsWith(head, ascii("RIFF")) && startsWith(head, ascii("WEBP"), 8);
     case "svg":
-      return isText(head) && SVG_ROOT.test(decode(head));
-    case "drawio":
-      return isText(head) && DRAWIO_ROOT.test(decode(head));
+      return isText(head) && xmlRootName(decode(head))?.toLowerCase() === "svg";
+    case "drawio": {
+      const root = isText(head) ? xmlRootName(decode(head))?.toLowerCase() : null;
+      return root === "mxfile" || root === "mxgraphmodel";
+    }
     case "text":
       return isText(head);
   }

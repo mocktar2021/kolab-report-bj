@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesSignature, svgHasActiveContent } from "./sniff";
+import { matchesSignature, svgHasActiveContent, xmlRootName } from "./sniff";
 
 const bytes = (...values: number[]) => new Uint8Array(values);
 const text = (value: string) => new TextEncoder().encode(value);
@@ -78,5 +78,38 @@ describe("svgHasActiveContent", () => {
     '<!DOCTYPE svg [<!ENTITY lol "lol">]><svg>&lol;</svg>',
   ])("refuses %s", (svg) => {
     expect(svgHasActiveContent(text(svg))).toBe(true);
+  });
+});
+
+describe("xmlRootName", () => {
+  it.each([
+    ["<svg/>", "svg"],
+    ['<?xml version="1.0"?><?xml-stylesheet href="a.css"?>\n<svg width="1">', "svg"],
+    ['<!-- a --><!-- b -->\n<mxfile host="x">', "mxfile"],
+    ['<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x.dtd"><svg>', "svg"],
+    ['   <svg:svg xmlns:svg="x">', "svg:svg"],
+  ])("finds the root of %j", (text, root) => {
+    expect(xmlRootName(text)).toBe(root);
+  });
+
+  it.each([
+    "",
+    "texte",
+    "<!-- jamais fermé <svg>",
+    "<?xml version",
+    '<!DOCTYPE svg [<!ENTITY x "y">]><svg>',
+    "<1svg>",
+  ])("gives null for %j", (text) => {
+    expect(xmlRootName(text)).toBeNull();
+  });
+
+  // A regular expression with a repeated comment group took minutes on
+  // a few hundred bytes of comments.
+  it("stays fast on files made of comments", () => {
+    const start = performance.now();
+    expect(xmlRootName(`${"<!---->".repeat(100_000)}x`)).toBeNull();
+    expect(matchesSignature("svg", text(`${"<!---->".repeat(500)}x`))).toBe(false);
+    expect(matchesSignature("drawio", text(`${"<!--".repeat(1000)}`))).toBe(false);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 });
