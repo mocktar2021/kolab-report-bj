@@ -1,0 +1,7 @@
+[
+  {
+    "rule": "js/user-controlled-bypass",
+    "path": "src/app/[locale]/auth/callback/route.ts",
+    "reason": "The query string only picks how the e-mail link is checked (token_hash or PKCE code). Supabase Auth verifies the token on both paths and the user gets a session only when that check passes, so nothing is bypassed."
+  }
+]

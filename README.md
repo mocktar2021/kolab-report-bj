@@ -44,7 +44,7 @@ The service worker is disabled in development. To test offline behaviour, run `n
 | `npm run typecheck` | TypeScript without emitting |
 | `npm run db:reset` | Recreate the local database from migrations |
 | `npm run db:push` | Apply migrations to the linked Supabase project |
-| `npm run db:types` | Generate `src/lib/supabase/database.types.ts` |
+| `npm run db:types` | Generate `src/lib/supabase/database.types.ts` (commit it with every migration) |
 | `npm test` | Vitest unit tests |
 | `npm run test:db` | pgTAP RLS tests (needs the local Supabase stack) |
 | `npm run test:e2e` | Playwright end-to-end tests (needs a build and the local Supabase stack) |
@@ -94,6 +94,16 @@ Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/rein
 
 - **pre-commit** formats and lints staged files with lint-staged.
 - **commit-msg** runs the `write-like-mocktar` checker on the message (skipped when Python 3 is missing).
+
+## Continuous integration
+
+GitHub Actions runs on every PR and every push to `master`:
+
+- **Lint, typecheck, unit tests, build**: Prettier, ESLint, TypeScript, Vitest, `npm audit` and `next build`.
+- **Database and end-to-end tests**: starts Supabase, runs `db reset` and the pgTAP suite, fails if `database.types.ts` is out of date, then runs Playwright.
+- **CodeQL**: security queries on the TypeScript code.
+
+Dependabot opens update PRs every Monday. `docs/ci.md` has the details and the branch protection setup.
 
 ## Data model and security
 

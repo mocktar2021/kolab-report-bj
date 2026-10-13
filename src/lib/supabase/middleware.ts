@@ -1,13 +1,14 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { publicEnv } from "@/lib/env";
+import type { Database } from "./database.types";
 
 /**
  * Refreshes the Supabase session cookie on `response` (the response produced
  * by the i18n middleware) and returns the authenticated user, if any.
  */
 export async function updateSession(request: NextRequest, response: NextResponse) {
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,
     publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {

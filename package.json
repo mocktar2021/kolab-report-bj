@@ -16,7 +16,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
+    "db:types": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts && prettier --write src/lib/supabase/database.types.ts",
     "test:e2e": "playwright test",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -80,11 +80,15 @@
   "lint-staged": {
     "*.{ts,tsx,mts,mjs,js}": [
       "prettier --write",
-      "eslint --fix --max-warnings=0",
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
       "sh scripts/check-prose.sh"
     ],
-    "*.{json,css,yml,yaml}": [
+    "*.{json,css}": [
       "prettier --write"
+    ],
+    "*.{yml,yaml}": [
+      "prettier --write",
+      "sh scripts/check-prose.sh"
     ],
     "*.{md,sql,html,toml}": [
       "sh scripts/check-prose.sh"
