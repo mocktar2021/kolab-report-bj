@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Link } from "@/i18n/navigation";
 import type { SectionStatus } from "@/lib/sections";
 import type { WorkspaceRole } from "@/lib/workspaces/roles";
 import { addSection, updateSectionAssignment, type SectionActionState } from "./actions";
@@ -27,12 +28,13 @@ export type SectionRowData = {
 type Assignee = { userId: string; name: string; role: WorkspaceRole };
 
 type SectionListProps = {
+  workspaceId: string;
   sections: SectionRowData[];
   assignees: Assignee[];
   canManage: boolean;
 };
 
-export function SectionList({ sections, assignees, canManage }: SectionListProps) {
+export function SectionList({ workspaceId, sections, assignees, canManage }: SectionListProps) {
   const t = useTranslations("Report");
 
   return (
@@ -55,6 +57,7 @@ export function SectionList({ sections, assignees, canManage }: SectionListProps
           {sections.map((section, index) => (
             <SectionRow
               key={section.id}
+              workspaceId={workspaceId}
               index={index}
               section={section}
               assignees={assignees}
@@ -68,11 +71,13 @@ export function SectionList({ sections, assignees, canManage }: SectionListProps
 }
 
 function SectionRow({
+  workspaceId,
   index,
   section,
   assignees,
   canManage,
 }: {
+  workspaceId: string;
   index: number;
   section: SectionRowData;
   assignees: Assignee[];
@@ -89,7 +94,12 @@ function SectionRow({
         </span>
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-medium leading-snug">
-            <span className="min-w-0 break-words">{section.title}</span>
+            <Link
+              href={`/espaces/${workspaceId}/sections/${section.id}`}
+              className="min-w-0 break-words rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {section.title}
+            </Link>
             {section.mine ? (
               <span className="rounded-full bg-highlight/10 px-2 py-0.5 text-[11px] font-medium text-highlight">
                 {t("yourSection")}
