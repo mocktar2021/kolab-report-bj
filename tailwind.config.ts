@@ -68,7 +68,7 @@ const config: Config = {
       // never goes below 15px. Register new names in src/lib/utils.ts too.
       fontSize: {
         display: [
-          "clamp(2.5rem, 1.25rem + 4.5vw, 4.5rem)",
+          "clamp(2.5rem, 1.5rem + 3.4vw, 4rem)",
           { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "600" },
         ],
         h1: [
@@ -104,9 +104,71 @@ const config: Config = {
       },
       keyframes: {
         shimmer: { "100%": { transform: "translateX(100%)" } },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        // Landing page micro-animations. Each loop holds its end state for
+        // most of the cycle so the motion stays in the background.
+        "assign-drop": {
+          "0%, 12%": { opacity: "0", transform: "translateY(-14px) scale(0.85)" },
+          "24%, 84%": { opacity: "1", transform: "translateY(0) scale(1)" },
+          "96%, 100%": { opacity: "0", transform: "translateY(0) scale(1)" },
+        },
+        "fade-out-hold": {
+          "0%, 12%": { opacity: "1" },
+          "24%, 84%": { opacity: "0" },
+          "96%, 100%": { opacity: "1" },
+        },
+        "fade-in-hold": {
+          "0%, 12%": { opacity: "0" },
+          "24%, 84%": { opacity: "1" },
+          "96%, 100%": { opacity: "0" },
+        },
+        "grow-x": {
+          "0%": { transform: "scaleX(0)" },
+          "30%, 86%": { transform: "scaleX(1)", opacity: "1" },
+          "100%": { transform: "scaleX(1)", opacity: "0" },
+        },
+        "progress-step": {
+          "0%, 12%": { transform: "scaleX(0.6)" },
+          "24%, 84%": { transform: "scaleX(0.8)" },
+          "96%, 100%": { transform: "scaleX(0.6)" },
+        },
+        upload: {
+          "0%": { transform: "scaleX(0.05)" },
+          "70%, 100%": { transform: "scaleX(1)" },
+        },
+        ripple: {
+          "0%": { transform: "scale(0.6)", opacity: "0.45" },
+          "100%": { transform: "scale(1.9)", opacity: "0" },
+        },
+        caret: {
+          "0%, 49%": { opacity: "1" },
+          "50%, 100%": { opacity: "0" },
+        },
       },
       animation: {
         shimmer: "shimmer 1.8s ease-in-out infinite",
+        "accordion-down": "accordion-down 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "accordion-up": "accordion-up 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        float: "float 7s ease-in-out infinite",
+        "assign-drop": "assign-drop 5s cubic-bezier(0.16, 1, 0.3, 1) infinite",
+        "fade-out-hold": "fade-out-hold 5s ease-out infinite",
+        "fade-in-hold": "fade-in-hold 5s ease-out infinite",
+        "grow-x": "grow-x 6s cubic-bezier(0.16, 1, 0.3, 1) infinite",
+        "progress-step": "progress-step 5s cubic-bezier(0.16, 1, 0.3, 1) infinite",
+        upload: "upload 3.2s cubic-bezier(0.65, 0, 0.35, 1) infinite",
+        ripple: "ripple 2.8s cubic-bezier(0, 0, 0.2, 1) infinite",
+        caret: "caret 1s steps(1) infinite",
       },
     },
   },

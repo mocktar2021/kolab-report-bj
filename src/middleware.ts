@@ -5,7 +5,12 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 const handleI18nRouting = createIntlMiddleware(routing);
 
-// Routes reachable without a session (paths without the locale prefix).
+// The locale root (/fr) is the public landing page. Exact match only, so
+// nothing nested under it becomes public by accident.
+const PUBLIC_EXACT_PATHS = ["/"];
+
+// Routes reachable without a session, with everything nested under them
+// (paths without the locale prefix).
 const PUBLIC_PATHS = [
   "/connexion",
   "/inscription",
@@ -22,8 +27,14 @@ function stripLocale(pathname: string) {
 }
 
 function isPublicPath(path: string) {
-  return PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+  return (
+    PUBLIC_EXACT_PATHS.includes(path) ||
+    PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
+  );
 }
+
+// Signed-in users skip the landing, sign-in and sign-up pages.
+const SIGNED_IN_REDIRECT_PATHS = ["/", "/connexion", "/inscription"];
 
 export async function middleware(request: NextRequest) {
   const response = handleI18nRouting(request);
@@ -47,8 +58,7 @@ export async function middleware(request: NextRequest) {
     return redirectWithCookies(url, response);
   }
 
-  // Signed-in users have nothing to do on the sign-in / sign-up pages.
-  if (user && (path === "/connexion" || path === "/inscription")) {
+  if (user && SIGNED_IN_REDIRECT_PATHS.includes(path)) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/tableau-de-bord`;
     url.search = "";

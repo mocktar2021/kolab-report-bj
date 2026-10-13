@@ -12,6 +12,154 @@
     "back": "Retour",
     "signOut": "Se déconnecter"
   },
+  "Landing": {
+    "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
+    "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement en direct.",
+    "skipToContent": "Aller au contenu",
+    "nav": {
+      "label": "Navigation principale",
+      "home": "KolabReport, accueil",
+      "features": "Fonctionnalités",
+      "faq": "Questions fréquentes",
+      "signIn": "Se connecter"
+    },
+    "hero": {
+      "eyebrow": "Rapports d'expertise rédigés en équipe",
+      "title": "Une section par expert. <muted>Un seul rapport à livrer.</muted>",
+      "subtitle": "Découpez le rapport en sections, attribuez-les à vos experts et recueillez leurs livrables au même endroit. L'IA prépare un premier brouillon, vous suivez l'avancement en direct et assemblez le rapport final.",
+      "primaryCta": "Se connecter",
+      "secondaryCta": "Voir les fonctionnalités",
+      "note": "Application web installable sur ordinateur et mobile."
+    },
+    "mockup": {
+      "label": "Aperçu de KolabReport : le plan d'un rapport avec le statut de chaque section, l'avancement global et un brouillon proposé par l'IA.",
+      "breadcrumb": "Rapports",
+      "reportTitle": "Audit énergétique du siège",
+      "reportMeta": "5 sections, 4 experts",
+      "outline": "Plan du rapport",
+      "progress": "Avancement",
+      "progressValue": "60 %",
+      "progressDetail": "2 terminées, 2 en cours",
+      "dueDate": "Échéance : 28 novembre",
+      "columnSection": "Section",
+      "columnExpert": "Expert",
+      "columnStatus": "Statut",
+      "unassigned": "À attribuer",
+      "sections": {
+        "summary": "Synthèse",
+        "context": "Contexte et périmètre",
+        "analysis": "Analyse technique",
+        "finance": "Annexes financières",
+        "recommendations": "Recommandations"
+      },
+      "aiBadge": "IA",
+      "aiTitle": "Brouillon proposé",
+      "aiMeta": "Analyse technique, d'après 3 livrables",
+      "aiExcerpt": "La chaufferie représente 38 % de la consommation du site. Les relevés de février montrent deux pics liés au réglage des brûleurs.",
+      "aiPrompt": "Modèle : analyse de données",
+      "aiReview": "Relire",
+      "uploadTitle": "Livrable ajouté",
+      "uploadFile": "mesures-chaufferie.xlsx"
+    },
+    "features": {
+      "eyebrow": "Fonctionnalités",
+      "title": "Du plan de sections au rapport final",
+      "subtitle": "L'attribution, les fichiers, le premier jet et l'assemblage se font au même endroit.",
+      "assign": {
+        "title": "Sections attribuées aux experts",
+        "description": "Découpez le rapport en sections et confiez chacune à un expert. Un expert ne modifie que les sections qui lui sont attribuées.",
+        "one": "Synthèse",
+        "two": "Analyse technique",
+        "three": "Recommandations",
+        "pending": "À attribuer"
+      },
+      "deliverables": {
+        "title": "Livrables multi-formats",
+        "description": "Word, Excel, PDF, images et schémas draw.io, jusqu'à 50 Mo par fichier. Chaque livrable reste rattaché à sa section.",
+        "docx": "rapport-terrain.docx",
+        "xlsx": "mesures-chaufferie.xlsx",
+        "png": "plan-du-site.png",
+        "drawio": "schema-reseau.drawio",
+        "docxSize": "1,2 Mo",
+        "pngSize": "860 Ko",
+        "drawioSize": "140 Ko"
+      },
+      "ai": {
+        "title": "Brouillons IA depuis la bibliothèque de prompts",
+        "description": "Choisissez un modèle de prompt et l'IA rédige un premier jet à partir des livrables de la section. L'expert le relit avant de l'accepter.",
+        "prompt": "Synthèse de section"
+      },
+      "master": {
+        "title": "Rapport maître et progression en temps réel",
+        "description": "Les sections s'assemblent dans l'ordre du plan. L'avancement se recalcule dès qu'un expert change le statut d'une section.",
+        "progress": "Avancement du rapport",
+        "before": "60 %",
+        "after": "80 %"
+      },
+      "offline": {
+        "title": "Fonctionne hors ligne",
+        "description": "Installez KolabReport sur ordinateur ou mobile. Les pages déjà consultées restent lisibles sans réseau.",
+        "badge": "Hors ligne",
+        "cached": "Plan du rapport disponible"
+      }
+    },
+    "facts": {
+      "title": "KolabReport en bref",
+      "roles": "rôles par espace de travail",
+      "sizeUnit": "Mo",
+      "size": "maximum par livrable",
+      "frenchUnit": "%",
+      "french": "de l'interface en français",
+      "offlineValue": "Hors ligne",
+      "offline": "les pages consultées restent lisibles"
+    },
+    "faq": {
+      "eyebrow": "Questions fréquentes",
+      "title": "Ce qu'il faut savoir avant de commencer",
+      "subtitle": "Sécurité des données, formats acceptés, IA, mode hors ligne et rôles.",
+      "items": {
+        "security": {
+          "question": "Qui peut voir les données de mon espace de travail ?",
+          "answer": "Uniquement les membres de cet espace. Chaque table est protégée par la sécurité au niveau des lignes (RLS) de Postgres : un utilisateur ne lit que les espaces dont il est membre, et un expert ne modifie que les sections qui lui sont attribuées. Les livrables sont stockés dans un espace privé et s'ouvrent uniquement par des liens signés à durée limitée."
+        },
+        "formats": {
+          "question": "Quels formats de fichiers puis-je déposer ?",
+          "answer": "Word (.docx, .doc), Excel (.xlsx, .xls, .csv), PowerPoint (.pptx), PDF, texte et Markdown, images PNG, JPEG, WebP et SVG, et schémas draw.io. Chaque fichier peut peser jusqu'à 50 Mo."
+        },
+        "ai": {
+          "question": "Que fait l'IA avec nos documents ?",
+          "answer": "Elle rédige un brouillon de section à partir du modèle de prompt choisi et des livrables de cette section. Le brouillon est enregistré comme proposition : l'expert l'accepte ou le modifie avant qu'il remplace le contenu de la section. Les clés d'API restent sur le serveur, jamais dans le navigateur."
+        },
+        "offline": {
+          "question": "Puis-je travailler sans connexion ?",
+          "answer": "En partie. KolabReport s'installe comme une application (PWA) et les pages déjà consultées restent lisibles hors ligne. Le dépôt de livrables et la génération de brouillons demandent une connexion."
+        },
+        "roles": {
+          "question": "Quels rôles existent dans un espace de travail ?",
+          "answer": "Quatre rôles : propriétaire, administrateur, expert et lecteur. Propriétaires et administrateurs gèrent les rapports, les sections et les membres. Les experts rédigent les sections qui leur sont attribuées. Les lecteurs consultent sans modifier."
+        },
+        "progress": {
+          "question": "Comment l'avancement d'un rapport est-il calculé ?",
+          "answer": "Chaque section compte selon son poids : une section terminée vaut 100 %, une section en cours 50 % et une section non commencée 0 %. L'avancement du rapport est la moyenne pondérée de ses sections."
+        }
+      }
+    },
+    "cta": {
+      "title": "Votre prochain rapport commence par un plan de sections.",
+      "subtitle": "Connectez-vous pour retrouver vos rapports et l'avancement de chaque section.",
+      "button": "Se connecter"
+    },
+    "footer": {
+      "tagline": "Rapports d'expertise rédigés en équipe, en français.",
+      "product": "Produit",
+      "features": "Fonctionnalités",
+      "faq": "Questions fréquentes",
+      "signIn": "Connexion",
+      "madeBy": "Conçu par <link>Mocktar Technologies</link>",
+      "newTab": "(nouvel onglet)",
+      "rights": "© {year} KolabReport"
+    }
+  },
   "Auth": {
     "signInTitle": "Connexion",
     "signInSubtitle": "Accédez à vos espaces de travail et rapports.",
@@ -22,7 +170,8 @@
     "noAccount": "Pas encore de compte ?",
     "register": "Créer un compte",
     "invalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
-    "invalidInput": "Veuillez saisir une adresse e-mail valide et un mot de passe."
+    "invalidInput": "Veuillez saisir une adresse e-mail valide et un mot de passe.",
+    "backHome": "Retour à l'accueil"
   },
   "Dashboard": {
     "title": "Tableau de bord",
