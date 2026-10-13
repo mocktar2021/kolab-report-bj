@@ -44,7 +44,7 @@ The service worker is disabled in development. To test offline behaviour, run `n
 | `npm run typecheck` | TypeScript without emitting |
 | `npm run db:reset` | Recreate the local database from migrations |
 | `npm run db:push` | Apply migrations to the linked Supabase project |
-| `npm run db:types` | Generate `src/lib/supabase/database.types.ts` |
+| `npm run db:types` | Generate `src/lib/supabase/database.types.ts` (commit it with every migration) |
 | `npm test` | Vitest unit tests |
 | `npm run test:db` | pgTAP RLS tests (needs the local Supabase stack) |
 | `npm run test:e2e` | Playwright end-to-end tests (needs a build and the local Supabase stack) |
