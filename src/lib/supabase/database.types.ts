@@ -332,6 +332,74 @@ export type Database = {
           },
         ];
       };
+      workspace_invitations: {
+        Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string;
+          revoked_at: string | null;
+          role: Database["public"]["Enums"]["workspace_role"];
+          token_hash: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string;
+          revoked_at?: string | null;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          token_hash: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string;
+          revoked_at?: string | null;
+          role?: Database["public"]["Enums"]["workspace_role"];
+          token_hash?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invitations_accepted_by_fkey";
+            columns: ["accepted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_invitations_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workspace_invitations_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       workspace_members: {
         Row: {
           created_at: string;
@@ -454,12 +522,26 @@ export type Database = {
       };
     };
     Functions: {
+      accept_my_pending_invitations: { Args: Record<PropertyKey, never>; Returns: number };
+      accept_workspace_invitation: { Args: { token: string }; Returns: string };
       create_workspace_with_owner: {
         Args: { organization_name: string; report_title: string; workspace_name: string };
         Returns: {
           organization_id: string;
           report_id: string;
           workspace_id: string;
+        }[];
+      };
+      invitation_preview: {
+        Args: { token: string };
+        Returns: {
+          email: string;
+          expires_at: string;
+          invited_by_name: string;
+          organization_name: string;
+          role: Database["public"]["Enums"]["workspace_role"];
+          status: string;
+          workspace_name: string;
         }[];
       };
     };

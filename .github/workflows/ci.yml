@@ -113,7 +113,11 @@ jobs:
             --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
             --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
             > .env.local
-          echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> .env.local
+          {
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+            echo "EMAIL_PROVIDER=mailpit"
+            echo "MAILPIT_URL=http://127.0.0.1:54324"
+          } >> .env.local
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

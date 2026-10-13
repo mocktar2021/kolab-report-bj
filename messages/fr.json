@@ -392,7 +392,13 @@
       "assigneeNotMember": "Cette personne n'est pas propriétaire, administrateur ou expert de l'espace de travail.",
       "forbidden": "Vous n'avez pas les droits pour faire ce changement.",
       "invalidInput": "Vérifiez les informations saisies.",
-      "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant."
+      "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant.",
+      "invitationInvalid": "Ce lien d'invitation n'est pas valide. Demandez une nouvelle invitation.",
+      "invitationUsed": "Cette invitation a déjà été utilisée.",
+      "invitationExpired": "Cette invitation a expiré. Demandez à la personne qui vous a invité de la renvoyer.",
+      "invitationOtherEmail": "Cette invitation est destinée à une autre adresse e-mail.",
+      "alreadyMember": "Cette personne est déjà membre de l'espace de travail.",
+      "invitationPending": "Une invitation est déjà en attente pour cette adresse. Renvoyez-la depuis la liste."
     }
   },
   "WorkspaceWizard": {
@@ -454,7 +460,25 @@
     "leaveDescription": "Vous n'aurez plus accès à cet espace de travail. Vos sections redeviendront non attribuées.",
     "leaveConfirm": "Quitter",
     "cancel": "Annuler",
-    "roleHelp": "Les propriétaires et les administrateurs gèrent les membres, les rapports et les sections. Seul un propriétaire nomme d'autres propriétaires. Un expert rédige les sections qui lui sont attribuées. Un lecteur consulte sans modifier."
+    "roleHelp": "Les propriétaires et les administrateurs gèrent les membres, les rapports et les sections. Seul un propriétaire nomme d'autres propriétaires. Un expert rédige les sections qui lui sont attribuées. Un lecteur consulte sans modifier.",
+    "inviteTitle": "Inviter un membre",
+    "inviteDescription": "La personne reçoit un e-mail avec un lien valable 7 jours. Elle rejoint l'espace avec le rôle choisi.",
+    "inviteEmail": "Adresse e-mail",
+    "inviteEmailPlaceholder": "prenom.nom@exemple.com",
+    "inviteRole": "Rôle",
+    "inviteSubmit": "Envoyer l'invitation",
+    "inviteSent": "Invitation envoyée à {email}.",
+    "inviteNotSent": "L'e-mail n'a pas pu partir. Envoyez ce lien vous-même à {email} :",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié.",
+    "pendingTitle": "Invitations en attente",
+    "pendingEmpty": "Aucune invitation en attente.",
+    "pendingExpires": "Expire le {date}",
+    "pendingExpired": "Expirée",
+    "resend": "Renvoyer",
+    "resendLabel": "Renvoyer l'invitation à {email}",
+    "revoke": "Annuler",
+    "revokeLabel": "Annuler l'invitation de {email}"
   },
   "Report": {
     "metaTitle": "Rapport",
@@ -479,5 +503,30 @@
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
     "addSubmit": "Ajouter"
+  },
+  "Invitation": {
+    "metaTitle": "Invitation",
+    "title": "Rejoindre {workspace}",
+    "description": "{inviter} vous invite en tant que {role}.",
+    "organization": "Organisation : {organization}",
+    "forEmail": "Cette invitation est destinée à {email}.",
+    "expires": "Valable jusqu'au {date}.",
+    "accept": "Rejoindre l'espace",
+    "signUp": "Créer mon compte",
+    "signIn": "J'ai déjà un compte",
+    "signUpHint": "Créez votre compte avec cette adresse. Vous rejoindrez l'espace dès votre première connexion.",
+    "otherAccount": "Vous êtes connecté avec {current}. Déconnectez-vous puis connectez-vous avec {email}.",
+    "unconfirmed": "Confirmez d'abord votre adresse e-mail avec le lien reçu, puis rouvrez cette invitation.",
+    "invalidTitle": "Invitation introuvable",
+    "invalid": "Ce lien d'invitation n'est pas valide. Il a peut-être été annulé ou remplacé par un nouveau. Demandez une nouvelle invitation.",
+    "expiredTitle": "Invitation expirée",
+    "expired": "Cette invitation a expiré. Demandez à la personne qui vous a invité de la renvoyer.",
+    "usedTitle": "Invitation déjà utilisée",
+    "used": "Cette invitation a déjà servi. Connectez-vous pour retrouver l'espace de travail.",
+    "toDashboard": "Aller au tableau de bord",
+    "toSignIn": "Se connecter",
+    "joinedTitle": "Vous avez rejoint {workspace}",
+    "joined": "Vous êtes membre de cet espace de travail.",
+    "open": "Ouvrir l'espace"
   }
 }

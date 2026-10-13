@@ -41,3 +41,17 @@ export async function signedInClient(user: TestUser) {
   if (error) throw error;
   return client;
 }
+
+/** Creates an organization, a workspace and a report owned by `user`. */
+export async function createWorkspaceFor(user: TestUser, workspaceName: string) {
+  const api = await signedInClient(user);
+  const { data, error } = await api
+    .rpc("create_workspace_with_owner", {
+      organization_name: `Cabinet ${workspaceName}`,
+      workspace_name: workspaceName,
+      report_title: `Rapport ${workspaceName}`,
+    })
+    .single();
+  if (error || !data) throw error ?? new Error("create_workspace_with_owner returned nothing");
+  return { api, ...data };
+}

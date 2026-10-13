@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Link } from "@/i18n/navigation";
+import { emailSchema } from "@/lib/auth/schemas";
 import { SignUpForm } from "./sign-up-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -9,10 +10,19 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("signUpTitle") };
 }
 
-export default async function InscriptionPage({ params }: { params: Promise<{ locale: "fr" }> }) {
+export default async function InscriptionPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: "fr" }>;
+  searchParams: Promise<{ email?: string | string[] }>;
+}) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Auth");
+  // ?email= comes from an invitation link: the address is filled in for them.
+  const { email } = await searchParams;
+  const invitedEmail = emailSchema.safeParse(email);
 
   return (
     <AuthShell
@@ -27,7 +37,7 @@ export default async function InscriptionPage({ params }: { params: Promise<{ lo
         </>
       }
     >
-      <SignUpForm />
+      <SignUpForm defaultEmail={invitedEmail.success ? invitedEmail.data : ""} />
     </AuthShell>
   );
 }

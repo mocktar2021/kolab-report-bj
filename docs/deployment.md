@@ -39,6 +39,9 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | **yes**, mark Sensitive | One key per environment |
 | `APP_ENV` | no | `staging` or `production` |
 | `AI_PROVIDER`, `AI_MODEL`, other `AI_*` | no | See `.env.example` |
+| `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation e-mails |
+| `EMAIL_FROM` | no | Sender, for example `KolabReport <noreply@kolabreport.com>`, on a domain verified with the provider |
+| `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
 
 4. Note the **Team ID** (Settings > General, or your account ID on a personal plan) and the **Project ID** (project Settings > General). Create a token in Account Settings > Tokens.
 5. Optional: add a staging domain (for example `staging.kolabreport.com`) to the project, and the production domain (KRB-134). HTTPS is automatic.

@@ -4,11 +4,13 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getPendingInvitations } from "@/lib/invitations/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
 import { canManageMember, grantableRoles, isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
+import { Invitations } from "./invitations";
 import { MemberList } from "./member-list";
 
 export const dynamic = "force-dynamic";
@@ -48,9 +50,10 @@ export default async function MembersPage({
   }
 
   const supabase = await createClient();
-  const [{ data: workspace }, members] = await Promise.all([
+  const [{ data: workspace }, members, pending] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getWorkspaceMembers(workspaceId),
+    getPendingInvitations(workspaceId),
   ]);
   if (!workspace || !members) notFound();
 
@@ -77,6 +80,7 @@ export default async function MembersPage({
       </header>
 
       <MemberList workspaceId={workspaceId} members={rows} grantable={grantableRoles(access.role)} />
+      <Invitations workspaceId={workspaceId} grantable={grantableRoles(access.role)} pending={pending} />
 
       <p className="mt-4 text-xs text-muted-foreground">{t("roleHelp")}</p>
     </div>
