@@ -102,6 +102,12 @@ const config: Config = {
       transitionTimingFunction: {
         "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
+      keyframes: {
+        shimmer: { "100%": { transform: "translateX(100%)" } },
+      },
+      animation: {
+        shimmer: "shimmer 1.8s ease-in-out infinite",
+      },
     },
   },
   plugins: [animate],

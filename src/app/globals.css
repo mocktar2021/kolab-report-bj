@@ -99,6 +99,11 @@
 }
 
 @layer utilities {
+  /* Hover lift for clickable cards. Movement is skipped under reduced motion. */
+  .lift {
+    @apply transition-[transform,box-shadow,border-color,background-color] duration-300 ease-out-expo hover:shadow-lg motion-safe:hover:-translate-y-0.5;
+  }
+
   /* Frosted surface: navigation bars, floating panels, command palette. */
   .glass {
     @apply border border-black/5 bg-white/70 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80;
