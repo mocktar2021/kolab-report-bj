@@ -1,0 +1,89 @@
+"use client";
+
+import { useActionState } from "react";
+import { MailCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { FieldError } from "@/components/auth/field-error";
+import { PasswordInput } from "@/components/auth/password-input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { signUp, type SignUpState } from "./actions";
+
+export function SignUpForm() {
+  const t = useTranslations("Auth");
+  const [state, formAction, pending] = useActionState<SignUpState, FormData>(signUp, { status: "idle" });
+
+  if (state.status === "checkEmail") {
+    return (
+      <div role="status" className="space-y-3">
+        <MailCheck aria-hidden="true" className="size-6 text-primary" />
+        <p className="font-medium">{t("checkEmailTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("checkEmailBody", { email: state.email })}</p>
+        <p className="text-sm text-muted-foreground">{t("checkEmailSpam")}</p>
+      </div>
+    );
+  }
+
+  const errors = state.status === "error" ? state.fieldErrors ?? {} : {};
+  const values = state.status === "error" ? state.values : { fullName: "", email: "" };
+
+  return (
+    <form action={formAction} className="space-y-4" noValidate>
+      <div className="space-y-2">
+        <Label htmlFor="fullName">{t("fullName")}</Label>
+        <Input
+          id="fullName"
+          name="fullName"
+          autoComplete="name"
+          defaultValue={values.fullName}
+          required
+          aria-invalid={Boolean(errors.fullName)}
+          aria-describedby={errors.fullName ? "fullName-error" : undefined}
+        />
+        <FieldError id="fullName-error" message={errors.fullName && t(`errors.${errors.fullName}`)} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">{t("email")}</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          defaultValue={values.email}
+          required
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "email-error" : undefined}
+        />
+        <FieldError id="email-error" message={errors.email && t(`errors.${errors.email}`)} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">{t("password")}</Label>
+        <PasswordInput
+          id="password"
+          name="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+          aria-invalid={Boolean(errors.password)}
+          aria-describedby={errors.password ? "password-error" : "password-hint"}
+        />
+        {errors.password ? (
+          <FieldError id="password-error" message={t(`errors.${errors.password}`)} />
+        ) : (
+          <p id="password-hint" className="text-sm text-muted-foreground">
+            {t("passwordHint")}
+          </p>
+        )}
+      </div>
+      {state.status === "error" && state.formError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t(`errors.${state.formError}`)}
+        </p>
+      ) : null}
+      <Button type="submit" shape="pill" className="h-10 w-full" disabled={pending}>
+        {t("signUpSubmit")}
+      </Button>
+    </form>
+  );
+}
