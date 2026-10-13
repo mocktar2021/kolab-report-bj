@@ -454,7 +454,14 @@ export type Database = {
       };
     };
     Functions: {
-      [_ in never]: never;
+      create_workspace_with_owner: {
+        Args: { organization_name: string; report_title: string; workspace_name: string };
+        Returns: {
+          organization_id: string;
+          report_id: string;
+          workspace_id: string;
+        }[];
+      };
     };
     Enums: {
       parse_status: "pending" | "processing" | "parsed" | "failed";
