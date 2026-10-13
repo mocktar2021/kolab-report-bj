@@ -82,7 +82,7 @@ function InviteForm({ workspaceId, grantable }: { workspaceId: string; grantable
         </div>
         <div className="space-y-2 sm:w-44">
           <Label htmlFor="invite-role">{t("inviteRole")}</Label>
-          <NativeSelect id="invite-role" name="role" defaultValue="expert">
+          <NativeSelect id="invite-role" name="role" defaultValue="expert" selectClassName="h-10">
             {grantable.map((role) => (
               <option key={role} value={role}>
                 {tWorkspaces(`roles.${role}`)}
