@@ -104,7 +104,7 @@ insert into public.deliverables (id, workspace_id, section_id, uploaded_by, stor
    pg_temp.id('w1') || '/' || pg_temp.id('s1') || '/d1-plan.docx', 'plan.docx',
    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 1000);
 
-insert into public.prompt_library (id, workspace_id, title, template) values
-  (pg_temp.id('p_global'), null, 'Modele global', 'Rediger la section {{section_title}}'),
-  (pg_temp.id('p_w1'), pg_temp.id('w1'), 'Modele A', 'Modele propre a A'),
-  (pg_temp.id('p_w2'), pg_temp.id('w2'), 'Modele B', 'Modele propre a B');
+insert into public.prompt_library (id, workspace_id, template_key, title, template, variables) values
+  (pg_temp.id('p_global'), null, 'modele-global', 'Modele global', 'Rediger la section {{section_title}}', '["section_title"]'),
+  (pg_temp.id('p_w1'), pg_temp.id('w1'), 'modele-a', 'Modele A', 'Modele propre a A', '[]'),
+  (pg_temp.id('p_w2'), pg_temp.id('w2'), 'modele-b', 'Modele B', 'Modele propre a B', '[]');
