@@ -33,7 +33,7 @@ export function SignInForm({ redirectTo }: { redirectTo?: string }) {
           {t(state.error)}
         </p>
       ) : null}
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" shape="pill" className="h-10 w-full" disabled={pending}>
         {t("submit")}
       </Button>
     </form>

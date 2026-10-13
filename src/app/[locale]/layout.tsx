@@ -1,12 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Instrument_Sans, Inter_Tight } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { MotionProvider } from "@/components/motion/motion-provider";
+import { THEME_COLORS } from "@/components/theme/theme-config";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+// Inter Tight for body text and UI, Instrument Sans for headings and large
+// numbers (font-display). Both are variable fonts, so one file each.
+const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+});
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -40,8 +50,13 @@ export async function generateMetadata({
   };
 }
 
+// Follows the device setting. ThemeProvider rewrites both tags when the
+// visitor picks a theme by hand.
 export const viewport: Viewport = {
-  themeColor: "#0f766e",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -61,9 +76,13 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
-    <html lang={locale} className={inter.variable} suppressHydrationWarning>
-      <body className="min-h-dvh font-sans">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+    <html lang={locale} className={`${interTight.variable} ${instrumentSans.variable}`} suppressHydrationWarning>
+      <body className="min-h-dvh">
+        <ThemeProvider>
+          <NextIntlClientProvider>
+            <MotionProvider>{children}</MotionProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

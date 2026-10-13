@@ -3,59 +3,284 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Two themes with the same layout and type. next-themes puts .light or
+   * .dark on <html>; :root holds the light values.
+   *
+   * Light: ink #09090B on #FAFAFA, white cards, borders #E4E4E7.
+   * Dark: white on #0E0E0E, cards #161616, borders #262626, muted text
+   * #A1A1A1.
+   *
+   * --primary is the ink pill (black on light, white on dark). --highlight is
+   * the single coral accent: #B93A26 on light (5.4:1 on the background),
+   * #FF8975 on dark (8.4:1). It marks focus, active filters and navigation,
+   * progress strokes and small badges, never large fills. --accent stays
+   * neutral because shadcn components use it for hover backgrounds.
+   */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 98%;
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 175 84% 26%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 10% 3.9%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 10% 3.9%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 4.5% 39%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 10% 3.9%;
+    --highlight: 8.2 65.9% 43.7%;
+    --highlight-foreground: 0 0% 100%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 175 84% 26%;
-    --radius: 0.5rem;
-    --status-not-started: 215 16% 65%;
-    --status-in-progress: 38 92% 50%;
-    --status-completed: 142 71% 36%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 87%;
+    --ring: 8.2 65.9% 43.7%;
+    --radius: 0.75rem;
+    /* Darker than the dark theme values so each dot keeps 3:1 on white. */
+    --status-not-started: 215 16% 57%;
+    --status-in-progress: 32 95% 44%;
+    --status-completed: 161 94% 30%;
+    --shadow-rgb: 9 9 11;
+    --shadow-strength: 1;
   }
 
   .dark {
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 172 66% 50%;
-    --primary-foreground: 222 47% 7%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 45%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 172 66% 50%;
+    --background: 0 0% 5.5%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 8.6%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10.2%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 5.5%;
+    --secondary: 0 0% 12.2%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 0% 13.5%;
+    --accent-foreground: 0 0% 100%;
+    --highlight: 8.7 100% 72.9%;
+    --highlight-foreground: 0 0% 5.5%;
+    --destructive: 0 86% 70%;
+    --destructive-foreground: 0 0% 5.5%;
+    --border: 0 0% 15%;
+    --input: 0 0% 19%;
+    --ring: 8.7 100% 72.9%;
+    --status-not-started: 215 20% 65%;
+    --status-in-progress: 43 96% 56%;
+    --status-completed: 158 64% 52%;
+    --shadow-rgb: 0 0 0;
+    --shadow-strength: 3;
   }
 
   * {
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Keeps anchors and keyboard focus clear of the sticky headers. */
+    scroll-padding-top: 5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-body text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Fallback ring for links and controls that do not set their own. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: hsl(var(--highlight) / 0.22);
+  }
+}
+
+@layer utilities {
+  /* Hover lift for clickable cards. Movement is skipped under reduced motion. */
+  .lift {
+    @apply transition-[transform,box-shadow,border-color,background-color] duration-300 ease-out-expo hover:shadow-lg motion-safe:hover:-translate-y-0.5;
+  }
+
+  /*
+   * Card surface. Flat white on the light theme. On the dark theme a faint
+   * warm light comes from the top-left and the top edge is a little brighter,
+   * like the cards of the Paymark reference. Pair it with the border class.
+   */
+  .surface-card {
+    background-color: hsl(var(--card));
+  }
+
+  /* :where() keeps this at zero specificity, so border-* utilities still win. */
+  :where(.dark .surface-card) {
+    background-image:
+      radial-gradient(120% 90% at 0% 0%, rgb(255 236 224 / 0.05), transparent 55%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 45%);
+    border-color: rgb(255 255 255 / 0.07);
+    border-top-color: rgb(255 255 255 / 0.11);
+  }
+
+  /*
+   * Floating UI card used in the landing illustrations: white with a soft
+   * layered shadow on the light theme, a dark gradient with a brighter top
+   * edge and a deep shadow on the dark theme.
+   */
+  .surface-float {
+    background-color: hsl(var(--card));
+    box-shadow:
+      0 1px 2px rgb(9 9 11 / 0.04),
+      0 8px 20px -6px rgb(9 9 11 / 0.08),
+      0 28px 56px -18px rgb(9 9 11 / 0.16);
+  }
+
+  :where(.dark .surface-float) {
+    background-image:
+      radial-gradient(110% 80% at 0% 0%, rgb(255 238 226 / 0.06), transparent 60%),
+      linear-gradient(165deg, #1d1d1d 0%, #151515 55%, #121212 100%);
+    border-color: rgb(255 255 255 / 0.08);
+    border-top-color: rgb(255 255 255 / 0.13);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.03),
+      0 30px 60px -20px rgb(0 0 0 / 0.75);
+  }
+
+  /*
+   * Large landing card: light falls from the top-left corner, with two soft
+   * beams drawn by ::before. Needs position: relative and overflow: hidden.
+   */
+  .surface-feature {
+    background-image:
+      radial-gradient(70% 90% at 0% 0%, rgb(255 222 204 / 0.5), transparent 62%),
+      linear-gradient(140deg, #ffffff 0%, #f7f6f5 100%);
+  }
+
+  .surface-feature::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      118deg,
+      transparent 6%,
+      rgb(255 255 255 / 0.75) 11%,
+      transparent 17%,
+      transparent 21%,
+      rgb(255 255 255 / 0.55) 25%,
+      transparent 31%
+    );
+    mask-image: radial-gradient(60% 70% at 8% 0%, #000 0%, transparent 75%);
+  }
+
+  .dark .surface-feature {
+    background-image:
+      radial-gradient(70% 90% at 0% 0%, rgb(255 232 214 / 0.11), transparent 60%),
+      linear-gradient(140deg, #1f1d1b 0%, #151515 48%, #111111 100%);
+  }
+
+  .dark .surface-feature::before {
+    background: linear-gradient(
+      118deg,
+      transparent 6%,
+      rgb(255 244 232 / 0.07) 11%,
+      transparent 17%,
+      transparent 21%,
+      rgb(255 244 232 / 0.05) 25%,
+      transparent 31%
+    );
+  }
+
+  :where(.dark .surface-feature) {
+    border-color: rgb(255 255 255 / 0.07);
+    border-top-color: rgb(255 255 255 / 0.1);
+  }
+
+  /* Inset area inside a feature card where the product mockup sits. */
+  .surface-panel {
+    background-image:
+      radial-gradient(80% 60% at 50% 0%, rgb(255 255 255 / 0.9), transparent 70%),
+      linear-gradient(180deg, #f4f4f5 0%, #eeeef0 100%);
+  }
+
+  .dark .surface-panel {
+    background-image:
+      radial-gradient(80% 60% at 50% 0%, rgb(255 240 230 / 0.05), transparent 70%),
+      linear-gradient(180deg, #121212 0%, #0f0f0f 100%);
+  }
+
+  :where(.dark .surface-panel) {
+    border-color: rgb(255 255 255 / 0.06);
+  }
+
+  /* Warm light at the top of a page: lilac on the left, ember in the middle. */
+  .bg-glow {
+    background-image:
+      radial-gradient(42% 60% at 20% 0%, rgb(205 184 230 / 0.5), transparent 70%),
+      radial-gradient(48% 58% at 56% 0%, rgb(247 205 190 / 0.45), transparent 70%),
+      radial-gradient(30% 45% at 90% 0%, rgb(236 214 206 / 0.4), transparent 70%);
+  }
+
+  .dark .bg-glow {
+    background-image:
+      radial-gradient(38% 58% at 22% 0%, rgb(152 120 172 / 0.8), transparent 70%),
+      radial-gradient(46% 62% at 54% 0%, rgb(154 98 94 / 0.8), transparent 72%),
+      radial-gradient(34% 50% at 88% 0%, rgb(110 76 70 / 0.5), transparent 70%),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.05), transparent 75%);
+  }
+
+  /* Ember light rising from the bottom of a section (final call to action). */
+  .bg-glow-bottom {
+    background-image: radial-gradient(55% 70% at 50% 100%, rgb(247 205 190 / 0.55), transparent 72%);
+  }
+
+  .dark .bg-glow-bottom {
+    background-image: radial-gradient(55% 70% at 50% 100%, rgb(120 72 62 / 0.45), transparent 72%);
+  }
+
+  /* Grid lines for the perspective floor of the final call to action. */
+  .bg-floor-grid {
+    background-image:
+      linear-gradient(to right, rgb(9 9 11 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(9 9 11 / 0.08) 1px, transparent 1px);
+    background-size: 64px 40px;
+  }
+
+  .dark .bg-floor-grid {
+    background-image:
+      linear-gradient(to right, rgb(255 214 200 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 214 200 / 0.08) 1px, transparent 1px);
+  }
+
+  /* Stroke color of the edge lines: grooves darker than the glow behind them. */
+  .text-edge-line {
+    color: rgb(9 9 11 / 0.12);
+  }
+
+  .dark .text-edge-line {
+    color: rgb(0 0 0 / 0.9);
   }
 }

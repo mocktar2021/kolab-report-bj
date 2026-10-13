@@ -12,6 +12,208 @@
     "back": "Retour",
     "signOut": "Se déconnecter"
   },
+  "Theme": {
+    "label": "Thème",
+    "current": "Thème : {theme}",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "Landing": {
+    "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
+    "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement section par section.",
+    "skipToContent": "Aller au contenu",
+    "nav": {
+      "label": "Navigation principale",
+      "home": "KolabReport, accueil",
+      "features": "Fonctionnalités",
+      "faq": "Questions fréquentes",
+      "signIn": "Se connecter"
+    },
+    "hero": {
+      "title": "<line>Une section par expert.</line> <line>Un seul rapport à livrer.</line>",
+      "subtitle": "Attribuez chaque section à un expert, recueillez ses livrables et partez d'un brouillon préparé par l'IA. Vous suivez l'avancement jusqu'au rapport final.",
+      "primaryCta": "Se connecter",
+      "secondaryCta": "Voir les fonctionnalités"
+    },
+    "sample": {
+      "reportTitle": "Audit énergétique du siège",
+      "sections": {
+        "summary": "Synthèse",
+        "context": "Contexte et périmètre",
+        "analysis": "Analyse technique",
+        "finance": "Annexes financières",
+        "recommendations": "Recommandations"
+      }
+    },
+    "heroCards": {
+      "label": "Aperçu de KolabReport sur un rapport d'exemple : avancement à 60 %, statut des sections, livrable ajouté, brouillon proposé par l'IA et experts du rapport.",
+      "progress": "Avancement",
+      "progressValue": "60 %",
+      "due": "Échéance : 28 nov.",
+      "legendCompleted": "2 terminées",
+      "legendInProgress": "2 en cours",
+      "legendNotStarted": "1 non commencée",
+      "sectionsTitle": "Sections",
+      "sectionsMeta": "5 sections, 4 experts",
+      "uploadTitle": "Livrable ajouté",
+      "uploadFile": "mesures-chaufferie.xlsx",
+      "uploadMeta": "Analyse technique, 1,2 Mo",
+      "aiBadge": "IA",
+      "aiTitle": "Brouillon proposé",
+      "aiMeta": "Analyse technique, d'après 3 livrables",
+      "aiExcerpt": "La chaufferie représente 38 % de la consommation du site. Les relevés de février montrent deux pics liés au réglage des brûleurs.",
+      "aiReview": "Relire",
+      "expertsTitle": "Experts du rapport",
+      "expertsMeta": "4 experts sur 5 sections",
+      "outlineTitle": "Plan du rapport",
+      "doneTitle": "Section terminée",
+      "doneMeta": "Contexte, par Mathieu Bello",
+      "acceptedTitle": "Brouillon accepté",
+      "acceptedMeta": "Synthèse, relu par Aïcha Kossou"
+    },
+    "formats": {
+      "title": "Livrables acceptés, jusqu'à 50 Mo par fichier",
+      "items": {
+        "word": "Word",
+        "excel": "Excel",
+        "powerpoint": "PowerPoint",
+        "pdf": "PDF",
+        "images": "Images",
+        "drawio": "draw.io"
+      }
+    },
+    "features": {
+      "title": "Du plan de sections au rapport final",
+      "subtitle": "L'attribution, les fichiers et le premier jet se font au même endroit.",
+      "assign": {
+        "title": "Sections attribuées aux experts",
+        "description": "Découpez le rapport en sections et confiez chacune à un expert. Un expert ne modifie que les sections qui lui sont attribuées.",
+        "cta": "Voir les livrables",
+        "outline": "Plan du rapport",
+        "unassigned": "À attribuer",
+        "assignedTo": "Attribuée à Fatou Dossou"
+      },
+      "deliverables": {
+        "title": "Livrables multi-formats",
+        "description": "Word, Excel, PDF, images et schémas draw.io, jusqu'à 50 Mo par fichier. Chaque livrable reste rattaché à sa section.",
+        "cta": "Voir les brouillons IA",
+        "listTitle": "Livrables de la section",
+        "listMeta": "Analyse technique",
+        "docx": "rapport-terrain.docx",
+        "xlsx": "mesures-chaufferie.xlsx",
+        "pdf": "releves-fevrier.pdf",
+        "drawio": "schema-reseau.drawio",
+        "docxSize": "1,2 Mo",
+        "xlsxSize": "1,2 Mo",
+        "pdfSize": "3,4 Mo",
+        "drawioSize": "140 Ko",
+        "uploading": "Téléversement",
+        "uploadFile": "plan-du-site.png",
+        "uploadValue": "68 %"
+      },
+      "ai": {
+        "title": "Brouillons IA depuis la bibliothèque de prompts",
+        "description": "Choisissez un modèle de prompt et l'IA rédige un premier jet à partir des livrables de la section. L'expert le relit avant de l'accepter.",
+        "cta": "Se connecter",
+        "libraryTitle": "Bibliothèque de prompts",
+        "prompts": {
+          "summary": {
+            "name": "Synthèse de section",
+            "hint": "Résume les livrables en une page"
+          },
+          "data": {
+            "name": "Analyse de données",
+            "hint": "Lit les tableaux et décrit les écarts"
+          },
+          "recommendations": {
+            "name": "Recommandations",
+            "hint": "Propose des actions par priorité"
+          }
+        },
+        "badge": "IA",
+        "draftTitle": "Brouillon proposé",
+        "excerpt": "Deux pics de consommation en février, les 6 et 19, liés au réglage des brûleurs.",
+        "review": "Relire"
+      }
+    },
+    "progress": {
+      "title": "Le rapport maître se construit section par section",
+      "subtitle": "Les sections s'assemblent dans l'ordre du plan. L'avancement du rapport suit le statut et le poids de chaque section.",
+      "cta": "Se connecter",
+      "outlineTitle": "Rapport maître",
+      "barsTitle": "Avancement par section",
+      "ringTitle": "Avancement du rapport",
+      "statusTitle": "Statut des sections"
+    },
+    "bento": {
+      "title": "Vos rapports restent dans votre espace de travail",
+      "subtitle": "Des rôles clairs, des données isolées par espace et les pages déjà consultées lisibles hors ligne.",
+      "roles": {
+        "title": "Quatre rôles",
+        "description": "Propriétaire, administrateur, expert et lecteur. Chacun voit et modifie ce que son rôle permet.",
+        "owner": "Propriétaire",
+        "admin": "Administrateur",
+        "expert": "Expert",
+        "viewer": "Lecteur"
+      },
+      "offline": {
+        "title": "Lisible hors ligne",
+        "description": "Installez KolabReport sur ordinateur ou mobile. Les pages déjà consultées restent lisibles sans réseau.",
+        "badge": "Hors ligne",
+        "cached": "Plan du rapport disponible"
+      },
+      "security": {
+        "title": "Données isolées par espace de travail",
+        "description": "La sécurité au niveau des lignes de Postgres protège chaque table. Les livrables s'ouvrent par des liens signés à durée limitée."
+      }
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "subtitle": "Sécurité des données, formats acceptés, IA, mode hors ligne et rôles.",
+      "items": {
+        "security": {
+          "question": "Qui peut voir les données de mon espace de travail ?",
+          "answer": "Uniquement les membres de cet espace. Chaque table est protégée par la sécurité au niveau des lignes (RLS) de Postgres : un utilisateur ne lit que les espaces dont il est membre, et un expert ne modifie que les sections qui lui sont attribuées. Les livrables sont stockés dans un espace privé et s'ouvrent uniquement par des liens signés à durée limitée."
+        },
+        "formats": {
+          "question": "Quels formats de fichiers puis-je déposer ?",
+          "answer": "Word (.docx, .doc), Excel (.xlsx, .xls, .csv), PowerPoint (.pptx), PDF, texte et Markdown, images PNG, JPEG, WebP et SVG, et schémas draw.io. Chaque fichier peut peser jusqu'à 50 Mo."
+        },
+        "ai": {
+          "question": "Que fait l'IA avec nos documents ?",
+          "answer": "Elle rédige un brouillon de section à partir du modèle de prompt choisi et des livrables de cette section. Le brouillon est enregistré comme proposition : l'expert l'accepte ou le modifie avant qu'il remplace le contenu de la section. Les clés d'API restent sur le serveur, jamais dans le navigateur."
+        },
+        "offline": {
+          "question": "Puis-je travailler sans connexion ?",
+          "answer": "En partie. KolabReport s'installe comme une application (PWA) et les pages déjà consultées restent lisibles hors ligne. Le dépôt de livrables et la génération de brouillons demandent une connexion."
+        },
+        "roles": {
+          "question": "Quels rôles existent dans un espace de travail ?",
+          "answer": "Quatre rôles : propriétaire, administrateur, expert et lecteur. Propriétaires et administrateurs gèrent les rapports, les sections et les membres. Les experts rédigent les sections qui leur sont attribuées. Les lecteurs consultent sans modifier."
+        },
+        "progress": {
+          "question": "Comment l'avancement d'un rapport est-il calculé ?",
+          "answer": "Chaque section compte selon son poids : une section terminée vaut 100 %, une section en cours 50 % et une section non commencée 0 %. L'avancement du rapport est la moyenne pondérée de ses sections."
+        }
+      }
+    },
+    "cta": {
+      "title": "Votre prochain rapport commence par un plan de sections.",
+      "subtitle": "Connectez-vous pour retrouver vos rapports et l'avancement de chaque section.",
+      "button": "Se connecter"
+    },
+    "footer": {
+      "tagline": "Rapports d'expertise rédigés en équipe, en français.",
+      "product": "Produit",
+      "features": "Fonctionnalités",
+      "faq": "Questions fréquentes",
+      "signIn": "Connexion",
+      "madeBy": "Conçu par <link>Mocktar Technologies</link>",
+      "newTab": "(nouvel onglet)",
+      "rights": "© {year} KolabReport"
+    }
+  },
   "Auth": {
     "signInTitle": "Connexion",
     "signInSubtitle": "Accédez à vos espaces de travail et rapports.",
@@ -22,12 +224,90 @@
     "noAccount": "Pas encore de compte ?",
     "register": "Créer un compte",
     "invalidCredentials": "Adresse e-mail ou mot de passe incorrect.",
-    "invalidInput": "Veuillez saisir une adresse e-mail valide et un mot de passe."
+    "invalidInput": "Veuillez saisir une adresse e-mail valide et un mot de passe.",
+    "backHome": "Retour à l'accueil"
+  },
+  "AppShell": {
+    "skipToContent": "Aller au contenu",
+    "navLabel": "Navigation de l'application",
+    "home": "KolabReport, tableau de bord",
+    "dashboard": "Tableau de bord",
+    "statusGroup": "Sections",
+    "search": "Rechercher",
+    "searchLabel": "Ouvrir la palette de commandes",
+    "collapse": "Réduire le menu",
+    "expand": "Déployer le menu",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "menuTitle": "Menu",
+    "menuDescription": "Pages et filtres du tableau de bord."
+  },
+  "CommandPalette": {
+    "title": "Palette de commandes",
+    "description": "Recherchez une page, un filtre ou une action, puis validez avec Entrée.",
+    "placeholder": "Rechercher une action…",
+    "empty": "Aucune action ne correspond à votre recherche.",
+    "navigation": "Navigation",
+    "goToDashboard": "Aller au tableau de bord",
+    "filtersHeading": "Filtrer les sections",
+    "filters": {
+      "not_started": "Sections non commencées",
+      "in_progress": "Sections en cours",
+      "completed": "Sections terminées"
+    },
+    "appearance": "Apparence",
+    "themes": {
+      "light": "Passer au thème clair",
+      "dark": "Passer au thème sombre",
+      "system": "Suivre le thème du système"
+    },
+    "currentTheme": "Thème actuel",
+    "account": "Compte",
+    "signOut": "Se déconnecter",
+    "hintNavigate": "naviguer",
+    "hintSelect": "valider",
+    "hintClose": "fermer"
   },
   "Dashboard": {
     "title": "Tableau de bord",
-    "welcome": "Bienvenue, {name}",
-    "emptyState": "Aucun espace de travail pour le moment."
+    "greeting": "Bonjour, {name}",
+    "subtitle": "Suivez l'avancement des sections de tous vos rapports.",
+    "kpiLabel": "Indicateurs des sections",
+    "share": "{percent} du total",
+    "activeFilter": "Filtre actif",
+    "completion": "Avancement global",
+    "completionHint": "{count, plural, =0 {Aucun rapport avec des sections} one {Moyenne de # rapport} other {Moyenne de # rapports}}",
+    "filters": {
+      "label": "Filtrer par statut",
+      "all": "Toutes",
+      "not_started": "Non commencées",
+      "in_progress": "En cours",
+      "completed": "Terminées"
+    },
+    "table": {
+      "title": "Sections",
+      "count": "{count, plural, =0 {Aucune section} one {# section} other {# sections}}",
+      "caption": "Sections de vos rapports, de la plus récemment modifiée à la plus ancienne",
+      "section": "Section",
+      "report": "Rapport",
+      "expert": "Expert",
+      "status": "Statut",
+      "updatedAt": "Mise à jour",
+      "unassigned": "Non attribuée",
+      "truncated": "Affichage des {shown} sections modifiées le plus récemment, sur {total}."
+    },
+    "empty": {
+      "title": "Aucune section pour le moment",
+      "description": "Les sections apparaissent ici dès qu'un rapport de votre espace de travail est découpé. Demandez à un administrateur de l'espace de vous attribuer une section.",
+      "filteredTitle": "Aucune section « {status} »",
+      "filteredDescription": "Aucune section n'a ce statut pour le moment. Affichez toutes les sections pour voir le reste du travail.",
+      "clearFilter": "Afficher toutes les sections"
+    },
+    "error": {
+      "title": "Impossible de charger les sections",
+      "description": "La base de données ne répond pas. Rechargez la page dans un instant.",
+      "retry": "Recharger la page"
+    }
   },
   "SectionStatus": {
     "not_started": "Non commencée",

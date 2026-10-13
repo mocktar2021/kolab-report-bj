@@ -303,7 +303,7 @@ Reference values: `section_status` = not_started | in_progress | completed; `rep
 
 **Issue ID:** `KRB-3.1` · **Parent:** `KRB-EPIC-3` · **Priority:** High · **Story points:** 8 · **Dependencies:** 1.2, 2.2 · **Labels:** `deliverables storage security backend`
 
-> As a assigned expert, I want to upload .docx, .xlsx, images and diagram files directly to secure cloud storage, so that my deliverables are stored safely and quickly regardless of file size.
+> As an assigned expert, I want to upload .docx, .xlsx, images and diagram files directly to secure cloud storage, so that my deliverables are stored safely and quickly regardless of file size.
 
 **Acceptance criteria**
 
@@ -328,7 +328,7 @@ Reference values: `section_status` = not_started | in_progress | completed; `rep
 
 **Issue ID:** `KRB-3.2` · **Parent:** `KRB-EPIC-3` · **Priority:** High · **Story points:** 8 · **Dependencies:** 3.1 · **Labels:** `deliverables frontend parsing`
 
-> As a assigned expert, I want a dedicated workspace for my section where I manage deliverables and preview their parsed content, so that I can check what the AI will use before generating a draft.
+> As an assigned expert, I want a dedicated workspace for my section where I manage deliverables and preview their parsed content, so that I can check what the AI will use before generating a draft.
 
 **Acceptance criteria**
 
@@ -400,7 +400,7 @@ Reference values: `section_status` = not_started | in_progress | completed; `rep
 
 **Issue ID:** `KRB-4.2` · **Parent:** `KRB-EPIC-4` · **Priority:** High · **Story points:** 13 · **Dependencies:** 3.2, 4.1 · **Labels:** `ai llm generation backend evaluation`
 
-> As a assigned expert, I want to generate a structured draft of my section from a selected template and my parsed deliverables, so that I start from a solid, consistent draft instead of a blank page.
+> As an assigned expert, I want to generate a structured draft of my section from a selected template and my parsed deliverables, so that I start from a solid, consistent draft instead of a blank page.
 
 **Acceptance criteria**
 
