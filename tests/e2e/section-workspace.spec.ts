@@ -139,15 +139,32 @@ test("a file that cannot be read shows an error and can be retried", async ({ pa
     broken.getByText("Le fichier est endommagé ou n'est pas un document Office valide."),
   ).toBeVisible();
 
+  const brokenRow = async () => {
+    const { data } = await adminClient()
+      .from("deliverables")
+      .select("parse_status, parse_error, updated_at")
+      .eq("section_id", setup.sectionId)
+      .eq("file_name", "Annexe abîmée.docx")
+      .single();
+    return data;
+  };
+  const before = await brokenRow();
+  expect(before?.parse_status).toBe("failed");
+
+  // "Échec" is already on screen, so wait for the second read to fail in the
+  // database: the claim and the failure both move updated_at.
   await broken.getByRole("button", { name: "Relancer l'analyse de Annexe abîmée.docx" }).click();
+  await expect
+    .poll(
+      async () => {
+        const row = await brokenRow();
+        return row?.updated_at !== before?.updated_at && row?.parse_status === "failed";
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+  expect((await brokenRow())?.parse_error).toBe("corrupt");
   await expect(broken.getByText("Échec")).toBeVisible({ timeout: 30_000 });
-  const { data: row } = await adminClient()
-    .from("deliverables")
-    .select("parse_status, parse_error")
-    .eq("section_id", setup.sectionId)
-    .eq("file_name", "Annexe abîmée.docx")
-    .single();
-  expect(row).toEqual({ parse_status: "failed", parse_error: "corrupt" });
 });
 
 test("the expert sets the section status and deletes a file", async ({ page }) => {
