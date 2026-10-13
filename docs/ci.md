@@ -25,6 +25,8 @@ Both jobs run on every PR, not only on PRs that touch `supabase/`, so they can b
 
 Runs the `security-extended` queries on JavaScript and TypeScript on pushes to `master`, on PRs that touch code, and every Monday. The repo is private, so uploading to the Security tab needs GitHub Code Security. Until it is on, the results stay in the run: they are listed in the job summary, kept as a SARIF artifact, and any finding fails the job.
 
+A finding that was reviewed and judged safe goes in `.github/codeql/accepted-findings.json` with its rule, file and the reason. The job then skips it. Keep that list short and review it when the file changes.
+
 ## Dependabot (`.github/dependabot.yml`)
 
 Checks npm packages and GitHub Actions every Monday. Minor and patch bumps come grouped in one PR for production packages and one for dev packages. Majors come one by one, at most 5 open at a time. Actions are pinned to a commit SHA with the version in a comment, and Dependabot keeps both up to date.

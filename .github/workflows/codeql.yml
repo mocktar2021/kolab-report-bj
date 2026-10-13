@@ -62,10 +62,17 @@ jobs:
           if-no-files-found: ignore
 
       - name: Fail on findings
+        # Findings reviewed and judged safe are listed with the reason in
+        # .github/codeql/accepted-findings.json (matched on rule and file).
         run: |
-          findings=$(jq -r '.runs[].results[]? | "\(.ruleId): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) \(.message.text | split("\n")[0])"' sarif/*.sarif)
+          findings=$(jq -r --slurpfile accepted .github/codeql/accepted-findings.json '
+            .runs[].results[]? | . as $r
+            | ($r.locations[0].physicalLocation.artifactLocation.uri | gsub("%5B"; "[") | gsub("%5D"; "]")) as $path
+            | select(any($accepted[0][]; .rule == $r.ruleId and .path == $path) | not)
+            | "\($r.ruleId): \($path):\($r.locations[0].physicalLocation.region.startLine) \($r.message.text | split("\n")[0])"
+          ' sarif/*.sarif)
           if [ -z "$findings" ]; then
-            echo "No CodeQL findings." >> "$GITHUB_STEP_SUMMARY"
+            echo "No CodeQL findings outside .github/codeql/accepted-findings.json." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           {
