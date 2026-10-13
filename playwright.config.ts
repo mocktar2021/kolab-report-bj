@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// The tests reach Supabase directly for setup (see tests/e2e/supabase.ts).
+// CI writes .env.local from `supabase status`; locally it is the app's own.
+try {
+  process.loadEnvFile(".env.local");
+} catch {
+  // No .env.local: rely on the environment.
+}
+
 /**
  * End-to-end tests run against a production build and the local Supabase
  * stack (`npx supabase start`), whose Mailpit inbox receives the auth e-mails.

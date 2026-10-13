@@ -66,7 +66,16 @@ docs/jira/                       Product backlog and Jira import file
 
 ## Routing and localization
 
-French is the only locale. Every page lives under `/fr`, and `/` redirects there. Unauthenticated visitors are redirected to `/fr/connexion?redirectTo=...`. Public routes are listed in `src/middleware.ts`. To add a locale later, extend `routing.locales` in `src/i18n/routing.ts` and add `messages/<locale>.json`.
+French is the only locale. Every page lives under `/fr`, and `/` redirects there. Unauthenticated visitors are redirected to `/fr/connexion?next=...`. Public routes are listed in `src/middleware.ts`. Signed-in pages live in the `src/app/[locale]/(app)` route group, which adds the app shell:
+
+| Route | Page |
+| --- | --- |
+| `/fr/tableau-de-bord` | Dashboard of the current workspace, or the "create your first workspace" screen |
+| `/fr/espaces/nouveau` | Wizard: organization, workspace, first report |
+| `/fr/espaces/{id}/membres` | Members and roles (owners and admins) |
+| `/fr/rapports/{id}` | Report sections, with assignment and weights for owners and admins |
+
+The workspace picked in the sidebar switcher is kept in the `kr-espace` cookie. The server checks the membership each time it reads it. To add a locale later, extend `routing.locales` in `src/i18n/routing.ts` and add `messages/<locale>.json`.
 
 ## Authentication
 
@@ -86,7 +95,8 @@ Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/rein
 | End-to-end | `tests/e2e/` | `npm run build && npm run test:e2e` |
 
 - The RLS suite checks every table for the owner, admin, expert and viewer roles, a member of another tenant, a user without workspace and signed-out visitors. Add a test file with every new table.
-- The end-to-end suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password.
+- The end-to-end suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password. It also creates a workspace with the wizard and checks the roles: assignment by the owner, admins kept away from owners, read-only experts and viewers.
+- The workspace tests create users with the service-role key, so `.env.local` needs `SUPABASE_SERVICE_ROLE_KEY` (from `npx supabase status`). `playwright.config.ts` loads `.env.local`.
 
 ## Git hooks
 
@@ -112,6 +122,10 @@ Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports
 - Every tenant row carries `workspace_id`, and RLS is enabled on every table.
 - Roles per workspace: `owner`, `admin`, `expert`, `viewer`.
 - Owners and admins manage reports, sections and members. Experts read their workspace and write only to sections assigned to them. A trigger blocks experts from reassigning, moving or re-weighting sections.
+- `create_workspace_with_owner()` creates the organization, the workspace and the first report in one transaction, with the caller as owner. It is the only function in `public` that the API exposes, and only to signed-in users.
+- A workspace always keeps at least one owner (error `KR001`). Admins manage admins, experts and viewers, never owners, and only the `role` column of a membership can change.
+- A section can only be assigned to an owner, admin or expert of its workspace (error `KR002`). It goes back to "unassigned" when that person leaves or becomes a viewer.
+- Server actions check the role again with `requireWorkspaceRole()` in `src/lib/workspaces/server.ts` before writing, on top of RLS.
 - Authorization helpers live in the `private` schema (not exposed by the API) as `SECURITY DEFINER` functions with an empty `search_path`.
 - Deliverables are stored in the private `deliverables` bucket under `{workspace_id}/{section_id}/{uuid}-{filename}`, with a 50 MB limit and a MIME allow-list.
 - `report_progress` computes weighted completion (completed = 1, in progress = 0.5, not started = 0) and runs with the caller's permissions. `report_sections` is published to Supabase Realtime for the live dashboard.
