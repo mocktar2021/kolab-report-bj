@@ -30,6 +30,18 @@ export type AiSettings = {
   rateLimitPerHour: number;
   monthlyTokenBudget: number;
   redactPii: boolean;
+  /** OpenTelemetry spans for each generation (KRB-17). Off unless AI_TRACING=true. */
+  tracing: {
+    enabled: boolean;
+    /** Prompts and outputs go into the spans. Needs a DPA with the tracing vendor. */
+    recordContent: boolean;
+    /** A trace link with "{traceId}" in it, for the dashboard. */
+    urlTemplate: string | null;
+  };
+  /** A second provider and model, used when the first fails before answering. */
+  fallback: { provider: "anthropic" | "openai"; model: string } | null;
+  /** Estimated USD spend per UTC day that triggers one alert e-mail, and where it goes. */
+  costAlert: { dailyUsd: number; email: string } | null;
   /** USD per million tokens. Null when not set: the cost estimate stays empty. */
   prices: Record<ModelTier, ModelPrice | null>;
 };
@@ -52,21 +64,48 @@ function price(env: Env, input: string, output: string): ModelPrice | null {
   return inputPerMTok === null || outputPerMTok === null ? null : { inputPerMTok, outputPerMTok };
 }
 
+const traceUrlTemplate = z
+  .string()
+  .url()
+  .refine((value) => /^https?:\/\//.test(value) && value.includes("{traceId}"));
+
+function hasKey(value: string | undefined): boolean {
+  return Boolean(value && value.trim() && !value.startsWith("your-"));
+}
+
+/** The fallback model, when it is set, differs from the main provider's setup and has a key. */
+function fallbackSetting(env: Env, provider: AiProvider): AiSettings["fallback"] {
+  const fallbackProvider = setting(
+    z.enum(["anthropic", "openai"]).nullable(),
+    env.AI_FALLBACK_PROVIDER,
+    null,
+  );
+  const model = setting(z.string().min(1).nullable(), env.AI_FALLBACK_MODEL, null);
+  if (!fallbackProvider || !model || provider === "mock") return null;
+  const key = fallbackProvider === "anthropic" ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
+  return hasKey(key) ? { provider: fallbackProvider, model } : null;
+}
+
+function costAlertSetting(env: Env): AiSettings["costAlert"] {
+  const dailyUsd = setting(z.coerce.number().positive().nullable(), env.AI_DAILY_COST_ALERT_USD, null);
+  const email = setting(z.string().email().nullable(), env.AI_ALERT_EMAIL, null);
+  return dailyUsd !== null && email ? { dailyUsd, email } : null;
+}
+
 export function readAiSettings(env: Env): AiSettings {
   const provider = setting(z.enum(AI_PROVIDERS), env.AI_PROVIDER, "anthropic");
   const production = env.APP_ENV === "production" || env.VERCEL_ENV === "production";
   const key =
     provider === "anthropic" ? env.ANTHROPIC_API_KEY : provider === "openai" ? env.OPENAI_API_KEY : "";
-  const configured =
-    provider === "mock" ? !production : Boolean(key && key.trim() && !key.startsWith("your-"));
-  const fallbackModel = provider === "openai" ? "gpt-5" : "claude-sonnet-5-5";
-  const fallbackFast = provider === "openai" ? "gpt-5-mini" : "claude-haiku-5-5";
+  const configured = provider === "mock" ? !production : hasKey(key);
+  const defaultModel = provider === "openai" ? "gpt-5" : "claude-sonnet-5-5";
+  const defaultFast = provider === "openai" ? "gpt-5-mini" : "claude-haiku-5-5";
 
   return {
     provider,
     models: {
-      standard: setting(z.string().min(1), env.AI_MODEL, fallbackModel),
-      fast: setting(z.string().min(1), env.AI_MODEL_FAST, fallbackFast),
+      standard: setting(z.string().min(1), env.AI_MODEL, defaultModel),
+      fast: setting(z.string().min(1), env.AI_MODEL_FAST, defaultFast),
     },
     draftsEnabled: setting(flag, env.AI_DRAFTS_ENABLED, false),
     configured,
@@ -77,6 +116,13 @@ export function readAiSettings(env: Env): AiSettings {
     rateLimitPerHour: setting(positiveInt, env.AI_RATE_LIMIT_PER_HOUR, 30),
     monthlyTokenBudget: setting(positiveInt, env.AI_MONTHLY_TOKEN_BUDGET, 2_000_000),
     redactPii: setting(flag, env.AI_REDACT_PII, true),
+    tracing: {
+      enabled: setting(flag, env.AI_TRACING, false),
+      recordContent: setting(flag, env.AI_TRACE_CONTENT, false),
+      urlTemplate: setting(traceUrlTemplate.nullable(), env.AI_TRACE_URL_TEMPLATE, null),
+    },
+    fallback: fallbackSetting(env, provider),
+    costAlert: costAlertSetting(env),
     prices: {
       standard: price(env, "AI_PRICE_INPUT_PER_MTOK", "AI_PRICE_OUTPUT_PER_MTOK"),
       fast: price(env, "AI_PRICE_FAST_INPUT_PER_MTOK", "AI_PRICE_FAST_OUTPUT_PER_MTOK"),
@@ -102,6 +148,23 @@ export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): 
     case "mock":
       return null;
   }
+}
+
+/** The fallback model, or null when none is set. */
+export function fallbackModel(settings: AiSettings, env: Env): LanguageModelV1 | null {
+  if (!settings.fallback) return null;
+  const { provider, model } = settings.fallback;
+  return provider === "anthropic"
+    ? createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(model)
+    : createOpenAI({ apiKey: env.OPENAI_API_KEY, compatibility: "strict" })(model, {
+        structuredOutputs: true,
+      });
+}
+
+/** The link to a trace, or null without a template. */
+export function traceUrl(settings: AiSettings, traceId: string | null): string | null {
+  if (!traceId || !settings.tracing.urlTemplate) return null;
+  return settings.tracing.urlTemplate.replace("{traceId}", encodeURIComponent(traceId));
 }
 
 /** Cost in USD of a call, or null when the tier has no price set. */
