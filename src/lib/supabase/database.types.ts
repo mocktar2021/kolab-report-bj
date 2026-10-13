@@ -3,6 +3,147 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      ai_generations: {
+        Row: {
+          accepted: boolean | null;
+          completed_at: string | null;
+          context_meta: NonNullable<Json>;
+          cost_estimate: number | null;
+          created_at: string;
+          decided_at: string | null;
+          draft_words: number | null;
+          edit_distance: number | null;
+          error_code: string | null;
+          estimated_tokens: number;
+          feedback_comment: string | null;
+          id: string;
+          input_hash: string | null;
+          input_hashes: NonNullable<Json>;
+          input_tokens: number | null;
+          latency_ms: number | null;
+          model: string;
+          output: Json | null;
+          output_schema: string;
+          output_tokens: number | null;
+          params: NonNullable<Json>;
+          prompt_version_id: string | null;
+          provider: string;
+          raw_output: string | null;
+          repaired: boolean;
+          requested_by: string | null;
+          schema_version: number;
+          section_id: string;
+          status: Database["public"]["Enums"]["ai_generation_status"];
+          total_tokens: number | null;
+          truncated: boolean;
+          updated_at: string;
+          user_rating: number | null;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          accepted?: boolean | null;
+          completed_at?: string | null;
+          context_meta?: NonNullable<Json>;
+          cost_estimate?: number | null;
+          created_at?: string;
+          decided_at?: string | null;
+          draft_words?: number | null;
+          edit_distance?: number | null;
+          error_code?: string | null;
+          estimated_tokens: number;
+          feedback_comment?: string | null;
+          id?: string;
+          input_hash?: string | null;
+          input_hashes?: NonNullable<Json>;
+          input_tokens?: number | null;
+          latency_ms?: number | null;
+          model: string;
+          output?: Json | null;
+          output_schema: string;
+          output_tokens?: number | null;
+          params?: NonNullable<Json>;
+          prompt_version_id?: string | null;
+          provider: string;
+          raw_output?: string | null;
+          repaired?: boolean;
+          requested_by?: string | null;
+          schema_version: number;
+          section_id: string;
+          status?: Database["public"]["Enums"]["ai_generation_status"];
+          total_tokens?: never;
+          truncated?: boolean;
+          updated_at?: string;
+          user_rating?: number | null;
+          workspace_id: string;
+        };
+        Update: {
+          accepted?: boolean | null;
+          completed_at?: string | null;
+          context_meta?: NonNullable<Json>;
+          cost_estimate?: number | null;
+          created_at?: string;
+          decided_at?: string | null;
+          draft_words?: number | null;
+          edit_distance?: number | null;
+          error_code?: string | null;
+          estimated_tokens?: number;
+          feedback_comment?: string | null;
+          id?: string;
+          input_hash?: string | null;
+          input_hashes?: NonNullable<Json>;
+          input_tokens?: number | null;
+          latency_ms?: number | null;
+          model?: string;
+          output?: Json | null;
+          output_schema?: string;
+          output_tokens?: number | null;
+          params?: NonNullable<Json>;
+          prompt_version_id?: string | null;
+          provider?: string;
+          raw_output?: string | null;
+          repaired?: boolean;
+          requested_by?: string | null;
+          schema_version?: number;
+          section_id?: string;
+          status?: Database["public"]["Enums"]["ai_generation_status"];
+          total_tokens?: never;
+          truncated?: boolean;
+          updated_at?: string;
+          user_rating?: number | null;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_generations_prompt_version_id_fkey";
+            columns: ["prompt_version_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_library";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generations_prompt_version_id_fkey";
+            columns: ["prompt_version_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generations_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generations_section_id_workspace_id_fkey";
+            columns: ["section_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "report_sections";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
       deliverables: {
         Row: {
           created_at: string;
@@ -519,6 +660,42 @@ export type Database = {
       };
     };
     Views: {
+      ai_generation_metrics: {
+        Row: {
+          accepted: number | null;
+          discarded: number | null;
+          failed: number | null;
+          generations: number | null;
+          mean_edit_ratio: number | null;
+          mean_latency_ms: number | null;
+          model: string | null;
+          prompt_version_id: string | null;
+          repaired: number | null;
+          succeeded: number | null;
+          thumbs_down: number | null;
+          thumbs_up: number | null;
+          total_cost: number | null;
+          total_tokens: number | null;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "ai_generations_prompt_version_id_fkey";
+            columns: ["prompt_version_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_library";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generations_prompt_version_id_fkey";
+            columns: ["prompt_version_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_templates";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       prompt_templates: {
         Row: {
           description: string | null;
@@ -568,6 +745,15 @@ export type Database = {
       };
     };
     Functions: {
+      accept_ai_generation: {
+        Args: {
+          p_content: string;
+          p_edit_distance: number;
+          p_generation_id: string;
+          p_section_updated_at: string;
+        };
+        Returns: string;
+      };
       accept_my_pending_invitations: { Args: Record<PropertyKey, never>; Returns: number };
       accept_workspace_invitation: { Args: { token: string }; Returns: string };
       create_workspace_with_owner: {
@@ -578,6 +764,7 @@ export type Database = {
           workspace_id: string;
         }[];
       };
+      discard_ai_generation: { Args: { p_generation_id: string }; Returns: undefined };
       invitation_preview: {
         Args: { token: string };
         Returns: {
@@ -590,8 +777,30 @@ export type Database = {
           workspace_name: string;
         }[];
       };
+      start_ai_generation: {
+        Args: {
+          p_estimated_tokens: number;
+          p_model: string;
+          p_monthly_budget: number;
+          p_output_schema: string;
+          p_params: Json;
+          p_prompt_version_id: string;
+          p_provider: string;
+          p_rate_limit: number;
+          p_schema_version: number;
+          p_section_id: string;
+          p_user_id: string;
+          p_workspace_id: string;
+        };
+        Returns: {
+          generation_id: string;
+          refusal: string;
+          retry_after: number;
+        }[];
+      };
     };
     Enums: {
+      ai_generation_status: "running" | "succeeded" | "failed";
       parse_status: "pending" | "processing" | "parsed" | "failed" | "skipped";
       prompt_status: "draft" | "published" | "archived";
       report_status: "draft" | "in_review" | "final";
@@ -712,6 +921,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_generation_status: ["running", "succeeded", "failed"],
       parse_status: ["pending", "processing", "parsed", "failed", "skipped"],
       prompt_status: ["draft", "published", "archived"],
       report_status: ["draft", "in_review", "final"],

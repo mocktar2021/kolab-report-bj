@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(11);
+select plan(13);
 
 select pg_temp.act_as_anon();
 select throws_ok('select * from public.organizations', '42501', null, 'anon cannot read organizations');
@@ -12,6 +12,8 @@ select throws_ok('select * from public.report_sections', '42501', null, 'anon ca
 select throws_ok('select * from public.deliverables', '42501', null, 'anon cannot read deliverables');
 select throws_ok('select * from public.prompt_library', '42501', null, 'anon cannot read prompt_library');
 select throws_ok('select * from public.report_progress', '42501', null, 'anon cannot read report_progress');
+select throws_ok('select * from public.ai_generations', '42501', null, 'anon cannot read ai_generations');
+select throws_ok('select * from public.ai_generation_metrics', '42501', null, 'anon cannot read ai_generation_metrics');
 
 
 -- Signed-in users keep the API privileges, but not TRUNCATE (it ignores RLS).
