@@ -29,16 +29,19 @@ Règles :
 - Pour un tableau, gardez les valeurs marquantes avec l'intitulé de leur colonne.
 - Répondez uniquement par le résumé, en texte simple, sans titre, sans HTML et sans balise.`;
 
-// An opening sign ("<", its full-width and small forms or an HTML entity), then
-// spaces, slashes, backslashes or invisible characters, then a block name.
-// The lookahead only scans the run right after one sign, so the whole pass
-// stays linear.
+// Invisible format characters (soft hyphen, direction marks, zero-width
+// spaces and joiners) could split a tag name or sit inside a tag unseen.
+// They are removed first. Then: an opening sign ("<", its full-width and
+// small forms or an HTML entity), spaces, slashes, backslashes or combining
+// marks, then a block name. The lookahead only scans the run right after one
+// sign, so the whole pass stays linear.
+const INVISIBLE = /\p{Cf}/gu;
 const DELIMITER =
-  /(?:<|\uFF1C|\uFE64|&lt;|&#0*60;|&#x0*3c;)(?=[\s/\\\u200B-\u200D\u2060\uFEFF]*(?:livrable|r(?:e|\u00E9|e\u0301)sum(?:e|\u00E9|e\u0301)))/giu;
+  /(?:<|\uFF1C|\uFE64|&lt;|&#0*60;|&#x0*3c;)(?=[\s/\\\p{Mn}]*(?:livrable|r(?:e|\u00E9|e\u0301)sum(?:e|\u00E9|e\u0301)))/giu;
 
-/** Replaces the sign that opens a fake block with "‹". Running it twice changes nothing. */
+/** Drops invisible format characters and replaces the sign that opens a fake block with "‹". Running it twice changes nothing. */
 export function escapeDelimiters(text: string): string {
-  return text.replace(DELIMITER, "‹");
+  return text.replace(INVISIBLE, "").replace(DELIMITER, "‹");
 }
 
 const FILE_NAME_MAX = 120;

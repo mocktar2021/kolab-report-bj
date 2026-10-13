@@ -80,7 +80,7 @@ export type GenerationOutcome = {
   truncated: boolean;
 } & (
   | { status: "succeeded"; output: Json; draftWords: number }
-  | { status: "failed"; error: DraftFailure | "contextFailed" | "saveFailed" }
+  | { status: "failed"; error: DraftFailure | "contextFailed" | "saveFailed" | "crashed" }
 );
 
 /** Records how a running generation ended. False when it was no longer running. */

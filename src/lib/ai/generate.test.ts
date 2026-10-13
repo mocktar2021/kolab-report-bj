@@ -1,6 +1,6 @@
 import type { LanguageModelV1 } from "ai";
 import { describe, expect, it, vi } from "vitest";
-import { describeValidationError, generateDraft, type DraftCall } from "./generate";
+import { describeValidationError, generateDraft, repairReserve, type DraftCall } from "./generate";
 import { mockModel, sampleOutput } from "./mock";
 
 const REFS = ["L1", "L2"] as const;
@@ -43,6 +43,7 @@ describe("generateDraft", () => {
     expect(result.repaired).toBe(false);
     expect(result.rawText).toBe(VALID);
     expect(result.usage.outputTokens).toBeGreaterThan(0);
+    expect(result.usageEstimated).toBe(false);
     expect(onPartial.mock.calls.length).toBeGreaterThan(1);
   });
 
@@ -73,8 +74,11 @@ describe("generateDraft", () => {
       onRepair,
     });
     const result = await generateDraft(call);
-    expect(result).toMatchObject({ ok: false, error: "aborted" });
+    expect(result).toMatchObject({ ok: false, error: "aborted", usageEstimated: true });
     expect(onRepair).not.toHaveBeenCalled();
+    // The provider never reported usage: the prompt and the text received are counted anyway.
+    expect(result.usage.inputTokens).toBeGreaterThan(0);
+    expect(result.usage.outputTokens).toBeGreaterThan(0);
   });
 
   it("reports the server deadline as a timeout", async () => {
@@ -90,7 +94,12 @@ describe("generateDraft", () => {
     model.doStream = () => Promise.reject(new Error("overloaded"));
     const onRepair = vi.fn();
     const result = await generateDraft(draftCall(model, { onRepair }));
-    expect(result).toMatchObject({ ok: false, error: "providerError" });
+    expect(result).toMatchObject({
+      ok: false,
+      error: "providerError",
+      usage: { inputTokens: 0, outputTokens: 0 },
+      usageEstimated: false,
+    });
     expect(onRepair).not.toHaveBeenCalled();
   });
 });
@@ -105,5 +114,11 @@ describe("describeValidationError", () => {
 
   it("falls back to a general message", () => {
     expect(describeValidationError(new Error("x"))).toContain("objet JSON valide");
+  });
+});
+
+describe("repairReserve", () => {
+  it("holds the prompt again, the quoted answer and the output", () => {
+    expect(repairReserve(10_000, 4096)).toBe(10_000 + Math.ceil(40_000 / 3) + 4096);
   });
 });

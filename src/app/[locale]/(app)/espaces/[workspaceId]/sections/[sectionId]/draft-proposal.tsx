@@ -243,6 +243,7 @@ export function DraftProposalView({
                 <Markdown
                   headingLevel={4}
                   headings="flatten"
+                  links="text"
                   fallback={<p className="text-destructive">{t("previewError")}</p>}
                 >
                   {proposal.markdown}

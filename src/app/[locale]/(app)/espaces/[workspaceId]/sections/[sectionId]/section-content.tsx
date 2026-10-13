@@ -32,6 +32,7 @@ export function SectionContent({ content, draftHint }: SectionContentProps) {
           <Markdown
             headingLevel={3}
             headings="flatten"
+            links="text"
             fallback={<p className="text-destructive">{t("contentError")}</p>}
           >
             {text}

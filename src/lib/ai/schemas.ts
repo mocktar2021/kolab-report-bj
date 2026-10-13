@@ -33,8 +33,13 @@ const PRIORITIES = ["haute", "moyenne", "basse"] as const;
 
 export type RecommendationPriority = (typeof PRIORITIES)[number];
 
+/** Postgres can't store NUL in jsonb, and an injected deliverable could make the model write one. */
+function withoutNul(value: string): string {
+  return value.replaceAll("\u0000", "");
+}
+
 function text(max: number, description: string) {
-  return z.string().trim().min(1).max(max).describe(description);
+  return z.string().trim().min(1).max(max).transform(withoutNul).describe(description);
 }
 
 function sourcesSchema(refs: SourceRefs) {
@@ -98,6 +103,7 @@ export function recommendationsSchema(refs: SourceRefs) {
       .string()
       .trim()
       .max(OUTPUT_LIMITS.summary)
+      .transform(withoutNul)
       .describe("Une ou deux phrases qui introduisent les recommandations. Chaîne vide si inutile."),
     recommendations: z
       .array(

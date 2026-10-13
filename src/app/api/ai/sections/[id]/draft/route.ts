@@ -5,6 +5,7 @@ import { aiSettings, draftAvailability, modelFor } from "@/lib/ai/config";
 import {
   buildPrompt,
   contextBudget,
+  estimateTokens,
   finalizeContext,
   planContext,
   summaryPrompt,
@@ -12,7 +13,7 @@ import {
   type ContextPlan,
   type OverflowChunk,
 } from "@/lib/ai/context";
-import { generateDraft, type TokenUsage } from "@/lib/ai/generate";
+import { generateDraft, repairReserve, type TokenUsage } from "@/lib/ai/generate";
 import { finishGeneration, startGeneration } from "@/lib/ai/generation-store";
 import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
@@ -183,7 +184,12 @@ export async function POST(request: Request, { params }: { params: Params }) {
     provider: settings.provider,
     model: mock ? "mock" : settings.models[tier],
     params: { temperature, maxOutputTokens: maxTokens, modelTier: tier },
-    estimatedTokens: plan.estimatedInputTokens + maxTokens + plan.estimatedSummaryTokens,
+    // Held against the budget while the draft runs, a repair call included.
+    estimatedTokens:
+      plan.estimatedInputTokens +
+      maxTokens +
+      plan.estimatedSummaryTokens +
+      repairReserve(plan.estimatedInputTokens, maxTokens),
     rateLimitPerHour: settings.rateLimitPerHour,
     monthlyTokenBudget: settings.monthlyTokenBudget,
   });
@@ -212,6 +218,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const encoder = new TextEncoder();
   let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
   let closed = false;
+  // What the calls cost so far, for the record when something crashes.
+  let spent: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
   function send(event: DraftStreamEvent) {
     if (closed || !streamController) return;
@@ -234,8 +242,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   async function summarize(
     chunks: OverflowChunk[],
-  ): Promise<{ summaries: Map<string, string | null>; usage: TokenUsage }> {
+  ): Promise<{ summaries: Map<string, string | null>; usage: TokenUsage; estimated: boolean }> {
     const usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+    let estimated = false;
     const fast = mock ? mockModel(() => "Résumé simulé de la suite du livrable.") : modelFor("fast");
     const signal = AbortSignal.any([userAbort.signal, deadline]);
     const results = await inBatches(chunks, SUMMARY_CONCURRENCY, async (chunk) => {
@@ -255,37 +264,45 @@ export async function POST(request: Request, { params }: { params: Params }) {
         usage.outputTokens += result.usage.completionTokens || 0;
         return [chunk.id, result.text.trim() || null] as const;
       } catch {
+        // A stopped call was billed for its prompt all the same.
+        if (signal.aborted) {
+          usage.inputTokens += estimateTokens(system + prompt);
+          estimated = true;
+        }
         return [chunk.id, null] as const;
       }
     });
-    return { summaries: new Map(results), usage };
+    return { summaries: new Map(results), usage, estimated };
   }
 
   async function run() {
     let built: BuiltContext | null = null;
     let summaryUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+    let summaryEstimated = false;
     try {
       const summarized = await summarize(plan.overflow);
       summaryUsage = summarized.usage;
+      summaryEstimated = summarized.estimated;
+      spent = summaryUsage;
       built = finalizeContext(plan, summarized.summaries);
     } catch (error) {
       console.error("ai drafts: could not build the context", error instanceof Error ? error.message : error);
     }
 
-    const contextMeta = built
-      ? {
-          version: 1 as const,
-          deliverables: built.deliverables,
-          decisions: built.decisions,
-          estimatedInputTokens: built.estimatedInputTokens,
-        }
-      : null;
-    const common = {
+    const common = (usageEstimated: boolean) => ({
       inputHash: built?.inputHash ?? null,
       inputHashes: built?.deliverableHashes ?? {},
-      contextMeta,
+      contextMeta: built
+        ? {
+            version: 1 as const,
+            deliverables: built.deliverables,
+            decisions: built.decisions,
+            estimatedInputTokens: built.estimatedInputTokens,
+            usageEstimated,
+          }
+        : null,
       truncated: built?.truncated ?? false,
-    };
+    });
     const summaryCost = estimateCost(settings, "fast", summaryUsage);
 
     if (!built) {
@@ -297,7 +314,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
         latencyMs: performance.now() - startedAt,
         rawOutput: "",
         repaired: false,
-        ...common,
+        ...common(summaryEstimated),
       });
       send({ type: "error", error: "generic" });
       return close();
@@ -346,6 +363,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           rawText: "",
           repaired: false,
           usage: { inputTokens: 0, outputTokens: 0 },
+          usageEstimated: false,
         } as const);
     if (pending) send({ type: "partial", object: pending });
 
@@ -353,6 +371,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
       inputTokens: summaryUsage.inputTokens + result.usage.inputTokens,
       outputTokens: summaryUsage.outputTokens + result.usage.outputTokens,
     };
+    spent = usage;
+    const usageEstimated = summaryEstimated || result.usageEstimated;
     const draftCost = estimateCost(settings, tier, result.usage);
     const costEstimate = draftCost === null ? null : draftCost + (summaryCost ?? 0);
     const latencyMs = performance.now() - startedAt;
@@ -366,29 +386,38 @@ export async function POST(request: Request, { params }: { params: Params }) {
         latencyMs,
         rawOutput: result.rawText,
         repaired: result.repaired,
-        ...common,
+        ...common(usageEstimated),
       });
       send({ type: "error", error: result.error });
       return close();
     }
 
     const markdown = draftToMarkdown(result.output, built.names);
-    const saved = await finishGeneration(generationId, workspaceId, {
-      status: "succeeded",
-      output: result.output.value as never,
-      draftWords: wordCount(markdown),
+    const outcome = {
       usage,
       costEstimate,
       latencyMs,
       rawOutput: result.rawText,
       repaired: result.repaired,
-      ...common,
+      ...common(usageEstimated),
+    };
+    const saved = await finishGeneration(generationId, workspaceId, {
+      status: "succeeded",
+      output: result.output.value as never,
+      draftWords: wordCount(markdown),
+      ...outcome,
     });
-    send(
-      saved
-        ? { type: "done", generationId, output: result.output, markdown }
-        : { type: "error", error: "generic" },
-    );
+    if (saved) {
+      send({ type: "done", generationId, output: result.output, markdown });
+    } else {
+      // The draft could not be stored: record the failure, so the section isn't blocked as busy.
+      await finishGeneration(generationId, workspaceId, {
+        status: "failed",
+        error: "saveFailed",
+        ...outcome,
+      });
+      send({ type: "error", error: "generic" });
+    }
     close();
   }
 
@@ -403,8 +432,21 @@ export async function POST(request: Request, { params }: { params: Params }) {
   });
 
   // The outcome is recorded even when the person leaves before the end.
-  const job = run().catch((error) => {
+  const job = run().catch(async (error) => {
     console.error("ai drafts: generation crashed", error instanceof Error ? error.message : error);
+    await finishGeneration(generationId, workspaceId, {
+      status: "failed",
+      error: "crashed",
+      usage: spent,
+      costEstimate: null,
+      latencyMs: performance.now() - startedAt,
+      rawOutput: "",
+      repaired: false,
+      inputHash: null,
+      inputHashes: {},
+      contextMeta: null,
+      truncated: false,
+    }).catch(() => false);
     send({ type: "error", error: "generic" });
     close();
   });

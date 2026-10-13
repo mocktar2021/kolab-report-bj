@@ -28,7 +28,7 @@ describe("SectionContent", () => {
     expect(screen.queryByText(/Générez un brouillon ci-dessous/)).toBeNull();
   });
 
-  it("renders Markdown with tables, safe links and no images or raw HTML", () => {
+  it("renders Markdown with tables, links as text, and no images or raw HTML", () => {
     const { container } = renderContent(
       [
         "### Contexte",
@@ -46,11 +46,10 @@ describe("SectionContent", () => {
     );
 
     expect(screen.getByRole("heading", { level: 3, name: "Contexte" })).toBeVisible();
-    const link = screen.getByRole("link", { name: "le site" });
-    expect(link).toHaveAttribute("href", "https://example.com");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer nofollow");
-    expect(screen.getByText("ce lien").closest("a")?.getAttribute("href") ?? "").not.toMatch(/javascript/i);
+    // The text may come from the model: a link shows its address and can't be clicked.
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(container.textContent).toContain("le site (https://example.com)");
+    expect(container.textContent).not.toMatch(/javascript/i);
     expect(screen.getByRole("table")).toHaveTextContent("Siège");
     expect(container.querySelector("img")).toBeNull();
     expect(container.querySelector("b")).toBeNull();
