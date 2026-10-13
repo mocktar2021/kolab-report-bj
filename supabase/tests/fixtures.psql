@@ -1,0 +1,110 @@
+-- Shared fixture for the RLS tests. Include it with `\ir fixtures.psql`
+-- inside a transaction; everything is rolled back at the end of each file.
+--
+-- Tenant A: organization org_a, workspace w1
+--   owner (owner), admin (admin), expert (expert, assigned to s1),
+--   expert2 (expert, assigned to s2), viewer (viewer)
+-- Tenant B: organization org_b, workspace w2, owned by outsider
+-- stranger: signed-in user with no workspace
+
+create or replace function pg_temp.id(name text) returns uuid
+language sql immutable as $$
+  select case name
+    when 'owner'    then '00000000-0000-4000-a000-000000000001'
+    when 'admin'    then '00000000-0000-4000-a000-000000000002'
+    when 'expert'   then '00000000-0000-4000-a000-000000000003'
+    when 'expert2'  then '00000000-0000-4000-a000-000000000004'
+    when 'viewer'   then '00000000-0000-4000-a000-000000000005'
+    when 'outsider' then '00000000-0000-4000-a000-000000000006'
+    when 'stranger' then '00000000-0000-4000-a000-000000000007'
+    when 'org_a'    then '00000000-0000-4000-b000-000000000001'
+    when 'org_b'    then '00000000-0000-4000-b000-000000000002'
+    when 'w1'       then '00000000-0000-4000-c000-000000000001'
+    when 'w2'       then '00000000-0000-4000-c000-000000000002'
+    when 'r1'       then '00000000-0000-4000-d000-000000000001'
+    when 'r2'       then '00000000-0000-4000-d000-000000000002'
+    when 's1'       then '00000000-0000-4000-e000-000000000001'
+    when 's2'       then '00000000-0000-4000-e000-000000000002'
+    when 's3'       then '00000000-0000-4000-e000-000000000003'
+    when 's4'       then '00000000-0000-4000-e000-000000000004'
+    when 'd1'       then '00000000-0000-4000-f000-000000000001'
+    when 'p_global' then '00000000-0000-4000-9000-000000000001'
+    when 'p_w1'     then '00000000-0000-4000-9000-000000000002'
+    when 'p_w2'     then '00000000-0000-4000-9000-000000000003'
+  end::uuid;
+$$;
+
+-- Switch to a signed-in user (role authenticated, auth.uid() = that user).
+create or replace function pg_temp.act_as(name text) returns void
+language plpgsql as $$
+begin
+  reset role;
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', pg_temp.id(name), 'role', 'authenticated')::text, true);
+  set local role authenticated;
+end;
+$$;
+
+-- Switch to a visitor without a session.
+create or replace function pg_temp.act_as_anon() returns void
+language plpgsql as $$
+begin
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  set local role anon;
+end;
+$$;
+
+-- Number of rows an UPDATE or DELETE touched. RLS hides rows instead of
+-- raising, so a blocked write shows up as 0.
+create or replace function pg_temp.affected(statement text) returns integer
+language plpgsql as $$
+declare n integer;
+begin
+  execute statement;
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+grant execute on all functions in schema pg_temp to authenticated, anon;
+
+-- Data, inserted as postgres (RLS does not apply).
+insert into auth.users (id, email, raw_user_meta_data)
+select pg_temp.id(u), u || '@kolabreport.test', json_build_object('full_name', initcap(u))::jsonb
+from unnest(array['owner','admin','expert','expert2','viewer','outsider','stranger']) as u;
+
+insert into public.organizations (id, name, slug, owner_id) values
+  (pg_temp.id('org_a'), 'Cabinet A', 'cabinet-a', pg_temp.id('owner')),
+  (pg_temp.id('org_b'), 'Cabinet B', 'cabinet-b', pg_temp.id('outsider'));
+
+-- The on_workspace_created trigger adds the creator as owner.
+insert into public.workspaces (id, organization_id, name, created_by) values
+  (pg_temp.id('w1'), pg_temp.id('org_a'), 'Etude A', pg_temp.id('owner')),
+  (pg_temp.id('w2'), pg_temp.id('org_b'), 'Etude B', pg_temp.id('outsider'));
+
+insert into public.workspace_members (workspace_id, user_id, role) values
+  (pg_temp.id('w1'), pg_temp.id('admin'), 'admin'),
+  (pg_temp.id('w1'), pg_temp.id('expert'), 'expert'),
+  (pg_temp.id('w1'), pg_temp.id('expert2'), 'expert'),
+  (pg_temp.id('w1'), pg_temp.id('viewer'), 'viewer');
+
+insert into public.reports (id, workspace_id, title, created_by) values
+  (pg_temp.id('r1'), pg_temp.id('w1'), 'Rapport A', pg_temp.id('owner')),
+  (pg_temp.id('r2'), pg_temp.id('w2'), 'Rapport B', pg_temp.id('outsider'));
+
+insert into public.report_sections (id, workspace_id, report_id, title, assigned_to, weight, status) values
+  (pg_temp.id('s1'), pg_temp.id('w1'), pg_temp.id('r1'), 'Contexte', pg_temp.id('expert'), 1, 'not_started'),
+  (pg_temp.id('s2'), pg_temp.id('w1'), pg_temp.id('r1'), 'Analyse', pg_temp.id('expert2'), 2, 'completed'),
+  (pg_temp.id('s3'), pg_temp.id('w1'), pg_temp.id('r1'), 'Annexes', null, 1, 'in_progress'),
+  (pg_temp.id('s4'), pg_temp.id('w2'), pg_temp.id('r2'), 'Synthese', pg_temp.id('outsider'), 1, 'not_started');
+
+insert into public.deliverables (id, workspace_id, section_id, uploaded_by, storage_path, file_name, mime_type, size_bytes) values
+  (pg_temp.id('d1'), pg_temp.id('w1'), pg_temp.id('s1'), pg_temp.id('expert'),
+   pg_temp.id('w1') || '/' || pg_temp.id('s1') || '/d1-plan.docx', 'plan.docx',
+   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 1000);
+
+insert into public.prompt_library (id, workspace_id, title, template) values
+  (pg_temp.id('p_global'), null, 'Modele global', 'Rediger la section {{section_title}}'),
+  (pg_temp.id('p_w1'), pg_temp.id('w1'), 'Modele A', 'Modele propre a A'),
+  (pg_temp.id('p_w2'), pg_temp.id('w2'), 'Modele B', 'Modele propre a B');
