@@ -1,18 +1,38 @@
 import "server-only";
+import { fork } from "node:child_process";
+import path from "node:path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
-import { fileTypeFor } from "./file-types";
-import { PARSE_LIMITS, ParseError } from "./parse/types";
+import { type FileExtension, fileTypeFor } from "./file-types";
+import {
+  isParsed,
+  PARSE_LIMITS,
+  ParseError,
+  type ParseResult,
+  STALE_PARSE_MS,
+  STORED_RESULT,
+} from "./parse/types";
+import type { WorkerInput, WorkerOutput } from "./parse/worker";
 import { DELIVERABLES_BUCKET } from "./server";
 
 // Reading a deliverable runs with the service role, after the request that
-// asked for it has answered (next/server after()). Users never write the
-// parse columns.
+// asked for it has answered (next/server after()). The parsers run in a
+// child process with its own memory limit and no environment, killed at the
+// deadline. A worker thread wouldn't do: --max-old-space-size in NODE_OPTIONS
+// overrides its heap limit, and running out of memory there aborts the whole
+// server. Users never write the parse columns.
 
-/** A claim this old is taken for a parse that died, and can be retried. */
-export const STALE_PARSE_MS = 5 * 60 * 1000;
+/** The parsers bundled by scripts/build-parse-worker.mjs, traced into the functions in next.config.mjs. */
+export const PARSE_WORKER_FILE = path.join(process.cwd(), "build", "parse-worker.cjs");
 
-export type ParseClaim = { id: string; workspace_id: string; storage_path: string; file_name: string };
+/** updated_at is the claim's version: a later claim changes it, and the older run can no longer save. */
+export type ParseClaim = {
+  id: string;
+  workspace_id: string;
+  storage_path: string;
+  file_name: string;
+  updated_at: string;
+};
 
 /**
  * Marks a checked file as being read, unless a read is already running.
@@ -27,18 +47,48 @@ export async function claimParse(id: string, workspaceId: string): Promise<Parse
     .eq("workspace_id", workspaceId)
     .not("uploaded_at", "is", null)
     .or(`parse_status.in.(pending,failed),and(parse_status.eq.processing,updated_at.lt.${staleBefore})`)
-    .select("id, workspace_id, storage_path, file_name")
+    .select("id, workspace_id, storage_path, file_name, updated_at")
     .maybeSingle();
   if (error) console.error("deliverables: could not claim a parse", error.message);
   return data;
 }
 
-function withTimeout<T>(work: Promise<T>, ms: number, onTimeout: () => Error): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(onTimeout()), ms);
+/**
+ * Runs the parsers in a child process, killed when it answers, fails or
+ * reaches the deadline. Running out of memory aborts it (SIGABRT).
+ */
+export function parseInWorker(
+  extension: FileExtension,
+  bytes: Uint8Array,
+  deadline: number,
+  { file = PARSE_WORKER_FILE, heapMb = PARSE_LIMITS.workerHeapMb }: { file?: string; heapMb?: number } = {},
+): Promise<ParseResult> {
+  return new Promise((resolve, reject) => {
+    const child = fork(file, [], {
+      execArgv: [`--max-old-space-size=${heapMb}`],
+      env: { NODE_ENV: process.env.NODE_ENV },
+      serialization: "advanced",
+      stdio: ["ignore", "inherit", "inherit", "ipc"],
+    });
+    const timer = setTimeout(
+      () => {
+        reject(new ParseError("timeout"));
+        child.kill("SIGKILL");
+      },
+      Math.max(deadline - Date.now(), 0),
+    );
+    child.once("message", (output: WorkerOutput) => {
+      if (output.ok) resolve(output.result);
+      else reject(new ParseError(output.key));
+    });
+    child.once("error", reject);
+    // Settles the promise if the process ends without answering.
+    child.once("exit", (_code, signal) => {
+      clearTimeout(timer);
+      reject(new ParseError(signal === "SIGABRT" ? "tooLarge" : "unreadable"));
+    });
+    child.send({ extension, bytes } satisfies WorkerInput);
   });
-  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
 
 /** Reads a claimed file and stores the Markdown, or why it failed. Never throws. */
@@ -49,45 +99,42 @@ export async function runParse(claim: ParseClaim): Promise<void> {
     parsed_content: string | null;
     parse_meta: Json | null;
     parse_error: string | null;
-  }) => {
+  }): Promise<boolean> => {
     const { error } = await admin
       .from("deliverables")
       .update({ ...values, parsed_at: values.parse_status === "failed" ? null : new Date().toISOString() })
       .eq("id", claim.id)
       .eq("workspace_id", claim.workspace_id)
-      .eq("parse_status", "processing");
+      .eq("parse_status", "processing")
+      .eq("updated_at", claim.updated_at);
     if (error) console.error("deliverables: could not save a parse", error.message);
+    return !error;
   };
+  const fail = (key: string) =>
+    save({ parse_status: "failed", parsed_content: null, parse_meta: null, parse_error: key });
 
+  const deadline = Date.now() + PARSE_LIMITS.timeoutMs;
   try {
-    // Loaded here so the routes that only claim stay light.
-    const { isParsed, parseDeliverableFile } = await import("./parse");
     const type = fileTypeFor(claim.file_name);
     if (!type) throw new ParseError("unreadable");
-    let bytes = Buffer.alloc(0);
+    let result = STORED_RESULT;
     if (isParsed(type.extension)) {
-      const { data, error } = await admin.storage.from(DELIVERABLES_BUCKET).download(claim.storage_path);
+      const { data, error } = await admin.storage
+        .from(DELIVERABLES_BUCKET)
+        .download(claim.storage_path, {}, { signal: AbortSignal.timeout(deadline - Date.now()) });
       if (error || !data) throw new ParseError("unreadable");
-      bytes = Buffer.from(await data.arrayBuffer());
+      result = await parseInWorker(type.extension, new Uint8Array(await data.arrayBuffer()), deadline);
     }
-    const result = await withTimeout(
-      parseDeliverableFile(type.extension, bytes),
-      PARSE_LIMITS.timeoutMs,
-      () => new ParseError("timeout"),
-    );
-    await save({
+    const saved = await save({
       parse_status: result.status,
       parsed_content: result.status === "parsed" ? result.markdown : null,
       parse_meta: result.meta as Json,
       parse_error: null,
     });
+    // Postgres refuses some text (a NUL byte, for one): the file is then marked as unreadable.
+    if (!saved) await fail("unreadable");
   } catch (error) {
     if (!(error instanceof ParseError)) console.error("deliverables: parse failed", error);
-    await save({
-      parse_status: "failed",
-      parsed_content: null,
-      parse_meta: null,
-      parse_error: error instanceof ParseError ? error.key : "unreadable",
-    });
+    await fail(error instanceof ParseError ? error.key : "unreadable");
   }
 }

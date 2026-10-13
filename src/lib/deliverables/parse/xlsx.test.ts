@@ -61,7 +61,7 @@ const SUMMARY = `## Synthèse
 
 ## Vide
 
-## Budget | 2026 \\_final\\_
+## Budget \\| 2026 \\_final\\_
 
 | Poste | Montant |
 | --- | --- |

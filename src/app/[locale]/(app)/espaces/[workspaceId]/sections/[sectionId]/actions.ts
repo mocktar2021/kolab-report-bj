@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { claimParse, runParse } from "@/lib/deliverables/parse-job";
 import type { ParseMeta } from "@/lib/deliverables/parse/types";
@@ -81,6 +82,8 @@ export async function updateSectionStatus(sectionId: string, status: string): Pr
     .select("status")
     .maybeSingle();
   if (error || !updated) return { ok: false };
+  // Sends the page back with the answer, so the status select keeps the new value.
+  revalidatePath("/[locale]/(app)/espaces/[workspaceId]/sections/[sectionId]", "page");
   return { ok: true, status: parsedStatus.data };
 }
 

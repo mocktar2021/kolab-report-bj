@@ -42,6 +42,8 @@ export type DeliverableRow = {
   uploaderName: string | null;
   parseState: ParseState;
   parseError: string | null;
+  /** Still pending long after upload: no read ever started. */
+  notStarted: boolean;
   canDelete: boolean;
   canRetry: boolean;
 };
@@ -113,10 +115,16 @@ function DeliverableItem({ file }: { file: DeliverableRow }) {
   function run(action: () => Promise<DeliverableActionResult>) {
     setError(null);
     startTransition(async () => {
-      const result = await action();
-      if (result.ok) router.refresh();
-      else setError(result);
-      setConfirming(false);
+      try {
+        const result = await action();
+        if (result.ok) router.refresh();
+        else setError(result);
+      } catch {
+        // The action did not answer, for example after a network error.
+        setError({ ok: false, error: "generic" });
+      } finally {
+        setConfirming(false);
+      }
     });
   }
 
@@ -127,7 +135,11 @@ function DeliverableItem({ file }: { file: DeliverableRow }) {
         ? t("parseErrors.stale")
         : file.parseState === "skipped"
           ? t("skippedHint")
-          : null;
+          : file.notStarted
+            ? t("pendingHint")
+            : null;
+  // Red when a read went wrong, muted when the file was not read.
+  const parseMessageMuted = file.parseState === "skipped" || file.notStarted;
 
   return (
     <li className="px-5 py-3.5">
@@ -216,12 +228,10 @@ function DeliverableItem({ file }: { file: DeliverableRow }) {
         </div>
       </div>
 
-      {parseMessage || error ? (
+      {parseMessage || file.canRetry || error ? (
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pl-12 text-xs">
           {parseMessage ? (
-            <p className={file.parseState === "skipped" ? "text-muted-foreground" : "text-destructive"}>
-              {parseMessage}
-            </p>
+            <p className={parseMessageMuted ? "text-muted-foreground" : "text-destructive"}>{parseMessage}</p>
           ) : null}
           {file.canRetry ? (
             <Button

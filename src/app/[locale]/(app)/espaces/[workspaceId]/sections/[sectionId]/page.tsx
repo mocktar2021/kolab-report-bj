@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
-import { STALE_PARSE_MS } from "@/lib/deliverables/parse-job";
+import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -73,9 +73,11 @@ export default async function SectionPage({ params }: { params: Params }) {
   const status = sectionStatusSchema.catch("not_started").parse(section.status);
   const staleBefore = Date.now() - STALE_PARSE_MS;
   const rows: DeliverableRow[] = (files ?? []).map((file) => {
-    const running = file.parse_status === "pending" || file.parse_status === "processing";
-    const parseState: ParseState =
-      running && new Date(file.updated_at).getTime() < staleBefore ? "stale" : file.parse_status;
+    const old = new Date(file.updated_at).getTime() < staleBefore;
+    // A claimed read this old has died. A pending file this old was never
+    // claimed, for example one uploaded before files were read.
+    const parseState: ParseState = file.parse_status === "processing" && old ? "stale" : file.parse_status;
+    const notStarted = file.parse_status === "pending" && old;
     return {
       id: file.id,
       name: file.file_name,
@@ -85,12 +87,17 @@ export default async function SectionPage({ params }: { params: Params }) {
       uploaderName: names.get(file.uploaded_by) ?? null,
       parseState,
       parseError: file.parse_error,
+      notStarted,
       // Same rule as the delete policy: managers, or the uploader while the section is theirs.
       canDelete: canEdit && (isManager(access.role) || file.uploaded_by === access.userId),
-      canRetry: canEdit && (parseState === "failed" || parseState === "stale"),
+      canRetry: canEdit && (parseState === "failed" || parseState === "stale" || notStarted),
     };
   });
-  const reading = rows.some((row) => row.parseState === "pending" || row.parseState === "processing");
+  // With their state, so the watcher starts over when a pending file is claimed.
+  const reading = rows
+    .filter((row) => row.parseState === "processing" || (row.parseState === "pending" && !row.notStarted))
+    .map((row) => `${row.id}:${row.parseState}`)
+    .join(" ");
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
@@ -136,7 +143,7 @@ export default async function SectionPage({ params }: { params: Params }) {
       )}
 
       <DeliverableList files={rows} canEdit={canEdit} />
-      <ParseWatcher active={reading} />
+      <ParseWatcher reading={reading} />
     </div>
   );
 }
