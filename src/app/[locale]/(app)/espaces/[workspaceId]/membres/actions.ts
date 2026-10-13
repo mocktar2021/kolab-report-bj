@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
+import { emailSchema } from "@/lib/auth/schemas";
+import { INVITATION_TTL_MS, invitationLink, sendInvitationEmail } from "@/lib/invitations/server";
+import { createInvitationToken } from "@/lib/invitations/token";
 import { createClient } from "@/lib/supabase/server";
 import { workspaceErrorKey, type WorkspaceErrorKey } from "@/lib/workspaces/errors";
 import {
@@ -110,4 +113,134 @@ export async function removeMember(_prev: MemberActionState, formData: FormData)
     return redirect({ href: "/tableau-de-bord", locale });
   }
   return { status: "success" };
+}
+
+export type InvitationActionState =
+  | { status: "idle" }
+  | {
+      status: "sent";
+      email: string;
+      /** Set when the e-mail could not go out: the inviter shares the link by hand. */
+      link: string | null;
+    }
+  | { status: "error"; error: WorkspaceErrorKey };
+
+/**
+ * Invites someone by e-mail with a role. Admins cannot invite owners (RLS
+ * checks it again). The e-mail goes out right away; when it cannot, the link
+ * is shown to the inviter instead.
+ */
+export async function inviteMember(
+  _prev: InvitationActionState,
+  formData: FormData,
+): Promise<InvitationActionState> {
+  const parsed = z
+    .object({ workspaceId: uuidSchema, email: emailSchema, role: workspaceRoleSchema })
+    .safeParse({
+      workspaceId: formData.get("workspaceId"),
+      email: formData.get("email"),
+      role: formData.get("role"),
+    });
+  if (!parsed.success) return { status: "error", error: "invalidInput" };
+  const { workspaceId, email, role } = parsed.data;
+
+  const access = await requireWorkspaceRole(workspaceId, MANAGER_ROLES);
+  if (!access || !grantableRoles(access.role).includes(role)) return { status: "error", error: "forbidden" };
+
+  const { token, tokenHash } = createInvitationToken();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workspace_invitations")
+    .insert({ workspace_id: workspaceId, email, role, token_hash: tokenHash })
+    .select("expires_at")
+    .single();
+  if (error || !data) return { status: "error", error: workspaceErrorKey(error) };
+
+  const sent = await sendInvitationEmail({
+    workspaceId,
+    email,
+    role,
+    token,
+    expiresAt: new Date(data.expires_at),
+  });
+
+  revalidatePath("/", "layout");
+  return { status: "sent", email, link: sent ? null : invitationLink(token) };
+}
+
+/** Sends a pending or expired invitation again with a new link, valid 7 more days. */
+export async function resendInvitation(
+  _prev: InvitationActionState,
+  formData: FormData,
+): Promise<InvitationActionState> {
+  const id = uuidSchema.safeParse(formData.get("invitationId"));
+  if (!id.success) return { status: "error", error: "invalidInput" };
+
+  const supabase = await createClient();
+  const { data: invitation } = await supabase
+    .from("workspace_invitations")
+    .select("id, workspace_id, email, role")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (!invitation) return { status: "error", error: "forbidden" };
+  const access = await requireWorkspaceRole(invitation.workspace_id, MANAGER_ROLES);
+  if (!access || !grantableRoles(access.role).includes(invitation.role)) {
+    return { status: "error", error: "forbidden" };
+  }
+
+  const { token, tokenHash } = createInvitationToken();
+  const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+  const { data, error } = await supabase
+    .from("workspace_invitations")
+    .update({ token_hash: tokenHash, expires_at: expiresAt.toISOString() })
+    .eq("id", invitation.id)
+    .is("accepted_at", null)
+    .is("revoked_at", null)
+    .select("id");
+  if (error) return { status: "error", error: workspaceErrorKey(error) };
+  if (!data || data.length === 0) return { status: "error", error: "forbidden" };
+
+  const sent = await sendInvitationEmail({
+    workspaceId: invitation.workspace_id,
+    email: invitation.email,
+    role: invitation.role,
+    token,
+    expiresAt,
+  });
+
+  revalidatePath("/", "layout");
+  return { status: "sent", email: invitation.email, link: sent ? null : invitationLink(token) };
+}
+
+/** Cancels an invitation: its link stops working. */
+export async function revokeInvitation(
+  _prev: InvitationActionState,
+  formData: FormData,
+): Promise<InvitationActionState> {
+  const id = uuidSchema.safeParse(formData.get("invitationId"));
+  if (!id.success) return { status: "error", error: "invalidInput" };
+
+  const supabase = await createClient();
+  const { data: invitation } = await supabase
+    .from("workspace_invitations")
+    .select("id, workspace_id, role")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (!invitation) return { status: "error", error: "forbidden" };
+  const access = await requireWorkspaceRole(invitation.workspace_id, MANAGER_ROLES);
+  if (!access || !grantableRoles(access.role).includes(invitation.role)) {
+    return { status: "error", error: "forbidden" };
+  }
+
+  const { data, error } = await supabase
+    .from("workspace_invitations")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("id", invitation.id)
+    .is("accepted_at", null)
+    .select("id");
+  if (error) return { status: "error", error: workspaceErrorKey(error) };
+  if (!data || data.length === 0) return { status: "error", error: "forbidden" };
+
+  revalidatePath("/", "layout");
+  return { status: "idle" };
 }
