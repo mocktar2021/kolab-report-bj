@@ -36,6 +36,7 @@ The service worker is disabled in development. To test offline behaviour, run `n
 | `npm run db:reset` | Recreate the local database from migrations |
 | `npm run db:push` | Apply migrations to the linked Supabase project |
 | `npm run db:types` | Generate `src/lib/supabase/database.types.ts` |
+| `npm run test:e2e` | Playwright end-to-end tests (needs a build and the local Supabase stack) |
 
 ## Project layout
 
@@ -54,6 +55,25 @@ docs/jira/                       Product backlog and Jira import file
 ## Routing and localization
 
 French is the only locale. Every page lives under `/fr`, and `/` redirects there. Unauthenticated visitors are redirected to `/fr/connexion?redirectTo=...`. Public routes are listed in `src/middleware.ts`. To add a locale later, extend `routing.locales` in `src/i18n/routing.ts` and add `messages/<locale>.json`.
+
+## Authentication
+
+Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/reinitialiser-mot-de-passe`, and `/fr/auth/callback` for e-mail links.
+
+- E-mail templates are in French in `supabase/templates/`. Their links carry a `token_hash`, so they work even when the e-mail is opened on another device.
+- Auth settings (site URL, redirect allowlist, 8-character minimum password, confirmations, rate limits) live in `supabase/config.toml`. To apply them and the templates to a hosted project, run `npx supabase link` then `npx supabase config push`, and check the result in the dashboard.
+- Local e-mails land in Mailpit at http://127.0.0.1:54324.
+- The service worker never caches auth pages or Supabase requests, and signing out clears the pages kept for offline reading.
+
+## End-to-end tests
+
+```bash
+npx supabase start
+npm run build
+npm run test:e2e
+```
+
+The suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password.
 
 ## Data model and security
 
