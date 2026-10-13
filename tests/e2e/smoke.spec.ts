@@ -25,3 +25,21 @@ test("the root redirects to /fr", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/fr$/);
 });
+
+test("public pages send the security headers and break no CSP rule", async ({ page }) => {
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && message.text().includes("Content Security Policy")) {
+      violations.push(message.text());
+    }
+  });
+
+  const response = await page.goto("/fr");
+  const headers = response?.headers() ?? {};
+  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(headers["strict-transport-security"]).toContain("max-age=");
+  await page.goto("/fr/connexion");
+  await page.goto("/fr/inscription");
+
+  expect(violations).toEqual([]);
+});

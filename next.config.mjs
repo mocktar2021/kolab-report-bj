@@ -4,6 +4,63 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+const isDev = process.env.NODE_ENV === "development";
+// Set by Vercel at build time: "preview" for PR and staging deployments.
+const isVercelPreview = process.env.VERCEL_ENV === "preview";
+
+/**
+ * Content-Security-Policy for every page. Scripts stay limited to this origin
+ * (plus inline ones: Next.js, the theme and sidebar scripts), data only goes
+ * to this origin and Supabase, and no other site can frame the app.
+ */
+function contentSecurityPolicy() {
+  const supabase = supabaseUrl ? new URL(supabaseUrl) : null;
+  const supabaseOrigin = supabase ? supabase.origin : "";
+  const supabaseSocket = supabase
+    ? `${supabase.protocol === "https:" ? "wss:" : "ws:"}//${supabase.host}`
+    : "";
+  // The Vercel toolbar on preview deployments (comments, feedback).
+  const toolbar = isVercelPreview ? "https://vercel.live" : "";
+
+  const directives = {
+    "default-src": ["'self'"],
+    // Next.js inlines its bootstrap scripts. Nonces would need every page to
+    // render per request, including the static landing and sign-in pages.
+    "script-src": ["'self'", "'unsafe-inline'", isDev ? "'unsafe-eval'" : "", toolbar],
+    "style-src": ["'self'", "'unsafe-inline'", toolbar],
+    "img-src": [
+      "'self'",
+      "data:",
+      "blob:",
+      supabaseOrigin,
+      toolbar,
+      isVercelPreview ? "https://vercel.com" : "",
+    ],
+    "font-src": ["'self'", toolbar, isVercelPreview ? "https://assets.vercel.com" : ""],
+    "connect-src": [
+      "'self'",
+      supabaseOrigin,
+      supabaseSocket,
+      toolbar,
+      isVercelPreview ? "wss://ws-us3.pusher.com" : "",
+    ],
+    "frame-src": [toolbar || "'none'"],
+    "worker-src": ["'self'"],
+    "manifest-src": ["'self'"],
+    "object-src": ["'none'"],
+    "base-uri": ["'self'"],
+    "form-action": ["'self'"],
+    "frame-ancestors": ["'none'"],
+  };
+
+  const policy = Object.entries(directives).map(
+    ([name, sources]) => `${name} ${sources.filter(Boolean).join(" ")}`,
+  );
+  // Only over HTTPS: on http://localhost it would break every request.
+  if (appUrl.startsWith("https://")) policy.push("upgrade-insecure-requests");
+  return policy.join("; ");
+}
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -84,6 +141,10 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
+          { key: "Content-Security-Policy", value: contentSecurityPolicy() },
+          // Browsers ignore it over plain HTTP, so it is safe locally too.
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
