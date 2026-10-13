@@ -1,0 +1,78 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "*.ts"
+      - "*.mts"
+      - "*.mjs"
+      - "package-lock.json"
+      - ".github/workflows/codeql.yml"
+  schedule:
+    # Mondays at 05:17 UTC, so new queries also run on code nobody touched.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL (JavaScript and TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+
+      # Code scanning uploads need GitHub Code Security on a private repo, so
+      # the results stay in the run: listed in the summary, kept as a SARIF
+      # artifact, and any finding fails the job. Switch `upload` to "always"
+      # once Code Security is on.
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: "/language:javascript-typescript"
+          upload: never
+          upload-database: false
+          output: sarif
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: codeql-sarif
+          path: sarif/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Fail on findings
+        run: |
+          findings=$(jq -r '.runs[].results[]? | "\(.ruleId): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine) \(.message.text | split("\n")[0])"' sarif/*.sarif)
+          if [ -z "$findings" ]; then
+            echo "No CodeQL findings." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "### CodeQL findings"
+            echo '```'
+            echo "$findings"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$findings"
+          exit 1
