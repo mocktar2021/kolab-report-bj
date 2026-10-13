@@ -1,6 +1,6 @@
 # Continuous integration
 
-Every pull request and every push to `master` runs two workflows in GitHub Actions.
+Every pull request and every push to `master` runs two workflows in GitHub Actions. A third one, `deploy.yml`, ships `master` to staging and tags to production (see `docs/deployment.md`).
 
 ## CI (`.github/workflows/ci.yml`)
 
@@ -9,8 +9,9 @@ Every pull request and every push to `master` runs two workflows in GitHub Actio
 1. `npm ci` with the npm cache from `actions/setup-node`.
 2. Writing check on the PR: commit messages and changed files go through `write-like-mocktar` (skipped for Dependabot).
 3. `format:check`, `lint`, `typecheck` and `npm test`.
-4. `npm audit --omit=dev --audit-level=critical`. Only critical advisories block. The known high ones are tracked in Jira.
-5. `next build` with placeholder Supabase variables and the `.next/cache` restored.
+4. `scripts/check-public-env.mjs` fails on `NEXT_PUBLIC_` variables named like secrets, since those ship to the browser.
+5. `npm audit --omit=dev --audit-level=critical`. Only critical advisories block. The known high ones are tracked in Jira.
+6. `next build` with placeholder Supabase variables and the `.next/cache` restored.
 
 **Database and end-to-end tests** starts the local Supabase stack with the CLI version from `package-lock.json`, then:
 
