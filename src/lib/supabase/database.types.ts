@@ -32,7 +32,7 @@ export type Database = {
           repaired: boolean;
           requested_by: string | null;
           schema_version: number;
-          section_id: string;
+          section_id: string | null;
           status: Database["public"]["Enums"]["ai_generation_status"];
           total_tokens: number | null;
           truncated: boolean;
@@ -69,7 +69,7 @@ export type Database = {
           repaired?: boolean;
           requested_by?: string | null;
           schema_version: number;
-          section_id: string;
+          section_id?: string | null;
           status?: Database["public"]["Enums"]["ai_generation_status"];
           total_tokens?: never;
           truncated?: boolean;
@@ -105,7 +105,7 @@ export type Database = {
           repaired?: boolean;
           requested_by?: string | null;
           schema_version?: number;
-          section_id?: string;
+          section_id?: string | null;
           status?: Database["public"]["Enums"]["ai_generation_status"];
           total_tokens?: never;
           truncated?: boolean;
@@ -141,6 +141,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "report_sections";
             referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "ai_generations_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -692,6 +699,13 @@ export type Database = {
             columns: ["prompt_version_id"];
             isOneToOne: false;
             referencedRelation: "prompt_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generations_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
             referencedColumns: ["id"];
           },
         ];

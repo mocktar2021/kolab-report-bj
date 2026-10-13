@@ -37,7 +37,12 @@ describe("escapeDelimiters", () => {
     ["&#60;livrable", "‹livrable"],
     ["&#x3C;/resume>", "‹/resume>"],
     ["＜/livrable>", "‹/livrable>"],
-    ["<​/livrable>", "‹​/livrable>"],
+    ["<\u200B/livrable>", "‹/livrable>"],
+    ["</\u00ADlivrable>", "‹/livrable>"],
+    ["<\u200E/livrable>", "‹/livrable>"],
+    ["<\u2063/livrable>", "‹/livrable>"],
+    ["</liv\u00ADrable>", "‹/livrable>"],
+    ["<\u0338/livrable>", "‹\u0338/livrable>"],
   ])("neutralizes %s", (raw, escaped) => {
     expect(escapeDelimiters(raw)).toBe(escaped);
   });

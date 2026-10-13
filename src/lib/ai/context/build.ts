@@ -120,6 +120,7 @@ export type TruncationDecision =
 export type OverflowChunk = {
   id: string;
   ref: string;
+  /** The name as the model reads it: PII masked when redactPii is on. */
   fileName: string;
   kind: ContextDeliverable["kind"];
   part: number;
@@ -133,6 +134,8 @@ export type PlanEntry = {
   ref: string;
   id: string;
   fileName: string;
+  /** fileName as the model reads it: PII masked when redactPii is on. People still see fileName. */
+  promptName: string;
   kind: ContextDeliverable["kind"];
   /** Cleaned content kept in the main prompt, before notes and summaries. Empty when dropped. */
   kept: string;
@@ -516,7 +519,7 @@ function renderDeliverables(
 ): string {
   const blocks: string[] = [];
   for (const entry of entries) {
-    const use = { ref: entry.ref, fileName: entry.fileName, kind: entry.kind };
+    const use = { ref: entry.ref, fileName: entry.promptName, kind: entry.kind };
     if (entry.dropped) {
       blocks.push(deliverableBlock(use, DROPPED_NOTE));
       continue;
@@ -552,6 +555,7 @@ export function summaryPrompt(chunk: OverflowChunk): {
 type Prepared = {
   deliverable: ContextDeliverable;
   ref: string;
+  promptName: string;
   content: Content;
   /** Length after the row cap. */
   fullChars: number;
@@ -584,7 +588,9 @@ export function planContext(
     if (content.rowsCut > 0) own.push({ ref, action: "rowsCut", rows: content.rowsCut });
     const fullChars = keptLength(content, content.segments.length);
     const capIndex = cutIndex(content, budget.perDeliverableTokens * CHARS_PER_TOKEN);
-    return { deliverable, ref, content, fullChars, capIndex, decisions: own };
+    // A file name can hold an e-mail or an IBAN too.
+    const promptName = options.redactPii ? redactPii(deliverable.fileName).text : deliverable.fileName;
+    return { deliverable, ref, promptName, content, fullChars, capIndex, decisions: own };
   });
 
   // Step 5, in characters. The deliverables text appears once per
@@ -598,10 +604,7 @@ export function planContext(
   const overhead = prepared.reduce(
     (sum, item) =>
       sum +
-      deliverableBlock(
-        { ref: item.ref, fileName: item.deliverable.fileName, kind: item.deliverable.kind },
-        "",
-      ).length +
+      deliverableBlock({ ref: item.ref, fileName: item.promptName, kind: item.deliverable.kind }, "").length +
       SEPARATOR.length +
       NOTE_RESERVE,
     0,
@@ -675,7 +678,7 @@ export function planContext(
         const chunk: OverflowChunk = {
           id: `${ref}-${chunkIndex + 1}`,
           ref,
-          fileName: deliverable.fileName,
+          fileName: item.promptName,
           kind: deliverable.kind,
           part: chunkIndex + 1,
           text,
@@ -697,6 +700,7 @@ export function planContext(
       ref,
       id: deliverable.id,
       fileName: deliverable.fileName,
+      promptName: item.promptName,
       kind: deliverable.kind,
       kept,
       originalTokens: estimateTokens(deliverable.markdown),

@@ -446,6 +446,18 @@ describe("personal data", () => {
     expect(built.truncated).toBe(false);
   });
 
+  it("masks it in file names sent to the model, summaries included, but not in the names people see", () => {
+    const named = { ...file("1", prose(2000)), fileName: "CV de jean.dupont@exemple.fr.docx" };
+    const contextPlan = plan([named], budget({ perDeliverableTokens: 4000 }), { redactPii: true });
+    const built = finalizeContext(contextPlan, new Map());
+    expect(buildPrompt(TEMPLATE, built).prompt).not.toContain("dupont@exemple");
+    expect(contextPlan.overflow.length).toBeGreaterThan(0);
+    for (const chunk of contextPlan.overflow)
+      expect(summaryPrompt(chunk).prompt).not.toContain("dupont@exemple");
+    expect(built.names.get("L1")).toBe("CV de jean.dupont@exemple.fr.docx");
+    expect(built.deliverables[0]?.fileName).toBe("CV de jean.dupont@exemple.fr.docx");
+  });
+
   it("keeps it otherwise", () => {
     const contextPlan = plan(deliverables, BUDGET, { redactPii: false }, overrides);
     const built = finalizeContext(contextPlan, new Map());

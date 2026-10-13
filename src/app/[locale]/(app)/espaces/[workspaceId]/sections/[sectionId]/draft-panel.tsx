@@ -372,6 +372,7 @@ export function DraftPanel({ workspaceId, sectionId, data, manager }: DraftPanel
               <Markdown
                 headingLevel={4}
                 headings="flatten"
+                links="text"
                 fallback={<p className="text-destructive">{t("previewError")}</p>}
               >
                 {preview}

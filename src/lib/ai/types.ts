@@ -95,4 +95,6 @@ export type GenerationContextMeta = {
   /** The context builder's truncation log. */
   decisions: unknown[];
   estimatedInputTokens: number;
+  /** A call ended before its usage was reported, so part of the token count is estimated. */
+  usageEstimated: boolean;
 };

@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(46);
+select plan(51);
 
 -- Starts a generation as the app does (service role).
 create or replace function pg_temp.start(
@@ -214,6 +214,23 @@ select results_eq(
     from public.ai_generation_metrics where workspace_id = pg_temp.id('w1')$$,
   $$values (3, 2, 1, 1, 1, 1, 0.12)$$,
   'the metrics count outcomes, ratings and the edit ratio per prompt version and model');
+
+-- Usage outlives the section ---------------------------------------------------
+reset role;
+select lives_ok($$delete from public.report_sections where id = pg_temp.id('s1')$$,
+  'a section with drafts can be deleted');
+select is(
+  (select count(*)::int from public.ai_generations where workspace_id = pg_temp.id('w1') and section_id is null), 3,
+  'its drafts stay, without a section');
+select results_eq(
+  $$select refusal from pg_temp.start('s3', 'expert', pg_temp.template('synthese-section'), 2, 100000, 1000, 'section_draft', 'w1')$$,
+  $$values ('rateLimited')$$, 'they still count against the hourly limit');
+select results_eq(
+  $$select refusal from pg_temp.start('s3', 'admin', pg_temp.template('synthese-section'), 30, 2800, 200, 'section_draft', 'w1')$$,
+  $$values ('budgetExceeded')$$, 'and against the monthly budget');
+delete from public.workspaces where id = pg_temp.id('w2');
+select is((select count(*)::int from public.ai_generations where workspace_id = pg_temp.id('w2')), 0,
+  'deleting the workspace removes its drafts');
 
 select * from finish();
 rollback;

@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 
 // Markdown from files, from the model or from people becomes React elements:
 // raw HTML is shown as text and never inserted into the page, react-markdown
-// drops javascript: links, and images are left out.
+// drops javascript: links, and images are left out. Text the model wrote may
+// carry a link a deliverable slipped in, so there links can be shown as text
+// with their address instead of being clickable.
 
 /**
  * Props for the DOM element: our classes plus the element's own, without the
@@ -66,6 +68,17 @@ const BASE_COMPONENTS: Components = {
   td: (props) => <td {...domProps(props, "border-b px-2.5 py-1.5 align-top")} />,
 };
 
+/** A link shown as its text and address, not clickable. */
+const textLink: NonNullable<Components["a"]> = ({ href, children }) => (
+  <span className="break-words">
+    {children}
+    {href && children !== href ? <span className="break-all text-muted-foreground"> ({href})</span> : null}
+  </span>
+);
+
+/** "open": clickable, in a new tab. "text": the text and the address, not clickable. */
+export type MarkdownLinks = "open" | "text";
+
 const REMARK_PLUGINS = [remarkGfm];
 
 const DEPTHS = [1, 2, 3, 4, 5, 6] as const;
@@ -84,11 +97,15 @@ function headingComponents(level: HeadingLevel, headings: MarkdownHeadings): Com
 
 const COMPONENTS = new Map<string, Components>();
 
-function componentsFor(level: HeadingLevel, headings: MarkdownHeadings): Components {
-  const key = `${level}-${headings}`;
+function componentsFor(level: HeadingLevel, headings: MarkdownHeadings, links: MarkdownLinks): Components {
+  const key = `${level}-${headings}-${links}`;
   let components = COMPONENTS.get(key);
   if (!components) {
-    components = { ...BASE_COMPONENTS, ...headingComponents(level, headings) };
+    components = {
+      ...BASE_COMPONENTS,
+      ...headingComponents(level, headings),
+      ...(links === "text" ? { a: textLink } : {}),
+    };
     COMPONENTS.set(key, components);
   }
   return components;
@@ -123,15 +140,22 @@ type MarkdownProps = {
   /** The HTML level of the text's top headings. */
   headingLevel?: HeadingLevel;
   headings?: MarkdownHeadings;
+  links?: MarkdownLinks;
 };
 
-/** Renders Markdown with GitHub tables, without raw HTML or images. Links open in a new tab. */
-export function Markdown({ children, fallback, headingLevel = 3, headings = "shift" }: MarkdownProps) {
+/** Renders Markdown with GitHub tables, without raw HTML or images. */
+export function Markdown({
+  children,
+  fallback,
+  headingLevel = 3,
+  headings = "shift",
+  links = "open",
+}: MarkdownProps) {
   return (
     <MarkdownBoundary text={children} fallback={fallback}>
       <ReactMarkdown
         remarkPlugins={REMARK_PLUGINS}
-        components={componentsFor(headingLevel, headings)}
+        components={componentsFor(headingLevel, headings, links)}
         disallowedElements={["img"]}
       >
         {children}
