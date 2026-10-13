@@ -74,7 +74,10 @@ export function MiniAvatar({
 export function EmptyAvatar({ className }: { className?: string }) {
   return (
     <span
-      className={cn("block size-7 shrink-0 rounded-full border border-dashed border-foreground/30", className)}
+      className={cn(
+        "block size-7 shrink-0 rounded-full border border-dashed border-foreground/30",
+        className,
+      )}
     />
   );
 }

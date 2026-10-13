@@ -11,7 +11,9 @@ export async function waitForAuthLink(to: string, subject: string, timeoutMs = 2
       const { messages } = (await res.json()) as { messages: MailpitSummary[] };
       const match = messages.find((m) => m.Subject === subject);
       if (match) {
-        const detail = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${match.ID}`)).json()) as { HTML: string };
+        const detail = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${match.ID}`)).json()) as {
+          HTML: string;
+        };
         const href = detail.HTML.match(/href="([^"]*\/fr\/auth\/callback[^"]*)"/)?.[1];
         if (!href) throw new Error(`No callback link in "${subject}"`);
         return href.replaceAll("&amp;", "&");

@@ -21,7 +21,10 @@ export async function AuthShell({
 
   return (
     <main className="relative isolate flex min-h-dvh flex-col items-center justify-center px-4 py-12">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-glow" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-glow"
+      />
 
       <Link href="/" aria-label={tNav("home")} className="mb-8 rounded-full">
         <Logo />

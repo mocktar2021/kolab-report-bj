@@ -25,7 +25,14 @@ export function SignInForm({ next }: { next?: string }) {
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <div className="space-y-2">
         <Label htmlFor="email">{t("email")}</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" defaultValue={state.email} required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          defaultValue={state.email}
+          required
+        />
       </div>
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3">

@@ -10,8 +10,10 @@ import { updatePassword, type ResetState } from "./actions";
 
 export function ResetPasswordForm({ email }: { email: string }) {
   const t = useTranslations("Auth");
-  const [state, formAction, pending] = useActionState<ResetState, FormData>(updatePassword, { status: "idle" });
-  const errors = state.status === "error" ? state.fieldErrors ?? {} : {};
+  const [state, formAction, pending] = useActionState<ResetState, FormData>(updatePassword, {
+    status: "idle",
+  });
+  const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
 
   return (
     <form action={formAction} className="space-y-4" noValidate>

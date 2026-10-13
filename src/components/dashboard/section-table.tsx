@@ -121,13 +121,7 @@ export function SectionTable({ sections, matchingSections, activeStatus }: Secti
   );
 }
 
-function SectionTableHeader({
-  count,
-  activeStatus,
-}: {
-  count: number;
-  activeStatus: SectionStatus | null;
-}) {
+function SectionTableHeader({ count, activeStatus }: { count: number; activeStatus: SectionStatus | null }) {
   const t = useTranslations("Dashboard");
   const filters: { key: "all" | SectionStatus; href: string }[] = [
     { key: "all", href: "/tableau-de-bord" },

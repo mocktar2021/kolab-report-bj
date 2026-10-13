@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  SIDEBAR_COLLAPSED as COLLAPSED,
-  SIDEBAR_STORAGE_KEY as STORAGE_KEY,
-} from "./sidebar-script";
+import { SIDEBAR_COLLAPSED as COLLAPSED, SIDEBAR_STORAGE_KEY as STORAGE_KEY } from "./sidebar-script";
 
 function readStored(): boolean {
   try {

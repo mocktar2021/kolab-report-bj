@@ -10,9 +10,7 @@ const withPWA = withPWAInit({
   register: true,
   // The service worker is disabled in dev unless explicitly requested,
   // otherwise stale caches make local development painful.
-  disable:
-    process.env.NODE_ENV === "development" &&
-    process.env.NEXT_PUBLIC_PWA_ENABLE_IN_DEV !== "true",
+  disable: process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_PWA_ENABLE_IN_DEV !== "true",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
@@ -45,7 +43,9 @@ const withPWA = withPWAInit({
         // so they always come from the server.
         urlPattern: ({ url, sameOrigin }) =>
           sameOrigin &&
-          /^\/[a-z]{2}\/(connexion|inscription|mot-de-passe-oublie|reinitialiser-mot-de-passe|auth\/)/.test(url.pathname),
+          /^\/[a-z]{2}\/(connexion|inscription|mot-de-passe-oublie|reinitialiser-mot-de-passe|auth\/)/.test(
+            url.pathname,
+          ),
         handler: "NetworkOnly",
       },
     ],

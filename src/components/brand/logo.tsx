@@ -30,10 +30,7 @@ export function Logo({ className, wordmarkClassName }: LogoProps) {
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark />
       <span
-        className={cn(
-          "text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground",
-          wordmarkClassName,
-        )}
+        className={cn("text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground", wordmarkClassName)}
       >
         {t("appName")}
       </span>

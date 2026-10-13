@@ -25,7 +25,7 @@ export function SignUpForm() {
     );
   }
 
-  const errors = state.status === "error" ? state.fieldErrors ?? {} : {};
+  const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
   const values = state.status === "error" ? state.values : { fullName: "", email: "" };
 
   return (

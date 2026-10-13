@@ -35,9 +35,7 @@ export default async function TableauDeBordPage({
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
       <header>
-        <p className="text-sm text-muted-foreground">
-          {t("greeting", { name: profile?.name ?? "" })}
-        </p>
+        <p className="text-sm text-muted-foreground">{t("greeting", { name: profile?.name ?? "" })}</p>
         <h1 className="mt-1 text-h2 text-foreground">{t("title")}</h1>
         <p className="mt-1 text-small text-muted-foreground">{t("subtitle")}</p>
       </header>

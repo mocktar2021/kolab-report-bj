@@ -13,15 +13,24 @@ KolabReport is a French-language progressive web app for writing expert reports 
 
 ## Getting started
 
-Requirements: Node.js 20.11 or later, and Docker if you want a local Supabase stack.
+Requirements: Node.js 20.11 or later, Docker for the local Supabase stack, and Python 3 for the commit message check (optional).
 
 ```bash
-npm install
-cp .env.example .env.local     # then fill in the values
-npx supabase start             # local Postgres, Auth, Storage on :54321
-npx supabase db reset          # applies supabase/migrations
-npm run dev                    # http://localhost:3000, redirects to /fr
+npm install                    # also installs the git hooks
+npx supabase start             # Postgres, Auth, Storage and Mailpit, applies supabase/migrations
+cp .env.example .env.local
 ```
+
+Fill `.env.local` with the values printed by `npx supabase status`:
+
+| Variable | Local value |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | `API_URL` (http://127.0.0.1:54321) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `ANON_KEY` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `SERVICE_ROLE_KEY`, only for server scripts |
+| `NEXT_PUBLIC_APP_URL` | http://localhost:3000 (must match `site_url` in `supabase/config.toml`) |
+
+Then run `npm run dev` and open http://localhost:3000. Sign-up e-mails arrive in Mailpit at http://127.0.0.1:54324. `npx supabase db reset` rebuilds the database from the migrations.
 
 The service worker is disabled in development. To test offline behaviour, run `npm run build && npm start`, or set `NEXT_PUBLIC_PWA_ENABLE_IN_DEV=true`.
 
@@ -36,7 +45,10 @@ The service worker is disabled in development. To test offline behaviour, run `n
 | `npm run db:reset` | Recreate the local database from migrations |
 | `npm run db:push` | Apply migrations to the linked Supabase project |
 | `npm run db:types` | Generate `src/lib/supabase/database.types.ts` |
+| `npm test` | Vitest unit tests |
+| `npm run test:db` | pgTAP RLS tests (needs the local Supabase stack) |
 | `npm run test:e2e` | Playwright end-to-end tests (needs a build and the local Supabase stack) |
+| `npm run format` | Format with Prettier (`format:check` to only check) |
 
 ## Project layout
 
@@ -65,15 +77,23 @@ Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/rein
 - Local e-mails land in Mailpit at http://127.0.0.1:54324.
 - The service worker never caches auth pages or Supabase requests, and signing out clears the pages kept for offline reading.
 
-## End-to-end tests
+## Tests
 
-```bash
-npx supabase start
-npm run build
-npm run test:e2e
-```
+| Layer | Where | Command |
+| --- | --- | --- |
+| Unit | `src/**/*.test.ts(x)` | `npm test` |
+| Database (RLS) | `supabase/tests/*_test.sql`, fixture in `fixtures.psql` | `npm run test:db` |
+| End-to-end | `tests/e2e/` | `npm run build && npm run test:e2e` |
 
-The suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password.
+- The RLS suite checks every table for the owner, admin, expert and viewer roles, a member of another tenant, a user without workspace and signed-out visitors. Add a test file with every new table.
+- The end-to-end suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password.
+
+## Git hooks
+
+`npm install` sets up husky:
+
+- **pre-commit** formats and lints staged files with lint-staged.
+- **commit-msg** runs the `write-like-mocktar` checker on the message (skipped when Python 3 is missing).
 
 ## Data model and security
 

@@ -25,10 +25,7 @@ function RolesVisual() {
           )}
         >
           <span
-            className={cn(
-              "size-1.5 rounded-full",
-              role === "expert" ? "bg-highlight" : "bg-foreground/25",
-            )}
+            className={cn("size-1.5 rounded-full", role === "expert" ? "bg-highlight" : "bg-foreground/25")}
           />
           {t(role)}
         </li>
@@ -55,7 +52,14 @@ function OfflineVisual() {
           className="stroke-highlight/70"
           strokeWidth="1"
         />
-        <circle cx="100" cy="100" r="96" strokeDasharray="1.5 5" className="stroke-foreground/15" strokeWidth="1" />
+        <circle
+          cx="100"
+          cy="100"
+          r="96"
+          strokeDasharray="1.5 5"
+          className="stroke-foreground/15"
+          strokeWidth="1"
+        />
       </svg>
       <span className="surface-float relative flex size-16 items-center justify-center rounded-2xl border">
         <WifiOff className="size-6 text-foreground" />

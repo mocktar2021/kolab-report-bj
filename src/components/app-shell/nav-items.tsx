@@ -112,9 +112,7 @@ function NavItem({ href, label, icon, active, variant, onNavigate }: NavItemProp
           </>
         ) : null}
         <span className={cn("relative", active && "text-highlight")}>{icon}</span>
-        <span className={cn("relative truncate", collapsible && "sidebar-collapsed:sr-only")}>
-          {label}
-        </span>
+        <span className={cn("relative truncate", collapsible && "sidebar-collapsed:sr-only")}>{label}</span>
         {collapsible ? (
           <span
             aria-hidden="true"

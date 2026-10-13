@@ -100,9 +100,7 @@ export async function getDashboardData(status: SectionStatus | null): Promise<Da
   // much as a 30-section one. Reports without sections are left out.
   const reports = parsedProgress.data.filter((row) => row.total_sections > 0);
   const completionPercent =
-    reports.length > 0
-      ? reports.reduce((sum, row) => sum + row.completion_percent, 0) / reports.length
-      : 0;
+    reports.length > 0 ? reports.reduce((sum, row) => sum + row.completion_percent, 0) / reports.length : 0;
 
   return {
     counts,

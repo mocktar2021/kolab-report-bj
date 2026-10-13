@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import {
-  animate,
-  motion,
-  useInView,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "motion/react";
+import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { EASE_OUT_EXPO } from "./tokens";
 
 type CountUpProps = {
@@ -26,10 +19,7 @@ export function CountUp({ value, className, duration = 1.4 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.6 });
   const prefersReducedMotion = useReducedMotion();
-  const formatter = useMemo(
-    () => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }),
-    [],
-  );
+  const formatter = useMemo(() => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }), []);
   const count = useMotionValue(value);
   const text = useTransform(count, (latest) => formatter.format(Math.round(latest)));
 

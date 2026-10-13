@@ -2,7 +2,7 @@
   "name": "kolab-report-bj",
   "version": "0.1.0",
   "private": true,
-  "description": "KolabReport, plateforme collaborative de r\u00e9daction de rapports d'experts assist\u00e9e par IA (PWA, Next.js, Supabase).",
+  "description": "KolabReport, plateforme collaborative de rédaction de rapports d'experts assistée par IA (PWA, Next.js, Supabase).",
   "engines": {
     "node": ">=20.11.0"
   },
@@ -17,7 +17,13 @@
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "supabase test db",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -52,15 +58,36 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@playwright/test": "^1.56.1",
+    "@testing-library/jest-dom": "^6.10.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
     "eslint-config-next": "^15.5.4",
+    "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
+    "lint-staged": "^16.1.6",
     "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
     "supabase": "^2.45.5",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,mjs,js}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=0",
+      "sh scripts/check-prose.sh"
+    ],
+    "*.{json,css,yml,yaml}": [
+      "prettier --write"
+    ],
+    "*.{md,sql,html,toml}": [
+      "sh scripts/check-prose.sh"
+    ]
   }
 }
