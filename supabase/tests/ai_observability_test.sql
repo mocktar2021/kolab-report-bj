@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(45);
+select plan(61);
 
 create temp table v (name text primary key, id uuid);
 grant all on v to authenticated;
@@ -128,6 +128,13 @@ update public.ai_generations
 set status = 'succeeded', output = '{}', input_tokens = 900, output_tokens = 300, latency_ms = 2000,
     cost_estimate = 5, completed_at = now(), trace_id = repeat('ab', 16)
 where id = pg_temp.v('gen');
+select isnt(
+  (select generation_id from public.start_ai_generation(
+    p_workspace_id => pg_temp.id('w1'), p_section_id => pg_temp.id('s3'), p_user_id => pg_temp.id('admin'),
+    p_prompt_version_id => pg_temp.id('p_w1'), p_output_schema => 'section_draft', p_schema_version => 1::smallint,
+    p_provider => 'mock', p_model => 'mock', p_params => '{}', p_estimated_tokens => 100, p_rate_limit => 30,
+    p_monthly_budget => 100000)),
+  null, 'the app version still running calls it without a rollout');
 
 -- Publishing for everyone, rolling back ------------------------------------------
 select pg_temp.act_as('admin');
@@ -182,6 +189,51 @@ select results_eq(
     where r.candidate_id = pg_temp.v('v5')$$,
   $$values ('cancelled', 'draft')$$, 'a stopped rollout leaves its candidate a draft');
 
+-- Publishing another version ends the rollout ---------------------------------------
+select pg_temp.add_version('v6', 'modele-a', 6, 'draft');
+select pg_temp.add_version('v7', 'modele-a', 7, 'draft');
+select pg_temp.act_as('admin');
+select lives_ok($$select public.start_prompt_rollout(pg_temp.v('v6'), 30::smallint)$$, 'version 6 is rolled out');
+update public.prompt_library set status = 'published' where id = pg_temp.v('v7');
+select is((select status from public.prompt_rollouts where candidate_id = pg_temp.v('v6')), 'cancelled',
+  'publishing another version cancels the rollout');
+reset role;
+select results_eq(
+  $$select refusal from public.start_ai_generation(
+    pg_temp.id('w1'), pg_temp.id('s1'), pg_temp.id('expert'), pg_temp.v('v6'), 'section_draft', 1::smallint,
+    'mock', 'mock', '{}', 100, 30, 100000, (pg_temp.rollout_of(pg_temp.v('v6'))).id)$$,
+  $$values ('templateUnavailable')$$, 'the cancelled rollout no longer serves its candidate');
+
+select pg_temp.add_version('v8', 'modele-a', 8, 'draft');
+select pg_temp.act_as('admin');
+select lives_ok($$select public.start_prompt_rollout(pg_temp.v('v8'), 10::smallint)$$, 'version 8 is rolled out');
+select lives_ok($$select public.rollback_prompt_publish(pg_temp.v('v7'))$$, 'an admin rolls version 7 back');
+select is((select status from public.prompt_rollouts where candidate_id = pg_temp.v('v8')), 'cancelled',
+  'rolling back cancels the rollout too');
+
+select pg_temp.add_version('v9', 'modele-a', 9, 'draft');
+select pg_temp.act_as('admin');
+select lives_ok($$select public.start_prompt_rollout(pg_temp.v('v9'), 10::smallint)$$, 'version 9 is rolled out');
+select pg_temp.add_version('v10', 'modele-a', 10, 'published');
+select is((select status from public.prompt_rollouts where candidate_id = pg_temp.v('v9')), 'cancelled',
+  'a version saved as published cancels the rollout');
+
+-- Rollout rows match their template -----------------------------------------------------
+select pg_temp.add_version('v11', 'modele-a', 11, 'draft');
+reset role;
+select throws_ok(
+  $$insert into public.prompt_rollouts (workspace_id, template_key, candidate_id, percent)
+    values (null, 'modele-a', pg_temp.v('v11'), 10)$$,
+  '22023', null, 'a global rollout cannot serve a workspace version');
+select throws_ok(
+  $$insert into public.prompt_rollouts (workspace_id, template_key, candidate_id, percent)
+    values (pg_temp.id('w1'), 'modele-a', pg_temp.id('p_w1'), 10)$$,
+  'KR011', null, 'a rollout row needs a draft candidate');
+select throws_ok(
+  $$insert into public.prompt_rollouts (workspace_id, template_key, candidate_id, base_id, percent)
+    values (pg_temp.id('w1'), 'modele-a', pg_temp.v('v11'), pg_temp.id('p_w2'), 10)$$,
+  '22023', null, 'the base must be a version of the same template');
+
 -- Dashboard figures ---------------------------------------------------------------
 select pg_temp.act_as('admin');
 select results_eq(
@@ -199,10 +251,14 @@ select is((select count(*)::int from public.ai_prompt_metrics(pg_temp.id('w1'), 
 select pg_temp.act_as('admin');
 select throws_ok($$select public.claim_ai_cost_alert(1)$$, '42501', null, 'users cannot claim the cost alert');
 select throws_ok($$select * from public.ai_cost_alerts$$, '42501', null, 'users cannot read the cost alerts');
+select throws_ok($$select public.release_ai_cost_alert()$$, '42501', null, 'users cannot release the cost alert');
 reset role;
 select is(public.claim_ai_cost_alert(100), null, 'below the threshold, no alert');
 select is(public.claim_ai_cost_alert(1), 5.000000::numeric, 'past the threshold, the day is claimed with the spend');
 select is(public.claim_ai_cost_alert(1), null, 'only once a day');
+select lives_ok($$select public.release_ai_cost_alert()$$, 'a failed e-mail gives the day back');
+select is(public.claim_ai_cost_alert(1), 5.000000::numeric, 'the next generation claims it again');
+select has_index('public', 'ai_generations', 'ai_generations_created_idx', 'the daily sum reads an index');
 
 select * from finish();
 rollback;

@@ -149,6 +149,41 @@ create index prompt_rollouts_candidate_idx on public.prompt_rollouts (candidate_
 create trigger set_updated_at before update on public.prompt_rollouts
   for each row execute function private.set_updated_at();
 
+-- A rollout serves a draft of its own template, measured against a version
+-- of the same template. Global rollouts are written by hand with the service
+-- role, so the table checks this itself.
+create or replace function private.check_prompt_rollout()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  candidate public.prompt_library;
+begin
+  select * into candidate from public.prompt_library p where p.id = new.candidate_id;
+  if candidate.workspace_id is distinct from new.workspace_id or candidate.template_key <> new.template_key then
+    raise exception 'The candidate is not a version of this template' using errcode = '22023';
+  end if;
+  if tg_op = 'INSERT' and candidate.status <> 'draft' then
+    raise exception 'Seul un brouillon se déploie progressivement' using errcode = 'KR011';
+  end if;
+  if new.base_id is not null and not exists (
+    select 1 from public.prompt_library p
+    where p.id = new.base_id
+      and p.workspace_id is not distinct from new.workspace_id
+      and p.template_key = new.template_key
+  ) then
+    raise exception 'The base is not a version of this template' using errcode = '22023';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger check_prompt_rollout
+  before insert or update of workspace_id, template_key, candidate_id, base_id on public.prompt_rollouts
+  for each row execute function private.check_prompt_rollout();
+
 alter table public.prompt_rollouts enable row level security;
 
 -- Members see the rollouts of their workspace templates, and the global
@@ -164,7 +199,9 @@ revoke all on public.prompt_rollouts from anon, authenticated;
 grant select on public.prompt_rollouts to authenticated;
 
 -- A rollout ends with its candidate: publishing it by any path promotes the
--- rollout, archiving it cancels the rollout.
+-- rollout, archiving it cancels the rollout. Publishing another version of
+-- the template (directly, or by a rollback) cancels the rollout too: its
+-- candidate was measured against a version that is no longer live.
 create or replace function private.end_rollouts_of_version()
 returns trigger
 language plpgsql
@@ -172,10 +209,19 @@ security definer
 set search_path = ''
 as $$
 begin
-  if new.status is distinct from old.status and new.status in ('published', 'archived') then
+  if tg_op = 'UPDATE' and new.status is not distinct from old.status then
+    return new;
+  end if;
+  if new.status = 'published' then
     update public.prompt_rollouts r
-    set status = case when new.status = 'published' then 'promoted' else 'cancelled' end,
+    set status = case when r.candidate_id = new.id then 'promoted' else 'cancelled' end,
         ended_at = now()
+    where r.workspace_id is not distinct from new.workspace_id
+      and r.template_key = new.template_key
+      and r.status = 'active';
+  elsif new.status = 'archived' then
+    update public.prompt_rollouts r
+    set status = 'cancelled', ended_at = now()
     where r.candidate_id = new.id and r.status = 'active';
   end if;
   return new;
@@ -183,7 +229,7 @@ end;
 $$;
 
 create trigger end_rollouts_of_version
-  after update of status on public.prompt_library
+  after insert or update of status on public.prompt_library
   for each row execute function private.end_rollouts_of_version();
 
 -- Locks a rollout and checks the caller manages its workspace template.
@@ -238,6 +284,11 @@ begin
   end if;
 
   perform private.lock_prompt_template(candidate.workspace_id, candidate.template_key);
+  -- A publish may have finished while this call waited for the lock.
+  select * into candidate from public.prompt_library p where p.id = p_candidate_id for update;
+  if candidate.status <> 'draft' then
+    raise exception 'Seul un brouillon se déploie progressivement' using errcode = 'KR011';
+  end if;
   select p.id into base
   from public.prompt_library p
   where p.workspace_id = candidate.workspace_id and p.template_key = candidate.template_key and p.status = 'published';
@@ -308,6 +359,9 @@ begin
     raise exception 'Seuls les propriétaires et administrateurs reviennent à une version' using errcode = '42501';
   end if;
   perform private.lock_prompt_template(current_version.workspace_id, current_version.template_key);
+  -- Another rollback or publish may have finished while this call waited for
+  -- the lock: check the version as it is now.
+  select * into current_version from public.prompt_library p where p.id = p_version_id for update;
   if current_version.status <> 'published' then
     raise exception 'Seule la version publiée peut revenir à la précédente' using errcode = 'KR012';
   end if;
@@ -331,6 +385,7 @@ end;
 $$;
 
 revoke all on function private.end_rollouts_of_version() from public, anon;
+revoke all on function private.check_prompt_rollout() from public, anon;
 revoke all on function private.lock_rollout(uuid) from public, anon;
 revoke all on function public.start_prompt_rollout(uuid, smallint) from public, anon;
 revoke all on function public.set_prompt_rollout_percent(uuid, smallint) from public, anon;
@@ -349,6 +404,8 @@ alter table public.ai_generations
   add column trace_id text check (trace_id ~ '^[0-9a-f]{32}$');
 
 create index ai_generations_rollout_idx on public.ai_generations (rollout_id);
+-- The daily cost alert sums the whole environment's day.
+create index ai_generations_created_idx on public.ai_generations (created_at);
 
 -- The same checks as before, and a draft version is accepted when it is the
 -- candidate of an active rollout that reaches this workspace. Which sections
@@ -370,7 +427,9 @@ create function public.start_ai_generation(
   p_estimated_tokens  integer,
   p_rate_limit        integer,
   p_monthly_budget    bigint,
-  p_rollout_id        uuid
+  -- Defaults to null so the app version still running between the migration
+  -- and the deploy keeps calling it with twelve arguments.
+  p_rollout_id        uuid default null
 )
 returns table (generation_id uuid, refusal text, retry_after integer)
 language plpgsql
@@ -406,6 +465,9 @@ begin
     where r.id = p_rollout_id
       and r.status = 'active'
       and r.candidate_id = p_prompt_version_id
+      and p.status = 'draft'
+      and p.workspace_id is not distinct from r.workspace_id
+      and p.template_key = r.template_key
       and p.output_schema = p_output_schema
       and (r.workspace_id is null or r.workspace_id = p_workspace_id)
       and (r.target_workspace_id is null or r.target_workspace_id = p_workspace_id)
@@ -590,3 +652,17 @@ $$;
 
 revoke all on function public.claim_ai_cost_alert(numeric) from public, anon, authenticated;
 grant execute on function public.claim_ai_cost_alert(numeric) to service_role;
+
+-- Gives today back when the alert e-mail could not be sent, so the next
+-- generation tries again.
+create or replace function public.release_ai_cost_alert()
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  delete from public.ai_cost_alerts where day = (now() at time zone 'utc')::date;
+$$;
+
+revoke all on function public.release_ai_cost_alert() from public, anon, authenticated;
+grant execute on function public.release_ai_cost_alert() to service_role;

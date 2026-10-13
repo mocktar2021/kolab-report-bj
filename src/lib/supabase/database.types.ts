@@ -956,6 +956,7 @@ export type Database = {
           workspace_name: string;
         }[];
       };
+      release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
       rollback_prompt_publish: { Args: { p_version_id: string }; Returns: string };
       set_prompt_rollout_percent: { Args: { p_percent: number; p_rollout_id: string }; Returns: undefined };
       start_ai_generation: {
@@ -968,7 +969,7 @@ export type Database = {
           p_prompt_version_id: string;
           p_provider: string;
           p_rate_limit: number;
-          p_rollout_id: string;
+          p_rollout_id?: string;
           p_schema_version: number;
           p_section_id: string;
           p_user_id: string;
