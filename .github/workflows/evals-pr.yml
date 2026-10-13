@@ -38,6 +38,8 @@ jobs:
         with:
           # Full history, to diff the PR against its base.
           fetch-depth: 0
+          # The token stays out of .git/config, out of reach of npm ci and the evals.
+          persist-credentials: false
 
       - name: Check what the PR changes
         id: scope
