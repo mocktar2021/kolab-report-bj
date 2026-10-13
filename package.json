@@ -80,11 +80,15 @@
   "lint-staged": {
     "*.{ts,tsx,mts,mjs,js}": [
       "prettier --write",
-      "eslint --fix --max-warnings=0",
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
       "sh scripts/check-prose.sh"
     ],
-    "*.{json,css,yml,yaml}": [
+    "*.{json,css}": [
       "prettier --write"
+    ],
+    "*.{yml,yaml}": [
+      "prettier --write",
+      "sh scripts/check-prose.sh"
     ],
     "*.{md,sql,html,toml}": [
       "sh scripts/check-prose.sh"
