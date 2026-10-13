@@ -51,10 +51,11 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
 
   async function send(key: number, file: File) {
     update(key, { phase: "uploading" });
+    // Never throws, so one failure does not stop the files queued after it.
     const result = await uploadDeliverable(sectionId, file, {
       onProgress: (progress) => update(key, { progress }),
       onChecking: () => update(key, { phase: "checking", progress: 1 }),
-    });
+    }).catch(() => ({ ok: false as const, error: "generic" as const }));
     if (result.ok) {
       update(key, { phase: "done" });
       router.refresh();
