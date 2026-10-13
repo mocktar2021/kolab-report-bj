@@ -175,7 +175,7 @@ export type Database = {
           title: string;
           updated_at?: string;
           variables?: NonNullable<Json>;
-          version?: number;
+          version: number;
           workspace_id?: string | null;
         };
         Update: {
@@ -519,6 +519,31 @@ export type Database = {
       };
     };
     Views: {
+      prompt_templates: {
+        Row: {
+          description: string | null;
+          id: string | null;
+          latest_version: number | null;
+          output_schema: string | null;
+          state: Database["public"]["Enums"]["prompt_status"] | null;
+          status: Database["public"]["Enums"]["prompt_status"] | null;
+          template_key: string | null;
+          title: string | null;
+          version: number | null;
+          version_count: number | null;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "prompt_library_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       report_progress: {
         Row: {
           completed_sections: number | null;
