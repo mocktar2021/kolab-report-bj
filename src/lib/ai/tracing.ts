@@ -87,11 +87,15 @@ export class AiSpanFilter implements SpanProcessor {
   }
 }
 
-let registered = false;
+// Next.js bundles src/instrumentation.ts apart from the routes, so each
+// bundle gets its own copy of this module. The flag lives on globalThis and
+// the routes read the state from the span, not from a module variable.
+const REGISTERED = Symbol.for("kolab.ai.tracing.registered");
+const state = globalThis as typeof globalThis & { [REGISTERED]?: boolean };
 
 /** Called once from src/instrumentation.ts, on the Node.js runtime. */
 export async function registerTracing(env: Env = process.env): Promise<boolean> {
-  if (registered) return true;
+  if (state[REGISTERED]) return true;
   const destination = tracingDestination(env);
   if (!destination) {
     if (isOn(env.AI_TRACING))
@@ -110,7 +114,7 @@ export async function registerTracing(env: Env = process.env): Promise<boolean> 
     instrumentations: [],
     spanProcessors: [new AiSpanFilter(new BatchSpanProcessor(exporter))],
   });
-  registered = true;
+  state[REGISTERED] = true;
   return true;
 }
 
@@ -134,7 +138,8 @@ export async function withDraftSpan<T>(
   return tracer.startActiveSpan("kolab.ai.draft", { root: true, attributes }, async (span: Span) => {
     const spanContext = span.spanContext();
     const draftSpan: DraftSpan = {
-      traceId: registered && isSpanContextValid(spanContext) ? spanContext.traceId : null,
+      // The no-op tracer used without tracing gives a span that doesn't record.
+      traceId: span.isRecording() && isSpanContextValid(spanContext) ? spanContext.traceId : null,
       set: (more) => span.setAttributes(more),
       fail: (errorCode) => {
         span.setAttribute("kolab.error_code", errorCode);
@@ -151,7 +156,7 @@ export async function withDraftSpan<T>(
 
 /** Sends the spans still waiting, before a serverless function is frozen. */
 export async function flushTraces(): Promise<void> {
-  if (!registered) return;
+  if (!state[REGISTERED]) return;
   const provider = trace.getTracerProvider() as { getDelegate?: () => unknown };
   const delegate = (provider.getDelegate?.() ?? provider) as { forceFlush?: () => Promise<void> };
   await delegate.forceFlush?.().catch(() => undefined);

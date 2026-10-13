@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
-import type { ReadableSpan, SpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
+import {
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+  type ReadableSpan,
+  type SpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import { AiSpanFilter, isAiSpan, parseOtlpHeaders, tracingDestination, withDraftSpan } from "./tracing";
 
 describe("tracingDestination", () => {
@@ -96,5 +103,31 @@ describe("withDraftSpan", () => {
       return span.traceId;
     });
     expect(result).toBeNull();
+  });
+
+  describe("with a registered provider", () => {
+    afterEach(() => trace.disable());
+
+    it("gives the trace id and records the span, whichever bundle registered it", async () => {
+      const exporter = new InMemorySpanExporter();
+      trace.setGlobalTracerProvider(
+        new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] }),
+      );
+      const traceId = await withDraftSpan({ "kolab.generation_id": "g1" }, async (span) => {
+        span.set({ "kolab.status": "failed" });
+        span.fail("timeout");
+        return span.traceId;
+      });
+      expect(traceId).toMatch(/^[0-9a-f]{32}$/);
+      const [span] = exporter.getFinishedSpans();
+      expect(span?.name).toBe("kolab.ai.draft");
+      expect(span?.spanContext().traceId).toBe(traceId);
+      expect(span?.attributes).toMatchObject({
+        "kolab.generation_id": "g1",
+        "kolab.status": "failed",
+        "kolab.error_code": "timeout",
+      });
+      expect(span?.status).toEqual({ code: SpanStatusCode.ERROR, message: "timeout" });
+    });
   });
 });
