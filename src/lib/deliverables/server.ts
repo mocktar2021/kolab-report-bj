@@ -122,8 +122,14 @@ export async function checkStoredFile(upload: PendingUpload): Promise<UploadChec
     return { ok: false, error: "notReceived" };
   }
 
-  if (objectSize(response) !== upload.size_bytes) {
+  // The row's size is whatever the caller registered, so the limit is checked
+  // on the stored object: an SVG over 5 MB would not be read whole.
+  const size = objectSize(response);
+  if (size === null || size !== upload.size_bytes || size > type.maxBytes) {
     await response.body?.cancel().catch(() => undefined);
+    if (size !== null && size > type.maxBytes) {
+      return { ok: false, error: type.signature === "svg" ? "svgTooLarge" : "fileTooLarge" };
+    }
     return { ok: false, error: "sizeMismatch" };
   }
   const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
