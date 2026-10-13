@@ -14,7 +14,7 @@
   },
   "Landing": {
     "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
-    "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement en direct.",
+    "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement section par section.",
     "skipToContent": "Aller au contenu",
     "nav": {
       "label": "Navigation principale",
@@ -26,7 +26,7 @@
     "hero": {
       "eyebrow": "Rapports d'expertise rédigés en équipe",
       "title": "Une section par expert. <muted>Un seul rapport à livrer.</muted>",
-      "subtitle": "Découpez le rapport en sections, attribuez-les à vos experts et recueillez leurs livrables au même endroit. L'IA prépare un premier brouillon, vous suivez l'avancement en direct et assemblez le rapport final.",
+      "subtitle": "Découpez le rapport en sections, attribuez-les à vos experts et recueillez leurs livrables au même endroit. L'IA prépare un premier brouillon, vous suivez l'avancement section par section et assemblez le rapport final.",
       "primaryCta": "Se connecter",
       "secondaryCta": "Voir les fonctionnalités",
       "note": "Application web installable sur ordinateur et mobile."
@@ -90,7 +90,7 @@
         "prompt": "Synthèse de section"
       },
       "master": {
-        "title": "Rapport maître et progression en temps réel",
+        "title": "Rapport maître et suivi de l'avancement",
         "description": "Les sections s'assemblent dans l'ordre du plan. L'avancement se recalcule dès qu'un expert change le statut d'une section.",
         "progress": "Avancement du rapport",
         "before": "60 %",

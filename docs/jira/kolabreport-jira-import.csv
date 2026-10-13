@@ -185,7 +185,7 @@ Definition of Done:
 - Disallowed MIME types and files > 50 MB are rejected client- and server-side
 - Storage policies verified: a non-member cannot read/write another workspace's objects
 - Parsing is idempotent, retried on failure and visible to the user via parse_status",,High,,deliverables ingestion,Expert Deliverables & File Ingestion Pipeline
-KRB-3.1,Story,Story 3.1: Multi-format Upload Pipeline,"As a assigned expert, I want to upload .docx, .xlsx, images and diagram files directly to secure cloud storage, so that my deliverables are stored safely and quickly regardless of file size.
+KRB-3.1,Story,Story 3.1: Multi-format Upload Pipeline,"As an assigned expert, I want to upload .docx, .xlsx, images and diagram files directly to secure cloud storage, so that my deliverables are stored safely and quickly regardless of file size.
 
 Dependencies: 1.2, 2.2
 
@@ -205,7 +205,7 @@ KRB-3.1.5,Sub-task,"Bucket config: private, 50 MB, allowed_mime_types (verify mi
 Scaffolded in the initial commit: verify against the acceptance criteria of the parent story, add tests, then close.",KRB-3.1,High,,deliverables storage security backend,
 KRB-3.1.6,Sub-task,Signed download URLs (short TTL) for previews,Signed download URLs (short TTL) for previews,KRB-3.1,High,,deliverables storage security backend,
 KRB-3.1.7,Sub-task,Tests: storage policy pgTAP + upload e2e with fixtures,Tests: storage policy pgTAP + upload e2e with fixtures,KRB-3.1,High,,deliverables storage security backend,
-KRB-3.2,Story,Story 3.2: Expert Section Workspace,"As a assigned expert, I want a dedicated workspace for my section where I manage deliverables and preview their parsed content, so that I can check what the AI will use before generating a draft.
+KRB-3.2,Story,Story 3.2: Expert Section Workspace,"As an assigned expert, I want a dedicated workspace for my section where I manage deliverables and preview their parsed content, so that I can check what the AI will use before generating a draft.
 
 Dependencies: 3.1
 
@@ -256,7 +256,7 @@ Scaffolded in the initial commit: verify against the acceptance criteria of the 
 KRB-4.1.3,Sub-task,"Seed 3–5 French global templates (synthèse de section, résumé exécutif, recommandations, analyse de données)","Seed 3–5 French global templates (synthèse de section, résumé exécutif, recommandations, analyse de données)",KRB-4.1,High,,ai prompts frontend backend,
 KRB-4.1.4,Sub-task,"Prompt library UI: list, detail, version history, diff between versions","Prompt library UI: list, detail, version history, diff between versions",KRB-4.1,High,,ai prompts frontend backend,
 KRB-4.1.5,Sub-task,Template editor with variable validation and preview against sample context,Template editor with variable validation and preview against sample context,KRB-4.1,High,,ai prompts frontend backend,
-KRB-4.2,Story,Story 4.2: AI Section Draft Generation,"As a assigned expert, I want to generate a structured draft of my section from a selected template and my parsed deliverables, so that I start from a solid, consistent draft instead of a blank page.
+KRB-4.2,Story,Story 4.2: AI Section Draft Generation,"As an assigned expert, I want to generate a structured draft of my section from a selected template and my parsed deliverables, so that I start from a solid, consistent draft instead of a blank page.
 
 Dependencies: 3.2, 4.1
 
