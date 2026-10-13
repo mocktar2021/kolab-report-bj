@@ -17,7 +17,7 @@ import { generateDraft, repairReserve, type TokenUsage } from "@/lib/ai/generate
 import { checkDailyCost, finishGeneration, startGeneration } from "@/lib/ai/generation-store";
 import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
-import { estimateCost, fallbackModel } from "@/lib/ai/models";
+import { estimateCost, estimateFallbackCost, fallbackModel } from "@/lib/ai/models";
 import { draftToMarkdown } from "@/lib/ai/schemas";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
 import type { ContextDeliverable, DraftErrorBody, DraftErrorKey, DraftStreamEvent } from "@/lib/ai/types";
@@ -418,9 +418,11 @@ export async function POST(request: Request, { params }: { params: Params }) {
     };
     spent = usage;
     const usageEstimated = summaryEstimated || result.usageEstimated;
-    // Prices are set for the main provider's tiers: a draft written by the
-    // fallback model has no cost estimate.
-    const draftCost = result.usedFallback ? null : estimateCost(settings, tier, result.usage);
+    // A draft written by the fallback model is priced with
+    // AI_FALLBACK_PRICE_*, and has no cost estimate without them.
+    const draftCost = result.usedFallback
+      ? estimateFallbackCost(settings, result.usage)
+      : estimateCost(settings, tier, result.usage);
     const costEstimate = draftCost === null ? null : draftCost + (summaryCost ?? 0);
     const latencyMs = performance.now() - startedAt;
     const answeredBy = result.usedFallback && settings.fallback ? settings.fallback : null;

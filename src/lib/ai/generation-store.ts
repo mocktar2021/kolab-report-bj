@@ -59,8 +59,7 @@ export async function startGeneration(request: StartRequest): Promise<StartResul
       p_estimated_tokens: Math.min(request.estimatedTokens, 2_000_000_000),
       p_rate_limit: request.rateLimitPerHour,
       p_monthly_budget: request.monthlyTokenBudget,
-      // Null when the published version is used: the generated type has no nullable arguments.
-      p_rollout_id: request.rolloutId as string,
+      ...(request.rolloutId ? { p_rollout_id: request.rolloutId } : {}),
     })
     .maybeSingle();
   if (error || !data) {
@@ -158,5 +157,9 @@ export async function checkDailyCost(alert: { dailyUsd: number; email: string } 
     text,
     html: `<p>${escapeHtml(text).replaceAll("\n\n", "</p><p>")}</p>`,
   });
-  if (!sent) console.error("ai drafts: the daily cost alert e-mail could not be sent");
+  if (sent) return;
+  console.error("ai drafts: the daily cost alert e-mail could not be sent");
+  // Give the day back so the next generation tries again.
+  const { error: releaseError } = await createAdminClient().rpc("release_ai_cost_alert");
+  if (releaseError) console.error("ai drafts: could not release the daily cost alert", releaseError.message);
 }

@@ -214,7 +214,8 @@ A new version of a template doesn't have to reach everyone at once.
 
 - **Workspace templates.** From the template page (`/fr/espaces/{id}/modeles/{id}`), an owner or an admin starts a progressive rollout of a draft version at 1 to 99 % of the generations. The template needs a published version, which serves the rest. Sections are bucketed by a stable hash of the rollout and the section, so a section keeps the same version for the whole rollout, and raising the percentage only adds sections. The manager can change the percentage, publish the version for everyone, or cancel the rollout (the version stays a draft).
 - **Rollback.** A published version can go back to the version published before it in one action.
-- **Global templates.** They change only through migrations, so their rollouts are written by SQL with the service role: a `prompt_rollouts` row with `workspace_id` null, usually limited to one workspace with `target_workspace_id`.
+- **Another publish ends the rollout.** Publishing any other version of the template, directly or by a rollback, cancels the rollout: its draft was measured against a version that is no longer live. Start a new one if needed.
+- **Global templates.** They change only through migrations, so their rollouts are written by SQL with the service role: a `prompt_rollouts` row with `workspace_id` null, usually limited to one workspace with `target_workspace_id`. The table refuses a row whose candidate is not a draft of that same global template.
 - **Tracking.** Each generation records the prompt version and the rollout it came from, so the AI dashboard shows the draft version next to the published one.
 
 The flow we recommend:
@@ -239,5 +240,5 @@ Prompt and output text never leave the server unless `AI_TRACE_CONTENT=true`, wh
 
 ## Cost alert and fallback model
 
-- **Cost alert.** With `AI_DAILY_COST_ALERT_USD` and `AI_ALERT_EMAIL` (and an `EMAIL_PROVIDER`), the app sends one e-mail a day when the estimated spend of the environment for the UTC day passes that amount. The estimate comes from the `AI_PRICE_*` variables.
-- **Fallback model.** `AI_FALLBACK_PROVIDER` and `AI_FALLBACK_MODEL` give a second model, used when the first one fails before answering (overloaded, rate limited, unreachable). The generation records which model answered. The evals never switch to it: to check the fallback model, run the suite with `AI_PROVIDER` and `AI_MODEL` set to it, with the judge and `--compare`.
+- **Cost alert.** With `AI_DAILY_COST_ALERT_USD` and `AI_ALERT_EMAIL` (and an `EMAIL_PROVIDER`), the app sends one e-mail a day when the estimated spend of the environment for the UTC day passes that amount. The estimate comes from the `AI_PRICE_*` variables. If the e-mail can't be sent, the next generation tries again.
+- **Fallback model.** `AI_FALLBACK_PROVIDER` and `AI_FALLBACK_MODEL` give a second model, used when the first one fails before answering (overloaded, rate limited, unreachable). The generation records which model answered. Set `AI_FALLBACK_PRICE_INPUT_PER_MTOK` and `AI_FALLBACK_PRICE_OUTPUT_PER_MTOK` too: without them, drafts the fallback writes have no cost, so the dashboard and the daily alert miss that spend. The evals never switch to it: to check the fallback model, run the suite with `AI_PROVIDER` and `AI_MODEL` set to it, with the judge and `--compare`.

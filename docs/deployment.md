@@ -41,7 +41,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `AI_PROVIDER`, `AI_MODEL`, other `AI_*` | no | See `.env.example` |
 | `AI_DRAFTS_ENABLED` | no | `true` only once the eval suite passes on the model of that environment (`evals/README.md`) |
 | `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | **yes** for the secret key, mark Sensitive | Tracing of AI calls, with `AI_TRACING=true` (`docs/ai-evaluation.md`) |
-| `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` | no | Fallback model and daily cost alert, see `.env.example` |
+| `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_PRICE_INPUT_PER_MTOK`, `AI_FALLBACK_PRICE_OUTPUT_PER_MTOK`, `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` | no | Fallback model, its price, and the daily cost alert, see `.env.example` |
 | `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation e-mails |
 | `EMAIL_FROM` | no | Sender, for example `KolabReport <noreply@kolabreport.com>`, on a domain verified with the provider |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |

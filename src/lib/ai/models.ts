@@ -39,7 +39,7 @@ export type AiSettings = {
     urlTemplate: string | null;
   };
   /** A second provider and model, used when the first fails before answering. */
-  fallback: { provider: "anthropic" | "openai"; model: string } | null;
+  fallback: { provider: "anthropic" | "openai"; model: string; price: ModelPrice | null } | null;
   /** Estimated USD spend per UTC day that triggers one alert e-mail, and where it goes. */
   costAlert: { dailyUsd: number; email: string } | null;
   /** USD per million tokens. Null when not set: the cost estimate stays empty. */
@@ -83,7 +83,12 @@ function fallbackSetting(env: Env, provider: AiProvider): AiSettings["fallback"]
   const model = setting(z.string().min(1).nullable(), env.AI_FALLBACK_MODEL, null);
   if (!fallbackProvider || !model || provider === "mock") return null;
   const key = fallbackProvider === "anthropic" ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
-  return hasKey(key) ? { provider: fallbackProvider, model } : null;
+  if (!hasKey(key)) return null;
+  return {
+    provider: fallbackProvider,
+    model,
+    price: price(env, "AI_FALLBACK_PRICE_INPUT_PER_MTOK", "AI_FALLBACK_PRICE_OUTPUT_PER_MTOK"),
+  };
 }
 
 function costAlertSetting(env: Env): AiSettings["costAlert"] {
@@ -167,15 +172,21 @@ export function traceUrl(settings: AiSettings, traceId: string | null): string |
   return settings.tracing.urlTemplate.replace("{traceId}", encodeURIComponent(traceId));
 }
 
-/** Cost in USD of a call, or null when the tier has no price set. */
-export function estimateCost(
-  settings: AiSettings,
-  tier: ModelTier,
-  usage: { inputTokens: number; outputTokens: number },
-): number | null {
-  const tierPrice = settings.prices[tier];
-  if (!tierPrice) return null;
+type Usage = { inputTokens: number; outputTokens: number };
+
+function costAt(modelPrice: ModelPrice | null, usage: Usage): number | null {
+  if (!modelPrice) return null;
   return (
-    (usage.inputTokens * tierPrice.inputPerMTok + usage.outputTokens * tierPrice.outputPerMTok) / 1_000_000
+    (usage.inputTokens * modelPrice.inputPerMTok + usage.outputTokens * modelPrice.outputPerMTok) / 1_000_000
   );
+}
+
+/** Cost in USD of a call, or null when the tier has no price set. */
+export function estimateCost(settings: AiSettings, tier: ModelTier, usage: Usage): number | null {
+  return costAt(settings.prices[tier], usage);
+}
+
+/** Cost in USD of a call answered by the fallback model, or null without its price. */
+export function estimateFallbackCost(settings: AiSettings, usage: Usage): number | null {
+  return costAt(settings.fallback?.price ?? null, usage);
 }
