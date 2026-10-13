@@ -4,6 +4,16 @@ type MailpitSummary = { ID: string; Subject: string; Created: string };
 
 /** Waits for the newest e-mail to `to` whose subject matches, and returns the first callback link in it. */
 export async function waitForAuthLink(to: string, subject: string, timeoutMs = 20_000): Promise<string> {
+  return waitForLink(to, subject, /href="([^"]*\/fr\/auth\/callback[^"]*)"/, timeoutMs);
+}
+
+/** Same, for the first link matching `pattern` (its first group is the URL). */
+export async function waitForLink(
+  to: string,
+  subject: string,
+  pattern: RegExp,
+  timeoutMs = 20_000,
+): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
@@ -14,8 +24,8 @@ export async function waitForAuthLink(to: string, subject: string, timeoutMs = 2
         const detail = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${match.ID}`)).json()) as {
           HTML: string;
         };
-        const href = detail.HTML.match(/href="([^"]*\/fr\/auth\/callback[^"]*)"/)?.[1];
-        if (!href) throw new Error(`No callback link in "${subject}"`);
+        const href = detail.HTML.match(pattern)?.[1];
+        if (!href) throw new Error(`No matching link in "${subject}"`);
         return href.replaceAll("&amp;", "&");
       }
     }
