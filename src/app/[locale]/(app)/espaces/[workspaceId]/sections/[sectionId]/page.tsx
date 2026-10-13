@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
-import { STALE_PARSE_MS } from "@/lib/deliverables/parse-job";
+import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";

@@ -130,6 +130,13 @@ const nextConfig = {
       bodySizeLimit: "2mb",
     },
   },
+  // The deliverable parsers run from their own bundle (scripts/build-parse-worker.mjs).
+  // Only the routes that start a read ship it: the upload check, and the
+  // section page whose "Relancer l'analyse" action starts one.
+  outputFileTracingIncludes: {
+    "/api/deliverables/[id]/complete": ["./build/parse-worker.cjs"],
+    "/[locale]/espaces/[workspaceId]/sections/[sectionId]": ["./build/parse-worker.cjs"],
+  },
   async redirects() {
     // French is the only locale: legacy/English entry points land on French routes.
     return [
