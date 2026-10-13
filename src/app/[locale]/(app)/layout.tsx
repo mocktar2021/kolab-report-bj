@@ -6,10 +6,14 @@ import { SIDEBAR_INIT_SCRIPT } from "@/components/app-shell/sidebar-script";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getCurrentProfile } from "@/lib/supabase/user";
+import { getCurrentWorkspace, getMyWorkspaces } from "@/lib/workspaces/server";
+
+// Every page under (app) depends on the session and the workspace cookie.
+export const dynamic = "force-dynamic";
 
 // App shell for signed-in pages. The middleware already sends visitors
 // without a session to /fr/connexion; the redirect here is a second check.
-export default async function TableauDeBordLayout({
+export default async function AppLayout({
   children,
   params,
 }: {
@@ -27,10 +31,18 @@ export default async function TableauDeBordLayout({
     return redirect({ href: "/connexion", locale });
   }
 
+  const [workspaces, current] = await Promise.all([getMyWorkspaces(), getCurrentWorkspace()]);
+
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
-      <AppShell user={{ name: profile.name, email: profile.email }}>{children}</AppShell>
+      <AppShell
+        user={{ name: profile.name, email: profile.email }}
+        workspaces={workspaces}
+        currentWorkspaceId={current?.id ?? null}
+      >
+        {children}
+      </AppShell>
     </>
   );
 }

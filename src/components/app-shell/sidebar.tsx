@@ -7,10 +7,12 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
+import type { MyWorkspace } from "@/lib/workspaces/types";
 import { NavItems } from "./nav-items";
 import { SearchTrigger } from "./search-trigger";
 import { useSidebarCollapsed } from "./sidebar-state";
 import { UserAvatar } from "./user-avatar";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 
 export const SIDEBAR_ID = "app-sidebar";
 
@@ -19,11 +21,13 @@ const footerButtonClass =
 
 type SidebarProps = {
   user: { name: string; email: string };
+  workspaces: MyWorkspace[];
+  currentWorkspaceId: string | null;
   onOpenPalette: () => void;
 };
 
 /** Desktop navigation (lg and up). Width follows <html data-sidebar>. */
-export function Sidebar({ user, onOpenPalette }: SidebarProps) {
+export function Sidebar({ user, workspaces, currentWorkspaceId, onOpenPalette }: SidebarProps) {
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const { collapsed, toggle } = useSidebarCollapsed();
@@ -39,7 +43,8 @@ export function Sidebar({ user, onOpenPalette }: SidebarProps) {
         </Link>
       </div>
 
-      <div className="px-3">
+      <div className="space-y-3 px-3">
+        <WorkspaceSwitcher workspaces={workspaces} currentWorkspaceId={currentWorkspaceId} collapsible />
         <SearchTrigger onOpen={onOpenPalette} collapsible />
       </div>
 
