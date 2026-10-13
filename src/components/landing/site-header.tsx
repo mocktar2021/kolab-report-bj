@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 
@@ -25,6 +26,7 @@ export function SiteHeader() {
           <a href="#faq" className={navLinkClass}>
             {t("faq")}
           </a>
+          <ThemeToggle />
           <Button asChild size="sm" shape="pill" className="ml-1 h-9 px-4 text-sm">
             <Link href="/connexion">{t("signIn")}</Link>
           </Button>

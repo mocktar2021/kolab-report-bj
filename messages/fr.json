@@ -12,6 +12,13 @@
     "back": "Retour",
     "signOut": "Se déconnecter"
   },
+  "Theme": {
+    "label": "Thème",
+    "current": "Thème : {theme}",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
   "Landing": {
     "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
     "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement section par section.",
@@ -201,6 +208,13 @@
       "in_progress": "Sections en cours",
       "completed": "Sections terminées"
     },
+    "appearance": "Apparence",
+    "themes": {
+      "light": "Passer au thème clair",
+      "dark": "Passer au thème sombre",
+      "system": "Suivre le thème de l'appareil"
+    },
+    "currentTheme": "Thème actuel",
     "account": "Compte",
     "signOut": "Se déconnecter",
     "hintNavigate": "naviguer",

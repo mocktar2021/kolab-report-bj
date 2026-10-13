@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { MotionProvider } from "@/components/motion/motion-provider";
+import { THEME_COLORS } from "@/components/theme/theme-config";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -41,8 +43,13 @@ export async function generateMetadata({
   };
 }
 
+// Follows the device setting. ThemeProvider rewrites both tags when the
+// visitor picks a theme by hand.
 export const viewport: Viewport = {
-  themeColor: "#FAFAFA",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -64,9 +71,11 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
       <body className="min-h-dvh font-sans">
-        <NextIntlClientProvider>
-          <MotionProvider>{children}</MotionProvider>
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider>
+            <MotionProvider>{children}</MotionProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

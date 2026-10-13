@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { LogOut, Menu, Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
@@ -111,6 +112,7 @@ export function AppShell({ user, children }: AppShellProps) {
                 ) : null}
               </div>
             </div>
+            <ThemeToggle variant="row" side="top" align="start" />
             <form action={signOut}>
               <button
                 type="submit"

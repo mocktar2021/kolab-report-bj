@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { NavItems } from "./nav-items";
@@ -58,6 +59,7 @@ export function Sidebar({ user, onOpenPalette }: SidebarProps) {
             ) : null}
           </div>
         </div>
+        <ThemeToggle variant="row" collapsible side="right" align="end" />
         <form action={signOut}>
           <button type="submit" className={footerButtonClass} aria-label={tCommon("signOut")}>
             <LogOut className="size-4 shrink-0" aria-hidden="true" />

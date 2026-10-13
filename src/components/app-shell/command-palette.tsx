@@ -2,8 +2,10 @@
 
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { CornerDownLeft, LayoutDashboard, LogOut } from "lucide-react";
+import { Check, CornerDownLeft, LayoutDashboard, LogOut } from "lucide-react";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
+import { THEME_CHOICES } from "@/components/theme/theme-config";
+import { THEME_ICONS, useThemeChoice } from "@/components/theme/theme-toggle";
 import {
   CommandDialog,
   CommandEmpty,
@@ -25,6 +27,12 @@ const STATUS_KEYWORDS = {
   completed: ["terminees", "finies", "done"],
 } as const;
 
+const THEME_KEYWORDS = {
+  light: ["theme clair", "mode clair", "jour", "light"],
+  dark: ["theme sombre", "mode sombre", "nuit", "dark"],
+  system: ["theme systeme", "appareil", "automatique", "system"],
+} as const;
+
 type CommandPaletteProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +42,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const t = useTranslations("CommandPalette");
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const { choice: themeChoice, setTheme } = useThemeChoice();
 
   function run(action: () => void) {
     onOpenChange(false);
@@ -96,6 +105,28 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               {t(`filters.${status}`)}
             </CommandItem>
           ))}
+        </CommandGroup>
+        <CommandGroup heading={t("appearance")}>
+          {THEME_CHOICES.map((option) => {
+            const Icon = THEME_ICONS[option];
+            return (
+              <CommandItem
+                key={option}
+                value={`theme-${option}`}
+                keywords={[t(`themes.${option}`), ...THEME_KEYWORDS[option]]}
+                onSelect={() => run(() => setTheme(option))}
+              >
+                <Icon aria-hidden="true" />
+                {t(`themes.${option}`)}
+                {themeChoice === option ? (
+                  <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check aria-hidden="true" />
+                    <span className="sr-only">{t("currentTheme")}</span>
+                  </span>
+                ) : null}
+              </CommandItem>
+            );
+          })}
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading={t("account")}>
