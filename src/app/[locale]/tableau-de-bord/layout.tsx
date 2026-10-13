@@ -1,0 +1,38 @@
+import { notFound } from "next/navigation";
+import { hasLocale } from "next-intl";
+import { setRequestLocale } from "next-intl/server";
+import { AppShell } from "@/components/app-shell/app-shell";
+import { SIDEBAR_INIT_SCRIPT } from "@/components/app-shell/sidebar-script";
+import { redirect } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
+import { getCurrentProfile } from "@/lib/supabase/user";
+
+// App shell for signed-in pages. The middleware already sends visitors
+// without a session to /fr/connexion; the redirect here is a second check.
+export default async function TableauDeBordLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+  setRequestLocale(locale);
+
+  const profile = await getCurrentProfile();
+  if (!profile) {
+    return redirect({ href: "/connexion", locale });
+  }
+
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
+      <AppShell user={{ name: profile.name, email: profile.email }}>
+        {children}
+      </AppShell>
+    </>
+  );
+}

@@ -173,10 +173,80 @@
     "invalidInput": "Veuillez saisir une adresse e-mail valide et un mot de passe.",
     "backHome": "Retour à l'accueil"
   },
+  "AppShell": {
+    "skipToContent": "Aller au contenu",
+    "navLabel": "Navigation de l'application",
+    "home": "KolabReport, tableau de bord",
+    "dashboard": "Tableau de bord",
+    "statusGroup": "Sections",
+    "search": "Rechercher",
+    "searchLabel": "Ouvrir la palette de commandes",
+    "collapse": "Réduire le menu",
+    "expand": "Déployer le menu",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "menuTitle": "Menu",
+    "menuDescription": "Pages et filtres du tableau de bord."
+  },
+  "CommandPalette": {
+    "title": "Palette de commandes",
+    "description": "Recherchez une page, un filtre ou une action, puis validez avec Entrée.",
+    "placeholder": "Rechercher une action…",
+    "empty": "Aucune action ne correspond à votre recherche.",
+    "navigation": "Navigation",
+    "goToDashboard": "Aller au tableau de bord",
+    "filtersHeading": "Filtrer les sections",
+    "filters": {
+      "not_started": "Sections non commencées",
+      "in_progress": "Sections en cours",
+      "completed": "Sections terminées"
+    },
+    "account": "Compte",
+    "signOut": "Se déconnecter",
+    "hintNavigate": "naviguer",
+    "hintSelect": "valider",
+    "hintClose": "fermer"
+  },
   "Dashboard": {
     "title": "Tableau de bord",
-    "welcome": "Bienvenue, {name}",
-    "emptyState": "Aucun espace de travail pour le moment."
+    "greeting": "Bonjour, {name}",
+    "subtitle": "Suivez l'avancement des sections de tous vos rapports.",
+    "kpiLabel": "Indicateurs des sections",
+    "share": "{percent} du total",
+    "activeFilter": "Filtre actif",
+    "completion": "Avancement global",
+    "completionHint": "{count, plural, =0 {Aucun rapport avec des sections} one {Moyenne de # rapport} other {Moyenne de # rapports}}",
+    "filters": {
+      "label": "Filtrer par statut",
+      "all": "Toutes",
+      "not_started": "Non commencées",
+      "in_progress": "En cours",
+      "completed": "Terminées"
+    },
+    "table": {
+      "title": "Sections",
+      "count": "{count, plural, =0 {Aucune section} one {# section} other {# sections}}",
+      "caption": "Sections de vos rapports, de la plus récemment modifiée à la plus ancienne",
+      "section": "Section",
+      "report": "Rapport",
+      "expert": "Expert",
+      "status": "Statut",
+      "updatedAt": "Mise à jour",
+      "unassigned": "Non attribuée",
+      "truncated": "Affichage des {shown} sections modifiées le plus récemment, sur {total}."
+    },
+    "empty": {
+      "title": "Aucune section pour le moment",
+      "description": "Les sections apparaissent ici dès qu'un rapport de votre espace de travail est découpé. Demandez à un administrateur de l'espace de vous attribuer une section.",
+      "filteredTitle": "Aucune section « {status} »",
+      "filteredDescription": "Aucune section n'a ce statut pour le moment. Affichez toutes les sections pour voir le reste du travail.",
+      "clearFilter": "Afficher toutes les sections"
+    },
+    "error": {
+      "title": "Impossible de charger les sections",
+      "description": "La base de données ne répond pas. Rechargez la page dans un instant.",
+      "retry": "Recharger la page"
+    }
   },
   "SectionStatus": {
     "not_started": "Non commencée",

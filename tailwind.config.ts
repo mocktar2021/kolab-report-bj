@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 import animate from "tailwindcss-animate";
 
 // Shadows use the ink color (#09090B) at low opacity, layered so they read as
@@ -172,7 +173,15 @@ const config: Config = {
       },
     },
   },
-  plugins: [animate],
+  plugins: [
+    animate,
+    // sidebar-collapsed:* applies while <html data-sidebar="collapsed"> is set.
+    // The attribute is written before first paint, so the app shell renders
+    // at the right width without waiting for React.
+    plugin(({ addVariant }) => {
+      addVariant("sidebar-collapsed", ':root[data-sidebar="collapsed"] &');
+    }),
+  ],
 };
 
 export default config;

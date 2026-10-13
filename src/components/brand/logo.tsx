@@ -19,11 +19,11 @@ export function LogoMark({ className }: { className?: string }) {
 
 type LogoProps = {
   className?: string;
-  /** Hide the wordmark visually, for collapsed navigation. */
-  compact?: boolean;
+  /** Extra classes for the wordmark, for example to hide it in a collapsed sidebar. */
+  wordmarkClassName?: string;
 };
 
-export function Logo({ className, compact = false }: LogoProps) {
+export function Logo({ className, wordmarkClassName }: LogoProps) {
   const t = useTranslations("Common");
 
   return (
@@ -32,7 +32,7 @@ export function Logo({ className, compact = false }: LogoProps) {
       <span
         className={cn(
           "text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground",
-          compact && "sr-only",
+          wordmarkClassName,
         )}
       >
         {t("appName")}
