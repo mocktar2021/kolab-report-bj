@@ -75,6 +75,15 @@ French is the only locale. Every page lives under `/fr`, and `/` redirects there
 | `/fr/espaces/{id}/membres` | Members, roles and invitations (owners and admins) |
 | `/fr/invitations/{token}` | Invitation link from the e-mail (works signed out) |
 | `/fr/rapports/{id}` | Report sections, with assignment and weights for owners and admins |
+| `/fr/espaces/{id}/sections/{id}` | One section: its deliverables, and the upload zone for the people who can edit it |
+
+Route handlers under `src/app/api` (not localized, skipped by the middleware, so each one checks the session itself):
+
+| Route | Purpose |
+| --- | --- |
+| `POST /api/deliverables/upload-url` | Registers a file for a section and returns a signed upload URL |
+| `POST /api/deliverables/{id}/complete` | Checks the stored file, then keeps it or deletes it |
+| `GET /api/deliverables/{id}/file` | Redirects members to a 60-second signed URL (`?apercu` shows images inline) |
 
 The workspace picked in the sidebar switcher is kept in the `kr-espace` cookie. The server checks the membership each time it reads it. To add a locale later, extend `routing.locales` in `src/i18n/routing.ts` and add `messages/<locale>.json`.
 
@@ -136,7 +145,11 @@ Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports
 - Server actions check the role again with `requireWorkspaceRole()` in `src/lib/workspaces/server.ts` before writing, on top of RLS.
 - Invitations (`workspace_invitations`) store only the SHA-256 of the link token, last 7 days and work once. Admins cannot invite owners. Invitees join from the link, or when they sign in with that address confirmed, so someone invited before having an account joins on first login. Errors `KR003` to `KR007` cover invalid, used, expired, wrong-account and already-member cases.
 - Authorization helpers live in the `private` schema (not exposed by the API) as `SECURITY DEFINER` functions with an empty `search_path`.
-- Deliverables are stored in the private `deliverables` bucket under `{workspace_id}/{section_id}/{uuid}-{filename}`, with a 50 MB limit and a MIME allow-list.
+- Deliverables are stored in the private `deliverables` bucket under `{workspace_id}/{section_id}/{uuid}-{filename}`, with a 50 MB limit (5 MB for SVG) and a MIME allow-list kept in sync with `src/lib/deliverables/file-types.ts`. Files go from the browser straight to storage, never through the app server:
+  1. `upload-url` checks the role, the type and the size, adds a `deliverables` row with `uploaded_at` empty, and signs an upload URL for that exact path.
+  2. The browser sends the file to that URL.
+  3. `complete` reads the stored object and compares its size, its type and its first bytes with the extension. SVG files are read whole and refused when they contain scripts or event handlers. A file that passes gets `uploaded_at` (written by the service role only). Otherwise the object and its row are deleted.
+- Users cannot write `uploaded_at` or the parse results, cannot write to storage without a pending row of their own, cannot replace a stored file, and can delete their object only once its row is gone. The file the server checked is the one that stays.
 - `report_progress` computes weighted completion (completed = 1, in progress = 0.5, not started = 0) and runs with the caller's permissions. `report_sections` is published to Supabase Realtime for the live dashboard.
 
 Serverless code must connect through the Supavisor pooler in transaction mode (port 6543, `DATABASE_URL`). Use the direct connection (port 5432, `DIRECT_URL`) only for migrations and admin tools.
