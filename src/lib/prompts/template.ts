@@ -10,6 +10,17 @@ function isKnown(name: string): name is PromptVariable {
   return KNOWN.has(name);
 }
 
+const BLANK = new Set([" ", "\t", "\n", "\r"]);
+
+/** The name between braces without the blanks around it, trimmed like the database trigger does. */
+function placeholderName(template: string, open: number, close: number): string {
+  let start = open + 2;
+  let end = close;
+  while (start < end && BLANK.has(template.charAt(start))) start++;
+  while (end > start && BLANK.has(template.charAt(end - 1))) end--;
+  return template.slice(start, end);
+}
+
 export type TemplateCheck = {
   /** Known variables, in the order they first appear. */
   variables: PromptVariable[];
@@ -32,7 +43,7 @@ export function checkTemplate(template: string): TemplateCheck {
       unclosed = true;
       break;
     }
-    const name = template.slice(open + 2, close).trim();
+    const name = placeholderName(template, open, close);
     if (isKnown(name)) variables.add(name);
     else unknown.add(name.slice(0, 40));
     from = close + 2;
@@ -53,7 +64,7 @@ export function renderTemplate(template: string, values: Partial<Record<PromptVa
     if (open === -1) break;
     const close = template.indexOf("}}", open + 2);
     if (close === -1) break;
-    const name = template.slice(open + 2, close).trim();
+    const name = placeholderName(template, open, close);
     rendered +=
       template.slice(from, open) + (isKnown(name) ? (values[name] ?? "") : template.slice(open, close + 2));
     from = close + 2;

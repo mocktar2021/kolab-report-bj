@@ -18,12 +18,19 @@ describe("diffTemplates", () => {
     ]);
   });
 
+  it("doesn't count a missing final newline as a change", () => {
+    expect(diffTemplates("a\nfin", "a\nfin\nnouvelle")).toEqual([
+      { kind: "same", text: "a" },
+      { kind: "same", text: "fin" },
+      { kind: "added", text: "nouvelle" },
+    ]);
+  });
+
   it("keeps empty lines", () => {
     expect(diffTemplates("a\n\nb", "a\n\nb\nc")).toEqual([
       { kind: "same", text: "a" },
       { kind: "same", text: "" },
-      { kind: "removed", text: "b" },
-      { kind: "added", text: "b" },
+      { kind: "same", text: "b" },
       { kind: "added", text: "c" },
     ]);
   });

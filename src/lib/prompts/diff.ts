@@ -2,8 +2,9 @@ import { diffLines } from "diff";
 
 export type DiffLine = { kind: "added" | "removed" | "same"; text: string };
 
-/** Beyond this many changed lines the history says the versions differ too much to show. */
+/** Beyond this many changed lines, or this long, the history says the versions differ too much to show. */
 const MAX_EDIT_LENGTH = 2000;
+const TIMEOUT_MS = 100;
 
 /**
  * Line by line changes from one version of a template to the next. Null
@@ -11,7 +12,12 @@ const MAX_EDIT_LENGTH = 2000;
  * server's time on a template rewritten from scratch.
  */
 export function diffTemplates(before: string, after: string): DiffLine[] | null {
-  const parts = diffLines(before, after, { maxEditLength: MAX_EDIT_LENGTH });
+  // A last line with or without its newline is the same line.
+  const parts = diffLines(before, after, {
+    maxEditLength: MAX_EDIT_LENGTH,
+    timeout: TIMEOUT_MS,
+    ignoreNewlineAtEof: true,
+  });
   if (!parts) return null;
   return parts.flatMap((part) => {
     const kind = part.added ? "added" : part.removed ? "removed" : "same";

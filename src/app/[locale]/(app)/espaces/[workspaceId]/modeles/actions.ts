@@ -7,17 +7,19 @@ import {
   promptFieldErrors,
   promptVersionSchema,
   type PromptFieldErrorKey,
+  type PromptVersion,
   type PromptVersionInput,
 } from "@/lib/prompts/schema";
-import { getPromptTemplate, promptKeyTaken } from "@/lib/prompts/server";
-import { checkTemplate, templateKeyFromTitle } from "@/lib/prompts/template";
+import { getPromptTemplate } from "@/lib/prompts/server";
+import { templateKeyFromTitle } from "@/lib/prompts/template";
 import { createClient } from "@/lib/supabase/server";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 
-// Owners and admins write workspace templates. The checks here mirror RLS and
-// the column privileges on prompt_library, which have the final say.
+// Owners and admins write workspace templates. The checks here mirror RLS,
+// the column privileges and the triggers on prompt_library, which have the
+// final say: they number, check and sign each version.
 
 export type PromptActionError = "forbidden" | "notFound" | "conflict" | "invalidInput" | "generic";
 
@@ -36,14 +38,29 @@ export type SavePromptRequest = {
 
 const LIBRARY_PATH = "/[locale]/(app)/espaces/[workspaceId]/modeles";
 
+// Ids are compared with the database's, which are lowercase.
+const idSchema = uuidSchema.transform((id) => id.toLowerCase());
+
+const saveRequestSchema = z.object({
+  workspaceId: idSchema,
+  baseId: idSchema.nullable(),
+  expectedLatest: z.number().int().positive().nullable(),
+  values: z.record(z.unknown()),
+});
+
 function errorKey(error: { code?: string | null }): PromptActionError {
   switch (error.code) {
+    // 23505: a version or key someone else just took. 40P01 and 27000: two
+    // writes to the same templates crossed.
     case "23505":
+    case "40P01":
+    case "27000":
       return "conflict";
     case "42501":
       return "forbidden";
     case "22023":
     case "22P02":
+    case "22P05":
     case "23514":
       return "invalidInput";
     default:
@@ -51,55 +68,23 @@ function errorKey(error: { code?: string | null }): PromptActionError {
   }
 }
 
-/** A key from the title that no template of the workspace uses yet. */
-async function freeTemplateKey(workspaceId: string, title: string): Promise<string | null> {
-  const base = templateKeyFromTitle(title);
-  for (let attempt = 1; attempt <= 20; attempt++) {
-    const suffix = attempt === 1 ? "" : `-${attempt}`;
-    const key = `${base.slice(0, PROMPT_LIMITS.keyMax - suffix.length).replace(/-$/, "")}${suffix}`;
-    if (!(await promptKeyTaken(workspaceId, key))) return key;
-  }
-  return null;
-}
-
-/** Saves a new template, or a new version of one. Saved versions never change. */
-export async function savePromptVersion(request: SavePromptRequest): Promise<SavePromptResult> {
-  const { workspaceId, baseId } = request;
-  if (
-    !uuidSchema.safeParse(workspaceId).success ||
-    (baseId !== null && !uuidSchema.safeParse(baseId).success)
-  )
-    return { ok: false, error: "invalidInput" };
-  const access = await requireWorkspaceRole(workspaceId, MANAGER_ROLES);
-  if (!access) return { ok: false, error: "forbidden" };
-
-  const parsed = promptVersionSchema(baseId === null).safeParse(request.values);
-  if (!parsed.success)
-    return { ok: false, error: "invalidInput", fieldErrors: promptFieldErrors(parsed.error) };
-  const values = parsed.data;
-
-  let templateKey: string | null;
-  if (baseId) {
-    // Global templates change through migrations only. Customizing one saves a new template.
-    const base = await getPromptTemplate(workspaceId, baseId);
-    if (!base || base.version.workspaceId !== workspaceId) return { ok: false, error: "notFound" };
-    if (base.history[0]?.version !== request.expectedLatest) return { ok: false, error: "conflict" };
-    templateKey = base.version.templateKey;
-  } else {
-    templateKey = await freeTemplateKey(workspaceId, values.title);
-    if (!templateKey) return { ok: false, error: "conflict" };
-  }
-
+/** Inserts one version. The trigger refuses `version` when it is not the template's next one. */
+async function insertVersion(
+  workspaceId: string,
+  templateKey: string,
+  version: number,
+  values: PromptVersion,
+) {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  return supabase
     .from("prompt_library")
     .insert({
       workspace_id: workspaceId,
       template_key: templateKey,
+      version,
       title: values.title,
       description: values.description,
       template: values.template,
-      variables: checkTemplate(values.template).variables,
       status: values.publish ? "published" : "draft",
       changelog: values.changelog,
       output_schema: values.outputSchema,
@@ -109,6 +94,42 @@ export async function savePromptVersion(request: SavePromptRequest): Promise<Sav
     })
     .select("id")
     .single();
+}
+
+/** Saves a new template, or a new version of one. Saved versions never change. */
+export async function savePromptVersion(request: SavePromptRequest): Promise<SavePromptResult> {
+  const parsedRequest = saveRequestSchema.safeParse(request);
+  if (!parsedRequest.success) return { ok: false, error: "invalidInput" };
+  const { workspaceId, baseId, expectedLatest } = parsedRequest.data;
+  const access = await requireWorkspaceRole(workspaceId, MANAGER_ROLES);
+  if (!access) return { ok: false, error: "forbidden" };
+
+  const parsed = promptVersionSchema(baseId === null).safeParse(parsedRequest.data.values);
+  if (!parsed.success)
+    return { ok: false, error: "invalidInput", fieldErrors: promptFieldErrors(parsed.error) };
+  const values = parsed.data;
+
+  let result: Awaited<ReturnType<typeof insertVersion>>;
+  if (baseId) {
+    // Global templates change through migrations only. Customizing one saves a new template.
+    const base = await getPromptTemplate(workspaceId, baseId);
+    if (!base || base.version.workspaceId !== workspaceId) return { ok: false, error: "notFound" };
+    if (expectedLatest === null) return { ok: false, error: "invalidInput" };
+    result = await insertVersion(workspaceId, base.version.templateKey, expectedLatest + 1, values);
+  } else {
+    // A new template takes a key from its title. When the workspace already
+    // uses it, the trigger refuses version 1 and the next suffix is tried.
+    const key = templateKeyFromTitle(values.title);
+    let attempt = 1;
+    do {
+      const suffix = attempt === 1 ? "" : `-${attempt}`;
+      const candidate = `${key.slice(0, PROMPT_LIMITS.keyMax - suffix.length).replace(/-$/, "")}${suffix}`;
+      result = await insertVersion(workspaceId, candidate, 1, values);
+      attempt++;
+    } while (result.error?.code === "23505" && attempt <= 20);
+  }
+
+  const { data, error } = result;
   if (error || !data) {
     if (error && errorKey(error) === "generic")
       console.error("prompts: could not save a version", error.message);
@@ -121,8 +142,8 @@ export async function savePromptVersion(request: SavePromptRequest): Promise<Sav
 export type PromptStatusResult = { ok: true } | { ok: false; error: PromptActionError };
 
 const statusRequestSchema = z.object({
-  workspaceId: uuidSchema,
-  versionId: uuidSchema,
+  workspaceId: idSchema,
+  versionId: idSchema,
   status: z.enum(["published", "archived"]),
 });
 
@@ -137,7 +158,7 @@ export async function setPromptStatus(
 ): Promise<PromptStatusResult> {
   const parsed = statusRequestSchema.safeParse({ workspaceId, versionId, status });
   if (!parsed.success) return { ok: false, error: "invalidInput" };
-  const access = await requireWorkspaceRole(workspaceId, MANAGER_ROLES);
+  const access = await requireWorkspaceRole(parsed.data.workspaceId, MANAGER_ROLES);
   if (!access) return { ok: false, error: "forbidden" };
 
   const supabase = await createClient();

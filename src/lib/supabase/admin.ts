@@ -5,7 +5,7 @@ import type { Database } from "./database.types";
 
 /**
  * Service-role client: BYPASSES RLS. Server-only, for trusted back-office
- * tasks (signed upload URLs, background parsing, seeding global prompts).
+ * tasks (signed upload URLs, background parsing).
  * Always scope queries by workspace_id explicitly when using it.
  */
 export function createAdminClient() {

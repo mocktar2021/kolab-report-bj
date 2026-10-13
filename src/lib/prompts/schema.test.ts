@@ -54,6 +54,22 @@ describe("promptVersionSchema", () => {
     expect(errors(input)).toEqual(expected);
   });
 
+  it("refuses NUL characters, which Postgres can't store", () => {
+    expect(errors({ title: "Titre\u0000" })).toEqual({ title: "invalidCharacters" });
+    expect(errors({ template: "{{section_title}}\u0000" })).toEqual({ template: "invalidCharacters" });
+  });
+
+  it("counts a title in characters, as Postgres does", () => {
+    expect(errors({ title: "😀" })).toEqual({ title: "titleLength" });
+    expect(errors({ title: "😀😀" })).toEqual({});
+  });
+
+  it("reads a blank or null number as no value", () => {
+    const parsed = promptVersionSchema(true).parse({ ...VALID, temperature: "   ", maxOutputTokens: null });
+    expect(parsed.temperature).toBeNull();
+    expect(parsed.maxOutputTokens).toBeNull();
+  });
+
   it("asks for a changelog from the second version on", () => {
     expect(errors({ changelog: "  " }, false)).toEqual({ changelog: "changelogRequired" });
     expect(errors({ changelog: "Ton plus direct" }, false)).toEqual({});

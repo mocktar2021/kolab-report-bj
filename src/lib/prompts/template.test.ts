@@ -26,6 +26,11 @@ describe("checkTemplate", () => {
     });
   });
 
+  it("trims only spaces, tabs and line breaks around a name, like the database", () => {
+    expect(checkTemplate("{{\t section_title \n}}").variables).toEqual(["section_title"]);
+    expect(checkTemplate("{{\u00a0section_title}}").unknown).toEqual(["\u00a0section_title"]);
+  });
+
   it("reads three braces as an unknown name", () => {
     expect(checkTemplate("{{{section_title}}}").unknown).toEqual(["{section_title"]);
   });

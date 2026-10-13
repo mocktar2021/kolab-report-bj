@@ -70,52 +70,62 @@ function toRow(record: VersionRecord): PromptVersionRow {
   };
 }
 
+/** The version a template shows in the library, without its body. */
+export type PromptVersionSummary = Pick<
+  PromptVersionRow,
+  "id" | "version" | "status" | "title" | "description" | "outputSchema"
+>;
+
 export type PromptTemplateSummary = {
   scope: "global" | "workspace";
   templateKey: string;
   /** The published version, or the latest one when none is published. */
-  current: PromptVersionRow;
+  current: PromptVersionSummary;
   latestVersion: number;
   versionCount: number;
   /** "draft" when nothing is published but a draft waits, "archived" when every version is. */
   state: PromptStatus;
 };
 
-/** Global templates and those of one workspace, one entry per template, by title. */
+/**
+ * Global templates and those of one workspace, one entry per template, by
+ * title. Reads the prompt_templates view, which picks the version to show in
+ * the database instead of loading every version's body.
+ */
 export async function listPromptTemplates(workspaceId: string): Promise<PromptTemplateSummary[] | null> {
   if (!uuidSchema.safeParse(workspaceId).success) return null;
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("prompt_library")
-    .select(VERSION_COLUMNS)
-    .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
-    .order("version", { ascending: false });
+    .from("prompt_templates")
+    .select(
+      "id, workspace_id, template_key, version, status, title, description, output_schema, version_count, latest_version, state",
+    )
+    .or(`workspace_id.is.null,workspace_id.eq.${workspaceId.toLowerCase()}`);
   if (error || !data) return null;
 
-  const templates = new Map<string, PromptVersionRow[]>();
-  for (const record of data) {
-    const row = toRow(record);
-    const id = `${row.workspaceId ?? "global"}/${row.templateKey}`;
-    templates.set(id, [...(templates.get(id) ?? []), row]);
-  }
-  return [...templates.values()]
-    .map((versions) => {
-      // Newest first, from the query.
-      const latest = versions[0] as PromptVersionRow;
-      const published = versions.find((row) => row.status === "published");
-      return {
-        scope: latest.workspaceId ? "workspace" : "global",
-        templateKey: latest.templateKey,
-        current: published ?? latest,
-        latestVersion: latest.version,
-        versionCount: versions.length,
-        state: published
-          ? "published"
-          : versions.some((row) => row.status === "draft")
-            ? "draft"
-            : "archived",
-      } satisfies PromptTemplateSummary;
-    })
+  return data
+    .flatMap((row) =>
+      // A view's columns are all nullable in the generated types.
+      row.id && row.template_key && row.version && row.status && row.title && row.state
+        ? [
+            {
+              scope: row.workspace_id ? "workspace" : "global",
+              templateKey: row.template_key,
+              current: {
+                id: row.id,
+                version: row.version,
+                status: row.status,
+                title: row.title,
+                description: row.description,
+                outputSchema: row.output_schema as OutputSchema,
+              },
+              latestVersion: row.latest_version ?? row.version,
+              versionCount: row.version_count ?? 1,
+              state: row.state,
+            } satisfies PromptTemplateSummary,
+          ]
+        : [],
+    )
     .sort((a, b) => a.current.title.localeCompare(b.current.title, "fr"));
 }
 
@@ -134,13 +144,15 @@ export async function getPromptTemplate(
   versionId: string,
 ): Promise<PromptTemplateDetail | null> {
   if (!uuidSchema.safeParse(workspaceId).success || !uuidSchema.safeParse(versionId).success) return null;
+  // The database gives ids in lowercase, the URL may not.
+  const workspace = workspaceId.toLowerCase();
   const supabase = await createClient();
   const { data: record } = await supabase
     .from("prompt_library")
     .select(VERSION_COLUMNS)
-    .eq("id", versionId)
+    .eq("id", versionId.toLowerCase())
     .maybeSingle();
-  if (!record || (record.workspace_id !== null && record.workspace_id !== workspaceId)) return null;
+  if (!record || (record.workspace_id !== null && record.workspace_id !== workspace)) return null;
 
   const base = supabase
     .from("prompt_library")
@@ -150,15 +162,4 @@ export async function getPromptTemplate(
     record.workspace_id ? base.eq("workspace_id", record.workspace_id) : base.is("workspace_id", null)
   ).order("version", { ascending: false });
   return { version: toRow(record), history: (history ?? [record]).map(toRow) };
-}
-
-/** Whether a workspace already has a template with this key. */
-export async function promptKeyTaken(workspaceId: string, templateKey: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from("prompt_library")
-    .select("id", { count: "exact", head: true })
-    .eq("workspace_id", workspaceId)
-    .eq("template_key", templateKey);
-  return (count ?? 0) > 0;
 }

@@ -15,13 +15,23 @@ export type PromptFieldErrorKey =
   | "outputSchema"
   | "modelTier"
   | "temperatureRange"
-  | "maxOutputTokensRange";
+  | "maxOutputTokensRange"
+  | "invalidCharacters";
 
-/** "" from an empty field becomes null, other values a number. */
+/** Postgres refuses text with a NUL character. */
+const noNul = (value: string) => !value.includes("\u0000");
+
+/** Characters as Postgres counts them (char_length): an emoji is one, not two. */
+const characters = (value: string) => [...value].length;
+
+/** An empty field becomes null, anything else a number. */
 const optionalNumber = (key: PromptFieldErrorKey, min: number, max: number, integer = false) =>
   z
-    .union([z.literal(""), z.number(), z.string()])
-    .transform((value) => (value === "" ? null : Number(String(value).replace(",", "."))))
+    .union([z.null(), z.number(), z.string()])
+    .transform((value) => {
+      const text = typeof value === "string" ? value.trim() : value;
+      return text === "" || text === null ? null : Number(String(text).replace(",", "."));
+    })
     .pipe(
       z
         .number({ invalid_type_error: key })
@@ -41,16 +51,22 @@ export function promptVersionSchema(isFirstVersion: boolean) {
       title: z
         .string()
         .trim()
-        .min(PROMPT_LIMITS.titleMin, "titleLength")
-        .max(PROMPT_LIMITS.titleMax, "titleLength"),
+        .refine(noNul, "invalidCharacters")
+        .refine(
+          (value) =>
+            characters(value) >= PROMPT_LIMITS.titleMin && characters(value) <= PROMPT_LIMITS.titleMax,
+          "titleLength",
+        ),
       description: z
         .string()
         .trim()
         .max(PROMPT_LIMITS.descriptionMax, "descriptionLength")
+        .refine(noNul, "invalidCharacters")
         .transform((value) => value || null),
       template: z
         .string()
         .max(PROMPT_LIMITS.templateMax, "templateLength")
+        .refine(noNul, "invalidCharacters")
         .refine((value) => value.trim().length > 0, "templateEmpty"),
       outputSchema: z.enum(OUTPUT_SCHEMAS, { message: "outputSchema" }),
       modelTier: z.enum(MODEL_TIERS, { message: "modelTier" }),
@@ -69,6 +85,7 @@ export function promptVersionSchema(isFirstVersion: boolean) {
         .string()
         .trim()
         .max(PROMPT_LIMITS.changelogMax, "changelogLength")
+        .refine(noNul, "invalidCharacters")
         .refine((value) => isFirstVersion || value.length > 0, "changelogRequired")
         .transform((value) => value || null),
       publish: z.boolean(),
