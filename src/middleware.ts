@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
     url.pathname = `/${locale}/connexion`;
     url.search = "";
     if (path !== "/") {
-      url.searchParams.set("redirectTo", request.nextUrl.pathname + request.nextUrl.search);
+      url.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
     }
     return redirectWithCookies(url, response);
   }
