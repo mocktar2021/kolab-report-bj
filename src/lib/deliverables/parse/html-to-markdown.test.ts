@@ -113,6 +113,32 @@ describe("htmlToMarkdown text", () => {
     expect(md("<h2>Lot *A* _bis_</h2>")).toBe("## Lot \\*A\\* \\_bis\\_");
   });
 
+  it("keeps a paragraph that starts like a heading, quote, list or rule as a paragraph", () => {
+    expect(
+      md(
+        "<p>1984. Le bâtiment</p><p># pas un titre</p><p>&gt; pas une citation</p><p>- 5 °C</p><p>+33 1 00</p><p>2) suite</p><p>---</p><p>===</p>",
+      ),
+    ).toBe(
+      "1984\\. Le bâtiment\n\n\\# pas un titre\n\n\\> pas une citation\n\n\\- 5 °C\n\n\\+33 1 00\n\n2\\) suite\n\n\\---\n\n\\===",
+    );
+  });
+
+  it("escapes block starts after a line break and at the start of a list item", () => {
+    expect(md("<p>Avant<br/>- après<br/> &gt; cité</p><ul><li>1. premier</li><li># deux</li></ul>")).toBe(
+      "Avant  \n\\- après  \n \\> cité\n\n- 1\\. premier\n- \\# deux",
+    );
+  });
+
+  it("keeps the closing # of a heading as text", () => {
+    expect(md("<h2>Langage C #</h2><h3>#</h3><h3>C#</h3>")).toBe("## Langage C \\#\n\n### \\#\n\n### C#");
+  });
+
+  it("escapes strikethrough, pipes, tags and entities written as text", () => {
+    expect(md("<p>~~non barré~~ a | b &lt;b&gt;gras&lt;/b&gt; &amp;eacute; 3 &lt; 4 &amp; 5</p>")).toBe(
+      "\\~\\~non barré\\~\\~ a \\| b \\<b>gras\\</b> \\&eacute; 3 < 4 & 5",
+    );
+  });
+
   it("turns <br> into a hard break in paragraphs and a space in headings", () => {
     expect(md("<p>Ligne 1<br/>Ligne 2<br>Ligne 3</p><h2>Titre<br/>suite</h2>")).toBe(
       "Ligne 1  \nLigne 2  \nLigne 3\n\n## Titre suite",
@@ -225,10 +251,10 @@ describe("htmlToMarkdown tables", () => {
     ).toBe("| **Total** | [site](<https://exemple.bj>) |\n| --- | --- |");
   });
 
-  it("keeps a pipe in a link target inside its cell, even after a backslash", () => {
-    expect(
-      md('<table><tr><td><a href="https://x.bj/a\\|b|c\\\\|d">lien</a></td><td>z</td></tr></table>'),
-    ).toBe("| [lien](<https://x.bj/a\\|b\\|c\\\\\\|d>) | z |\n| --- | --- |");
+  it("encodes backslashes in a link target and keeps its pipes inside the cell", () => {
+    expect(md('<table><tr><td><a href="https://x.bj/a\\|b|c">lien</a></td><td>z</td></tr></table>')).toBe(
+      "| [lien](<https://x.bj/a%5C\\|b\\|c>) | z |\n| --- | --- |",
+    );
   });
 
   it("joins a list in a cell with semicolons", () => {

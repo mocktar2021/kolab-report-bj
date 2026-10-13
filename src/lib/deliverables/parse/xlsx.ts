@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { escapeInline, finishMarkdown, tableToMarkdown } from "./markdown";
+import { escapeInline, finishMarkdown, heading, storableText, tableToMarkdown } from "./markdown";
 import { PARSE_LIMITS, ParseError, type ParseResult, type SheetMeta } from "./types";
 import { guardZip } from "./zip";
 
@@ -46,7 +46,9 @@ export async function parseXlsx(bytes: Buffer): Promise<ParseResult> {
     const columns = rows === 0 ? 0 : right - left + 1;
     const keptRows = Math.min(rows, PARSE_LIMITS.maxRowsPerSheet);
     const keptColumns = Math.min(columns, PARSE_LIMITS.maxColumns);
-    sheets.push({ name: sheet.name, rows, columns, keptRows, keptColumns });
+    // The name goes into parse_meta, which Postgres stores as JSON.
+    const name = storableText(sheet.name);
+    sheets.push({ name, rows, columns, keptRows, keptColumns });
 
     const grid: string[][] = [];
     for (let row = top; row < top + keptRows; row++) {
@@ -59,7 +61,7 @@ export async function parseXlsx(bytes: Buffer): Promise<ParseResult> {
       }
       grid.push(cells);
     }
-    parts.push(`## ${escapeInline(sheet.name)}`, grid.length > 0 ? tableToMarkdown(grid) : "");
+    parts.push(heading(2, escapeInline(name)), grid.length > 0 ? tableToMarkdown(grid) : "");
   }
   return { status: "parsed", ...finishMarkdown(parts.join("\n\n"), { kind: "spreadsheet", sheets }) };
 }

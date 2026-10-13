@@ -1,20 +1,13 @@
 import { type ChildNode, type Element, isTag, isText } from "domhandler";
 import { parseDocument } from "htmlparser2";
-import { escapeInline, tableToMarkdown } from "./markdown";
+import { escapeInline, escapeLineStarts, heading, tableToMarkdown } from "./markdown";
 
 // Turns the HTML mammoth makes from a Word file into Markdown: headings,
 // paragraphs, emphasis, links, nested lists and tables. Merged table cells
 // are spread over the grid so every row keeps the same columns. Images are
 // left out.
 
-const HEADINGS: Record<string, string> = {
-  h1: "#",
-  h2: "##",
-  h3: "###",
-  h4: "####",
-  h5: "#####",
-  h6: "######",
-};
+const HEADINGS: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4, h5: 5, h6: 6 };
 const MAX_SPAN = 50;
 
 function attribute(element: Element, name: string): string | undefined {
@@ -28,7 +21,8 @@ function span(element: Element, name: "colspan" | "rowspan"): number {
 
 function safeHref(href: string | undefined): string | null {
   if (!href || !/^(?:https?:|mailto:)/i.test(href)) return null;
-  return href.replace(/[\s<>]/g, encodeURIComponent);
+  // A backslash would escape the next character of the link target.
+  return href.replace(/[\s<>\\]/g, encodeURIComponent);
 }
 
 /** Wraps text in Markdown markers, keeping the surrounding spaces outside. */
@@ -104,7 +98,7 @@ function renderList(list: Element, indent: string): string {
         .filter((node): node is Element => isTag(node) && (node.name === "ul" || node.name === "ol"))
         .map((sub) => renderList(sub, childIndent))
         .join("\n");
-      return `${indent}${marker}${text}${nested ? `\n${nested}` : ""}`;
+      return `${indent}${marker}${escapeLineStarts(text)}${nested ? `\n${nested}` : ""}`;
     })
     .join("\n");
 }
@@ -155,18 +149,18 @@ function blocks(nodes: ChildNode[], counter: { tables: number }): string {
     .map((node) => {
       if (isText(node)) {
         const text = inline([node], "  \n").trim();
-        return text ? `${text}\n\n` : "";
+        return text ? `${escapeLineStarts(text)}\n\n` : "";
       }
       if (!isTag(node)) return "";
-      const heading = HEADINGS[node.name];
-      if (heading) {
+      const level = HEADINGS[node.name];
+      if (level) {
         const text = inline(node.children, " ").trim();
-        return text ? `${heading} ${text}\n\n` : "";
+        return text ? `${heading(level, text)}\n\n` : "";
       }
       switch (node.name) {
         case "p": {
           const text = inline(node.children, "  \n").trim();
-          return text ? `${text}\n\n` : "";
+          return text ? `${escapeLineStarts(text)}\n\n` : "";
         }
         case "ul":
         case "ol":

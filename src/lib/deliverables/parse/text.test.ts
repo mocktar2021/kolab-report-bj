@@ -138,6 +138,19 @@ describe("parseCsvRows", () => {
     expect(rows.at(-1)?.at(-1)).toBe("R200C30");
   });
 
+  it("counts a very wide row without keeping its values", () => {
+    const start = performance.now();
+    const { rows, totalColumns } = parseCsvRows(",".repeat(1_000_000));
+    expect(performance.now() - start).toBeLessThan(5000);
+    expect(totalColumns).toBe(1_000_001);
+    expect(rows).toEqual([Array(PARSE_LIMITS.maxColumns).fill("")]);
+  });
+
+  it("detects the delimiter from the start of a very long first line", () => {
+    const text = `${"a;".repeat(100_000)}\n${"b,c,".repeat(100_000)}`;
+    expect(parseCsvRows(text).rows[0]?.slice(0, 2)).toEqual(["a", "a"]);
+  });
+
   it("cuts quoted and unquoted values at 500 characters", () => {
     const long = "x".repeat(PARSE_LIMITS.maxCellChars + 100);
     expect(parseCsvRows(`${long};"${long}"\n`).rows).toEqual([
@@ -204,6 +217,20 @@ describe("parsePlainText", () => {
       tokenEstimate: Math.ceil(markdown.length / 4),
       truncated: false,
     });
+  });
+
+  it("decodes only the start of a long file and says it was cut", () => {
+    const line = "Le bâtiment consomme peu. 🌿\n";
+    const text = line.repeat(Math.ceil((PARSE_LIMITS.maxMarkdownChars * 4) / line.length));
+    const { markdown, meta } = parsed(parsePlainText(utf8(text)));
+    expect(meta.truncated).toBe(true);
+    expect(markdown.length).toBeLessThanOrEqual(PARSE_LIMITS.maxMarkdownChars);
+    // A character cut at the end of the decoded start doesn't make the text look like Windows-1252.
+    expect(markdown.startsWith("Le bâtiment consomme peu. 🌿")).toBe(true);
+  });
+
+  it("drops NUL bytes, which Postgres cannot store", () => {
+    expect(parsed(parsePlainText(utf8("a\u0000b\u0000"))).markdown).toBe("ab");
   });
 
   it("decodes a Windows-1252 text file", () => {

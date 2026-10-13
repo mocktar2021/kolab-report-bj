@@ -10,12 +10,18 @@ const WINDOWS_1252_HIGH = [
   0x153, 0x9d, 0x17e, 0x178,
 ];
 
-/** UTF-8 when it is valid, UTF-16 with a byte order mark, otherwise Windows-1252 (Excel's CSV). */
-export function decodeText(bytes: Uint8Array): string {
-  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes);
-  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(bytes);
+/**
+ * UTF-8 when it is valid, UTF-16 with a byte order mark, otherwise
+ * Windows-1252 (Excel's CSV). `partial` is for the start of a longer file:
+ * a character cut at the end is then dropped instead of making the UTF-8
+ * look invalid.
+ */
+export function decodeText(bytes: Uint8Array, partial = false): string {
+  const options = { stream: partial };
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes, options);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(bytes, options);
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes, options);
   } catch {
     return new TextDecoder("windows-1252")
       .decode(bytes)
@@ -25,9 +31,13 @@ export function decodeText(bytes: Uint8Array): string {
   }
 }
 
-/** French Excel writes ";" between values, others "," or tabs. Quoted values are not counted. */
+/**
+ * French Excel writes ";" between values, others "," or tabs. Counted on the
+ * start of the first line, quoted values left out.
+ */
 function delimiterOf(text: string): string {
-  const firstLine = text.slice(0, text.search(/\r?\n|$/)).replace(/"[^"]*"/g, "");
+  const start = text.slice(0, 64 * 1024);
+  const firstLine = start.slice(0, start.search(/\r?\n|$/)).replace(/"[^"]*"/g, "");
   const counts = [";", ",", "\t"].map((delimiter) => [delimiter, firstLine.split(delimiter).length] as const);
   return counts.reduce((best, current) => (current[1] > best[1] ? current : best))[0];
 }
@@ -36,23 +46,27 @@ function delimiterOf(text: string): string {
 export function parseCsvRows(text: string): { rows: string[][]; totalRows: number; totalColumns: number } {
   const delimiter = delimiterOf(text);
   const rows: string[][] = [];
+  // Values past the column limit are counted, not kept.
   let row: string[] = [];
+  let columns = 0;
   let value = "";
   let quoted = false;
   let totalRows = 0;
   let totalColumns = 0;
   const endValue = () => {
-    row.push(value);
+    if (columns < PARSE_LIMITS.maxColumns) row.push(value);
+    columns++;
     value = "";
   };
   const endRow = () => {
     endValue();
-    if (row.length > 1 || row[0] !== "") {
+    if (columns > 1 || row[0] !== "") {
       totalRows++;
-      totalColumns = Math.max(totalColumns, row.length);
-      if (rows.length < PARSE_LIMITS.maxRowsPerSheet) rows.push(row.slice(0, PARSE_LIMITS.maxColumns));
+      totalColumns = Math.max(totalColumns, columns);
+      if (rows.length < PARSE_LIMITS.maxRowsPerSheet) rows.push(row);
     }
     row = [];
+    columns = 0;
   };
   for (let index = 0; index < text.length; index++) {
     const char = text.charAt(index);
@@ -76,7 +90,7 @@ export function parseCsvRows(text: string): { rows: string[][]; totalRows: numbe
       value += char;
     }
   }
-  if (value !== "" || row.length > 0) endRow();
+  if (value !== "" || columns > 0) endRow();
   return { rows, totalRows, totalColumns };
 }
 
@@ -96,7 +110,15 @@ export function parseCsv(bytes: Uint8Array): ParseResult {
   };
 }
 
-/** Plain text and Markdown files are kept as they are. */
+/** Bytes of a text file that hold at least maxMarkdownChars characters, whatever the encoding. */
+const TEXT_BYTES = PARSE_LIMITS.maxMarkdownChars * 3;
+
+/**
+ * Plain text and Markdown files are kept as they are, and previewed as plain
+ * text. Only the start that can be kept is decoded.
+ */
 export function parsePlainText(bytes: Uint8Array): ParseResult {
-  return { status: "parsed", ...finishMarkdown(decodeText(bytes), { kind: "text" }) };
+  const cut = bytes.length > TEXT_BYTES;
+  const { markdown, meta } = finishMarkdown(decodeText(bytes.subarray(0, TEXT_BYTES), cut), { kind: "text" });
+  return { status: "parsed", markdown, meta: { ...meta, truncated: meta.truncated || cut } };
 }
