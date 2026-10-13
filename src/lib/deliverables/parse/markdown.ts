@@ -6,6 +6,22 @@ export function escapeInline(text: string): string {
 }
 
 /**
+ * Escapes every pipe so it can't end a table cell. A pipe after an even run
+ * of backslashes (none, or escaped ones) gets one more; after an odd run it
+ * is already escaped. Link targets keep their raw backslashes, so both occur.
+ */
+function escapePipes(cell: string): string {
+  let escaped = "";
+  let slashes = 0;
+  for (const char of cell) {
+    if (char === "|" && slashes % 2 === 0) escaped += "\\";
+    escaped += char;
+    slashes = char === "\\" ? slashes + 1 : 0;
+  }
+  return escaped;
+}
+
+/**
  * GitHub-style table, first row as header. Cells must already be escaped;
  * pipes and line breaks are handled here.
  */
@@ -15,7 +31,7 @@ export function tableToMarkdown(rows: string[][]): string {
   const line = (row: string[]) =>
     `| ${Array.from({ length: width }, (_, index) => {
       const value = (row[index] ?? "").replace(/\s+/g, " ").trim();
-      return value.replace(/\|/g, "\\|") || " ";
+      return escapePipes(value) || " ";
     }).join(" | ")} |`;
   const [header = [], ...body] = rows;
   return [line(header), `| ${Array(width).fill("---").join(" | ")} |`, ...body.map(line)].join("\n");

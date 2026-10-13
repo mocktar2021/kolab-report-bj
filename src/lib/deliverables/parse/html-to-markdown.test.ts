@@ -225,6 +225,12 @@ describe("htmlToMarkdown tables", () => {
     ).toBe("| **Total** | [site](<https://exemple.bj>) |\n| --- | --- |");
   });
 
+  it("keeps a pipe in a link target inside its cell, even after a backslash", () => {
+    expect(
+      md('<table><tr><td><a href="https://x.bj/a\\|b|c\\\\|d">lien</a></td><td>z</td></tr></table>'),
+    ).toBe("| [lien](<https://x.bj/a\\|b\\|c\\\\\\|d>) | z |\n| --- | --- |");
+  });
+
   it("joins a list in a cell with semicolons", () => {
     expect(md("<table><tr><td><ul><li>a</li><li>b <em>c</em></li></ul></td></tr></table>")).toBe(
       "| a; b *c* |\n| --- |",
