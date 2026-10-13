@@ -24,10 +24,12 @@ export type PromptVersionRow = {
   changelog: string | null;
   createdBy: string | null;
   createdAt: string;
+  /** Last time this version became the published one. */
+  publishedAt: string | null;
 };
 
 const VERSION_COLUMNS =
-  "id, workspace_id, template_key, version, status, title, description, template, variables, output_schema, model_tier, temperature, max_output_tokens, changelog, created_by, created_at";
+  "id, workspace_id, template_key, version, status, title, description, template, variables, output_schema, model_tier, temperature, max_output_tokens, changelog, created_by, created_at, published_at";
 
 type VersionRecord = {
   id: string;
@@ -46,6 +48,7 @@ type VersionRecord = {
   changelog: string | null;
   created_by: string | null;
   created_at: string;
+  published_at: string | null;
 };
 
 function toRow(record: VersionRecord): PromptVersionRow {
@@ -67,6 +70,7 @@ function toRow(record: VersionRecord): PromptVersionRow {
     changelog: record.changelog,
     createdBy: record.created_by,
     createdAt: record.created_at,
+    publishedAt: record.published_at,
   };
 }
 

@@ -1,4 +1,6 @@
 import "server-only";
+import { escapeHtml } from "@/lib/email/invitation-email";
+import { sendEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
 import type { OutputSchema } from "@/lib/prompts/catalog";
@@ -25,6 +27,8 @@ export type StartRequest = {
   sectionId: string;
   userId: string;
   promptVersionId: string;
+  /** The rollout that chose this version, when it is a rollout candidate. */
+  rolloutId: string | null;
   outputSchema: OutputSchema;
   provider: string;
   model: string;
@@ -55,6 +59,7 @@ export async function startGeneration(request: StartRequest): Promise<StartResul
       p_estimated_tokens: Math.min(request.estimatedTokens, 2_000_000_000),
       p_rate_limit: request.rateLimitPerHour,
       p_monthly_budget: request.monthlyTokenBudget,
+      ...(request.rolloutId ? { p_rollout_id: request.rolloutId } : {}),
     })
     .maybeSingle();
   if (error || !data) {
@@ -78,6 +83,10 @@ export type GenerationOutcome = {
   inputHashes: Record<string, string>;
   contextMeta: GenerationContextMeta | null;
   truncated: boolean;
+  /** Trace of the generation when tracing is on. */
+  traceId?: string | null;
+  /** The model that actually answered, when the fallback took over. */
+  answeredBy?: { provider: string; model: string } | null;
 } & (
   | { status: "succeeded"; output: Json; draftWords: number }
   | { status: "failed"; error: DraftFailure | "contextFailed" | "saveFailed" | "crashed" }
@@ -106,6 +115,10 @@ export async function finishGeneration(
       input_hashes: outcome.inputHashes,
       context_meta: (outcome.contextMeta ?? {}) as NonNullable<Json>,
       truncated: outcome.truncated,
+      trace_id: outcome.traceId ?? null,
+      ...(outcome.answeredBy
+        ? { provider: outcome.answeredBy.provider, model: outcome.answeredBy.model }
+        : {}),
       completed_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -115,4 +128,38 @@ export async function finishGeneration(
     .maybeSingle();
   if (error) console.error("ai drafts: could not record the outcome of a generation", error.message);
   return Boolean(data);
+}
+
+/**
+ * Sends the daily cost alert once the environment's estimated spend of the
+ * day (UTC) passes the threshold. The database claims the day, so only one
+ * e-mail goes out however many generations finish at the same time.
+ */
+export async function checkDailyCost(alert: { dailyUsd: number; email: string } | null): Promise<void> {
+  if (!alert) return;
+  const { data: spent, error } = await createAdminClient().rpc("claim_ai_cost_alert", {
+    p_threshold: alert.dailyUsd,
+  });
+  if (error) {
+    console.error("ai drafts: could not check the daily cost", error.message);
+    return;
+  }
+  if (spent === null || spent === undefined) return;
+  const environment = process.env.APP_ENV ?? process.env.VERCEL_ENV ?? "development";
+  const amount = Number(spent).toFixed(2);
+  const threshold = alert.dailyUsd.toFixed(2);
+  console.warn(`ai drafts: daily AI spend ${amount} USD passed ${threshold} USD (${environment})`);
+  const subject = `[KolabReport ${environment}] Dépenses IA du jour : ${amount} USD`;
+  const text = `Les générations IA du jour (UTC) ont coûté environ ${amount} USD sur l'environnement ${environment}, au-delà du seuil de ${threshold} USD (AI_DAILY_COST_ALERT_USD).\n\nLe tableau de bord IA de chaque espace donne le détail par version de modèle de prompt. Cette alerte part une fois par jour.`;
+  const sent = await sendEmail({
+    to: alert.email,
+    subject,
+    text,
+    html: `<p>${escapeHtml(text).replaceAll("\n\n", "</p><p>")}</p>`,
+  });
+  if (sent) return;
+  console.error("ai drafts: the daily cost alert e-mail could not be sent");
+  // Give the day back so the next generation tries again.
+  const { error: releaseError } = await createAdminClient().rpc("release_ai_cost_alert");
+  if (releaseError) console.error("ai drafts: could not release the daily cost alert", releaseError.message);
 }

@@ -1,4 +1,4 @@
-import { NoObjectGeneratedError, streamObject, type LanguageModelV1 } from "ai";
+import { NoObjectGeneratedError, streamObject, type LanguageModelV1, type TelemetrySettings } from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN, estimateTokens } from "./context/tokens";
 import { outputSchemaFor, parseDraftOutput, type DraftOutput, type SourceRefs } from "./schemas";
@@ -12,6 +12,10 @@ import { outputSchemaFor, parseDraftOutput, type DraftOutput, type SourceRefs } 
 // cut by the deadline or broken by an error mid-stream has still been billed,
 // so its usage is estimated from the prompt and the text received, and the
 // budget can't be dodged by stopping drafts.
+//
+// When the first model fails before answering anything (overloaded, rate
+// limited, unreachable), the fallback model, if one is set, gets the same
+// call once (Story KRB-17). A model that answered is never replaced.
 
 export type TokenUsage = { inputTokens: number; outputTokens: number };
 
@@ -23,6 +27,8 @@ type DraftOutcome = {
   usage: TokenUsage;
   /** Some of the usage is an estimate: a call ended before the provider reported it. */
   usageEstimated: boolean;
+  /** The fallback model wrote the draft. */
+  usedFallback: boolean;
 };
 
 export type DraftResult =
@@ -43,6 +49,10 @@ export type DraftCall = {
   deadline: AbortSignal;
   onPartial: (partial: unknown) => void;
   onRepair: () => void;
+  /** Used once when `model` fails before answering. */
+  fallback?: LanguageModelV1 | null;
+  /** AI SDK spans (src/lib/ai/tracing.ts). */
+  telemetry?: TelemetrySettings;
 };
 
 /** Longest previous answer quoted back to the model in the repair call. */
@@ -53,7 +63,13 @@ export function repairReserve(promptTokens: number, maxTokens: number): number {
   return promptTokens + Math.ceil(REPAIR_QUOTE_CHARS / CHARS_PER_TOKEN) + maxTokens;
 }
 
-type AttemptBase = { rawText: string; usage: TokenUsage; usageEstimated: boolean };
+type AttemptBase = {
+  rawText: string;
+  usage: TokenUsage;
+  usageEstimated: boolean;
+  /** The model sent something back before the call ended. */
+  answered: boolean;
+};
 
 type Attempt =
   | ({ ok: true; value: unknown } & AttemptBase)
@@ -108,15 +124,20 @@ ${quoted}
 Renvoie l'objet complet, corrigé, dans le format demandé, sans rien ajouter d'autre.`;
 }
 
-async function attempt(call: DraftCall, prompt: string, signal: AbortSignal): Promise<Attempt> {
+async function attempt(
+  call: DraftCall,
+  model: LanguageModelV1,
+  prompt: string,
+  signal: AbortSignal,
+): Promise<Attempt> {
   let rawText = "";
   let usage: TokenUsage | null = null;
   let streamError: unknown = null;
   let started = false;
   // A call that got an answer started, or was stopped, has been billed even without a usage report.
-  const settle = (reported: TokenUsage | null): Pick<AttemptBase, "usage" | "usageEstimated"> =>
+  const settle = (reported: TokenUsage | null): Pick<AttemptBase, "usage" | "usageEstimated" | "answered"> =>
     reported && (reported.inputTokens > 0 || reported.outputTokens > 0)
-      ? { usage: reported, usageEstimated: false }
+      ? { usage: reported, usageEstimated: false, answered: started }
       : started || signal.aborted
         ? {
             usage: {
@@ -124,11 +145,12 @@ async function attempt(call: DraftCall, prompt: string, signal: AbortSignal): Pr
               outputTokens: estimateTokens(rawText),
             },
             usageEstimated: true,
+            answered: started,
           }
-        : { usage: { inputTokens: 0, outputTokens: 0 }, usageEstimated: false };
+        : { usage: { inputTokens: 0, outputTokens: 0 }, usageEstimated: false, answered: false };
   try {
     const result = streamObject({
-      model: call.model,
+      model,
       schema: outputSchemaFor(call.schema, call.refs),
       schemaName: "brouillon",
       schemaDescription: "Brouillon de section de rapport d'expertise, en français.",
@@ -140,6 +162,7 @@ async function attempt(call: DraftCall, prompt: string, signal: AbortSignal): Pr
       abortSignal: signal,
       // Errors arrive in the stream below; this keeps them out of the logs twice.
       onError: () => undefined,
+      experimental_telemetry: call.telemetry,
     });
     for await (const part of result.fullStream) {
       // An error part alone means the provider refused the call, which isn't billed.
@@ -177,40 +200,37 @@ export async function generateDraft(call: DraftCall): Promise<DraftResult> {
   const signal = AbortSignal.any([call.userSignal, call.deadline]);
   let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
-  const first = await attempt(call, call.prompt, signal);
+  let model = call.model;
+  let usedFallback = false;
+  let first = await attempt(call, model, call.prompt, signal);
   usage = addUsage(usage, first.usage);
   let usageEstimated = first.usageEstimated;
+  if (!first.ok && !first.invalid && !first.answered && !signal.aborted && call.fallback) {
+    model = call.fallback;
+    usedFallback = true;
+    first = await attempt(call, model, call.prompt, signal);
+    usage = addUsage(usage, first.usage);
+    usageEstimated ||= first.usageEstimated;
+  }
+  const outcome = () => ({ usage, usageEstimated, usedFallback });
+
   const firstOutput = first.ok ? parseDraftOutput(call.schema, call.refs, first.value) : null;
   if (firstOutput) {
-    return { ok: true, output: firstOutput, rawText: first.rawText, repaired: false, usage, usageEstimated };
+    return { ok: true, output: firstOutput, rawText: first.rawText, repaired: false, ...outcome() };
   }
   if (!first.ok && (!first.invalid || signal.aborted)) {
-    return {
-      ok: false,
-      error: failure(call),
-      rawText: first.rawText,
-      repaired: false,
-      usage,
-      usageEstimated,
-    };
+    return { ok: false, error: failure(call), rawText: first.rawText, repaired: false, ...outcome() };
   }
 
   call.onRepair();
   const problems = describeValidationError(first.ok ? null : first.error);
-  const second = await attempt(call, repairPrompt(call.prompt, first.rawText, problems), signal);
+  const second = await attempt(call, model, repairPrompt(call.prompt, first.rawText, problems), signal);
   usage = addUsage(usage, second.usage);
   usageEstimated ||= second.usageEstimated;
   const secondOutput = second.ok ? parseDraftOutput(call.schema, call.refs, second.value) : null;
   if (secondOutput) {
-    return { ok: true, output: secondOutput, rawText: second.rawText, repaired: true, usage, usageEstimated };
+    return { ok: true, output: secondOutput, rawText: second.rawText, repaired: true, ...outcome() };
   }
   const error = !second.ok && !second.invalid ? failure(call) : "invalidOutput";
-  return {
-    ok: false,
-    error,
-    rawText: second.rawText || first.rawText,
-    repaired: true,
-    usage,
-    usageEstimated,
-  };
+  return { ok: false, error, rawText: second.rawText || first.rawText, repaired: true, ...outcome() };
 }

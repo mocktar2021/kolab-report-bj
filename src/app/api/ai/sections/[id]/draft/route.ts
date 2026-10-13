@@ -14,14 +14,16 @@ import {
   type OverflowChunk,
 } from "@/lib/ai/context";
 import { generateDraft, repairReserve, type TokenUsage } from "@/lib/ai/generate";
-import { finishGeneration, startGeneration } from "@/lib/ai/generation-store";
+import { checkDailyCost, finishGeneration, startGeneration } from "@/lib/ai/generation-store";
 import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
-import { estimateCost } from "@/lib/ai/models";
+import { estimateCost, estimateFallbackCost, fallbackModel } from "@/lib/ai/models";
 import { draftToMarkdown } from "@/lib/ai/schemas";
+import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
 import type { ContextDeliverable, DraftErrorBody, DraftErrorKey, DraftStreamEvent } from "@/lib/ai/types";
 import type { ParseMeta } from "@/lib/deliverables/parse/types";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier } from "@/lib/prompts/catalog";
+import { versionForSection } from "@/lib/prompts/rollouts";
 import { canEditSection } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
@@ -51,6 +53,9 @@ const PARTIAL_INTERVAL_MS = 150;
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
 const requestSchema = z.object({ promptVersionId: uuidSchema });
+
+const VERSION_COLUMNS =
+  "id, workspace_id, template_key, version, template, output_schema, model_tier, temperature, max_output_tokens, status";
 
 type Params = Promise<{ id: string }>;
 
@@ -107,21 +112,38 @@ export async function POST(request: Request, { params }: { params: Params }) {
   if (draftAvailability() !== "enabled") return refuse(503, "aiUnavailable");
   const settings = aiSettings();
 
-  const { data: template } = await supabase
+  // The expert picks a published version. An active rollout of its template
+  // may serve its draft candidate to this section instead (Story KRB-17).
+  const { data: picked } = await supabase
     .from("prompt_library")
-    .select("id, workspace_id, template, output_schema, model_tier, temperature, max_output_tokens, status")
+    .select(VERSION_COLUMNS)
     .eq("id", body.promptVersionId)
     .maybeSingle();
-  const outputSchema = z.enum(OUTPUT_SCHEMAS).safeParse(template?.output_schema);
-  const tier = z.enum(MODEL_TIERS).catch("standard").parse(template?.model_tier) as ModelTier;
   if (
-    !template ||
-    template.status !== "published" ||
-    (template.workspace_id !== null && template.workspace_id !== section.workspace_id) ||
-    !outputSchema.success
+    !picked ||
+    picked.status !== "published" ||
+    (picked.workspace_id !== null && picked.workspace_id !== section.workspace_id)
   ) {
     return refuse(422, "templateUnavailable");
   }
+  const chosen = await versionForSection(
+    { id: picked.id, workspaceId: picked.workspace_id, templateKey: picked.template_key },
+    section.workspace_id,
+    section.id,
+  );
+  const template =
+    chosen.versionId === picked.id
+      ? picked
+      : (
+          await supabase
+            .from("prompt_library")
+            .select(VERSION_COLUMNS)
+            .eq("id", chosen.versionId)
+            .maybeSingle()
+        ).data;
+  const outputSchema = z.enum(OUTPUT_SCHEMAS).safeParse(template?.output_schema);
+  const tier = z.enum(MODEL_TIERS).catch("standard").parse(template?.model_tier) as ModelTier;
+  if (!template || !outputSchema.success) return refuse(422, "templateUnavailable");
 
   const { data: workspace } = await supabase
     .from("workspaces")
@@ -180,10 +202,16 @@ export async function POST(request: Request, { params }: { params: Params }) {
     sectionId: section.id,
     userId: user.id,
     promptVersionId: template.id,
+    rolloutId: chosen.rolloutId,
     outputSchema: outputSchema.data,
     provider: settings.provider,
     model: mock ? "mock" : settings.models[tier],
-    params: { temperature, maxOutputTokens: maxTokens, modelTier: tier },
+    params: {
+      temperature,
+      maxOutputTokens: maxTokens,
+      modelTier: tier,
+      ...(settings.fallback ? { fallbackModel: settings.fallback.model } : {}),
+    },
     // Held against the budget while the draft runs, a repair call included.
     estimatedTokens:
       plan.estimatedInputTokens +
@@ -211,6 +239,17 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const workspaceId = section.workspace_id;
   const schemaKey = outputSchema.data;
   const templateText = template.template;
+  const promptVersion = { id: template.id, key: template.template_key, number: template.version };
+  const modelId = mock ? "mock" : settings.models[tier];
+  // Spans of the AI SDK calls, under this generation's trace. Prompts and
+  // outputs stay out of them unless AI_TRACE_CONTENT is on.
+  const telemetry = (functionId: string) => ({
+    isEnabled: settings.tracing.enabled,
+    recordInputs: settings.tracing.recordContent,
+    recordOutputs: settings.tracing.recordContent,
+    functionId,
+    metadata: { generationId, promptVersionId: promptVersion.id },
+  });
   const startedAt = performance.now();
   const userAbort = new AbortController();
   request.signal.addEventListener("abort", () => userAbort.abort(), { once: true });
@@ -259,6 +298,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           temperature: 0,
           maxRetries: 1,
           abortSignal: signal,
+          experimental_telemetry: telemetry("kolab.summary"),
         });
         usage.inputTokens += result.usage.promptTokens || 0;
         usage.outputTokens += result.usage.completionTokens || 0;
@@ -275,7 +315,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     return { summaries: new Map(results), usage, estimated };
   }
 
-  async function run() {
+  async function runDraft(span: DraftSpan) {
     let built: BuiltContext | null = null;
     let summaryUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
     let summaryEstimated = false;
@@ -302,6 +342,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           }
         : null,
       truncated: built?.truncated ?? false,
+      traceId: span.traceId,
     });
     const summaryCost = estimateCost(settings, "fast", summaryUsage);
 
@@ -316,6 +357,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
         repaired: false,
         ...common(summaryEstimated),
       });
+      span.fail("contextFailed");
       send({ type: "error", error: "generic" });
       return close();
     }
@@ -356,6 +398,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
             pending = null;
             send({ type: "repair" });
           },
+          fallback: mock ? null : fallbackModel(settings, process.env),
+          telemetry: telemetry("kolab.draft"),
         })
       : ({
           ok: false,
@@ -364,6 +408,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
           repaired: false,
           usage: { inputTokens: 0, outputTokens: 0 },
           usageEstimated: false,
+          usedFallback: false,
         } as const);
     if (pending) send({ type: "partial", object: pending });
 
@@ -373,9 +418,25 @@ export async function POST(request: Request, { params }: { params: Params }) {
     };
     spent = usage;
     const usageEstimated = summaryEstimated || result.usageEstimated;
-    const draftCost = estimateCost(settings, tier, result.usage);
+    // A draft written by the fallback model is priced with
+    // AI_FALLBACK_PRICE_*, and has no cost estimate without them.
+    const draftCost = result.usedFallback
+      ? estimateFallbackCost(settings, result.usage)
+      : estimateCost(settings, tier, result.usage);
     const costEstimate = draftCost === null ? null : draftCost + (summaryCost ?? 0);
     const latencyMs = performance.now() - startedAt;
+    const answeredBy = result.usedFallback && settings.fallback ? settings.fallback : null;
+    span.set({
+      "gen_ai.usage.input_tokens": usage.inputTokens,
+      "gen_ai.usage.output_tokens": usage.outputTokens,
+      "kolab.latency_ms": Math.round(latencyMs),
+      "kolab.truncated": built.truncated,
+      "kolab.repaired": result.repaired,
+      "kolab.usage_estimated": usageEstimated,
+      "kolab.fallback_used": result.usedFallback,
+      ...(answeredBy ? { "gen_ai.response.model": answeredBy.model } : {}),
+      ...(costEstimate === null ? {} : { "kolab.cost_usd": costEstimate }),
+    });
 
     if (!result.ok) {
       await finishGeneration(generationId, workspaceId, {
@@ -386,8 +447,10 @@ export async function POST(request: Request, { params }: { params: Params }) {
         latencyMs,
         rawOutput: result.rawText,
         repaired: result.repaired,
+        answeredBy,
         ...common(usageEstimated),
       });
+      span.fail(result.error);
       send({ type: "error", error: result.error });
       return close();
     }
@@ -399,6 +462,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       latencyMs,
       rawOutput: result.rawText,
       repaired: result.repaired,
+      answeredBy,
       ...common(usageEstimated),
     };
     const saved = await finishGeneration(generationId, workspaceId, {
@@ -408,6 +472,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       ...outcome,
     });
     if (saved) {
+      span.set({ "kolab.status": "succeeded" });
       send({ type: "done", generationId, output: result.output, markdown });
     } else {
       // The draft could not be stored: record the failure, so the section isn't blocked as busy.
@@ -416,9 +481,33 @@ export async function POST(request: Request, { params }: { params: Params }) {
         error: "saveFailed",
         ...outcome,
       });
+      span.fail("saveFailed");
       send({ type: "error", error: "generic" });
     }
     close();
+  }
+
+  // One trace per generation, with what the dashboard shows. Then the daily
+  // cost check, and the spans are sent before the function is frozen.
+  async function run() {
+    await withDraftSpan(
+      {
+        "kolab.generation_id": generationId,
+        "kolab.workspace_id": workspaceId,
+        "kolab.prompt_version_id": promptVersion.id,
+        "kolab.prompt_template_key": promptVersion.key,
+        "kolab.prompt_version": promptVersion.number,
+        "kolab.output_schema": schemaKey,
+        ...(chosen.rolloutId ? { "kolab.rollout_id": chosen.rolloutId } : {}),
+        "gen_ai.system": settings.provider,
+        "gen_ai.request.model": modelId,
+        "gen_ai.request.temperature": temperature,
+        "gen_ai.request.max_tokens": maxTokens,
+      },
+      runDraft,
+    );
+    await checkDailyCost(settings.costAlert);
+    await flushTraces();
   }
 
   const stream = new ReadableStream<Uint8Array>({

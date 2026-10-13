@@ -14,10 +14,18 @@ type VersionActionsProps = {
   versionId: string;
   status: PromptStatus;
   newVersionHref: string;
+  /** False for the candidate of an active rollout: it is published from the rollout banner, with a confirmation. */
+  canPublish?: boolean;
 };
 
 /** Manager actions on a version of a workspace template. */
-export function VersionActions({ workspaceId, versionId, status, newVersionHref }: VersionActionsProps) {
+export function VersionActions({
+  workspaceId,
+  versionId,
+  status,
+  newVersionHref,
+  canPublish = true,
+}: VersionActionsProps) {
   const t = useTranslations("Prompts");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -50,7 +58,7 @@ export function VersionActions({ workspaceId, versionId, status, newVersionHref 
             {t("actions.newVersion")}
           </Link>
         </Button>
-        {status === "published" ? null : (
+        {status === "published" || !canPublish ? null : (
           <Button
             type="button"
             variant="outline"

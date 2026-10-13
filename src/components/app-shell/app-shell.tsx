@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
+import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { CommandPalette } from "./command-palette";
 import { NavItems } from "./nav-items";
@@ -36,6 +37,7 @@ export function AppShell({ user, workspaces, currentWorkspaceId, children }: App
   const tCommon = useTranslations("Common");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
   const openPalette = useCallback(() => {
     setMenuOpen(false);
@@ -117,6 +119,7 @@ export function AppShell({ user, workspaces, currentWorkspaceId, children }: App
               <NavItems
                 variant="sheet"
                 workspaceId={currentWorkspaceId}
+                manager={current ? isManager(current.role) : false}
                 onNavigate={() => setMenuOpen(false)}
               />
             </Suspense>

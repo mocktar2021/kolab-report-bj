@@ -122,3 +122,48 @@ describe("repairReserve", () => {
     expect(repairReserve(10_000, 4096)).toBe(10_000 + Math.ceil(40_000 / 3) + 4096);
   });
 });
+
+describe("provider fallback", () => {
+  it("gives the call to the fallback model when the first one fails before answering", async () => {
+    const primary = answers(VALID);
+    primary.doStream = () => Promise.reject(new Error("overloaded"));
+    const fallback = answers(VALID);
+    const result = await generateDraft(draftCall(primary, { fallback }));
+    expect(result).toMatchObject({ ok: true, usedFallback: true, repaired: false });
+  });
+
+  it("keeps a model that started answering, even when it breaks", async () => {
+    const controller = new AbortController();
+    const fallback = answers(VALID);
+    const spy = vi.spyOn(fallback, "doStream");
+    const result = await generateDraft(
+      draftCall(answers(VALID), {
+        fallback,
+        userSignal: controller.signal,
+        onPartial: () => controller.abort(),
+      }),
+    );
+    expect(result).toMatchObject({ ok: false, error: "aborted", usedFallback: false });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("repairs with the fallback model once it took over", async () => {
+    const primary = answers(VALID);
+    primary.doStream = () => Promise.reject(new Error("rate limited"));
+    const fallback = answers(INVALID, VALID);
+    const spy = vi.spyOn(fallback, "doStream");
+    const result = await generateDraft(draftCall(primary, { fallback }));
+    expect(result).toMatchObject({ ok: true, usedFallback: true, repaired: true });
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails as before without a fallback model", async () => {
+    const primary = answers(VALID);
+    primary.doStream = () => Promise.reject(new Error("unreachable"));
+    expect(await generateDraft(draftCall(primary))).toMatchObject({
+      ok: false,
+      error: "providerError",
+      usedFallback: false,
+    });
+  });
+});

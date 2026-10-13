@@ -14,6 +14,9 @@ import type { EvalTemplate } from "./templates";
 
 export const RUBRIC_FILE = "evals/rubric.md";
 
+/** Output cap of one judge call. */
+export const JUDGE_MAX_TOKENS = 2000;
+
 const START = "<!-- judge:start -->";
 const END = "<!-- judge:end -->";
 
@@ -118,7 +121,7 @@ export async function runJudge(params: {
     system: judgeSystem(params.rubric),
     prompt: judgePrompt(params.value, params.template, params.built, params.markdown),
     temperature: 0,
-    maxTokens: 2000,
+    maxTokens: JUDGE_MAX_TOKENS,
     maxRetries: 2,
   });
   const scores = {} as Record<Criterion, number>;

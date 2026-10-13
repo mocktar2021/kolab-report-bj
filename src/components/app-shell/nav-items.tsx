@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookText, LayoutDashboard } from "lucide-react";
+import { BookText, Gauge, LayoutDashboard } from "lucide-react";
 import { motion } from "motion/react";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -16,11 +16,13 @@ type NavItemsProps = {
   variant: "sidebar" | "sheet";
   /** The workspace picked in the switcher, for the links that belong to one workspace. */
   workspaceId: string | null;
+  /** Owners and admins of that workspace, who also get its manager-only pages. */
+  manager?: boolean;
   onNavigate?: () => void;
 };
 
 /** Links of the app navigation, shared by the desktop sidebar and the mobile sheet. */
-export function NavItems({ variant, workspaceId, onNavigate }: NavItemsProps) {
+export function NavItems({ variant, workspaceId, manager = false, onNavigate }: NavItemsProps) {
   const t = useTranslations("AppShell");
   const tFilters = useTranslations("Dashboard.filters");
   const pathname = usePathname();
@@ -29,6 +31,7 @@ export function NavItems({ variant, workspaceId, onNavigate }: NavItemsProps) {
   const activeStatus = parsedStatus.success ? parsedStatus.data : null;
   const onDashboard = pathname === DASHBOARD_PATH;
   const promptsPath = workspaceId ? `/espaces/${workspaceId}/modeles` : null;
+  const aiPath = workspaceId && manager ? `/espaces/${workspaceId}/ia` : null;
   const collapsible = variant === "sidebar";
 
   return (
@@ -50,6 +53,16 @@ export function NavItems({ variant, workspaceId, onNavigate }: NavItemsProps) {
             variant={variant}
             onNavigate={onNavigate}
             icon={<BookText className="size-4" aria-hidden="true" />}
+          />
+        ) : null}
+        {aiPath ? (
+          <NavItem
+            href={aiPath}
+            label={t("aiDashboard")}
+            active={pathname === aiPath || pathname.startsWith(`${aiPath}/`)}
+            variant={variant}
+            onNavigate={onNavigate}
+            icon={<Gauge className="size-4" aria-hidden="true" />}
           />
         ) : null}
       </ul>

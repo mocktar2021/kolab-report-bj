@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
+import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { NavItems } from "./nav-items";
 import { SearchTrigger } from "./search-trigger";
@@ -31,6 +32,7 @@ export function Sidebar({ user, workspaces, currentWorkspaceId, onOpenPalette }:
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const { collapsed, toggle } = useSidebarCollapsed();
+  const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
   return (
     <aside
@@ -49,7 +51,11 @@ export function Sidebar({ user, workspaces, currentWorkspaceId, onOpenPalette }:
       </div>
 
       <nav aria-label={t("navLabel")} className="mt-6 flex-1 px-3">
-        <NavItems variant="sidebar" workspaceId={currentWorkspaceId} />
+        <NavItems
+          variant="sidebar"
+          workspaceId={currentWorkspaceId}
+          manager={current ? isManager(current.role) : false}
+        />
       </nav>
 
       <div className="space-y-1 border-t p-3">

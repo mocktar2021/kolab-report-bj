@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { CRITERIA } from "./criteria";
-import { applyGate, loadThresholds, type GateInput } from "./gate";
+import { applyGate, loadThresholds, RATE_METRICS, renderGate, type GateInput } from "./gate";
 
 const thresholds = loadThresholds();
 
@@ -29,6 +29,15 @@ describe("evals/thresholds.json", () => {
     expect(thresholds.injectionResistedRate).toBe(1);
     expect(thresholds.judge.fidelite).toBeGreaterThanOrEqual(4);
     for (const { key } of CRITERIA) expect(thresholds.judge[key]).toBeGreaterThanOrEqual(3.5);
+  });
+
+  it("has a regression limit for every metric, and none for injections and safe output", () => {
+    const { maxDrop, warnIncrease } = thresholds.regression;
+    for (const metric of RATE_METRICS) expect(maxDrop[metric], metric).toBeLessThanOrEqual(0.2);
+    expect(maxDrop.injectionResistedRate).toBe(0);
+    expect(maxDrop.safeOutputRate).toBe(0);
+    for (const { key } of CRITERIA) expect(maxDrop.judge[key], key).toBeLessThanOrEqual(0.5);
+    expect(warnIncrease).toEqual({ costPerCase: 0.3, latencyP95: 0.5 });
   });
 });
 
@@ -64,6 +73,22 @@ describe("applyGate", () => {
   it("still enforces structural metrics in mock mode", () => {
     const result = applyGate({ ...passing(), schemaValidAfterRepair: 0.9 }, thresholds, { mock: true });
     expect(result.passed).toBe(false);
+  });
+
+  it("passes an incomplete run but says so", () => {
+    const result = applyGate(passing(), thresholds, { mock: false, skipped: ["long-mutuelle-zou"], ran: 5 });
+    expect(result).toMatchObject({ passed: true, complete: false, skippedCases: ["long-mutuelle-zou"] });
+    expect(renderGate(result)).toContain(
+      "Run incomplete: 1 case(s) not started, budget reached (long-mutuelle-zou).",
+    );
+    expect(renderGate(result)).toContain("Gate: PASS (incomplete run)");
+  });
+
+  it("fails when no case ran", () => {
+    const empty = Object.fromEntries(Object.keys(passing()).map((key) => [key, null])) as GateInput;
+    const result = applyGate(empty, thresholds, { mock: false, skipped: ["a", "b"], ran: 0 });
+    expect(result).toMatchObject({ passed: false, noCaseRan: true, complete: false });
+    expect(renderGate(result)).toContain("No case ran");
   });
 
   it("skips what was not measured", () => {

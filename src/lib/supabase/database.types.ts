@@ -3,6 +3,28 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      ai_cost_alerts: {
+        Row: {
+          created_at: string;
+          day: string;
+          threshold_usd: number;
+          total_usd: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          day: string;
+          threshold_usd: number;
+          total_usd: number;
+        };
+        Update: {
+          created_at?: string;
+          day?: string;
+          threshold_usd?: number;
+          total_usd?: number;
+        };
+        Relationships: [];
+      };
       ai_generations: {
         Row: {
           accepted: boolean | null;
@@ -31,10 +53,12 @@ export type Database = {
           raw_output: string | null;
           repaired: boolean;
           requested_by: string | null;
+          rollout_id: string | null;
           schema_version: number;
           section_id: string | null;
           status: Database["public"]["Enums"]["ai_generation_status"];
           total_tokens: number | null;
+          trace_id: string | null;
           truncated: boolean;
           updated_at: string;
           user_rating: number | null;
@@ -68,10 +92,12 @@ export type Database = {
           raw_output?: string | null;
           repaired?: boolean;
           requested_by?: string | null;
+          rollout_id?: string | null;
           schema_version: number;
           section_id?: string | null;
           status?: Database["public"]["Enums"]["ai_generation_status"];
           total_tokens?: never;
+          trace_id?: string | null;
           truncated?: boolean;
           updated_at?: string;
           user_rating?: number | null;
@@ -104,10 +130,12 @@ export type Database = {
           raw_output?: string | null;
           repaired?: boolean;
           requested_by?: string | null;
+          rollout_id?: string | null;
           schema_version?: number;
           section_id?: string | null;
           status?: Database["public"]["Enums"]["ai_generation_status"];
           total_tokens?: never;
+          trace_id?: string | null;
           truncated?: boolean;
           updated_at?: string;
           user_rating?: number | null;
@@ -133,6 +161,13 @@ export type Database = {
             columns: ["requested_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ai_generations_rollout_id_fkey";
+            columns: ["rollout_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_rollouts";
             referencedColumns: ["id"];
           },
           {
@@ -296,6 +331,7 @@ export type Database = {
           max_output_tokens: number | null;
           model_tier: string;
           output_schema: string;
+          published_at: string | null;
           status: Database["public"]["Enums"]["prompt_status"];
           temperature: number | null;
           template: string;
@@ -316,6 +352,7 @@ export type Database = {
           max_output_tokens?: number | null;
           model_tier?: string;
           output_schema?: string;
+          published_at?: string | null;
           status?: Database["public"]["Enums"]["prompt_status"];
           temperature?: number | null;
           template: string;
@@ -335,6 +372,7 @@ export type Database = {
           max_output_tokens?: number | null;
           model_tier?: string;
           output_schema?: string;
+          published_at?: string | null;
           status?: Database["public"]["Enums"]["prompt_status"];
           temperature?: number | null;
           template?: string;
@@ -355,6 +393,102 @@ export type Database = {
           },
           {
             foreignKeyName: "prompt_library_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      prompt_rollouts: {
+        Row: {
+          base_id: string | null;
+          candidate_id: string;
+          created_at: string;
+          created_by: string | null;
+          ended_at: string | null;
+          id: string;
+          percent: number;
+          status: string;
+          target_workspace_id: string | null;
+          template_key: string;
+          updated_at: string;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          base_id?: string | null;
+          candidate_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          percent: number;
+          status?: string;
+          target_workspace_id?: string | null;
+          template_key: string;
+          updated_at?: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          base_id?: string | null;
+          candidate_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          percent?: number;
+          status?: string;
+          target_workspace_id?: string | null;
+          template_key?: string;
+          updated_at?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "prompt_rollouts_base_id_fkey";
+            columns: ["base_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_library";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_rollouts_base_id_fkey";
+            columns: ["base_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_rollouts_candidate_id_fkey";
+            columns: ["candidate_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_library";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_rollouts_candidate_id_fkey";
+            columns: ["candidate_id"];
+            isOneToOne: false;
+            referencedRelation: "prompt_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_rollouts_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_rollouts_target_workspace_id_fkey";
+            columns: ["target_workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_rollouts_workspace_id_fkey";
             columns: ["workspace_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
@@ -770,6 +904,36 @@ export type Database = {
       };
       accept_my_pending_invitations: { Args: Record<PropertyKey, never>; Returns: number };
       accept_workspace_invitation: { Args: { token: string }; Returns: string };
+      ai_prompt_metrics: {
+        Args: { p_since: string; p_workspace_id: string };
+        Returns: {
+          acceptance_rate: number;
+          accepted: number;
+          cost: number;
+          discarded: number;
+          failed: number;
+          failure_rate: number;
+          from_rollout: number;
+          generations: number;
+          input_tokens: number;
+          last_generation: string;
+          mean_edit_ratio: number;
+          mean_rating: number;
+          model: string;
+          output_tokens: number;
+          p50_latency_ms: number;
+          p95_latency_ms: number;
+          prompt_scope: string;
+          prompt_version_id: string;
+          rated: number;
+          succeeded: number;
+          template_key: string;
+          title: string;
+          total_tokens: number;
+          version: number;
+        }[];
+      };
+      claim_ai_cost_alert: { Args: { p_threshold: number }; Returns: number };
       create_workspace_with_owner: {
         Args: { organization_name: string; report_title: string; workspace_name: string };
         Returns: {
@@ -779,6 +943,7 @@ export type Database = {
         }[];
       };
       discard_ai_generation: { Args: { p_generation_id: string }; Returns: undefined };
+      end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
       invitation_preview: {
         Args: { token: string };
         Returns: {
@@ -791,6 +956,9 @@ export type Database = {
           workspace_name: string;
         }[];
       };
+      release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
+      rollback_prompt_publish: { Args: { p_version_id: string }; Returns: string };
+      set_prompt_rollout_percent: { Args: { p_percent: number; p_rollout_id: string }; Returns: undefined };
       start_ai_generation: {
         Args: {
           p_estimated_tokens: number;
@@ -801,6 +969,7 @@ export type Database = {
           p_prompt_version_id: string;
           p_provider: string;
           p_rate_limit: number;
+          p_rollout_id?: string;
           p_schema_version: number;
           p_section_id: string;
           p_user_id: string;
@@ -812,6 +981,7 @@ export type Database = {
           retry_after: number;
         }[];
       };
+      start_prompt_rollout: { Args: { p_candidate_id: string; p_percent: number }; Returns: string };
     };
     Enums: {
       ai_generation_status: "running" | "succeeded" | "failed";

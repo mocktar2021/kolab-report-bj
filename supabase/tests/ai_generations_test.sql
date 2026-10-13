@@ -10,7 +10,7 @@ create or replace function pg_temp.start(
 language sql as $$
   select * from public.start_ai_generation(
     pg_temp.id(workspace), pg_temp.id(section), pg_temp.id(requester), prompt, output_schema, 1::smallint,
-    'mock', 'mock', '{"temperature": 0.3}', estimate, rate_limit, budget
+    'mock', 'mock', '{"temperature": 0.3}', estimate, rate_limit, budget, null
   );
 $$;
 
@@ -34,7 +34,7 @@ grant execute on all functions in schema pg_temp to authenticated, anon;
 select pg_temp.act_as('expert');
 select throws_ok(
   $$select * from public.start_ai_generation(pg_temp.id('w1'), pg_temp.id('s1'), pg_temp.id('expert'),
-    pg_temp.template('synthese-section'), 'section_draft', 1::smallint, 'mock', 'mock', '{}', 10, 30, 100000)$$,
+    pg_temp.template('synthese-section'), 'section_draft', 1::smallint, 'mock', 'mock', '{}', 10, 30, 100000, null)$$,
   '42501', null, 'users cannot start a generation themselves');
 
 reset role;

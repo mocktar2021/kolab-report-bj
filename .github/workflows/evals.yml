@@ -1,10 +1,17 @@
 name: Evals
 
 # Runs the golden set (evals/) against the real model and keeps the reports.
-# Manual only: each run costs API tokens. The job fails when a threshold of
-# evals/thresholds.json fails. Release rule: evals/README.md.
+# Every night it runs the full set with the judge and compares it with
+# evals/baseline/production.json; it is skipped while no API key secret is
+# set. It can also be started by hand from the Actions tab. The job fails
+# when a threshold of evals/thresholds.json fails or a metric drops past its
+# regression limit. Release rule: evals/README.md. Playbook:
+# docs/ai-evaluation.md.
 
 on:
+  schedule:
+    # 03:17 UTC every night, on the default branch.
+    - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
       tier:
@@ -33,12 +40,44 @@ env:
   HUSKY: "0"
 
 jobs:
+  key:
+    name: API key
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - name: Check the API key secret
+        id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+        run: |
+          case "${AI_PROVIDER:-anthropic}" in
+            anthropic) key="$ANTHROPIC_API_KEY" ;;
+            openai) key="$OPENAI_API_KEY" ;;
+            *) key="" ;;
+          esac
+          if [ -n "$key" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Evals skipped::No API key secret for provider ${AI_PROVIDER:-anthropic}. Set ANTHROPIC_API_KEY (or OPENAI_API_KEY with AI_PROVIDER=openai) to run the nightly evals."
+          fi
+
   evals:
     name: Golden set
+    needs: key
+    # A night without a key is skipped. A manual run goes ahead and fails
+    # with a clear error.
+    if: needs.key.outputs.ok == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -62,20 +101,29 @@ jobs:
           AI_PRICE_OUTPUT_PER_MTOK: ${{ vars.AI_PRICE_OUTPUT_PER_MTOK }}
           AI_PRICE_FAST_INPUT_PER_MTOK: ${{ vars.AI_PRICE_FAST_INPUT_PER_MTOK }}
           AI_PRICE_FAST_OUTPUT_PER_MTOK: ${{ vars.AI_PRICE_FAST_OUTPUT_PER_MTOK }}
+          # Optional caps. Empty means no cap; an incomplete run is not valid for a release.
+          BUDGET_USD: ${{ vars.EVAL_NIGHTLY_BUDGET_USD }}
+          BUDGET_TOKENS: ${{ vars.EVAL_NIGHTLY_BUDGET_TOKENS }}
           # Inputs go through the environment, never straight into the script.
-          TIER: ${{ inputs.tier }}
-          JUDGE: ${{ inputs.judge }}
+          # A scheduled run has no inputs: it takes the defaults.
+          TIER: ${{ inputs.tier || 'template' }}
+          JUDGE: ${{ inputs.judge || 'yes' }}
           CASES: ${{ inputs.cases }}
         run: |
           set --
           if [ "$TIER" != "template" ]; then set -- "$@" --tier "$TIER"; fi
           if [ "$JUDGE" = "yes" ]; then set -- "$@" --judge; fi
           if [ -n "$CASES" ]; then set -- "$@" --cases "$CASES"; fi
-          npm run eval -- "$@"
+          if [ -n "$BUDGET_USD" ]; then set -- "$@" --budget-usd "$BUDGET_USD"; fi
+          if [ -n "$BUDGET_TOKENS" ]; then set -- "$@" --budget-tokens "$BUDGET_TOKENS"; fi
+          # baseline.json in the artifact is ready to become evals/baseline/production.json.
+          npm run eval -- "$@" --compare evals/baseline/production.json \
+            --write-baseline evals/reports/baseline.json --comment evals/reports/summary.md
 
       - name: Summary
         if: always()
         run: |
+          if [ -f evals/reports/summary.md ]; then cat evals/reports/summary.md >> "$GITHUB_STEP_SUMMARY"; fi
           for file in evals/reports/*-run-*.md; do
             [ -f "$file" ] && cat "$file" >> "$GITHUB_STEP_SUMMARY"
           done
