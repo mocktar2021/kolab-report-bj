@@ -45,10 +45,10 @@ select throws_ok($$insert into public.deliverables (id, workspace_id, section_id
   '42501', null, 'expert cannot choose the id on insert');
 
 -- Changing a file -------------------------------------------------------------
-select is(pg_temp.affected($$update public.deliverables set file_name = 'plan-v2.docx' where id = pg_temp.id('d1')$$),
-  1, 'expert renames their file');
-
+-- No renames: a checked .txt renamed .hta would run when opened on Windows.
 -- RLS lets expert update d1, so only the column privileges refuse these.
+select throws_ok($$update public.deliverables set file_name = 'plan-v2.hta' where id = pg_temp.id('d1')$$,
+  '42501', null, 'expert cannot rename their file');
 select throws_ok($$update public.deliverables set uploaded_at = now() where id = pg_temp.id('d1')$$,
   '42501', null, 'expert cannot set uploaded_at');
 select throws_ok($$update public.deliverables set parse_status = 'parsed' where id = pg_temp.id('d1')$$,

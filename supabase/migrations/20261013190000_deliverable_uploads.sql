@@ -11,8 +11,10 @@
 --      If not, it deletes the object and the row.
 --
 -- Users can no longer write anything that check relies on:
---   * deliverables: users insert the file description and can rename a file.
---     uploaded_at and the parse results are written by the service role only.
+--   * deliverables: users insert the file description and change nothing
+--     after. uploaded_at and the parse results are written by the service
+--     role only. No renames either: the name's extension is part of what was
+--     checked, and a checked .txt renamed .hta would run when opened.
 --   * storage: users create an object only for an unchecked file they
 --     registered, never replace or delete one, and read only checked files.
 --     The app deletes objects with the service role once their row is gone.
@@ -32,7 +34,6 @@ comment on column public.deliverables.uploaded_at is
 revoke insert, update on public.deliverables from authenticated;
 grant insert (workspace_id, section_id, uploaded_by, storage_path, file_name, mime_type, size_bytes)
   on public.deliverables to authenticated;
-grant update (file_name) on public.deliverables to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- Storage policies
