@@ -117,6 +117,9 @@ jobs:
             echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
             echo "EMAIL_PROVIDER=mailpit"
             echo "MAILPIT_URL=http://127.0.0.1:54324"
+            echo "AI_PROVIDER=mock"
+            echo "AI_DRAFTS_ENABLED=true"
+            echo "AI_RATE_LIMIT_PER_HOUR=5"
           } >> .env.local
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
