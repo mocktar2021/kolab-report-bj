@@ -247,12 +247,12 @@ export function HeroCards() {
     <>
       {/* Two faded cards beside the subtitle, from lg up. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[21rem] hidden lg:block xl:top-[22.5rem]">
-        <div className={cn("absolute left-[9%] w-56 xl:left-[13%]", ENTER)} style={{ animationDelay: "300ms" }}>
+        <div className={cn("absolute left-[8%] w-60 xl:left-[12%]", ENTER)} style={{ animationDelay: "300ms" }}>
           <div className="opacity-60 motion-safe:animate-float [animation-duration:10s]">
             <AcceptedCard />
           </div>
         </div>
-        <div className={cn("absolute right-[8%] w-56 xl:right-[12%]", ENTER)} style={{ animationDelay: "340ms" }}>
+        <div className={cn("absolute right-[8%] w-60 xl:right-[12%]", ENTER)} style={{ animationDelay: "340ms" }}>
           <div className="opacity-60 motion-safe:animate-float [animation-delay:-4s] [animation-duration:11s]">
             <DoneCard />
           </div>
