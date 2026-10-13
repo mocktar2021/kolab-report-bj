@@ -95,6 +95,16 @@ Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/rein
 - **pre-commit** formats and lints staged files with lint-staged.
 - **commit-msg** runs the `write-like-mocktar` checker on the message (skipped when Python 3 is missing).
 
+## Continuous integration
+
+GitHub Actions runs on every PR and every push to `master`:
+
+- **Lint, typecheck, unit tests, build**: Prettier, ESLint, TypeScript, Vitest, `npm audit` and `next build`.
+- **Database and end-to-end tests**: starts Supabase, runs `db reset` and the pgTAP suite, fails if `database.types.ts` is out of date, then runs Playwright.
+- **CodeQL**: security queries on the TypeScript code.
+
+Dependabot opens update PRs every Monday. `docs/ci.md` has the details and the branch protection setup.
+
 ## Data model and security
 
 Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports`, `report_sections`, `deliverables`, `prompt_library`, plus the `report_progress` view.
