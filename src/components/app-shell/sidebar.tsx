@@ -6,6 +6,7 @@ import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
+import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { NavItems } from "./nav-items";
 import { SearchTrigger } from "./search-trigger";
 import { useSidebarCollapsed } from "./sidebar-state";
@@ -60,7 +61,7 @@ export function Sidebar({ user, onOpenPalette }: SidebarProps) {
           </div>
         </div>
         <ThemeToggle variant="row" collapsible side="right" align="end" />
-        <form action={signOut}>
+        <form action={signOut} onSubmit={clearOfflineCaches}>
           <button type="submit" className={footerButtonClass} aria-label={tCommon("signOut")}>
             <LogOut className="size-4 shrink-0" aria-hidden="true" />
             <span className="sidebar-collapsed:sr-only">{tCommon("signOut")}</span>

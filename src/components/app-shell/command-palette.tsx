@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import { useRouter } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
+import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { SECTION_STATUSES } from "@/lib/sections";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +134,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem
             value="sign-out"
             keywords={[t("signOut"), "deconnexion", "quitter", "logout"]}
-            onSelect={() => run(() => startTransition(() => signOut()))}
+            onSelect={() =>
+              run(() => {
+                clearOfflineCaches();
+                startTransition(() => signOut());
+              })
+            }
           >
             <LogOut aria-hidden="true" />
             {t("signOut")}
