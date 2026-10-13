@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUp, type SignUpState } from "./actions";
 
-export function SignUpForm() {
+export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
   const t = useTranslations("Auth");
   const [state, formAction, pending] = useActionState<SignUpState, FormData>(signUp, { status: "idle" });
 
@@ -26,7 +26,7 @@ export function SignUpForm() {
   }
 
   const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
-  const values = state.status === "error" ? state.values : { fullName: "", email: "" };
+  const values = state.status === "error" ? state.values : { fullName: "", email: defaultEmail };
 
   return (
     <form action={formAction} className="space-y-4" noValidate>

@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNextPath } from "@/lib/auth/redirect";
+import { acceptPendingInvitations } from "@/lib/invitations/accept";
 import { createClient } from "@/lib/supabase/server";
 
 const OTP_TYPES: readonly EmailOtpType[] = [
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (ok) {
+    // A new account confirmed from an invitation joins its workspace here.
+    await acceptPendingInvitations(supabase);
     return NextResponse.redirect(`${origin}${next}`);
   }
 

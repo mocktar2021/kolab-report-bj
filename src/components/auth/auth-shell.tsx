@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 
 /** Shared frame for the sign-in, sign-up and password pages. */
@@ -31,7 +31,8 @@ export async function AuthShell({
       </Link>
       <Card className="surface-card w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
         <CardHeader>
-          <CardTitle className="text-h2">{title}</CardTitle>
+          {/* The card title is the page heading. */}
+          <h1 className="font-display text-h2">{title}</h1>
           {description ? <CardDescription>{description}</CardDescription> : null}
         </CardHeader>
         <CardContent>{children}</CardContent>

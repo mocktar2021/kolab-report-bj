@@ -18,6 +18,8 @@ const PUBLIC_PATHS = [
   "/reinitialiser-mot-de-passe",
   "/auth/callback",
   "/hors-ligne",
+  // The invitation page works signed out: the token in the link is the proof.
+  "/invitations",
 ];
 
 const LOCALE_PREFIX = new RegExp(`^/(${routing.locales.join("|")})(?=/|$)`);

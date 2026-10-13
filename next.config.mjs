@@ -96,11 +96,12 @@ const withPWA = withPWAInit({
         handler: "NetworkOnly",
       },
       {
-        // Auth pages depend on the session (signed-in users are redirected),
-        // so they always come from the server.
+        // Auth and invitation pages depend on the session (signed-in users
+        // are redirected), so they always come from the server. Invitation
+        // URLs also hold a secret token that must not sit in a cache.
         urlPattern: ({ url, sameOrigin }) =>
           sameOrigin &&
-          /^\/[a-z]{2}\/(connexion|inscription|mot-de-passe-oublie|reinitialiser-mot-de-passe|auth\/)/.test(
+          /^\/[a-z]{2}\/(connexion|inscription|mot-de-passe-oublie|reinitialiser-mot-de-passe|auth\/|invitations\/)/.test(
             url.pathname,
           ),
         handler: "NetworkOnly",

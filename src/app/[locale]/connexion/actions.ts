@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { authErrorKey } from "@/lib/auth/errors";
+import { acceptPendingInvitations } from "@/lib/invitations/accept";
 import { safeNextPath, withoutLocale } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,6 +39,8 @@ export async function signIn(_prev: SignInState, formData: FormData): Promise<Si
     if (key === "rateLimited" || key === "emailNotConfirmed") return { error: key, email };
     return { error: "invalidCredentials", email };
   }
+
+  await acceptPendingInvitations(supabase);
 
   const next = safeNextPath(parsed.data.next);
   const locale = await getLocale();
