@@ -4,15 +4,23 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
+import { STALE_PARSE_MS } from "@/lib/deliverables/parse-job";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
+import { isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { DeliverableList, type DeliverableRow } from "./deliverable-list";
 import { DeliverableUploader } from "./deliverable-uploader";
+import type { ParseState } from "./parse-badge";
+import { ParseWatcher } from "./parse-watcher";
+import { SectionStatusControl } from "./section-status";
 
 export const dynamic = "force-dynamic";
+
+// "Relancer l'analyse" reads the file after the action answers, within this budget (Vercel).
+export const maxDuration = 60;
 
 type Params = Promise<{ locale: "fr"; workspaceId: string; sectionId: string }>;
 
@@ -50,7 +58,9 @@ export default async function SectionPage({ params }: { params: Params }) {
   const [{ data: files }, members] = await Promise.all([
     supabase
       .from("deliverables")
-      .select("id, file_name, mime_type, size_bytes, uploaded_by, uploaded_at")
+      .select(
+        "id, file_name, mime_type, size_bytes, uploaded_by, uploaded_at, parse_status, parse_error, updated_at",
+      )
       .eq("section_id", section.id)
       .not("uploaded_at", "is", null)
       .order("uploaded_at", { ascending: false }),
@@ -60,14 +70,27 @@ export default async function SectionPage({ params }: { params: Params }) {
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
   const canEdit = canEditSection(access, section.assigned_to);
   const mine = section.assigned_to === access.userId;
-  const rows: DeliverableRow[] = (files ?? []).map((file) => ({
-    id: file.id,
-    name: file.file_name,
-    mimeType: file.mime_type,
-    size: file.size_bytes,
-    uploadedAt: file.uploaded_at ?? "",
-    uploaderName: names.get(file.uploaded_by) ?? null,
-  }));
+  const status = sectionStatusSchema.catch("not_started").parse(section.status);
+  const staleBefore = Date.now() - STALE_PARSE_MS;
+  const rows: DeliverableRow[] = (files ?? []).map((file) => {
+    const running = file.parse_status === "pending" || file.parse_status === "processing";
+    const parseState: ParseState =
+      running && new Date(file.updated_at).getTime() < staleBefore ? "stale" : file.parse_status;
+    return {
+      id: file.id,
+      name: file.file_name,
+      mimeType: file.mime_type,
+      size: file.size_bytes,
+      uploadedAt: file.uploaded_at ?? "",
+      uploaderName: names.get(file.uploaded_by) ?? null,
+      parseState,
+      parseError: file.parse_error,
+      // Same rule as the delete policy: managers, or the uploader while the section is theirs.
+      canDelete: canEdit && (isManager(access.role) || file.uploaded_by === access.userId),
+      canRetry: canEdit && (parseState === "failed" || parseState === "stale"),
+    };
+  });
+  const reading = rows.some((row) => row.parseState === "pending" || row.parseState === "processing");
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
@@ -82,7 +105,7 @@ export default async function SectionPage({ params }: { params: Params }) {
       <header className="mt-4">
         <h1 className="break-words text-h2 text-foreground">{section.title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
-          <StatusBadge status={sectionStatusSchema.catch("not_started").parse(section.status)} />
+          {canEdit ? null : <StatusBadge status={status} />}
           <span>
             {section.assigned_to
               ? t("assignedTo", { name: names.get(section.assigned_to) ?? t("unknownMember") })
@@ -94,6 +117,11 @@ export default async function SectionPage({ params }: { params: Params }) {
             </span>
           ) : null}
         </div>
+        {canEdit ? (
+          <div className="mt-4">
+            <SectionStatusControl sectionId={section.id} status={status} />
+          </div>
+        ) : null}
         {section.instructions ? (
           <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{section.instructions}</p>
         ) : null}
@@ -108,6 +136,7 @@ export default async function SectionPage({ params }: { params: Params }) {
       )}
 
       <DeliverableList files={rows} canEdit={canEdit} />
+      <ParseWatcher active={reading} />
     </div>
   );
 }

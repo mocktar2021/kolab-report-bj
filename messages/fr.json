@@ -546,6 +546,48 @@
       "activeContent": "Ce fichier SVG contient du code (script ou événement). Exportez-le sans script, ou en PNG.",
       "uploadFailed": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
       "generic": "Une erreur est survenue. Réessayez."
+    },
+    "statusLabel": "Statut de la section",
+    "statusError": "Le statut n'a pas pu être enregistré. Réessayez.",
+    "parse": {
+      "pending": "En attente",
+      "processing": "En cours",
+      "parsed": "Analysé",
+      "failed": "Échec",
+      "skipped": "Non analysé",
+      "stale": "Bloqué"
+    },
+    "parseBadgeLabel": "Analyse : {status}",
+    "skippedHint": "Fichier conservé tel quel : son contenu ne sert pas encore au brouillon.",
+    "parseErrors": {
+      "corrupt": "Le fichier est endommagé ou n'est pas un document Office valide.",
+      "tooLarge": "Le fichier est trop volumineux une fois décompressé.",
+      "timeout": "L'analyse a pris trop de temps.",
+      "unreadable": "Le contenu de ce fichier n'a pas pu être lu.",
+      "stale": "L'analyse ne répond plus."
+    },
+    "retry": "Relancer l'analyse",
+    "retryLabel": "Relancer l'analyse de {name}",
+    "preview": "Aperçu",
+    "hidePreview": "Masquer l'aperçu",
+    "previewLabel": "Aperçu de {name}",
+    "previewTitle": "Ce que l'IA lira",
+    "previewLoading": "Chargement de l'aperçu",
+    "previewEmpty": "Aucun texte n'a été trouvé dans ce fichier.",
+    "previewError": "L'aperçu n'a pas pu être chargé. Réessayez.",
+    "previewStats": "{words, plural, one {# mot} other {# mots}}, environ {tokens, plural, one {# jeton} other {# jetons}} pour le brouillon.",
+    "previewTruncated": "Le texte est coupé à 200 000 caractères.",
+    "previewSheet": "Feuille « {name} » : {keptRows} lignes sur {rows} et {keptColumns} colonnes sur {columns} reprises.",
+    "imageAlt": "Image {name}",
+    "delete": "Supprimer",
+    "deleteLabel": "Supprimer {name}",
+    "confirmDelete": "Confirmer",
+    "confirmDeleteLabel": "Confirmer la suppression de {name}",
+    "cancel": "Annuler",
+    "actionErrors": {
+      "forbidden": "Vous ne pouvez pas faire cela sur ce fichier.",
+      "busy": "Une analyse est déjà en cours.",
+      "generic": "Une erreur est survenue. Réessayez."
     }
   },
   "Invitation": {

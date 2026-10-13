@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { claimParse, runParse } from "@/lib/deliverables/parse-job";
 import {
   checkStoredFile,
   discardUpload,
@@ -13,6 +14,9 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 
 type Params = Promise<{ id: string }>;
+
+// Reading the file runs after the answer, within this budget (Vercel).
+export const maxDuration = 60;
 
 /**
  * Called by the browser once the upload is done. Checks the stored file and
@@ -52,5 +56,9 @@ export async function POST(_request: Request, { params }: { params: Params }) {
   }
 
   if (!(await markUploaded(upload))) return errorResponse(409, "notReceived");
+
+  // Claimed now so the list shows the file as being read straight away.
+  const claim = await claimParse(upload.id, upload.workspace_id);
+  if (claim) after(() => runParse(claim));
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }

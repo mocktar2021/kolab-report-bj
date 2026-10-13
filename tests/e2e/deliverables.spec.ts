@@ -95,7 +95,8 @@ test("an expert uploads a Word file and downloads it back", async ({ page }) => 
     .eq("section_id", setup.sectionId)
     .single();
   expect(row?.uploaded_at).not.toBeNull();
-  expect(row?.parse_status).toBe("pending");
+  // Reading the file starts as soon as it is kept (KRB-14).
+  expect(["processing", "parsed"]).toContain(row?.parse_status);
   expect(row?.size_bytes).toBe(DOCX.length);
   expect(row?.storage_path).toMatch(
     new RegExp(`^${setup.workspaceId}/${setup.sectionId}/[0-9a-f-]{36}-Rapport-d-etude\\.docx$`),

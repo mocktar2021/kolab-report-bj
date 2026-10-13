@@ -54,7 +54,7 @@ export async function removeStaleUploads(supabase: UserClient, userId: string, s
 }
 
 /** Service role: only for paths of rows the caller was allowed to delete. */
-async function removeObjects(paths: string[]) {
+export async function removeObjects(paths: string[]) {
   const { error } = await createAdminClient().storage.from(DELIVERABLES_BUCKET).remove(paths);
   if (error) console.error("deliverables: could not remove stored files", error.message);
 }
