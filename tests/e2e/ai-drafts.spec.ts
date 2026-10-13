@@ -182,6 +182,86 @@ test("the assigned expert gets a streamed draft, recorded as a proposal", async 
   expect(section).toEqual({ content: null, status: "not_started" });
 });
 
+function sectionUrl() {
+  return `/fr/espaces/${setup.workspaceId}/sections/${setup.sectionId}`;
+}
+
+async function latestGeneration() {
+  const { data, error } = await adminClient()
+    .from("ai_generations")
+    .select("id, accepted, edit_distance, user_rating, feedback_comment")
+    .eq("section_id", setup.sectionId)
+    .eq("status", "succeeded")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+test("the expert generates a draft, rates it, edits it and accepts it", async ({ page }) => {
+  await signIn(page, setup.expert);
+  await page.goto(sectionUrl());
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Contenu de la section" })).toBeVisible();
+  // The draft streamed by the previous test still waits for a decision.
+  await expect(main.getByRole("heading", { name: "Brouillon proposé" })).toBeVisible();
+
+  await main.getByRole("button", { name: "Générer un brouillon" }).click();
+  await expect(main.getByText("Brouillon prêt. Relisez-le avant de l'accepter.")).toBeVisible();
+  await expect(main.getByText("audit-energie.md").first()).toBeVisible();
+
+  await main.getByRole("button", { name: "Utile", exact: true }).click();
+  await main.getByLabel("Commentaire").fill("Bon point de départ.");
+  await main.getByRole("button", { name: "Envoyer mon avis" }).click();
+  await expect(main.getByText("Avis enregistré.")).toBeVisible();
+
+  await main.getByRole("button", { name: "Modifier avant d'accepter" }).click();
+  const editor = main.getByLabel("Texte à accepter (Markdown)");
+  await editor.fill(`${await editor.inputValue()}\n\nParagraphe ajouté par l'expert.`);
+  await main.getByRole("button", { name: "Accepter ce texte" }).click();
+  await expect(main.getByText("Brouillon accepté.", { exact: false })).toBeVisible();
+  await expect(main.getByText("Paragraphe ajouté par l'expert.")).toBeVisible();
+
+  const generation = await latestGeneration();
+  expect(generation).toMatchObject({
+    accepted: true,
+    user_rating: 1,
+    feedback_comment: "Bon point de départ.",
+  });
+  expect(generation.edit_distance).toBeGreaterThan(0);
+  const { data: section } = await adminClient()
+    .from("report_sections")
+    .select("content, status")
+    .eq("id", setup.sectionId)
+    .single();
+  expect(section?.status).toBe("in_progress");
+  expect(section?.content).toContain("Paragraphe ajouté par l'expert.");
+});
+
+test("the expert discards a draft and the section keeps its text", async ({ page }) => {
+  await signIn(page, setup.expert);
+  await page.goto(sectionUrl());
+  const main = page.getByRole("main");
+  await main.getByRole("button", { name: "Générer un brouillon" }).click();
+  await expect(main.getByText("Brouillon prêt. Relisez-le avant de l'accepter.")).toBeVisible();
+  await main.getByRole("button", { name: "Rejeter" }).click();
+  await main.getByRole("button", { name: "Confirmer le rejet" }).click();
+  await expect(main.getByText("Brouillon rejeté.", { exact: false })).toBeVisible();
+
+  expect(await latestGeneration()).toMatchObject({ accepted: false, edit_distance: null });
+  await expect(main.getByText("Paragraphe ajouté par l'expert.")).toBeVisible();
+});
+
+test("a viewer reads the section text without the draft tools", async ({ page }) => {
+  await signIn(page, setup.viewer);
+  await page.goto(sectionUrl());
+  const main = page.getByRole("main");
+  await expect(main.getByText("Paragraphe ajouté par l'expert.")).toBeVisible();
+  await expect(main.getByRole("button", { name: "Générer un brouillon" })).toHaveCount(0);
+  await expect(main.getByRole("heading", { name: "Brouillon proposé" })).toHaveCount(0);
+});
+
 test("past the hourly limit the route answers 429 without calling the model", async ({ page }) => {
   // AI_RATE_LIMIT_PER_HOUR is 5 for the tests: the expert already asked once.
   const rows = Array.from({ length: 4 }, () => ({
