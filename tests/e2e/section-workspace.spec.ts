@@ -1,0 +1,206 @@
+import { readFileSync } from "node:fs";
+import ExcelJS from "exceljs";
+import { expect, test, type Page } from "@playwright/test";
+import { adminClient, createTestUser, createWorkspaceFor, type TestUser } from "./supabase";
+
+// KRB-14: files are read after upload, previewed, retried, deleted, and the
+// section status changes. Needs the storage service (CI).
+test.describe.configure({ mode: "serial" });
+
+const DOCX = readFileSync("tests/e2e/fixtures/rapport-etude.docx");
+const NOT_A_DOCX = Buffer.concat([
+  Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+  Buffer.from("pas un vrai document"),
+]);
+const PDF = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n");
+
+type Setup = {
+  owner: TestUser;
+  expert: TestUser;
+  otherExpert: TestUser;
+  viewer: TestUser;
+  workspaceId: string;
+  sectionId: string;
+};
+
+let setup: Setup;
+
+test.beforeAll(async () => {
+  const [owner, expert, otherExpert, viewer] = await Promise.all([
+    createTestUser("Olga Owner"),
+    createTestUser("Elie Expert"),
+    createTestUser("Omar Autre"),
+    createTestUser("Vera Viewer"),
+  ]);
+  const { api, workspace_id: workspaceId, report_id: reportId } = await createWorkspaceFor(owner, "Lecture");
+  const { error: membersError } = await adminClient()
+    .from("workspace_members")
+    .insert([
+      { workspace_id: workspaceId, user_id: expert.id, role: "expert" },
+      { workspace_id: workspaceId, user_id: otherExpert.id, role: "expert" },
+      { workspace_id: workspaceId, user_id: viewer.id, role: "viewer" },
+    ]);
+  if (membersError) throw membersError;
+  const { data: section, error } = await api
+    .from("report_sections")
+    .insert({
+      workspace_id: workspaceId,
+      report_id: reportId,
+      title: "Bilan thermique",
+      assigned_to: expert.id,
+    })
+    .select("id")
+    .single();
+  if (error || !section) throw error ?? new Error("Could not create the section");
+  setup = { owner, expert, otherExpert, viewer, workspaceId, sectionId: section.id };
+});
+
+async function signIn(page: Page, user: TestUser) {
+  await page.goto("/fr/connexion");
+  await page.getByLabel("Adresse e-mail").fill(user.email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(user.password);
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL((url) => !url.pathname.endsWith("/connexion"));
+}
+
+function sectionUrl() {
+  return `/fr/espaces/${setup.workspaceId}/sections/${setup.sectionId}`;
+}
+
+function filesList(page: Page) {
+  return page.getByRole("main").getByRole("region", { name: "Livrables", exact: true });
+}
+
+/** The list item of a file, found by its name. */
+function fileItem(page: Page, name: string) {
+  return filesList(page).getByRole("listitem").filter({ hasText: name });
+}
+
+async function workbook(): Promise<Buffer> {
+  const book = new ExcelJS.Workbook();
+  const sheet = book.addWorksheet("Consommations");
+  sheet.addRow(["Bâtiment", "kWh/an"]);
+  sheet.addRow(["Siège", 182000]);
+  sheet.addRow(["Annexe", 45000]);
+  return Buffer.from(await book.xlsx.writeBuffer());
+}
+
+test("Word and Excel files are read and previewed, a PDF is kept as is", async ({ page }) => {
+  await signIn(page, setup.expert);
+  await page.goto(sectionUrl());
+  await page.getByLabel("Choisir des fichiers").setInputFiles([
+    { name: "Rapport d'étude.docx", mimeType: "application/octet-stream", buffer: DOCX },
+    { name: "Consommations.xlsx", mimeType: "application/octet-stream", buffer: await workbook() },
+    { name: "Plan masse.pdf", mimeType: "application/pdf", buffer: PDF },
+  ]);
+
+  // The page refreshes itself while files are being read.
+  const word = fileItem(page, "Rapport d'étude.docx");
+  await expect(word.getByText("Analysé", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await word.getByRole("button", { name: "Aperçu de Rapport d'étude.docx" }).click();
+  await expect(word.getByRole("heading", { name: "Étude énergétique du siège" })).toBeVisible();
+  await expect(word.getByText(/consomme 182 kWh\/m² par an/)).toBeVisible();
+
+  const excel = fileItem(page, "Consommations.xlsx");
+  await expect(excel.getByText("Analysé", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await excel.getByRole("button", { name: "Aperçu de Consommations.xlsx" }).click();
+  await expect(excel.getByRole("heading", { name: "Consommations" })).toBeVisible();
+  await expect(excel.getByRole("cell", { name: "182000" })).toBeVisible();
+
+  const pdf = fileItem(page, "Plan masse.pdf");
+  await expect(pdf.getByText("Non analysé")).toBeVisible({ timeout: 30_000 });
+  await expect(pdf.getByRole("button", { name: /Aperçu/ })).toHaveCount(0);
+
+  const { data: rows } = await adminClient()
+    .from("deliverables")
+    .select("file_name, parse_status, parsed_content, parse_meta")
+    .eq("section_id", setup.sectionId);
+  const parsed = new Map((rows ?? []).map((row) => [row.file_name, row]));
+  expect(parsed.get("Rapport d'étude.docx")?.parsed_content).toContain("# Étude énergétique du siège");
+  expect(parsed.get("Consommations.xlsx")?.parsed_content).toContain("| Siège | 182000 |");
+  expect(parsed.get("Consommations.xlsx")?.parse_meta).toMatchObject({
+    kind: "spreadsheet",
+    sheets: [{ name: "Consommations", rows: 3, keptRows: 3 }],
+  });
+  expect(parsed.get("Plan masse.pdf")?.parse_status).toBe("skipped");
+});
+
+test("a file that cannot be read shows an error and can be retried", async ({ page }) => {
+  await signIn(page, setup.expert);
+  await page.goto(sectionUrl());
+  await page.getByLabel("Choisir des fichiers").setInputFiles({
+    name: "Annexe abîmée.docx",
+    mimeType: "application/octet-stream",
+    buffer: NOT_A_DOCX,
+  });
+  const broken = fileItem(page, "Annexe abîmée.docx");
+  await expect(broken.getByText("Échec")).toBeVisible({ timeout: 30_000 });
+  await expect(
+    broken.getByText("Le fichier est endommagé ou n'est pas un document Office valide."),
+  ).toBeVisible();
+
+  await broken.getByRole("button", { name: "Relancer l'analyse de Annexe abîmée.docx" }).click();
+  await expect(broken.getByText("Échec")).toBeVisible({ timeout: 30_000 });
+  const { data: row } = await adminClient()
+    .from("deliverables")
+    .select("parse_status, parse_error")
+    .eq("section_id", setup.sectionId)
+    .eq("file_name", "Annexe abîmée.docx")
+    .single();
+  expect(row).toEqual({ parse_status: "failed", parse_error: "corrupt" });
+});
+
+test("the expert sets the section status and deletes a file", async ({ page }) => {
+  await signIn(page, setup.expert);
+  await page.goto(sectionUrl());
+
+  await page.getByLabel("Statut de la section").selectOption("completed");
+  await expect
+    .poll(async () => {
+      const { data } = await adminClient()
+        .from("report_sections")
+        .select("status, completed_at")
+        .eq("id", setup.sectionId)
+        .single();
+      return data?.status === "completed" && data.completed_at !== null;
+    })
+    .toBe(true);
+  await page.reload();
+  await expect(page.getByLabel("Statut de la section")).toHaveValue("completed");
+
+  const { data: before } = await adminClient()
+    .from("deliverables")
+    .select("storage_path")
+    .eq("section_id", setup.sectionId)
+    .eq("file_name", "Plan masse.pdf")
+    .single();
+  const pdf = fileItem(page, "Plan masse.pdf");
+  await pdf.getByRole("button", { name: "Supprimer Plan masse.pdf" }).click();
+  await pdf.getByRole("button", { name: "Confirmer la suppression de Plan masse.pdf" }).click();
+  await expect(filesList(page).getByText("Plan masse.pdf")).toHaveCount(0);
+
+  // The stored file goes with the row.
+  const { data: left } = await adminClient()
+    .storage.from("deliverables")
+    .list(`${setup.workspaceId}/${setup.sectionId}`);
+  expect((left ?? []).map((object) => object.name)).not.toContain(before?.storage_path.split("/").pop());
+});
+
+test("viewers and other experts read the section without changing anything", async ({ browser }) => {
+  for (const user of [setup.viewer, setup.otherExpert]) {
+    const page = await browser.newPage();
+    await signIn(page, user);
+    await page.goto(sectionUrl());
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bilan thermique");
+    await expect(page.getByLabel("Statut de la section")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Choisir des fichiers" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Supprimer/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Relancer/ })).toHaveCount(0);
+
+    // Reading is open to every member.
+    const word = fileItem(page, "Rapport d'étude.docx");
+    await word.getByRole("button", { name: "Aperçu de Rapport d'étude.docx" }).click();
+    await expect(word.getByRole("heading", { name: "Étude énergétique du siège" })).toBeVisible();
+    await page.close();
+  }
+});

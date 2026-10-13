@@ -75,7 +75,7 @@ French is the only locale. Every page lives under `/fr`, and `/` redirects there
 | `/fr/espaces/{id}/membres` | Members, roles and invitations (owners and admins) |
 | `/fr/invitations/{token}` | Invitation link from the e-mail (works signed out) |
 | `/fr/rapports/{id}` | Report sections, with assignment and weights for owners and admins |
-| `/fr/espaces/{id}/sections/{id}` | One section: its deliverables, and the upload zone for the people who can edit it |
+| `/fr/espaces/{id}/sections/{id}` | One section: its status, its deliverables with what the app read from them, and for the people who can edit it the upload zone, delete and "Relancer l'analyse" |
 
 Route handlers under `src/app/api` (not localized, skipped by the middleware, so each one checks the session itself):
 
@@ -149,7 +149,8 @@ Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports
   1. `upload-url` checks the role, the type and the size, adds a `deliverables` row with `uploaded_at` empty, and signs an upload URL for that exact path.
   2. The browser sends the file to that URL.
   3. `complete` reads the stored object and compares its size, its type and its first bytes with the extension. SVG files (5 MB at most, measured on the stored object) are read whole and refused when they contain scripts, event handlers, script URLs, frames, a style sheet instruction or a DTD beyond plain entities, whatever the namespace prefix. A file that passes gets `uploaded_at` (written by the service role only). Otherwise the object and its row are deleted.
-- Users cannot write `uploaded_at` or the parse results, or rename a file once registered. In storage they can only create the object of a pending row of their own, never replace or delete one, and read only checked files of their workspaces. The app deletes objects with the service role once their row is gone. So the file the server checked is the one that stays, and an unchecked file cannot be shared.
+- Once a file is kept, the app reads it with the service role after answering the request (`next/server` `after()`, see `src/lib/deliverables/parse-job.ts`). Word (mammoth), Excel (exceljs), CSV and text files become Markdown in `parsed_content`, which the AI draft will use. `parse_meta` holds the kind, the sheets and rows kept, a word count and a token estimate. Other formats are kept but marked `skipped` ("Non analysé"). Safeguards: the unpacked size declared by a .docx or .xlsx (100 MB), 20 sheets of 200 rows and 30 columns, 200,000 characters of Markdown, and 45 seconds per file. A read that stops answering for 5 minutes can be retried.
+- Users cannot write `uploaded_at` or the parse results, or rename a file once registered. In storage they can only create the object of a pending row of their own, never replace or delete one, and read only checked files of their workspaces. The app deletes objects with the service role once their row is gone. So the file the server checked is the one that stays, and an unchecked file cannot be shared. Only the uploader, while the section is still theirs, or a manager deletes a file.
 - `report_progress` computes weighted completion (completed = 1, in progress = 0.5, not started = 0) and runs with the caller's permissions. `report_sections` is published to Supabase Realtime for the live dashboard.
 
 Serverless code must connect through the Supavisor pooler in transaction mode (port 6543, `DATABASE_URL`). Use the direct connection (port 5432, `DIRECT_URL`) only for migrations and admin tools.
