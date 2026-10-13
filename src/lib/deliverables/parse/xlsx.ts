@@ -11,7 +11,8 @@ function dateText(date: Date): string {
 /** What a cell shows: formulas give their result, rich text its plain text. */
 export function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return "";
-  if (value instanceof Date) return dateText(value);
+  // A number too large for a date gives an invalid Date. Excel shows ### for it.
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : dateText(value);
   if (typeof value === "object") {
     if ("richText" in value) return value.richText.map((part) => part.text).join("");
     if ("formula" in value || "sharedFormula" in value) return cellText(value.result ?? null);
@@ -32,6 +33,8 @@ export async function parseXlsx(bytes: Buffer): Promise<ParseResult> {
   } catch {
     throw new ParseError("unreadable");
   }
+  // exceljs loads any ZIP without complaint. A real workbook has at least one sheet.
+  if (workbook.worksheets.length === 0) throw new ParseError("unreadable");
 
   const parts: string[] = [];
   const sheets: SheetMeta[] = [];

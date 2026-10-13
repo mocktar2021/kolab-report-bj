@@ -1,6 +1,15 @@
 import { escapeInline, finishMarkdown, tableToMarkdown } from "./markdown";
 import { PARSE_LIMITS, type ParseResult } from "./types";
 
+// Windows-1252 characters for bytes 0x80 to 0x9F. Some Node versions decode
+// "windows-1252" as Latin-1 and give control characters there instead of
+// the euro sign, "œ" or the curly apostrophe.
+const WINDOWS_1252_HIGH = [
+  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d,
+  0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a,
+  0x153, 0x9d, 0x17e, 0x178,
+];
+
 /** UTF-8 when it is valid, UTF-16 with a byte order mark, otherwise Windows-1252 (Excel's CSV). */
 export function decodeText(bytes: Uint8Array): string {
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes);
@@ -8,13 +17,17 @@ export function decodeText(bytes: Uint8Array): string {
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
-    return new TextDecoder("windows-1252").decode(bytes);
+    return new TextDecoder("windows-1252")
+      .decode(bytes)
+      .replace(/[\u0080-\u009f]/g, (char) =>
+        String.fromCharCode(WINDOWS_1252_HIGH[char.charCodeAt(0) - 0x80] ?? char.charCodeAt(0)),
+      );
   }
 }
 
-/** French Excel writes ";" between values, others "," or tabs. */
+/** French Excel writes ";" between values, others "," or tabs. Quoted values are not counted. */
 function delimiterOf(text: string): string {
-  const firstLine = text.slice(0, text.search(/\r?\n|$/));
+  const firstLine = text.slice(0, text.search(/\r?\n|$/)).replace(/"[^"]*"/g, "");
   const counts = [";", ",", "\t"].map((delimiter) => [delimiter, firstLine.split(delimiter).length] as const);
   return counts.reduce((best, current) => (current[1] > best[1] ? current : best))[0];
 }

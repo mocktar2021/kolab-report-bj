@@ -27,6 +27,7 @@ export function finishMarkdown(
   meta: Pick<ParseMeta, "kind" | "tables" | "sheets">,
 ): { markdown: string; meta: ParseMeta } {
   let text = markdown
+    .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+\n/g, (match) => (match.startsWith("  ") ? "  \n" : "\n"))
     .replace(/\n{3,}/g, "\n\n")
     .trim();

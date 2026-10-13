@@ -1,5 +1,5 @@
 import { type ChildNode, type Element, isTag, isText } from "domhandler";
-import { DomUtils, parseDocument } from "htmlparser2";
+import { parseDocument } from "htmlparser2";
 import { escapeInline, tableToMarkdown } from "./markdown";
 
 // Turns the HTML mammoth makes from a Word file into Markdown: headings,
@@ -31,13 +31,13 @@ function safeHref(href: string | undefined): string | null {
   return href.replace(/[\s<>]/g, encodeURIComponent);
 }
 
-/** Wraps text in a Markdown marker, keeping the surrounding spaces outside. */
-function wrap(text: string, marker: string): string {
+/** Wraps text in Markdown markers, keeping the surrounding spaces outside. */
+function wrap(text: string, open: string, close = open): string {
   const inner = text.trim();
   if (!inner) return text;
   const lead = text.startsWith(" ") ? " " : "";
   const trail = text.endsWith(" ") ? " " : "";
-  return `${lead}${marker}${inner}${marker}${trail}`;
+  return `${lead}${open}${inner}${close}${trail}`;
 }
 
 /** Text of inline content. `lineBreak` is what <br> becomes. */
@@ -63,10 +63,11 @@ function inline(nodes: ChildNode[], lineBreak: string): string {
         case "strike":
           return wrap(content(), "~~");
         case "a": {
-          const text = content();
           const href = safeHref(attribute(node, "href"));
-          return href && text.trim() ? `[${text.trim()}](<${href}>)` : text;
+          return href ? wrap(content(), "[", `](<${href}>)`) : content();
         }
+        case "p":
+          return ` ${content()} `;
         case "ul":
         case "ol":
           return ` ${node.children
@@ -74,7 +75,11 @@ function inline(nodes: ChildNode[], lineBreak: string): string {
             .map((item) => inline(item.children, lineBreak).trim())
             .join("; ")} `;
         case "table":
-          return ` ${DomUtils.textContent(node).replace(/\s+/g, " ").trim()} `;
+          // A table inside a cell: its cells one after the other.
+          return ` ${ownRows(node)
+            .flatMap((row) => row.children.filter(isTag))
+            .map((cell) => inline(cell.children, lineBreak).trim())
+            .join(" ")} `;
         default:
           return content();
       }
