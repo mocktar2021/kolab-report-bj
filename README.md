@@ -1,6 +1,6 @@
 # KolabReport
 
-KolabReport is a French-language progressive web app for writing expert reports as a team. A coordinator splits a report into sections, assigns each section to an expert, experts upload their deliverables (.docx, .xlsx, images, diagrams), an AI engine drafts each section from those deliverables, and the coordinator assembles the final master report while tracking completion in real time.
+KolabReport is a French-language progressive web app for writing expert reports as a team. A coordinator splits a report into sections, assigns each section to an expert, experts upload their deliverables (.docx, .xlsx, images, diagrams), an AI engine drafts each section from those deliverables, and the coordinator assembles the final master report while tracking completion section by section.
 
 ## Stack
 
