@@ -9,6 +9,7 @@ import {
   planContext,
   summaryPrompt,
   type BuiltContext,
+  type ContextPlan,
   type OverflowChunk,
 } from "@/lib/ai/context";
 import { generateDraft, type TokenUsage } from "@/lib/ai/generate";
@@ -93,12 +94,10 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const supabase = await createClient();
   const { data: section } = await supabase
     .from("report_sections")
-    .select(
-      "id, workspace_id, title, instructions, assigned_to, report:reports(title, description), workspace:workspaces(name)",
-    )
+    .select("id, workspace_id, title, instructions, assigned_to, report:reports(title, description)")
     .eq("id", id.toLowerCase())
     .maybeSingle();
-  if (!section?.report || !section.workspace) return refuse(404, "notFound");
+  if (!section?.report) return refuse(404, "notFound");
 
   const access = await requireWorkspaceRole(section.workspace_id);
   if (!access) return refuse(404, "notFound");
@@ -122,6 +121,12 @@ export async function POST(request: Request, { params }: { params: Params }) {
   ) {
     return refuse(422, "templateUnavailable");
   }
+
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("name")
+    .eq("id", section.workspace_id)
+    .maybeSingle();
 
   const { data: files } = await supabase
     .from("deliverables")
@@ -151,16 +156,22 @@ export async function POST(request: Request, { params }: { params: Params }) {
     maxOutputTokens: maxTokens,
     maxInputTokens: settings.maxInputTokens,
   });
-  const plan = planContext(
-    {
-      workspaceName: section.workspace.name,
-      report: { title: section.report.title, description: section.report.description },
-      section: { title: section.title, instructions: section.instructions },
-      deliverables,
-    },
-    budget,
-    { redactPii: settings.redactPii, template: template.template },
-  );
+  let plan: ContextPlan;
+  try {
+    plan = planContext(
+      {
+        workspaceName: workspace?.name ?? "",
+        report: { title: section.report.title, description: section.report.description },
+        section: { title: section.title, instructions: section.instructions },
+        deliverables,
+      },
+      budget,
+      { redactPii: settings.redactPii, template: template.template },
+    );
+  } catch {
+    // Every deliverable was empty once cleaned.
+    return refuse(422, "noDeliverables");
+  }
 
   const mock = settings.provider === "mock";
   const started = await startGeneration({
