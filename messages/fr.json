@@ -178,7 +178,7 @@
         },
         "formats": {
           "question": "Quels formats de fichiers puis-je déposer ?",
-          "answer": "Word (.docx, .doc), Excel (.xlsx, .xls, .csv), PowerPoint (.pptx), PDF, texte et Markdown, images PNG, JPEG, WebP et SVG, et schémas draw.io. Chaque fichier peut peser jusqu'à 50 Mo."
+          "answer": "Word (.docx, .doc), Excel (.xlsx, .xls, .csv), PowerPoint (.pptx), PDF, texte et Markdown, images PNG, JPEG, WebP et SVG, et schémas draw.io ou Visio (.vsdx). Chaque fichier peut peser jusqu'à 50 Mo."
         },
         "ai": {
           "question": "Que fait l'IA avec nos documents ?",
@@ -503,6 +503,50 @@
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
     "addSubmit": "Ajouter"
+  },
+  "Deliverables": {
+    "metaTitle": "Section",
+    "assignedTo": "Attribuée à {name}",
+    "unassigned": "Non attribuée",
+    "unknownMember": "Membre inconnu",
+    "yourSection": "Votre section",
+    "readOnlyExpert": "Cette section est attribuée à un autre expert. Vous consultez ses livrables sans pouvoir en ajouter.",
+    "readOnlyViewer": "Vous consultez cette section en lecture seule.",
+    "uploadTitle": "Déposer des livrables",
+    "dropHint": "Glissez vos fichiers ici ou choisissez-les sur votre appareil.",
+    "choose": "Choisir des fichiers",
+    "formats": "Word, Excel, PowerPoint, PDF, texte, images et schémas draw.io ou Visio. 50 Mo maximum par fichier, 5 Mo pour un SVG.",
+    "progressLabel": "Envoi de {name}",
+    "phase": {
+      "waiting": "En attente",
+      "uploading": "Envoi : {percent}",
+      "checking": "Vérification du fichier",
+      "done": "Ajouté"
+    },
+    "listTitle": "Livrables",
+    "count": "{count, plural, =0 {Aucun fichier} one {# fichier} other {# fichiers}}",
+    "empty": "Aucun livrable pour l'instant.",
+    "emptyEditor": "Déposez vos premiers fichiers ci-dessus. Ils serviront de base au brouillon de la section.",
+    "meta": "{size} · {uploader} · {date}",
+    "download": "Télécharger",
+    "downloadLabel": "Télécharger {name}",
+    "errors": {
+      "fileType": "Ce type de fichier n'est pas accepté.",
+      "fileEmpty": "Ce fichier est vide.",
+      "fileTooLarge": "Ce fichier dépasse 50 Mo.",
+      "svgTooLarge": "Les fichiers SVG sont limités à 5 Mo.",
+      "unauthenticated": "Votre session a expiré. Reconnectez-vous puis réessayez.",
+      "invalidInput": "La demande d'envoi n'est pas valide. Réessayez.",
+      "sectionNotFound": "Cette section n'existe plus.",
+      "forbidden": "Vous ne pouvez pas déposer de fichiers dans cette section.",
+      "notReceived": "Le fichier n'est pas arrivé jusqu'au stockage. Réessayez.",
+      "sizeMismatch": "Le fichier reçu n'a pas la taille annoncée. Réessayez.",
+      "typeMismatch": "Le type du fichier reçu ne correspond pas à son extension.",
+      "contentMismatch": "Le contenu de ce fichier ne correspond pas à son extension.",
+      "activeContent": "Ce fichier SVG contient du code (script ou événement). Exportez-le sans script, ou en PNG.",
+      "uploadFailed": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+      "generic": "Une erreur est survenue. Réessayez."
+    }
   },
   "Invitation": {
     "metaTitle": "Invitation",

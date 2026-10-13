@@ -109,7 +109,12 @@ export default async function ReportPage({ params }: { params: Params }) {
         </p>
       )}
 
-      <SectionList sections={rows} assignees={assignees} canManage={manager} />
+      <SectionList
+        workspaceId={report.workspace_id}
+        sections={rows}
+        assignees={assignees}
+        canManage={manager}
+      />
       {manager ? <AddSectionForm reportId={report.id} /> : null}
     </div>
   );
