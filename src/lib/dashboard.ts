@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 // comes with the report pages; until then the page says when it truncates.
 export const SECTION_LIMIT = 50;
 
-// A many-to-one embed comes back as an object, but the untyped client does
-// not know that, so accept an array too and keep the first row.
+// A many-to-one embed comes back as an object. Accept an array too and keep
+// the first row, so the parsing does not depend on how PostgREST reads the
+// relationship.
 function embedded<T extends z.ZodTypeAny>(schema: T) {
   return z
     .union([schema, z.array(schema)])
@@ -51,14 +52,22 @@ export type DashboardData = {
 };
 
 /**
- * Loads the dashboard with the signed-in user's client, so RLS limits every
- * query to the workspaces they belong to. Returns null when a query fails.
+ * Loads the dashboard of one workspace with the signed-in user's client, so
+ * RLS still limits every query to the workspaces they belong to. Returns null
+ * when a query fails.
  */
-export async function getDashboardData(status: SectionStatus | null): Promise<DashboardData | null> {
+export async function getDashboardData(
+  workspaceId: string,
+  status: SectionStatus | null,
+): Promise<DashboardData | null> {
   const supabase = await createClient();
 
   const countByStatus = (value: SectionStatus) =>
-    supabase.from("report_sections").select("id", { count: "exact", head: true }).eq("status", value);
+    supabase
+      .from("report_sections")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId)
+      .eq("status", value);
 
   let sectionsQuery = supabase
     .from("report_sections")
@@ -66,6 +75,7 @@ export async function getDashboardData(status: SectionStatus | null): Promise<Da
       "id, title, status, updated_at, report:reports(title), assignee:profiles!report_sections_assigned_to_fkey(full_name, email)",
       { count: "exact" },
     )
+    .eq("workspace_id", workspaceId)
     .order("updated_at", { ascending: false })
     .limit(SECTION_LIMIT);
   if (status) {
@@ -76,7 +86,10 @@ export async function getDashboardData(status: SectionStatus | null): Promise<Da
     countByStatus("not_started"),
     countByStatus("in_progress"),
     countByStatus("completed"),
-    supabase.from("report_progress").select("total_sections, completion_percent"),
+    supabase
+      .from("report_progress")
+      .select("total_sections, completion_percent")
+      .eq("workspace_id", workspaceId),
     sectionsQuery,
   ]);
 
@@ -119,4 +132,39 @@ export async function getDashboardData(status: SectionStatus | null): Promise<Da
         : null,
     })),
   };
+}
+
+export type WorkspaceReport = {
+  id: string;
+  title: string;
+  totalSections: number;
+  completionPercent: number;
+};
+
+/** Reports of a workspace with their weighted completion, oldest first. */
+export async function getWorkspaceReports(workspaceId: string): Promise<WorkspaceReport[] | null> {
+  const supabase = await createClient();
+  const [reports, progress] = await Promise.all([
+    supabase
+      .from("reports")
+      .select("id, title")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("report_progress")
+      .select("report_id, total_sections, completion_percent")
+      .eq("workspace_id", workspaceId),
+  ]);
+  if (reports.error || progress.error) return null;
+
+  const byReport = new Map(progress.data.map((row) => [row.report_id, row]));
+  return reports.data.map((report) => {
+    const row = byReport.get(report.id);
+    return {
+      id: report.id,
+      title: report.title,
+      totalSections: Number(row?.total_sections ?? 0),
+      completionPercent: Number(row?.completion_percent ?? 0),
+    };
+  });
 }

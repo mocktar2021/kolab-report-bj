@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Users } from "lucide-react";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
+import { NoWorkspace } from "@/components/dashboard/no-workspace";
+import { ReportList } from "@/components/dashboard/report-list";
 import { SectionTable, SectionsError } from "@/components/dashboard/section-table";
-import { getDashboardData } from "@/lib/dashboard";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { getDashboardData, getWorkspaceReports } from "@/lib/dashboard";
 import { sectionStatusSchema } from "@/lib/sections";
 import { getCurrentProfile } from "@/lib/supabase/user";
+import { isManager } from "@/lib/workspaces/roles";
+import { getCurrentWorkspace } from "@/lib/workspaces/server";
 
 // Per-user data behind auth: never prerender or cache.
 export const dynamic = "force-dynamic";
@@ -30,17 +37,36 @@ export default async function TableauDeBordPage({
   const parsedStatus = sectionStatusSchema.safeParse(statut);
   const activeStatus = parsedStatus.success ? parsedStatus.data : null;
 
-  const [profile, data] = await Promise.all([getCurrentProfile(), getDashboardData(activeStatus)]);
+  const [profile, workspace] = await Promise.all([getCurrentProfile(), getCurrentWorkspace()]);
+  const [data, reports] = workspace
+    ? await Promise.all([getDashboardData(workspace.id, activeStatus), getWorkspaceReports(workspace.id)])
+    : [null, null];
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
-      <header>
-        <p className="text-sm text-muted-foreground">{t("greeting", { name: profile?.name ?? "" })}</p>
-        <h1 className="mt-1 text-h2 text-foreground">{t("title")}</h1>
-        <p className="mt-1 text-small text-muted-foreground">{t("subtitle")}</p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{t("greeting", { name: profile?.name ?? "" })}</p>
+          <h1 className="mt-1 text-h2 text-foreground">{t("title")}</h1>
+          {workspace ? (
+            <p className="mt-1 text-small text-muted-foreground">
+              {t("subtitle", { workspace: workspace.name })}
+            </p>
+          ) : null}
+        </div>
+        {workspace && isManager(workspace.role) ? (
+          <Button asChild variant="outline" shape="pill" className="shrink-0">
+            <Link href={`/espaces/${workspace.id}/membres`}>
+              <Users aria-hidden="true" />
+              {t("manageMembers")}
+            </Link>
+          </Button>
+        ) : null}
       </header>
 
-      {data ? (
+      {!workspace ? (
+        <NoWorkspace />
+      ) : data && reports ? (
         <>
           <KpiCards
             counts={data.counts}
@@ -49,6 +75,7 @@ export default async function TableauDeBordPage({
             reportsWithSections={data.reportsWithSections}
             activeStatus={activeStatus}
           />
+          <ReportList reports={reports} />
           <SectionTable
             sections={data.sections}
             matchingSections={data.matchingSections}

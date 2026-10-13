@@ -9,14 +9,18 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
+import type { MyWorkspace } from "@/lib/workspaces/types";
 import { CommandPalette } from "./command-palette";
 import { NavItems } from "./nav-items";
 import { SearchTrigger } from "./search-trigger";
 import { Sidebar } from "./sidebar";
 import { UserAvatar } from "./user-avatar";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 
 type AppShellProps = {
   user: { name: string; email: string };
+  workspaces: MyWorkspace[];
+  currentWorkspaceId: string | null;
   children: React.ReactNode;
 };
 
@@ -27,7 +31,7 @@ const iconButtonClass =
  * Frame for signed-in pages: sidebar from lg up, a top bar with a sheet menu
  * below lg, and the command palette on Cmd+K or Ctrl+K.
  */
-export function AppShell({ user, children }: AppShellProps) {
+export function AppShell({ user, workspaces, currentWorkspaceId, children }: AppShellProps) {
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -61,7 +65,12 @@ export function AppShell({ user, children }: AppShellProps) {
 
       {/* useSearchParams in the navigation needs a Suspense boundary. */}
       <Suspense>
-        <Sidebar user={user} onOpenPalette={openPalette} />
+        <Sidebar
+          user={user}
+          workspaces={workspaces}
+          currentWorkspaceId={currentWorkspaceId}
+          onOpenPalette={openPalette}
+        />
       </Suspense>
 
       <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md lg:hidden">
@@ -95,7 +104,12 @@ export function AppShell({ user, children }: AppShellProps) {
           <div className="flex h-14 shrink-0 items-center px-5">
             <Logo />
           </div>
-          <div className="px-3">
+          <div className="space-y-3 px-3">
+            <WorkspaceSwitcher
+              workspaces={workspaces}
+              currentWorkspaceId={currentWorkspaceId}
+              onNavigate={() => setMenuOpen(false)}
+            />
             <SearchTrigger onOpen={openPalette} />
           </div>
           <nav aria-label={t("navLabel")} className="mt-6 flex-1 overflow-y-auto px-3">
