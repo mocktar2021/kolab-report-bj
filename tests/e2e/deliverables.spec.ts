@@ -84,7 +84,7 @@ test("an expert uploads a Word file and downloads it back", async ({ page }) => 
     mimeType: WORD,
     buffer: DOCX,
   });
-  const list = main.getByRole("region", { name: "Livrables" });
+  const list = main.getByRole("region", { name: "Livrables", exact: true });
   await expect(list.getByText("Rapport d'étude.docx")).toBeVisible();
   await expect(list.getByText("1 fichier")).toBeVisible();
 
@@ -123,7 +123,7 @@ test("files that are not what their extension says are refused and removed", asy
   await expect(page.getByText("Le contenu de ce fichier ne correspond pas à son extension.")).toBeVisible();
   await expect(page.getByText(/Ce fichier SVG contient du code/)).toBeVisible();
 
-  const list = page.getByRole("main").getByRole("region", { name: "Livrables" });
+  const list = page.getByRole("main").getByRole("region", { name: "Livrables", exact: true });
   await expect(list.getByText("photo.png")).toHaveCount(0);
   await expect(list.getByText("schema.svg")).toHaveCount(0);
   const { count } = await adminClient()
