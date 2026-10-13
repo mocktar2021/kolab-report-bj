@@ -1,0 +1,67 @@
+{
+  "id": "noisy-ocr-ecole-pahou",
+  "category": "noisy",
+  "description": "Un procès-verbal passé à l'OCR, avec lettres confondues, mots coupés et en-têtes répétés, et des notes de réunion presque toutes hors sujet. La section doit retrouver les faits techniques et laisser de côté la kermesse, le tournoi et le menu.",
+  "template": "synthese-section",
+  "workspaceName": "Cabinet Akowé Conseil",
+  "report": {
+    "title": "Inspection technique de l'école primaire publique de Pahou",
+    "description": "Inspection des bâtiments avant les travaux de réhabilitation de l'été 2026."
+  },
+  "section": {
+    "title": "État de la toiture et de la charpente",
+    "instructions": "Décrire les désordres constatés sur la toiture et la charpente et leur gravité."
+  },
+  "deliverables": [
+    {
+      "id": "e1c71d42-e5ce-4ee4-8fa6-8a05e0eba73b",
+      "fileName": "pv-inspection-ocr.txt",
+      "kind": "text",
+      "uploadedAt": "2026-02-12T18:02:00Z",
+      "markdownFile": "noisy-ocr-ecole-pahou/pv-inspection-ocr.md"
+    },
+    {
+      "id": "3ea469d7-82ea-4a51-baa4-dd6f3b80a7cc",
+      "fileName": "notes-reunion-ecole.docx",
+      "kind": "document",
+      "uploadedAt": "2026-02-14T09:25:00Z",
+      "markdownFile": "noisy-ocr-ecole-pahou/notes-reunion-ecole.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Toiture\n\nLa toiture en tôles ondulées galvanisées repose sur une charpente en bois. 18 des 64 tôles sont corrodées, surtout au-dessus des salles 3 et 4, et plusieurs ont des trous de clous agrandis par la rouille (pv-inspection-ocr.txt). Il n'y a pas de gouttières côté cour.\n\n### Charpente\n\nDeux fermes de charpente, les fermes n° 5 et 6, sont attaquées par les termites. La section des entraits est réduite de moitié par endroits. L'inspecteur classe ce désordre comme urgent, avec un risque d'affaissement en cas de forte pluie.\n\n### Infiltrations\n\nL'eau s'infiltre dans 3 salles de classe sur 6 (salles 2, 3 et 4), avec des traces d'humidité sur les murs et le plafond. La salle 4 est fermée depuis le 2 février 2026 à cause des fuites, et ses élèves sont accueillis dans la bibliothèque (notes-reunion-ecole.docx).\n\n### Gravité\n\nLe remplacement des deux fermes est la priorité, avant la saison des pluies. La reprise des tôles corrodées au-dessus des salles 3 et 4 doit suivre, puisqu'elle conditionne la réouverture de la salle 4.",
+    "keyPoints": [
+      {
+        "id": "toles",
+        "text": "18 tôles corrodées sur 64.",
+        "anyOf": [["18"], ["64"], ["tole*"]]
+      },
+      {
+        "id": "fermes",
+        "text": "Deux fermes de charpente sont attaquées par les termites.",
+        "anyOf": [["ferme*"], ["termite*"]]
+      },
+      {
+        "id": "infiltrations",
+        "text": "Infiltrations dans 3 salles sur 6.",
+        "anyOf": [
+          ["3 salles", "trois salles", "3 des 6", "trois des six", "3 sur 6", "trois sur six", "salles 2"],
+          ["infiltr*", "fuite*"]
+        ]
+      },
+      {
+        "id": "salle-4",
+        "text": "La salle 4 est fermée depuis le 2 février 2026.",
+        "anyOf": [["salle 4"], ["fermee", "inutilisable", "n'est plus utilisee", "bibliotheque"]]
+      },
+      {
+        "id": "urgence",
+        "text": "Le désordre de la charpente est urgent.",
+        "anyOf": [["urgen*", "prioritaire", "priorite", "immediat*", "affaissement", "effondrement"]]
+      }
+    ],
+    "mustCite": ["L1", "L2"],
+    "forbidden": ["kermesse", "tournoi*", "igname*", "riz au gras", "maillot*", "<livrable", "{{"],
+    "words": { "min": 150, "max": 1000 }
+  }
+}

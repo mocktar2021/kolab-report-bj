@@ -1,0 +1,90 @@
+name: Evals
+
+# Runs the golden set (evals/) against the real model and keeps the reports.
+# Manual only: each run costs API tokens. The job fails when a threshold of
+# evals/thresholds.json fails. Release rule: evals/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Model tier ("template" uses each template's model_tier)
+        type: choice
+        options: [template, standard, fast]
+        default: template
+      judge:
+        description: Score the drafts with the LLM judge
+        type: choice
+        options: ["yes", "no"]
+        default: "yes"
+      cases:
+        description: Case ids, comma-separated (empty runs the whole golden set)
+        type: string
+        default: ""
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: "0"
+
+jobs:
+  evals:
+    name: Golden set
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run the evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
+          AI_EVAL_JUDGE_MODEL: ${{ vars.AI_EVAL_JUDGE_MODEL }}
+          AI_MAX_INPUT_TOKENS: ${{ vars.AI_MAX_INPUT_TOKENS }}
+          AI_CONTEXT_WINDOW_TOKENS: ${{ vars.AI_CONTEXT_WINDOW_TOKENS }}
+          AI_REDACT_PII: ${{ vars.AI_REDACT_PII }}
+          AI_PRICE_INPUT_PER_MTOK: ${{ vars.AI_PRICE_INPUT_PER_MTOK }}
+          AI_PRICE_OUTPUT_PER_MTOK: ${{ vars.AI_PRICE_OUTPUT_PER_MTOK }}
+          AI_PRICE_FAST_INPUT_PER_MTOK: ${{ vars.AI_PRICE_FAST_INPUT_PER_MTOK }}
+          AI_PRICE_FAST_OUTPUT_PER_MTOK: ${{ vars.AI_PRICE_FAST_OUTPUT_PER_MTOK }}
+          # Inputs go through the environment, never straight into the script.
+          TIER: ${{ inputs.tier }}
+          JUDGE: ${{ inputs.judge }}
+          CASES: ${{ inputs.cases }}
+        run: |
+          set --
+          if [ "$TIER" != "template" ]; then set -- "$@" --tier "$TIER"; fi
+          if [ "$JUDGE" = "yes" ]; then set -- "$@" --judge; fi
+          if [ -n "$CASES" ]; then set -- "$@" --cases "$CASES"; fi
+          npm run eval -- "$@"
+
+      - name: Summary
+        if: always()
+        run: |
+          for file in evals/reports/*-run-*.md; do
+            [ -f "$file" ] && cat "$file" >> "$GITHUB_STEP_SUMMARY"
+          done
+          true
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: eval-reports
+          path: evals/reports/
+          retention-days: 90
+          if-no-files-found: ignore

@@ -1,0 +1,74 @@
+{
+  "id": "docx-resume-agroecologie-glazoue",
+  "category": "docx",
+  "description": "Résumé exécutif à partir de deux fichiers Word, dont un avec un petit tableau. Le résumé doit rester dans 150 à 250 mots, garder les chiffres exacts et signaler qu'une seule campagne a été mesurée.",
+  "template": "resume-executif",
+  "workspaceName": "Groupe Kpèvi Études rurales",
+  "report": {
+    "title": "Évaluation à mi-parcours du projet pilote d'agroécologie de Glazoué",
+    "description": "Projet de l'ONG Terres Vivantes Collines auprès de 450 exploitations familiales, de juillet 2024 à juin 2028."
+  },
+  "section": {
+    "title": "Résumé exécutif",
+    "instructions": null
+  },
+  "deliverables": [
+    {
+      "id": "9dc0a81a-9090-431b-8c26-317436591f50",
+      "fileName": "rapport-mi-parcours.docx",
+      "kind": "document",
+      "uploadedAt": "2026-06-03T10:00:00Z",
+      "markdownFile": "docx-resume-agroecologie-glazoue/rapport-mi-parcours.md"
+    },
+    {
+      "id": "80eed79e-a6b6-4f9b-a135-0cf2c0151d72",
+      "fileName": "note-suivi-rendements.docx",
+      "kind": "document",
+      "uploadedAt": "2026-06-05T16:40:00Z",
+      "markdownFile": "docx-resume-agroecologie-glazoue/note-suivi-rendements.md"
+    }
+  ],
+  "reference": {
+    "markdown": "À mi-parcours, le projet pilote d'agroécologie de Glazoué atteint une bonne partie de ses objectifs d'adoption. Sur les 450 exploitations accompagnées, 312 appliquent au moins deux des trois pratiques promues (compost, cultures associées maïs et niébé, haies vives), soit 69 % (rapport-mi-parcours.docx). Le compost est la pratique la plus suivie, les haies vives progressent lentement.\n\nLes premiers effets sont visibles. Les adoptants déclarent une baisse de 38 % de leurs dépenses en engrais chimiques. En 2025, leur rendement moyen de maïs est de 1,9 t/ha contre 1,4 t/ha chez les autres exploitations ; l'écart sur le niébé est faible (note-suivi-rendements.docx). Une seule campagne a été mesurée, ces résultats restent donc à confirmer.\n\nL'exécution prend du retard sur un point : l'unité collective de compostage de Ouèdèmè n'est pas construite, l'appel d'offres ayant été infructueux. 54 % du budget est consommé. Les femmes ne représentent que 28 % des adoptants, freinées par un accès incertain à la terre.\n\n### Points clés\n\n- 69 % des exploitations (312 sur 450) appliquent au moins deux pratiques.\n- Les dépenses en engrais chimiques baissent de 38 % chez les adoptants.\n- Rendement du maïs de 1,9 t/ha contre 1,4 t/ha, sur une seule campagne.\n- L'unité de compostage de Ouèdèmè est en retard et 54 % du budget est consommé.\n- L'accès à la terre limite l'adoption par les femmes (28 % des adoptants).",
+    "keyPoints": [
+      {
+        "id": "adoption",
+        "text": "312 exploitations sur 450, soit 69 %, appliquent au moins deux pratiques.",
+        "anyOf": [["312", "69%"]]
+      },
+      {
+        "id": "rendements",
+        "text": "Rendement du maïs de 1,9 t/ha contre 1,4 t/ha.",
+        "anyOf": [["1.9"], ["1.4"]]
+      },
+      {
+        "id": "engrais",
+        "text": "Baisse de 38 % des dépenses en engrais chimiques.",
+        "anyOf": [["38%"], ["engrais"]]
+      },
+      {
+        "id": "budget",
+        "text": "54 % du budget est consommé à mi-parcours.",
+        "anyOf": [["54%"], ["budget*"]]
+      },
+      {
+        "id": "compostage",
+        "text": "L'unité collective de compostage n'est pas construite.",
+        "anyOf": [
+          ["compost*"],
+          [
+            "retard*",
+            "pas encore",
+            "n'est pas construit*",
+            "non construit*",
+            "infructueu*",
+            "pas ete construit*"
+          ]
+        ]
+      }
+    ],
+    "mustCite": ["L1", "L2"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 150, "max": 520 }
+  }
+}

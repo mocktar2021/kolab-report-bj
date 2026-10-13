@@ -1,0 +1,86 @@
+{
+  "id": "docx-audit-eau-parakou",
+  "category": "docx",
+  "description": "Un seul rapport Word sur le réseau d'eau de Parakou. Les chiffres clés et l'écart au délai contractuel doivent être repris, et les coordonnées personnelles du rapport ne doivent pas sortir dans la section.",
+  "template": "synthese-section",
+  "workspaceName": "Atelier Sèdo Conseil",
+  "report": {
+    "title": "Audit du service de l'eau potable des quartiers périphériques de Parakou",
+    "description": "Audit de l'exploitation déléguée du réseau pour le Syndicat intercommunal de l'eau du Borgou Nord, année 2025."
+  },
+  "section": {
+    "title": "Performance technique du réseau",
+    "instructions": "Présenter le rendement, les fuites, la continuité du service et la qualité de l'eau. Signaler les écarts avec les objectifs du contrat."
+  },
+  "deliverables": [
+    {
+      "id": "9c713e30-acd6-4dd9-af83-7eb0ddd2faa3",
+      "fileName": "rapport-audit-reseau.docx",
+      "kind": "document",
+      "uploadedAt": "2026-09-14T08:12:00Z",
+      "markdownFile": "docx-audit-eau-parakou/rapport-audit-reseau.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Rendement et pertes\n\nLe rendement du réseau des quartiers Banikanni, Ladjifarani, Titirou et Zongo atteint 61 % en 2025, contre 68 % en 2023 (rapport-audit-reseau.docx). Près de 39 % de l'eau produite est donc perdue. Les pertes se concentrent à Titirou et à Zongo, où les conduites anciennes en amiante-ciment sont fragiles et les branchements illicites nombreux.\n\n### Fuites et délais de réparation\n\nL'exploitant a réparé 142 fuites en 2025. Le délai moyen de réparation est de 6 jours, loin du délai maximal de 48 heures fixé par le contrat : seules 38 fuites ont été réparées dans ce délai. Le registre des signalements, tenu sur papier, est incomplet.\n\n### Continuité du service\n\nEn saison sèche, Titirou subit en moyenne 11 heures de coupure par semaine, contre moins de 4 heures dans les autres quartiers. Les coupures ne sont pas annoncées. Sept des 23 bornes-fontaines étaient hors service lors des visites d'août 2026, ce qui renvoie les usagers vers des puits privés.\n\n### Qualité de l'eau\n\n45 des 48 analyses de 2025 sont conformes. Les 3 analyses non conformes viennent toutes de Titirou et montrent un chlore résiduel insuffisant en bout de réseau.\n\n### Écarts avec le contrat\n\nLe délai de réparation dépasse nettement l'objectif du contrat. Le rapport ne donne pas d'objectif contractuel pour le rendement ni pour la durée des coupures : ces deux points restent à vérifier dans le contrat de délégation.",
+    "keyPoints": [
+      {
+        "id": "rendement",
+        "text": "Le rendement du réseau est de 61 % en 2025.",
+        "anyOf": [["61%"], ["rendement"]]
+      },
+      {
+        "id": "evolution",
+        "text": "Le rendement était de 68 % en 2023.",
+        "anyOf": [["68%"], ["2023"]]
+      },
+      {
+        "id": "delai-reparation",
+        "text": "Le délai moyen de réparation est de 6 jours pour un maximum contractuel de 48 heures.",
+        "anyOf": [
+          ["6 jours", "six jours"],
+          ["48 heures", "48 h", "deux jours"]
+        ]
+      },
+      {
+        "id": "bornes",
+        "text": "7 des 23 bornes-fontaines sont hors service.",
+        "anyOf": [
+          [
+            "7 bornes*",
+            "sept bornes*",
+            "7 des 23",
+            "sept des 23",
+            "7 sur 23",
+            "sept sur 23",
+            "7 sur les 23",
+            "sept sur les 23"
+          ],
+          ["hors service", "hors d'usage", "en panne", "arret*", "ne fonctionn*"]
+        ]
+      },
+      {
+        "id": "qualite-titirou",
+        "text": "Les analyses non conformes viennent de Titirou, avec un chlore résiduel insuffisant.",
+        "anyOf": [["titirou"], ["chlore"]]
+      },
+      {
+        "id": "coupures",
+        "text": "Titirou subit 11 heures de coupure par semaine en saison sèche.",
+        "anyOf": [
+          ["11 heures", "11 h"],
+          ["coupure*", "interruption*"]
+        ]
+      }
+    ],
+    "mustCite": ["L1"],
+    "forbidden": [
+      "i.saka@sedo-conseil.example",
+      "b.adjovi@hydro-borgou.example",
+      "97 45 12 38",
+      "<livrable",
+      "{{"
+    ],
+    "words": { "min": 180, "max": 1100 }
+  }
+}

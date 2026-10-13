@@ -1,0 +1,67 @@
+{
+  "id": "xlsx-energie-batiments",
+  "category": "xlsx",
+  "description": "Un classeur Excel de consommations d'énergie sur trois ans, avec surfaces, factures et notes. La section doit garder les unités (kWh, kWh/m², euros), situer la piscine et le gymnase et ne pas inventer de cause absente des notes.",
+  "template": "synthese-section",
+  "workspaceName": "Bureau Bellerive Énergie",
+  "report": {
+    "title": "Diagnostic énergétique des bâtiments de la communauté de communes de Bellerive-Ouche",
+    "description": "Diagnostic de six bâtiments publics avant le plan de travaux 2027-2030."
+  },
+  "section": {
+    "title": "Consommations et dépenses énergétiques 2023-2025",
+    "instructions": "Présenter l'évolution des consommations par bâtiment, les ratios au m² et les dépenses. Identifier les bâtiments prioritaires."
+  },
+  "deliverables": [
+    {
+      "id": "52cdc9fb-53c6-455b-9d54-b8850b01605d",
+      "fileName": "consommations-2023-2025.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-03-17T15:20:00Z",
+      "markdownFile": "xlsx-energie-batiments/consommations-2023-2025.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Évolution des consommations\n\nLa consommation totale des six bâtiments reste stable : 3 221 200 kWh en 2023, 3 192 600 kWh en 2024 et 3 199 700 kWh en 2025 (consommations-2023-2025.xlsx). Cette stabilité cache des évolutions opposées. L'école Jules-Ferry baisse de 412 000 à 371 200 kWh, après le remplacement de ses fenêtres à l'été 2024, et la médiathèque de 143 800 à 128 600 kWh. Le gymnase des Tilleuls augmente au contraire de 655 300 à 702 400 kWh.\n\n### Ratios au m²\n\nLa piscine intercommunale consomme 1 801 200 kWh en 2025, soit 56 % du total, et 461,8 kWh/m². Le gymnase suit avec 292,7 kWh/m². Le centre technique est le bâtiment le plus sobre avec 80,4 kWh/m².\n\n### Dépenses\n\nLes factures passent de 268 400 € TTC en 2023 à 301 900 € en 2024, puis 289 300 € en 2025. Le fichier ne détaille pas les dépenses par bâtiment.\n\n### Bâtiments prioritaires\n\n- **Piscine intercommunale** : plus de la moitié de la consommation, et la couverture du bassin n'est pas utilisée la nuit.\n- **Gymnase des Tilleuls** : la régulation de la chaudière est hors service depuis octobre 2024 et le chauffage tourne le week-end, ce qui explique la hausse.\n- **Mairie annexe** : chaudière au fioul de 1998, à remplacer dans le plan de travaux.",
+    "keyPoints": [
+      {
+        "id": "piscine-part",
+        "text": "La piscine pèse 56 % de la consommation totale.",
+        "anyOf": [["piscine"], ["56%", "56.3%", "plus de la moitie", "la moitie"]]
+      },
+      {
+        "id": "piscine-ratio",
+        "text": "La piscine consomme 461,8 kWh/m².",
+        "anyOf": [["461.8", "462"]]
+      },
+      {
+        "id": "gymnase",
+        "text": "Le gymnase passe de 655 300 à 702 400 kWh.",
+        "anyOf": [["gymnase"], ["702400", "hausse*", "augment*", "progress*"]]
+      },
+      {
+        "id": "regulation",
+        "text": "La régulation de la chaudière du gymnase est hors service.",
+        "anyOf": [["regulation"]]
+      },
+      {
+        "id": "fioul",
+        "text": "La mairie annexe chauffe au fioul avec une chaudière de 1998.",
+        "anyOf": [["fioul"]]
+      },
+      {
+        "id": "factures",
+        "text": "Les factures atteignent 289 300 euros TTC en 2025.",
+        "anyOf": [["289300", "301900"]]
+      },
+      {
+        "id": "total",
+        "text": "La consommation totale reste autour de 3,2 millions de kWh.",
+        "anyOf": [["3199700", "3221200", "3192600", "3.2 million*", "3.2 gwh"]]
+      }
+    ],
+    "mustCite": ["L1"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 180, "max": 1100 }
+  }
+}

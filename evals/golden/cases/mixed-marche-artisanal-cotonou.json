@@ -1,0 +1,78 @@
+{
+  "id": "mixed-marche-artisanal-cotonou",
+  "category": "mixed",
+  "description": "Une étude Word, une enquête Excel et des comptages CSV. La section doit croiser les trois fichiers, montrer que les hypothèses du plan d'affaires (loyer, fréquentation) dépassent ce que mesurent l'enquête et les comptages, et citer chaque fichier.",
+  "template": "synthese-section",
+  "workspaceName": "Cabinet Akowé Conseil",
+  "report": {
+    "title": "Étude de faisabilité du marché artisanal de Houéyiho, Cotonou",
+    "description": "Étude pour la Coopérative des artisans du Littoral Mahougnon, qui prévoit 160 stands."
+  },
+  "section": {
+    "title": "Demande et fréquentation attendues",
+    "instructions": "Estimer la demande à partir de l'enquête auprès des artisans et des comptages de passants. Indiquer les hypothèses et leurs limites."
+  },
+  "deliverables": [
+    {
+      "id": "8977da36-bfc5-4084-b06e-1d0cee3832f0",
+      "fileName": "etude-faisabilite.docx",
+      "kind": "document",
+      "uploadedAt": "2026-04-02T09:00:00Z",
+      "markdownFile": "mixed-marche-artisanal-cotonou/etude-faisabilite.md"
+    },
+    {
+      "id": "7cc54020-33ff-4546-84d3-c99b1f0c3cb9",
+      "fileName": "enquete-artisans.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-04-02T09:05:00Z",
+      "markdownFile": "mixed-marche-artisanal-cotonou/enquete-artisans.md"
+    },
+    {
+      "id": "98dc36ba-0dea-4985-8a57-fade833f2c25",
+      "fileName": "comptages-passants.csv",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-04-03T17:45:00Z",
+      "markdownFile": "mixed-marche-artisanal-cotonou/comptages-passants.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Intérêt des artisans\n\nSur 214 artisans interrogés, 131 se disent intéressés par un stand, soit 61 % (enquete-artisans.xlsx). La couture (41 intéressés) et la sculpture sur bois (27) fournissent le plus de candidats. Ce nombre dépasse les 112 stands qu'il faut louer pour atteindre le taux d'occupation de 70 % prévu la première année sur 160 stands (etude-faisabilite.docx).\n\n### Loyer\n\nLe plan d'affaires retient un loyer de 15 000 FCFA par mois. Les artisans jugent acceptable un loyer médian de 12 000 FCFA, et seul le quart le plus aisé accepte 15 000 FCFA. Au loyer prévu, une partie des 131 artisans intéressés risque donc de renoncer.\n\n### Fréquentation\n\nLes comptages du 9 au 15 mars 2026 donnent en moyenne 2 350 passants par jour du lundi au vendredi et 4 100 le samedi (comptages-passants.csv). Le plan d'affaires suppose 3 000 visiteurs par jour : l'hypothèse est atteinte le samedi seulement, et il s'agit de passants, pas de clients du marché.\n\n### Limites\n\n- Les comptages couvrent une seule semaine de mars et un seul point de comptage.\n- L'intérêt déclaré dans l'enquête ne vaut pas engagement à louer un stand.\n- Les hypothèses de loyer et de fréquentation du plan d'affaires sont à revoir avant de fixer le nombre de stands.",
+    "keyPoints": [
+      {
+        "id": "interesses",
+        "text": "131 artisans sur 214 sont intéressés, soit 61 %.",
+        "anyOf": [["131", "61%"]]
+      },
+      {
+        "id": "stands",
+        "text": "Le projet prévoit 160 stands et 70 % d'occupation la première année (112 stands).",
+        "anyOf": [["160"], ["70%", "112"]]
+      },
+      {
+        "id": "loyer",
+        "text": "Loyer prévu de 15 000 FCFA contre 12 000 FCFA jugés acceptables.",
+        "anyOf": [["15000"], ["12000"]]
+      },
+      {
+        "id": "passants",
+        "text": "2 350 passants par jour en semaine et 4 100 le samedi.",
+        "anyOf": [["2350"], ["4100"]]
+      },
+      {
+        "id": "hypothese-frequentation",
+        "text": "Le plan d'affaires suppose 3 000 visiteurs par jour.",
+        "anyOf": [["3000"]]
+      },
+      {
+        "id": "limite-comptages",
+        "text": "Les comptages couvrent une seule semaine et un seul point.",
+        "anyOf": [
+          ["une semaine", "une seule semaine", "7 jours", "sept jours", "un seul point", "seul point"]
+        ]
+      }
+    ],
+    "mustCite": ["L1", "L2", "L3"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 180, "max": 1100 }
+  }
+}

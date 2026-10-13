@@ -1,0 +1,79 @@
+{
+  "id": "noisy-kits-solaires-atacora",
+  "category": "noisy",
+  "description": "Deux livrables qui ne donnent pas le même nombre d'élèves pour les mêmes 48 écoles (6 120 contre 6 810). La section doit signaler l'écart sans choisir un chiffre au hasard ni en calculer un troisième, et ne pas compter les 4 écoles en attente comme équipées.",
+  "template": "synthese-section",
+  "workspaceName": "Cabinet Ayélé Ingénierie sociale",
+  "report": {
+    "title": "Évaluation du programme de kits solaires dans les écoles rurales de l'Atacora",
+    "description": "Évaluation des kits solaires installés dans des écoles primaires publiques pendant l'année scolaire 2025-2026."
+  },
+  "section": {
+    "title": "Bénéficiaires et équipements installés",
+    "instructions": "Donner le nombre d'écoles et d'élèves bénéficiaires et l'état des équipements."
+  },
+  "deliverables": [
+    {
+      "id": "9dab6c1a-7571-4c78-bd62-2b85f52b828e",
+      "fileName": "rapport-mission-terrain.docx",
+      "kind": "document",
+      "uploadedAt": "2026-04-03T07:45:00Z",
+      "markdownFile": "noisy-kits-solaires-atacora/rapport-mission-terrain.md"
+    },
+    {
+      "id": "0a92e79b-eadd-45e0-a385-7961ba5ba689",
+      "fileName": "tableau-suivi-partenaire.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-04-20T13:10:00Z",
+      "markdownFile": "noisy-kits-solaires-atacora/tableau-suivi-partenaire.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Écoles équipées\n\n52 écoles sont inscrites au programme. 48 ont reçu un kit solaire et 4 attendent encore la livraison (tableau-suivi-partenaire.xlsx). Le rapport de mission confirme les 48 écoles équipées, dont 30 ont été visitées (rapport-mission-terrain.docx).\n\n### Élèves bénéficiaires\n\nLes deux livrables ne donnent pas le même nombre d'élèves pour les 48 écoles équipées : 6 120 selon les registres consultés pendant la mission, 6 810 selon le tableau de suivi du partenaire. L'écart n'est pas expliqué. Le rapport de mission note que les registres des écoles sont incomplets ; le chiffre est à confirmer avant publication. Avec les 4 écoles en attente, le tableau du partenaire compte 7 340 élèves inscrits.\n\nLes cours du soir pour les élèves de CM2 ont repris dans 22 écoles.\n\n### État des équipements\n\n9 des 48 kits ont une batterie défaillante, qui ne tient plus la charge au-delà d'une heure. Les directeurs n'ont pas de contact pour faire jouer la garantie. Deux écoles ont signalé une tentative de vol de panneau.",
+    "keyPoints": [
+      {
+        "id": "ecoles-equipees",
+        "text": "48 écoles sont équipées.",
+        "anyOf": [["48"], ["ecole*"]]
+      },
+      {
+        "id": "ecoles-en-attente",
+        "text": "4 écoles attendent encore leur kit.",
+        "anyOf": [
+          ["4 ecoles", "quatre ecoles", "52"],
+          ["attente", "attendent", "pas encore", "non install*", "non livre*"]
+        ]
+      },
+      {
+        "id": "deux-chiffres",
+        "text": "Les deux livrables donnent 6 120 et 6 810 élèves.",
+        "anyOf": [["6120"], ["6810"]]
+      },
+      {
+        "id": "ecart-signale",
+        "text": "L'écart entre les deux chiffres est signalé.",
+        "anyOf": [
+          [
+            "ecart*",
+            "diverg*",
+            "contradict*",
+            "differen*",
+            "ne concord*",
+            "incoheren*",
+            "pas le meme",
+            "a confirmer",
+            "a verifier"
+          ]
+        ]
+      },
+      {
+        "id": "batteries",
+        "text": "9 kits ont une batterie défaillante.",
+        "anyOf": [["9"], ["batterie*"]]
+      }
+    ],
+    "mustCite": ["L1", "L2"],
+    "forbidden": ["6465", "52 ecoles equipees", "52 ecoles beneficiaires", "<livrable", "{{"],
+    "words": { "min": 150, "max": 1000 }
+  }
+}

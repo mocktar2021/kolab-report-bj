@@ -42,3 +42,6 @@ yarn-error.log*
 /test-results/
 /playwright-report/
 /blob-report/
+
+# eval reports (npm run eval); the bundle goes to /build
+/evals/reports/

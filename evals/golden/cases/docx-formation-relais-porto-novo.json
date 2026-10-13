@@ -1,0 +1,77 @@
+{
+  "id": "docx-formation-relais-porto-novo",
+  "category": "docx",
+  "description": "Deux fichiers Word : un rapport d'évaluation et le compte rendu d'un atelier. La section doit comparer objectifs et résultats et reprendre des faits des deux fichiers, chacun cité.",
+  "template": "synthese-section",
+  "workspaceName": "Cabinet Ayélé Ingénierie sociale",
+  "report": {
+    "title": "Évaluation finale du programme de formation des relais communautaires de santé de Porto-Novo",
+    "description": "Programme soutenu par la Fondation Lagune Verte de janvier 2024 à mars 2026."
+  },
+  "section": {
+    "title": "Résultats de la formation",
+    "instructions": "Comparer les objectifs et les résultats obtenus. Mentionner les difficultés rencontrées par les relais."
+  },
+  "deliverables": [
+    {
+      "id": "f0f949a1-e660-43c0-8c3a-ddef20ff088f",
+      "fileName": "rapport-evaluation-formation.docx",
+      "kind": "document",
+      "uploadedAt": "2026-06-10T09:30:00Z",
+      "markdownFile": "docx-formation-relais-porto-novo/rapport-evaluation-formation.md"
+    },
+    {
+      "id": "d9fb2bef-50f5-4487-aeb0-d0423e736f18",
+      "fileName": "compte-rendu-atelier-bilan.docx",
+      "kind": "document",
+      "uploadedAt": "2026-07-02T14:05:00Z",
+      "markdownFile": "docx-formation-relais-porto-novo/compte-rendu-atelier-bilan.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Formation des relais\n\nLe programme visait 120 relais formés. 104 relais ont suivi les trois modules (paludisme, nutrition des jeunes enfants, vaccination), soit 87 % de l'objectif, dont 61 femmes (rapport-evaluation-formation.docx). Le score moyen au test de connaissances passe de 41 sur 100 à 72 sur 100. La vaccination reste le module le moins maîtrisé.\n\n### Activité sur le terrain\n\nLes relais font en moyenne 9 visites à domicile par mois en 2025, pour 15 prévues. Les relais proches d'un centre de santé sont les plus actifs. Les infirmiers de Ouando et de Tokpota relèvent une hausse de 35 % des références d'enfants fiévreux vers les centres de santé entre 2024 et 2025 (compte-rendu-atelier-bilan.docx).\n\n### Difficultés\n\n- Les indemnités de transport ont été versées avec trois mois de retard en 2025.\n- Des thermomètres et des tests de diagnostic rapide du paludisme manquaient dans quatre quartiers sur dix.\n- 11 relais ont abandonné, surtout pour un déménagement ou un emploi mieux payé.\n\n### Ce qu'il faut retenir\n\nLa formation a nettement amélioré les connaissances des relais, mais l'activité reste en dessous de l'objectif. Les relais demandent un recyclage d'au moins 3 jours en 2027, centré sur la vaccination, et un paiement mensuel des indemnités à date fixe.",
+    "keyPoints": [
+      {
+        "id": "relais-formes",
+        "text": "104 relais formés pour un objectif de 120.",
+        "anyOf": [["104"], ["120"]]
+      },
+      {
+        "id": "femmes",
+        "text": "61 des relais formés sont des femmes.",
+        "anyOf": [["61"], ["femme*"]]
+      },
+      {
+        "id": "scores",
+        "text": "Le score moyen passe de 41 à 72 sur 100.",
+        "anyOf": [["41"], ["72"]]
+      },
+      {
+        "id": "visites",
+        "text": "9 visites par mois en moyenne pour 15 prévues.",
+        "anyOf": [["9"], ["15"], ["visite*"]]
+      },
+      {
+        "id": "difficultes",
+        "text": "Indemnités en retard et kits incomplets.",
+        "anyOf": [
+          ["indemnit*"],
+          ["kit*", "thermometre*", "tdr", "tests de diagnostic rapide", "test de diagnostic rapide"]
+        ]
+      },
+      {
+        "id": "abandons",
+        "text": "11 relais ont abandonné.",
+        "anyOf": [["11"], ["abandon*", "quitte*", "depart*"]]
+      },
+      {
+        "id": "references",
+        "text": "Les références d'enfants fiévreux ont augmenté de 35 %.",
+        "anyOf": [["35%"], ["referen*", "orient*"]]
+      }
+    ],
+    "mustCite": ["L1", "L2"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 180, "max": 1100 }
+  }
+}

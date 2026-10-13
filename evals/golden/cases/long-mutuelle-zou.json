@@ -1,0 +1,86 @@
+{
+  "id": "long-mutuelle-zou",
+  "category": "long",
+  "description": "Un tableau de bord Excel avec six feuilles de saisie de 200 lignes et un rapport d'activité très long. Les tableaux dépassent le plafond de lignes, et l'analyse doit s'appuyer sur la synthèse annuelle en disant que les saisies mensuelles n'ont pas été rapprochées.",
+  "template": "analyse-donnees",
+  "workspaceName": "Bureau Agbo Statistiques",
+  "report": {
+    "title": "Revue des comptes 2024-2025 de la mutuelle de santé Alafia Zou",
+    "description": "Revue demandée par le conseil d'administration de la mutuelle, qui compte cinq antennes dans le Zou."
+  },
+  "section": {
+    "title": "Cotisations et prestations par antenne",
+    "instructions": "Analyser l'évolution des adhérents, des cotisations et des prestations. Signaler les antennes en déséquilibre."
+  },
+  "deliverables": [
+    {
+      "id": "17445b51-3f73-45e0-baba-1196a8d44a30",
+      "fileName": "tableau-de-bord-mutuelle.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-02-11T10:00:00Z",
+      "markdownFile": "long-mutuelle-zou/tableau-de-bord-mutuelle.md",
+      "generated": {
+        "type": "table",
+        "topic": "mutuelle",
+        "seed": 47,
+        "sheets": [
+          { "name": "Saisie janv-juin 2024", "rows": 200 },
+          { "name": "Saisie juil-déc 2024", "rows": 200 },
+          { "name": "Saisie janv-mars 2025", "rows": 200 },
+          { "name": "Saisie avr-juin 2025", "rows": 200 },
+          { "name": "Saisie juil-sept 2025", "rows": 200 },
+          { "name": "Saisie oct-déc 2025", "rows": 200 }
+        ]
+      }
+    },
+    {
+      "id": "ef755b09-5e80-4cda-b7d0-90af4fcd54c1",
+      "fileName": "rapport-activite-2025.docx",
+      "kind": "document",
+      "uploadedAt": "2026-02-12T15:30:00Z",
+      "markdownFile": "long-mutuelle-zou/rapport-activite-2025.md",
+      "generated": { "type": "narrative", "topic": "mutuelle", "seed": 5, "sections": 160 }
+    }
+  ],
+  "reference": {
+    "markdown": "Les adhérents augmentent, mais les prestations progressent plus vite que les cotisations : la mutuelle se rapproche de l'équilibre et deux antennes sont déjà en déficit.\n\n### Observations\n\n- **Adhérents.** 6 840 adhérents à jour fin 2024 et 7 415 fin 2025 (tableau-de-bord-mutuelle.xlsx).\n- **Cotisations et prestations.** Les cotisations passent de 61 560 000 à 66 735 000 FCFA, les prestations de 47 402 000 à 60 061 000 FCFA. Le ratio prestations sur cotisations monte de 77 % à 90 %.\n- **Bohicon.** Ratio de 118 % en 2025 : l'antenne verse plus qu'elle n'encaisse, après l'ouverture d'un centre de santé partenaire en avril 2025 (rapport-activite-2025.docx).\n- **Covè.** Ratio de 104 % en 2025, également en déficit.\n- **Autres antennes.** Abomey (81 %), Djidja (72 %) et Zogbodomey (69 %) restent excédentaires.\n- **Paludisme.** 46 % des prestations payées en 2025.\n\n### Limites des données\n\n- Les feuilles de saisie mensuelle, tenues à la main, n'ont pas été rapprochées des totaux annuels issus des relevés bancaires. L'analyse s'appuie donc sur la synthèse annuelle.\n- Les cotisations et prestations par antenne en valeur ne figurent pas dans la synthèse, seuls les ratios sont donnés.",
+    "keyPoints": [
+      {
+        "id": "adherents",
+        "text": "6 840 adhérents fin 2024 et 7 415 fin 2025.",
+        "anyOf": [["6840"], ["7415"]]
+      },
+      {
+        "id": "ratio",
+        "text": "Le ratio prestations sur cotisations passe de 77 % à 90 %.",
+        "anyOf": [["77%"], ["90%"]]
+      },
+      {
+        "id": "bohicon",
+        "text": "Bohicon est à 118 %.",
+        "anyOf": [["bohicon"], ["118%"]]
+      },
+      {
+        "id": "cove",
+        "text": "Covè est à 104 %.",
+        "anyOf": [["cove"], ["104%"]]
+      },
+      {
+        "id": "paludisme",
+        "text": "Le paludisme pèse 46 % des prestations.",
+        "anyOf": [["paludisme"], ["46%"]]
+      },
+      {
+        "id": "rapprochement",
+        "text": "Les saisies mensuelles ne sont pas rapprochées des totaux annuels.",
+        "anyOf": [
+          ["saisie*", "mensuel*"],
+          ["rapproch*", "concord*", "coheren*", "verifi*"]
+        ]
+      }
+    ],
+    "mustCite": ["L1", "L2"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 150, "max": 1000 }
+  }
+}
