@@ -2,7 +2,7 @@
   "name": "kolab-report-bj",
   "version": "0.1.0",
   "private": true,
-  "description": "KolabReport, plateforme collaborative de rédaction de rapports d'experts assistée par IA (PWA, Next.js, Supabase).",
+  "description": "KolabReport, plateforme collaborative de r\u00e9daction de rapports d'experts assist\u00e9e par IA (PWA, Next.js, Supabase).",
   "engines": {
     "node": ">=20.11.0"
   },
@@ -16,7 +16,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "^1.56.1",
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
