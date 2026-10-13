@@ -16,7 +16,6 @@ const buttonVariants = cva(
         // theme and a faint top highlight on the dark one.
         soft: "border bg-card text-foreground shadow-md hover:bg-accent dark:border-white/10 dark:bg-white/[0.06] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_8px_24px_-8px_rgb(0_0_0/0.6)] dark:hover:bg-white/10",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        glass: "glass text-foreground shadow-sm hover:bg-white/90 dark:hover:bg-zinc-800/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },

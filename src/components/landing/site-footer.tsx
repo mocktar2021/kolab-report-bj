@@ -3,25 +3,26 @@ import { ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Link } from "@/i18n/navigation";
 
+// py-1 gives each link a 30px tall target without changing the rhythm.
 const footerLinkClass =
-  "rounded text-small text-muted-foreground transition-colors hover:text-foreground";
+  "inline-block rounded py-1 text-small text-muted-foreground transition-colors hover:text-foreground";
 
 export function SiteFooter() {
   const t = useTranslations("Landing.footer");
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-24 border-t bg-card/60 sm:mt-32">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.5fr_1fr]">
+    <footer className="border-t">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.5fr_1fr] lg:py-16">
         <div>
           <Logo />
           <p className="mt-4 max-w-xs text-small text-muted-foreground">{t("tagline")}</p>
         </div>
-        <nav aria-labelledby="footer-product">
-          <h2 id="footer-product" className="text-sm font-semibold text-foreground">
+        <nav aria-labelledby="footer-product" className="md:justify-self-end">
+          <h2 id="footer-product" className="font-sans text-sm font-medium text-foreground">
             {t("product")}
           </h2>
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-3 space-y-1">
             <li>
               <a href="#fonctionnalites" className={footerLinkClass}>
                 {t("features")}

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CallToAction } from "@/components/landing/call-to-action";
-import { Facts } from "@/components/landing/facts";
 import { Faq } from "@/components/landing/faq";
-import { FeatureBento } from "@/components/landing/feature-bento";
+import { FeatureCards } from "@/components/landing/feature-cards";
+import { FormatStrip } from "@/components/landing/format-strip";
 import { Hero } from "@/components/landing/hero";
+import { ProgressShowcase } from "@/components/landing/progress-showcase";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
+import { WorkspaceBento } from "@/components/landing/workspace-bento";
 
 // Public landing page. It reads no cookies or search params, so it is
 // prerendered at build time. Signed-in visitors are sent to the dashboard by
@@ -38,10 +40,15 @@ export default async function LandingPage({
   const t = await getTranslations("Landing");
 
   return (
-    <>
+    <div className="relative isolate">
       <noscript>
         <style>{NO_SCRIPT_REVEAL}</style>
       </noscript>
+      {/* Warm light behind the header and hero, in both themes. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[52rem] bg-glow [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]"
+      />
       <a
         href="#contenu"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:text-background"
@@ -51,12 +58,14 @@ export default async function LandingPage({
       <SiteHeader />
       <main id="contenu" className="overflow-x-clip">
         <Hero />
-        <FeatureBento />
-        <Facts />
+        <FormatStrip />
+        <FeatureCards />
+        <ProgressShowcase />
+        <WorkspaceBento />
         <Faq />
         <CallToAction />
       </main>
       <SiteFooter />
-    </>
+    </div>
   );
 }

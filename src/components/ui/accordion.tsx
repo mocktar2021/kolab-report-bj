@@ -29,18 +29,17 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "group flex flex-1 items-center justify-between gap-6 rounded-lg py-5 text-left text-h3 text-foreground transition-colors hover:text-foreground/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-card",
+        "group flex flex-1 items-center justify-between gap-6 rounded-lg py-6 text-left text-h3 text-foreground transition-colors hover:text-foreground/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background",
         className,
       )}
       {...props}
     >
       {children}
-      <span
+      <Plus
         aria-hidden="true"
-        className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground transition-[transform,background-color,color] duration-300 ease-out-expo group-hover:text-foreground group-data-[state=open]:rotate-45 group-data-[state=open]:bg-foreground group-data-[state=open]:text-background"
-      >
-        <Plus className="size-3.5" />
-      </span>
+        strokeWidth={1.5}
+        className="size-6 shrink-0 text-foreground transition-transform duration-300 ease-out-expo group-data-[state=open]:rotate-45"
+      />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ));
