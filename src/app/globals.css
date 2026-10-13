@@ -40,9 +40,10 @@
     --input: 240 5.9% 87%;
     --ring: 8.2 65.9% 43.7%;
     --radius: 0.75rem;
+    /* Darker than the dark theme values so each dot keeps 3:1 on white. */
     --status-not-started: 215 16% 57%;
-    --status-in-progress: 38 92% 50%;
-    --status-completed: 160 84% 39%;
+    --status-in-progress: 32 95% 44%;
+    --status-completed: 161 94% 30%;
     --shadow-rgb: 9 9 11;
     --shadow-strength: 1;
   }
