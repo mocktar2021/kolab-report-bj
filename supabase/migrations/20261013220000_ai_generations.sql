@@ -13,19 +13,14 @@
 -- can't both slip under them. Users read the generations of the sections
 -- they can edit, rate their own, and accept or discard a proposal through
 -- the two functions at the end, which check the same rights.
---
--- Usage outlives the section: deleting a section or its report keeps its
--- generations, without a section, so they still count against the limits.
--- Deleting the workspace removes them.
 -- =============================================================================
 
 create type public.ai_generation_status as enum ('running', 'succeeded', 'failed');
 
 create table public.ai_generations (
   id                 uuid primary key default gen_random_uuid(),
-  workspace_id       uuid not null references public.workspaces (id) on delete cascade,
-  -- Null once the section is deleted.
-  section_id         uuid,
+  workspace_id       uuid not null,
+  section_id         uuid not null,
   requested_by       uuid references public.profiles (id) on delete set null,
   prompt_version_id  uuid references public.prompt_library (id) on delete set null,
   output_schema      text not null
@@ -68,7 +63,7 @@ create table public.ai_generations (
   completed_at       timestamptz,
   updated_at         timestamptz not null default now(),
   foreign key (section_id, workspace_id)
-    references public.report_sections (id, workspace_id) on delete set null (section_id),
+    references public.report_sections (id, workspace_id) on delete cascade,
   check (status <> 'succeeded' or output is not null),
   check (accepted is null or status = 'succeeded'),
   check ((accepted is null) = (decided_at is null)),
