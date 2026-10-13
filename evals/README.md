@@ -1,6 +1,6 @@
 # Evals for AI section drafts
 
-This folder holds the offline evaluation of the AI draft feature (KRB-16): a golden set of French cases with reference sections (KRB-100), a human review rubric (KRB-101), and a runner that drafts each case with the real pipeline, checks the result and gates the release on fixed thresholds (KRB-102). The feature stays behind `AI_DRAFTS_ENABLED=false` until a run passes on the model an environment uses (see [Release rule](#release-rule)).
+This folder holds the offline evaluation of the AI draft feature (KRB-16): a golden set of French cases with reference sections (KRB-100), a human review rubric (KRB-101), and a runner that drafts each case with the real pipeline, checks the result and gates the release on fixed thresholds (KRB-102). The feature stays behind `AI_DRAFTS_ENABLED=false` until a run passes on the model an environment uses (see [Release rule](#release-rule)). The pull request gate, the nightly run, the production baseline and how to handle a failing run are in the playbook, [`docs/ai-evaluation.md`](../docs/ai-evaluation.md) (KRB-106, KRB-109).
 
 ## Running it
 
@@ -9,22 +9,28 @@ npm run eval -- --mock                  # mock model: no key, no network, checks
 npm run eval                            # real provider from the environment
 npm run eval -- --judge                 # same, plus the LLM judge (needed for a release)
 npm run eval -- --cases injection-csv-laiterie,long-mutuelle-zou
+npm run eval -- --subset pr --judge --budget-usd 2 --compare evals/baseline/production.json --comment eval-comment.md
 npm run eval -- --prompt-file new-template.txt --prompt-schema section_draft
 npm run eval:agreement -- evals/human/2026-10-20-awa.csv evals/human/2026-10-20-paul.csv
 npx vitest run evals                    # unit tests: cases, checks, kappa, gate, mock run
 ```
 
-`npm run eval` bundles `evals/run.ts` into `build/evals.mjs` with esbuild (`scripts/build-evals.mjs`) and runs it with node. It exits with 0 when the gate passes, 1 when a threshold fails and 2 on a usage or setup error. It reads `.env.local` when the file exists, without overriding variables already set.
+`npm run eval` bundles `evals/run.ts` into `build/evals.mjs` with esbuild (`scripts/build-evals.mjs`) and runs it with node. It exits with 0 when the gate passes, 1 when a threshold fails or a metric drops past its regression limit against the baseline (`--compare`), and 2 on a usage or setup error. It reads `.env.local` when the file exists, without overriding variables already set.
 
 | Option | Effect |
 | --- | --- |
 | `--mock` | Mock writer, summarizer and judge. Also on when `AI_PROVIDER=mock`. |
 | `--tier standard\|fast` | Model tier for every case. Default: each template's `model_tier`. |
 | `--cases a,b` | Only these case ids. The run is then marked as a subset. |
+| `--subset name` | The cases of a named subset of `subsets.json`, in its order. `pr` is the one the pull request workflow runs. Not with `--cases`. |
 | `--judge` | Scores each draft with the judge model. |
 | `--prompt-file path` with `--prompt-schema key` | Runs the cases whose template has this output schema with the text of `path`, to test a new template version before it ships. |
 | `--out dir` | Report folder. Default `evals/reports` (git-ignored). |
 | `--concurrency n` | Cases run at the same time. Default 3. |
+| `--budget-usd n`, `--budget-tokens n` | Start no new case once the estimated spend (judge included) would pass the cap. USD needs the four `AI_PRICE_*` variables. Skipped cases are listed and make the run incomplete. |
+| `--compare file` | Compare with a baseline run, overall and per template, on the cases both runs have. A missing file only means no baseline yet. |
+| `--write-baseline file` | Write this run as a baseline (see `baseline/README.md`). |
+| `--comment file` | Write a French Markdown summary for the PR comment, starting with `<!-- kolab-evals -->`. |
 
 | Variable | Use |
 | --- | --- |
@@ -34,7 +40,7 @@ npx vitest run evals                    # unit tests: cases, checks, kappa, gate
 | `AI_MAX_INPUT_TOKENS`, `AI_CONTEXT_WINDOW_TOKENS`, `AI_REDACT_PII` | Context budget and PII masking, as in the app. Use the values of the environment you want to release. |
 | `AI_PRICE_*_PER_MTOK` | Prices for the cost estimate. Without them the cost shows as n/a. |
 
-The **Evals** workflow (`.github/workflows/evals.yml`) runs the same command by hand from the Actions tab, with the tier, judge and case list as inputs. It needs the `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` secret and the `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST` variables (optionally `AI_EVAL_JUDGE_MODEL` and the prices). The reports are kept as the `eval-reports` artifact for 90 days.
+The **Evals** workflow (`.github/workflows/evals.yml`) runs the full set with the judge every night and compares it with `baseline/production.json`, and runs by hand from the Actions tab with the tier, judge and case list as inputs. It needs the `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` secret and the `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST` variables (optionally `AI_EVAL_JUDGE_MODEL` and the prices); the nightly run is skipped while the secret is missing. The reports are kept as the `eval-reports` artifact for 90 days. The **Evals on PR** workflow (`.github/workflows/evals-pr.yml`) runs the `pr` subset on pull requests that change a prompt template, an output schema, the context builder, the repair logic, a model id or the evals, and comments the comparison on the PR. See [`docs/ai-evaluation.md`](../docs/ai-evaluation.md).
 
 ## What a run does
 
@@ -81,11 +87,13 @@ With `--mock`, the writer answers fixed text, so the quality metrics (`mustCiteR
 
 These are baselines agreed for the first release. Raise them once a few real runs show where the model stands, never lower one to make a run pass.
 
+The `regression` key of the same file holds the largest drop allowed against a baseline run (`--compare`): `maxDrop` per metric (a share for rates, points for judge means; 0 for injections, safe output and the other 100 % metrics) and `warnIncrease` for cost per case (+30 %) and p95 latency (+50 %), which only warn. The playbook explains each number.
+
 ## Release rule
 
 Set `AI_DRAFTS_ENABLED=true` in an environment only when all of this holds:
 
-1. A full run (no `--cases`, no `--prompt-file`) with `--judge` passes the gate on the provider and models that environment uses, with its `AI_MAX_INPUT_TOKENS` and `AI_REDACT_PII`. The run summary then says "Release ready: yes".
+1. A full run (no `--cases`, `--subset` or `--prompt-file`, no case skipped by a budget) with `--judge` passes the gate on the provider and models that environment uses, with its `AI_MAX_INPUT_TOKENS` and `AI_REDACT_PII`. The run summary then says "Release ready: yes".
 2. Two reviewers scored at least 8 cases of that run with `evals/rubric.md`, including every injection case, and `npm run eval:agreement` shows a kappa of 0.6 or more on every criterion.
 3. The judge stays within 0.75 point of the human mean on every criterion (calibration table of the report).
 4. The record is kept: commit the run summary and the score sheets (`npm run eval -- --judge --out evals/baselines` writes there instead of the ignored folder), or attach the workflow artifact to KRB-16.
@@ -137,5 +145,7 @@ For a long case, use `generated` with `{ "type": "narrative", "topic", "seed", "
 | `rubric.md` | Human review rubric, also read by the judge (KRB-101). |
 | `human/scores.template.csv` | Score sheet to copy for each reviewer. |
 | `human/agreement.ts` | Score sheet parser, quadratic weighted kappa, `eval:agreement` command. |
-| `run.ts`, `lib/` | Runner, checks, judge, reports and gate (KRB-102). |
-| `thresholds.json` | Gate minimums. |
+| `run.ts`, `lib/` | Runner, checks, judge, reports and gate (KRB-102); subsets, budget, baseline comparison and PR comment (KRB-106). |
+| `thresholds.json` | Gate minimums and regression limits. |
+| `subsets.json` | Named subsets for `--subset`. |
+| `baseline/` | `production.json`, the run PRs and the nightly run compare with, and how to create it. |

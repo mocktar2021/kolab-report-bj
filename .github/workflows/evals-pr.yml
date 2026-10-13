@@ -1,0 +1,201 @@
+name: Evals on PR
+
+# Runs the "pr" subset of the golden set (evals/subsets.json) when a pull
+# request changes what the evals cover: a prompt template migration, the
+# output schemas, the context builder, the repair logic, a model id or the
+# evals themselves. Posts one comment on the PR, edited on every push, and
+# fails on a threshold or on a regression against
+# evals/baseline/production.json. Without an API key secret (forks,
+# Dependabot, secret not set yet) it runs the mock model, which still checks
+# structure, citations and injections. Playbook: docs/ai-evaluation.md.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# A new push to the PR cancels the run still going.
+concurrency:
+  group: evals-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  HUSKY: "0"
+  COMMENT_FILE: eval-comment.md
+
+jobs:
+  evals:
+    name: Evals (pr subset)
+    # Draft PRs wait until they are ready for review: a real run costs API tokens.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, to diff the PR against its base.
+          fetch-depth: 0
+
+      - name: Check what the PR changes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          range="$BASE_SHA...$HEAD_SHA"
+          reasons=""
+          add() { reasons="${reasons:+$reasons, }$1"; }
+          changed() { ! git diff --quiet "$range" -- "$@"; }
+
+          # Migrations that insert or change prompt_library rows (the global templates).
+          templates=$(git diff -z --name-only --diff-filter=ACMR "$range" -- 'supabase/migrations/*.sql' \
+            | xargs -0 -r grep -l -i prompt_library || true)
+          if [ -n "$templates" ]; then add "prompt templates"; fi
+          if changed src/lib/ai/schemas.ts src/lib/prompts/catalog.ts; then add "output schemas"; fi
+          if changed src/lib/ai/context; then add "context builder"; fi
+          if changed src/lib/ai/generate.ts; then add "repair logic"; fi
+          if changed src/lib/ai/models.ts; then add "model settings"; fi
+          if changed evals scripts/build-evals.mjs .github/workflows/evals-pr.yml; then add "evals"; fi
+          model_from_pr=false
+          if git diff -U0 "$range" -- .env.example | grep -E '^[+-]AI_MODEL(_FAST)?=' > /dev/null; then
+            add "model ids in .env.example"
+            model_from_pr=true
+          fi
+
+          if [ -z "$reasons" ]; then
+            echo "::notice title=Evals skipped::This PR changes no prompt template, output schema, context builder, repair logic, model id or eval file."
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Evals needed: $reasons"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "model_from_pr=$model_from_pr" >> "$GITHUB_OUTPUT"
+
+      - name: Pick the real or the mock model
+        id: mode
+        if: steps.scope.outputs.relevant == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+        run: |
+          case "${AI_PROVIDER:-anthropic}" in
+            anthropic) key="$ANTHROPIC_API_KEY" ;;
+            openai) key="$OPENAI_API_KEY" ;;
+            *) key="" ;;
+          esac
+          if [ -n "$key" ]; then
+            echo "mode=real" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=mock" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Evals on the mock model::No API key secret in this run. Only structure, citations and injections are checked."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.scope.outputs.relevant == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+        if: steps.scope.outputs.relevant == 'true'
+
+      - name: Run the evals
+        id: evals
+        if: steps.scope.outputs.relevant == 'true'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          MODEL_FROM_PR: ${{ steps.scope.outputs.model_from_pr }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
+          AI_EVAL_JUDGE_MODEL: ${{ vars.AI_EVAL_JUDGE_MODEL }}
+          AI_MAX_INPUT_TOKENS: ${{ vars.AI_MAX_INPUT_TOKENS }}
+          AI_CONTEXT_WINDOW_TOKENS: ${{ vars.AI_CONTEXT_WINDOW_TOKENS }}
+          AI_REDACT_PII: ${{ vars.AI_REDACT_PII }}
+          AI_PRICE_INPUT_PER_MTOK: ${{ vars.AI_PRICE_INPUT_PER_MTOK }}
+          AI_PRICE_OUTPUT_PER_MTOK: ${{ vars.AI_PRICE_OUTPUT_PER_MTOK }}
+          AI_PRICE_FAST_INPUT_PER_MTOK: ${{ vars.AI_PRICE_FAST_INPUT_PER_MTOK }}
+          AI_PRICE_FAST_OUTPUT_PER_MTOK: ${{ vars.AI_PRICE_FAST_OUTPUT_PER_MTOK }}
+          # The USD cap needs the four AI_PRICE_* variables; the token cap
+          # applies in any case.
+          BUDGET_USD: ${{ vars.EVAL_PR_BUDGET_USD || '2' }}
+          BUDGET_TOKENS: ${{ vars.EVAL_PR_BUDGET_TOKENS || '500000' }}
+        run: |
+          set +e
+          if [ "$MODE" = "real" ]; then
+            if [ "$MODEL_FROM_PR" = "true" ]; then
+              # The PR changes the model ids in .env.example: evaluate those
+              # instead of the repository variables.
+              for name in AI_MODEL AI_MODEL_FAST; do
+                value=$(sed -n "s/^$name=//p" .env.example | tail -n 1 | tr -d '\r')
+                case "$value" in
+                  "" | *[!A-Za-z0-9._:/@-]*) echo "::warning::$name in .env.example is empty or has unexpected characters: keeping the repository variable." ;;
+                  *) export "$name=$value"; echo "$name=$value, from .env.example" ;;
+                esac
+              done
+            fi
+            npm run eval -- --subset pr --judge \
+              --budget-usd "$BUDGET_USD" --budget-tokens "$BUDGET_TOKENS" \
+              --compare evals/baseline/production.json --comment "$COMMENT_FILE"
+          else
+            npm run eval -- --mock --subset pr --comment "$COMMENT_FILE"
+          fi
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Post the PR comment
+        if: always() && steps.scope.outputs.relevant == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ ! -s "$COMMENT_FILE" ]; then
+            echo "::warning::The eval run wrote no comment. See the Run the evals step."
+            exit 0
+          fi
+          cat "$COMMENT_FILE" >> "$GITHUB_STEP_SUMMARY"
+          # One comment per PR: edit the one that starts with the marker.
+          id=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- kolab-evals -->"))) | .id' \
+            | sed -n 1p) || id=""
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F "body=@$COMMENT_FILE" > /dev/null \
+              || echo "::warning::Could not edit the eval comment. The summary of this run has it."
+          else
+            # A PR from a fork gets a read-only token: the run summary keeps the text.
+            gh api --method POST "repos/$REPO/issues/$PR_NUMBER/comments" -F "body=@$COMMENT_FILE" > /dev/null \
+              || echo "::warning::Could not post the eval comment. The summary of this run has it."
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.scope.outputs.relevant == 'true'
+        with:
+          name: eval-reports
+          path: |
+            evals/reports/
+            eval-comment.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Fail on a threshold or a regression
+        if: steps.scope.outputs.relevant == 'true'
+        env:
+          CODE: ${{ steps.evals.outputs.code }}
+        run: |
+          case "$CODE" in
+            0) echo "Evals passed." ;;
+            1)
+              echo "::error title=Evals::A threshold failed, or a metric dropped past its limit against evals/baseline/production.json. See the PR comment."
+              exit 1
+              ;;
+            *)
+              echo "::error title=Evals::The eval run could not start (exit code ${CODE:-none}). See the Run the evals step."
+              exit 1
+              ;;
+          esac

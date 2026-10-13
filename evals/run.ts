@@ -1,21 +1,33 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import type { LanguageModelV1 } from "ai";
+import { CONTEXT_VERSION } from "@/lib/ai/context";
 import { providerModel, readAiSettings, type AiSettings } from "@/lib/ai/models";
+import { OUTPUT_SCHEMA_VERSION } from "@/lib/ai/schemas";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier, type OutputSchema } from "@/lib/prompts/catalog";
 import { agreementCli, loadHumanScores } from "./human/agreement";
+import { buildBaseline, readBaseline, writeBaseline } from "./lib/baseline";
+import { Budget, hasPrices } from "./lib/budget";
 import { CaseError, loadCases, type LoadedCase } from "./lib/case";
+import { renderComment, renderErrorComment } from "./lib/comment";
+import { compareWithBaseline, hasRegression, renderComparison, type Comparison } from "./lib/compare";
+import { SetupError } from "./lib/errors";
+import { executeCases } from "./lib/execute";
 import { applyGate, loadThresholds, renderGate } from "./lib/gate";
 import { loadRubric } from "./lib/judge";
 import { mockGenerator, mockJudge, mockSummarizer } from "./lib/mock";
 import { aggregate, calibration, REPORTS_DIR, writeReports, type TemplateReport } from "./lib/report";
-import { runCase, type CaseResult, type RunDeps } from "./lib/runner";
+import type { CaseResult, RunDeps } from "./lib/runner";
+import { loadSubsets, subsetIds } from "./lib/subsets";
+import { summarizeCase } from "./lib/summary";
 import { loadGlobalTemplates, templateFromFile, type EvalTemplate } from "./lib/templates";
 
 // Entry of `npm run eval` (bundled to build/evals.mjs by scripts/build-evals.mjs).
-// Runs the golden set, writes the reports and exits 1 when the gate fails.
-// `npm run eval:agreement` runs the inter-rater agreement instead. See evals/README.md.
+// Runs the golden set, writes the reports and exits 1 when the gate fails or
+// a metric drops past its limit against the baseline (--compare).
+// `npm run eval:agreement` runs the inter-rater agreement instead. See
+// evals/README.md and docs/ai-evaluation.md.
 
 const USAGE = `Usage: npm run eval -- [options]
        npm run eval:agreement -- [scores.csv ...]
@@ -24,29 +36,59 @@ Options:
   --mock                 Use the mock model (no API key, no network)
   --tier standard|fast   Model tier for every case (default: each template's model_tier)
   --cases a,b            Run only these case ids
+  --subset name          Run the cases of a named subset of evals/subsets.json (e.g. pr)
   --judge                Score each draft with the LLM judge (AI_EVAL_JUDGE_MODEL, or AI_MODEL)
   --prompt-file path     Evaluate this template text instead of the shipped one...
   --prompt-schema key    ...for the templates with this output schema (${OUTPUT_SCHEMAS.join(", ")})
   --out dir              Report folder (default ${REPORTS_DIR})
   --concurrency n        Cases run at the same time (default 3)
+  --budget-usd n         Start no case once the estimated spend would pass n USD (needs AI_PRICE_*)
+  --budget-tokens n      Same, in tokens
+  --compare file         Compare with a baseline run file (missing file: absolute thresholds only)
+  --write-baseline file  Write this run as a baseline file
+  --comment file         Write a Markdown summary for the pull request comment, in French
+
+Exit codes: 0 pass, 1 threshold failed or regression against the baseline, 2 setup error.
 `;
 
 /** Bad command line: the usage is printed. */
 class UsageError extends Error {}
 
-/** Missing key or nothing to run: only the message is printed. */
-class SetupError extends Error {}
-
 type Options = {
   mock: boolean;
   tier: ModelTier | null;
   cases: string[] | null;
+  subset: string | null;
   judge: boolean;
   promptFile: string | null;
   promptSchema: OutputSchema | null;
   out: string;
   concurrency: number;
+  budgetUsd: number | null;
+  budgetTokens: number | null;
+  compare: string | null;
+  writeBaseline: string | null;
+  comment: string | null;
 };
+
+function positive(value: string | undefined, flag: string, integer: boolean): number | null {
+  if (value === undefined) return null;
+  const number = Number(value);
+  if (
+    value.trim() === "" ||
+    !Number.isFinite(number) ||
+    number <= 0 ||
+    (integer && !Number.isInteger(number))
+  )
+    throw new UsageError(`${flag} must be a positive ${integer ? "integer" : "number"}`);
+  return number;
+}
+
+function path(value: string | undefined, flag: string): string | null {
+  if (value === undefined) return null;
+  if (value.trim() === "") throw new UsageError(`${flag} needs a file path`);
+  return value;
+}
 
 function parseOptions(args: string[]): Options {
   const { values } = parseArgs({
@@ -55,11 +97,17 @@ function parseOptions(args: string[]): Options {
       mock: { type: "boolean", default: false },
       tier: { type: "string" },
       cases: { type: "string" },
+      subset: { type: "string" },
       judge: { type: "boolean", default: false },
       "prompt-file": { type: "string" },
       "prompt-schema": { type: "string" },
       out: { type: "string", default: REPORTS_DIR },
       concurrency: { type: "string", default: "3" },
+      "budget-usd": { type: "string" },
+      "budget-tokens": { type: "string" },
+      compare: { type: "string" },
+      "write-baseline": { type: "string" },
+      comment: { type: "string" },
       help: { type: "boolean", default: false },
     },
     strict: true,
@@ -84,15 +132,24 @@ function parseOptions(args: string[]): Options {
         .map((id) => id.trim())
         .filter(Boolean)
     : null;
+  const subset = values.subset?.trim() || null;
+  if (values.subset !== undefined && subset === null) throw new UsageError("--subset needs a name");
+  if (subset !== null && cases !== null) throw new UsageError("use --subset or --cases, not both");
   return {
     mock: values.mock ?? false,
     tier: tier as ModelTier | null,
     cases,
+    subset,
     judge: values.judge ?? false,
     promptFile,
     promptSchema: schema as OutputSchema | null,
     out: values.out ?? REPORTS_DIR,
     concurrency,
+    budgetUsd: positive(values["budget-usd"], "--budget-usd", false),
+    budgetTokens: positive(values["budget-tokens"], "--budget-tokens", true),
+    compare: path(values.compare, "--compare"),
+    writeBaseline: path(values["write-baseline"], "--write-baseline"),
+    comment: path(values.comment, "--comment"),
   };
 }
 
@@ -140,8 +197,29 @@ function caseLine(result: CaseResult, index: number, total: number): string {
   ).toFixed(1)} s${extra.length > 0 ? `  ${extra.join(" ")}` : ""}`;
 }
 
-async function evaluate(args: string[], env: Env): Promise<number> {
-  const options = parseOptions(args);
+/** Link to the GitHub Actions run, when the runner is in one. */
+function runUrl(env: Env): string | null {
+  const server = env.GITHUB_SERVER_URL;
+  const repository = env.GITHUB_REPOSITORY;
+  const id = env.GITHUB_RUN_ID;
+  if (
+    !server ||
+    !repository ||
+    !id ||
+    !/^https:\/\/[\w.-]+(:\d+)?$/.test(server) ||
+    !/^[\w.-]+\/[\w.-]+$/.test(repository) ||
+    !/^\d+$/.test(id)
+  )
+    return null;
+  return `${server}/${repository}/actions/runs/${id}`;
+}
+
+function writeText(file: string, text: string): void {
+  mkdirSync(dirname(resolve(file)), { recursive: true });
+  writeFileSync(file, text);
+}
+
+async function evaluate(options: Options, env: Env): Promise<number> {
   const settings = readAiSettings(env);
   const mock = options.mock || settings.provider === "mock";
   const templates = templatesFor(options);
@@ -151,11 +229,23 @@ async function evaluate(args: string[], env: Env): Promise<number> {
   const known = new Set(all.map((value) => value.id));
   const unknown = (options.cases ?? []).filter((id) => !known.has(id));
   if (unknown.length > 0) throw new UsageError(`unknown case ids: ${unknown.join(", ")}`);
-  const selected = all.filter(
-    (value) => (options.cases === null || options.cases.includes(value.id)) && templates.has(value.template),
-  );
+  // A subset runs in its own order, so the budget cuts its last cases first.
+  const byId = new Map(all.map((value) => [value.id, value]));
+  const selected = (
+    options.subset !== null
+      ? subsetIds(options.subset, loadSubsets(), known).map((id) => byId.get(id))
+      : all.filter((value) => options.cases === null || options.cases.includes(value.id))
+  ).filter((value): value is LoadedCase => value !== undefined && templates.has(value.template));
   if (selected.length === 0) throw new SetupError("no case to run");
   const fullRun = selected.length === all.length;
+
+  const priced = hasPrices(settings);
+  if (options.budgetUsd !== null && !priced && options.budgetTokens === null)
+    throw new SetupError(
+      "--budget-usd needs prices for both tiers (AI_PRICE_INPUT_PER_MTOK, AI_PRICE_OUTPUT_PER_MTOK, AI_PRICE_FAST_INPUT_PER_MTOK, AI_PRICE_FAST_OUTPUT_PER_MTOK). Set them, or add --budget-tokens.",
+    );
+  // Read the baseline before spending anything: a broken file is a setup error.
+  const baseline = options.compare !== null ? readBaseline(options.compare) : null;
 
   const judgeModelId = env.AI_EVAL_JUDGE_MODEL?.trim() || null;
   const judgeModel = !options.judge
@@ -183,26 +273,22 @@ async function evaluate(args: string[], env: Env): Promise<number> {
 
   const models = [...new Set(selected.map((value) => depsFor(value).modelId))];
   console.log(
-    `Golden set: ${selected.length} case(s), ${mock ? "mock model" : `${settings.provider} ${models.join(", ")}`}${
-      judge ? `, judge ${mock ? "mock" : (judgeModelId ?? settings.models.standard)}` : ""
-    }`,
+    `Golden set: ${selected.length} case(s)${options.subset ? ` (subset ${options.subset})` : ""}, ${
+      mock ? "mock model" : `${settings.provider} ${models.join(", ")}`
+    }${judge ? `, judge ${mock ? "mock" : (judgeModelId ?? settings.models.standard)}` : ""}`,
   );
+  if (options.budgetUsd !== null && !priced)
+    console.log("No AI_PRICE_* for both tiers: the USD budget can't be checked, the token budget applies.");
 
   const startedAt = new Date().toISOString();
-  const results: CaseResult[] = new Array(selected.length);
-  let done = 0;
-  let next = 0;
-  const workers = Array.from({ length: Math.min(options.concurrency, selected.length) }, async () => {
-    while (next < selected.length) {
-      const index = next++;
-      const value = selected[index];
-      if (!value) continue;
-      const result = await runCase(value, depsFor(value));
-      results[index] = result;
-      console.log(caseLine(result, ++done, selected.length));
-    }
+  const budget = new Budget({ usd: options.budgetUsd, tokens: options.budgetTokens }, priced);
+  const { results, skipped } = await executeCases(selected, {
+    concurrency: options.concurrency,
+    budget,
+    depsFor,
+    onResult: (result, done) => console.log(caseLine(result, done, selected.length)),
+    onSkip: (value) => console.log(`[skip] ${value.id}: budget reached`),
   });
-  await Promise.all(workers);
 
   const humans = loadHumanScores();
   for (const error of humans.errors) console.warn(`Human scores: ${error}`);
@@ -212,6 +298,7 @@ async function evaluate(args: string[], env: Env): Promise<number> {
     mock,
     judge: judge !== null,
     fullRun: fullRun && options.promptFile === null,
+    subset: options.subset,
     provider: mock ? "mock" : settings.provider,
     model: models.join("+"),
     judgeModel: judge ? (mock ? "mock" : (judgeModelId ?? settings.models.standard)) : null,
@@ -249,8 +336,22 @@ async function evaluate(args: string[], env: Env): Promise<number> {
   });
 
   const aggregates = aggregate(results);
-  const gate = applyGate(aggregates, thresholds, { mock });
-  const releaseReady = gate.passed && runInfo.fullRun && !mock && judge !== null;
+  const gate = applyGate(aggregates, thresholds, { mock, skipped, ran: results.length });
+  const releaseReady = gate.passed && gate.complete && runInfo.fullRun && !mock && judge !== null;
+  const summaries = results.map(summarizeCase);
+  const versions = { outputSchema: OUTPUT_SCHEMA_VERSION, context: CONTEXT_VERSION };
+  const comparison: Comparison =
+    options.compare === null
+      ? { status: "off" }
+      : compareWithBaseline(
+          { cases: summaries, mock, judge: judge !== null, versions },
+          baseline,
+          thresholds.regression,
+          options.compare,
+        );
+  const regression = hasRegression(comparison);
+  const budgetSummary = budget.summary();
+
   const outDir = resolve(options.out);
   const written = writeReports(outDir, templateReports, {
     kind: "run",
@@ -258,14 +359,56 @@ async function evaluate(args: string[], env: Env): Promise<number> {
     aggregates,
     gate,
     releaseReady,
+    budget: budgetSummary,
+    comparison,
   });
+
+  if (options.writeBaseline !== null) {
+    if (results.length === 0) {
+      console.warn("No case ran: no baseline written.");
+    } else {
+      writeBaseline(
+        options.writeBaseline,
+        buildBaseline({ run: runInfo, complete: gate.complete, versions, cases: summaries }),
+      );
+      const caveats = [
+        mock ? "mock model, never compared" : null,
+        runInfo.fullRun ? null : "subset of the golden set",
+        gate.complete ? null : "incomplete run",
+        judge ? null : "no judge",
+      ].filter(Boolean);
+      console.log(
+        `Baseline written to ${options.writeBaseline}${caveats.length > 0 ? ` (${caveats.join(", ")})` : ""}.`,
+      );
+    }
+  }
+
+  if (options.comment !== null) {
+    writeText(
+      options.comment,
+      renderComment({
+        run: runInfo,
+        goldenCases: all.length,
+        selected: selected.length,
+        gate,
+        aggregates,
+        cases: summaries,
+        comparison,
+        budget: budgetSummary,
+        reportsDir: options.out,
+        runUrl: runUrl(env),
+      }),
+    );
+  }
 
   console.log("");
   console.log(renderGate(gate));
   if (mock) console.log("Mock model: quality thresholds are reported, not enforced.");
   if (!runInfo.fullRun) console.log("Subset run: not valid for a release.");
+  if (comparison.status !== "off") console.log(`\n${renderComparison(comparison)}`);
   console.log(`Reports in ${options.out}: ${written.filter((name) => name.endsWith(".md")).join(", ")}`);
-  return gate.passed ? 0 : 1;
+  if (options.comment !== null) console.log(`Comment in ${options.comment}`);
+  return gate.passed && !regression ? 0 : 1;
 }
 
 async function main(argv: string[]): Promise<number> {
@@ -274,7 +417,15 @@ async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   if (command === "agreement") return agreementCli(rest);
   try {
-    return await evaluate(argv, process.env);
+    const options = parseOptions(argv);
+    try {
+      return await evaluate(options, process.env);
+    } catch (error) {
+      // The pull request still gets a comment that says why nothing ran.
+      if (options.comment !== null && (error instanceof SetupError || error instanceof CaseError))
+        writeText(options.comment, renderErrorComment(error.message, runUrl(process.env)));
+      throw error;
+    }
   } catch (error) {
     if (error instanceof SetupError || error instanceof CaseError) {
       console.error(`Error: ${error.message}`);

@@ -1,9 +1,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { humanKey, humanMeans, type HumanScore } from "../human/agreement";
+import type { BudgetSummary } from "./budget";
+import { renderComparison, type Comparison } from "./compare";
 import { CRITERIA, type Criterion } from "./criteria";
-import { renderGate, type GateInput, type GateResult } from "./gate";
+import { renderGate, type GateResult } from "./gate";
 import type { CaseResult } from "./runner";
+import { aggregateSummaries, judged, summarizeCase, type Aggregates } from "./summary";
 
 // Aggregates and report files. One JSON and one Markdown file per template
 // and model (the template's prompt version is in the name), plus a run
@@ -11,13 +14,8 @@ import type { CaseResult } from "./runner";
 
 export const REPORTS_DIR = "evals/reports";
 
-export type Aggregates = GateInput & {
-  cases: number;
-  judgedCases: number;
-  latencyMs: { p50: number | null; p95: number | null };
-  tokens: { input: number; output: number; total: number };
-  costUsd: number | null;
-};
+export type { Aggregates } from "./summary";
+export { percentile } from "./summary";
 
 export type Calibration = Record<Criterion, { cases: number; meanAbsoluteDifference: number | null }>;
 
@@ -25,68 +23,8 @@ function mean(values: readonly number[]): number | null {
   return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function rate(values: readonly boolean[]): number | null {
-  return mean(values.map((value) => (value ? 1 : 0)));
-}
-
-/** Nearest-rank percentile. */
-export function percentile(values: readonly number[], p: number): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const rank = Math.min(sorted.length, Math.max(1, Math.ceil((p / 100) * sorted.length)));
-  return sorted[rank - 1] ?? null;
-}
-
-function judged(result: CaseResult) {
-  return result.judge && "scores" in result.judge ? result.judge : null;
-}
-
 export function aggregate(results: readonly CaseResult[]): Aggregates {
-  const injection = results.filter((result) => result.injectionResisted !== null);
-  const long = results.filter((result) => result.truncationOk !== null);
-  const scored = results.map(judged).filter((value) => value !== null);
-  const judge =
-    scored.length === 0
-      ? null
-      : (Object.fromEntries(
-          CRITERIA.map(({ key }) => [key, mean(scored.map((value) => value.scores[key]))]),
-        ) as Record<Criterion, number | null>);
-
-  let input = 0;
-  let output = 0;
-  const costs: number[] = [];
-  for (const result of results) {
-    const usages = [result.generation.usage, result.summaries.usage];
-    const judgeResult = judged(result);
-    if (judgeResult) usages.push(judgeResult.usage);
-    for (const usage of usages) {
-      input += usage.inputTokens;
-      output += usage.outputTokens;
-    }
-    for (const cost of [result.generation.costUsd, result.summaries.costUsd])
-      if (cost !== null) costs.push(cost);
-  }
-  const latencies = results.map((result) => result.generation.latencyMs);
-
-  return {
-    cases: results.length,
-    judgedCases: scored.length,
-    schemaValidFirstTry: rate(results.map((result) => result.generation.schemaValidFirstTry)),
-    schemaValidAfterRepair: rate(results.map((result) => result.generation.schemaValidAfterRepair)),
-    citationValidRate: rate(results.map((result) => result.checks?.citationValid === true)),
-    injectionResistedRate: rate(injection.map((result) => result.injectionResisted === true)),
-    safeOutputRate: rate(results.map((result) => result.safeOutput)),
-    longCasesTruncatedRate: rate(long.map((result) => result.truncationOk === true)),
-    mustCiteRate: mean(results.map((result) => result.checks?.mustCiteCoverage ?? 0)),
-    lengthOkRate: rate(results.map((result) => result.checks?.lengthOk === true)),
-    keyPointCoverage: mean(results.map((result) => result.checks?.keyPointCoverage ?? 0)),
-    forbiddenAbsentRate: rate(results.map((result) => result.forbiddenFound.length === 0)),
-    frenchRate: rate(results.map((result) => result.checks?.french === true)),
-    judge,
-    latencyMs: { p50: percentile(latencies, 50), p95: percentile(latencies, 95) },
-    tokens: { input, output, total: input + output },
-    costUsd: costs.length === 0 ? null : costs.reduce((sum, cost) => sum + cost, 0),
-  };
+  return aggregateSummaries(results.map(summarizeCase));
 }
 
 /** Judge against human means on the same case, prompt version and model. */
@@ -127,8 +65,10 @@ export type RunInfo = {
   startedAt: string;
   mock: boolean;
   judge: boolean;
-  /** Every case of the golden set ran. */
+  /** Every case of the golden set was selected, with the shipped templates. */
   fullRun: boolean;
+  /** Name from evals/subsets.json (--subset), or null. */
+  subset: string | null;
   provider: string;
   model: string;
   judgeModel: string | null;
@@ -244,8 +184,22 @@ export type RunReport = {
   aggregates: Aggregates;
   gate: GateResult;
   releaseReady: boolean;
+  /** Spend and cap. Optional so reports written before KRB-106 still read. */
+  budget?: BudgetSummary;
+  comparison?: Comparison;
   reports: string[];
 };
+
+function budgetLine(budget: BudgetSummary): string {
+  const caps = [
+    budget.limits.usd !== null
+      ? `$${budget.limits.usd}${budget.priced ? "" : " (not checked: no price set)"}`
+      : null,
+    budget.limits.tokens !== null ? `${budget.limits.tokens} tokens` : null,
+  ].filter(Boolean);
+  const spent = `${budget.spent.usd === null ? "n/a" : `$${budget.spent.usd.toFixed(4)}`} and ${budget.spent.tokens} tokens`;
+  return `Budget: ${caps.length > 0 ? caps.join(", ") : "none"}. Estimated spend, judge included: ${spent}.`;
+}
 
 export function templateMarkdown(report: TemplateReport): string {
   const { run, template } = report;
@@ -278,7 +232,13 @@ export function runMarkdown(report: RunReport): string {
   const notes: string[] = [];
   if (run.mock) notes.push("Mock model: quality thresholds are reported, not enforced.");
   if (!run.fullRun)
-    notes.push("Subset of the golden set (--cases or --prompt-file): not valid for a release.");
+    notes.push(
+      `Subset of the golden set (${run.subset ? `--subset ${run.subset}` : "--cases, --subset or --prompt-file"}): not valid for a release.`,
+    );
+  if (!report.gate.complete)
+    notes.push(
+      `Incomplete: the budget kept ${report.gate.skippedCases.length} case(s) from starting. Not valid for a release.`,
+    );
   if (!run.judge) notes.push("Judge off: judge thresholds skipped.");
   return [
     `# Eval run ${run.date}, ${run.model}`,
@@ -292,8 +252,12 @@ export function runMarkdown(report: RunReport): string {
     renderGate(report.gate),
     "```",
     "",
-    `Release ready: ${report.releaseReady ? "yes" : "no"} (needs a passing gate on the full set, real model, judge on).`,
+    `Release ready: ${report.releaseReady ? "yes" : "no"} (needs a passing gate on the full set, every case run, real model, judge on).`,
     "",
+    ...(report.budget ? [budgetLine(report.budget), ""] : []),
+    ...(report.comparison && report.comparison.status !== "off"
+      ? ["## Comparison with the baseline", "", "```", renderComparison(report.comparison), "```", ""]
+      : []),
     "## All cases",
     "",
     ...aggregateLines(report.aggregates),

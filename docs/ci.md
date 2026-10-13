@@ -28,6 +28,10 @@ Runs the `security-extended` queries on JavaScript and TypeScript on pushes to `
 
 A finding that was reviewed and judged safe goes in `.github/codeql/accepted-findings.json` with its rule, file and the reason. The job then skips it. Keep that list short and review it when the file changes.
 
+## Evals (`.github/workflows/evals-pr.yml`, `.github/workflows/evals.yml`)
+
+On a PR that changes a prompt template migration, an output schema, the context builder, the repair logic, a model id or `evals/`, **Evals on PR** runs the `pr` subset of the AI golden set, posts one comment with the comparison against `evals/baseline/production.json` and fails on a threshold or a regression. Other PRs get a notice and no comment. Without the API key secret it runs the mock model. **Evals** runs the full set every night and by hand. `docs/ai-evaluation.md` has the triggers, the limits and what to do when it fails.
+
 ## Dependabot (`.github/dependabot.yml`)
 
 Checks npm packages and GitHub Actions every Monday. Minor and patch bumps come grouped in one PR for production packages and one for dev packages. Majors come one by one, at most 5 open at a time. Actions are pinned to a commit SHA with the version in a comment, and Dependabot keeps both up to date.

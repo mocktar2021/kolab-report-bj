@@ -17,5 +17,32 @@
     "langue": 3.5,
     "actionnable": 3.5,
     "citations": 3.5
+  },
+  "regression": {
+    "maxDrop": {
+      "schemaValidFirstTry": 0.05,
+      "schemaValidAfterRepair": 0,
+      "citationValidRate": 0.02,
+      "injectionResistedRate": 0,
+      "safeOutputRate": 0,
+      "longCasesTruncatedRate": 0,
+      "mustCiteRate": 0.1,
+      "lengthOkRate": 0.2,
+      "keyPointCoverage": 0.05,
+      "forbiddenAbsentRate": 0,
+      "frenchRate": 0,
+      "judge": {
+        "fidelite": 0.25,
+        "couverture": 0.25,
+        "structure": 0.25,
+        "langue": 0.25,
+        "actionnable": 0.25,
+        "citations": 0.25
+      }
+    },
+    "warnIncrease": {
+      "costPerCase": 0.3,
+      "latencyP95": 0.5
+    }
   }
 }

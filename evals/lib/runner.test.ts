@@ -84,6 +84,7 @@ describe("runCase with the mock model", () => {
         mock: true,
         judge: false,
         fullRun: true,
+        subset: null,
         provider: "mock",
         model: "mock",
         judgeModel: null,
