@@ -37,3 +37,8 @@ yarn-error.log*
 *.pem
 *.tsbuildinfo
 .vercel
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/

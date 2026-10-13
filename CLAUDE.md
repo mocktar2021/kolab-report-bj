@@ -12,7 +12,7 @@ Use the `write-like-mocktar` skill (`.claude/skills/write-like-mocktar`) for eve
 
 ## Checks
 
-Run before pushing: `npm run lint`, `npm run typecheck`, `npm run build`.
+Run before pushing: `npm run lint`, `npm run typecheck`, `npm run build`. For auth or routing changes, also run `npm run test:e2e` with `npx supabase start` running.
 
 ## Project rules
 

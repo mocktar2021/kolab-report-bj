@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
+import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { CommandPalette } from "./command-palette";
 import { NavItems } from "./nav-items";
 import { SearchTrigger } from "./search-trigger";
@@ -113,7 +114,7 @@ export function AppShell({ user, children }: AppShellProps) {
               </div>
             </div>
             <ThemeToggle variant="row" side="top" align="start" />
-            <form action={signOut}>
+            <form action={signOut} onSubmit={clearOfflineCaches}>
               <button
                 type="submit"
                 className="flex h-10 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"

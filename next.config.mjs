@@ -18,7 +18,6 @@ const withPWA = withPWAInit({
   reloadOnOnline: true,
   cacheStartUrl: true,
   dynamicStartUrl: true,
-  dynamicStartUrlRedirect: "/fr/connexion",
   fallbacks: {
     // Served when a navigation fails and the page is not in cache.
     document: "/fr/hors-ligne",
@@ -28,17 +27,25 @@ const withPWA = withPWAInit({
     disableDevLogs: true,
     // Custom rules are evaluated before the defaults.
     runtimeCaching: [
+      // These matchers are copied into sw.js as source text, so they must not
+      // use variables from this file.
       {
-        // Multi-tenant data (REST, Auth, Realtime, Storage) must never be
-        // served from a shared cache: always go to the network.
-        urlPattern: ({ url }) =>
-          supabaseUrl !== "" && url.href.startsWith(supabaseUrl),
+        // Supabase REST, Auth, Storage, Realtime and Functions: multi-tenant
+        // data never goes into a shared cache.
+        urlPattern: ({ url }) => /^\/(rest|auth|storage|realtime|functions|graphql)\/v1\//.test(url.pathname),
         handler: "NetworkOnly",
       },
       {
         // Route handlers (AI generation, signed upload URLs) are dynamic.
+        urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/api/"),
+        handler: "NetworkOnly",
+      },
+      {
+        // Auth pages depend on the session (signed-in users are redirected),
+        // so they always come from the server.
         urlPattern: ({ url, sameOrigin }) =>
-          sameOrigin && url.pathname.startsWith("/api/"),
+          sameOrigin &&
+          /^\/[a-z]{2}\/(connexion|inscription|mot-de-passe-oublie|reinitialiser-mot-de-passe|auth\/)/.test(url.pathname),
         handler: "NetworkOnly",
       },
     ],

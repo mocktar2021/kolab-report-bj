@@ -3,38 +3,44 @@
 import { z } from "zod";
 import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
+import { authErrorKey } from "@/lib/auth/errors";
+import { safeNextPath, withoutLocale } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 
 const signInSchema = z.object({
-  email: z.string().trim().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
-  redirectTo: z.string().optional(),
+  next: z.string().optional(),
 });
 
-export type SignInState = { error?: "invalidInput" | "invalidCredentials" };
-
-// Only allow same-site relative paths to prevent open redirects.
-function safeRedirectPath(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/tableau-de-bord";
-  return value.replace(/^\/fr(?=\/|$)/, "") || "/tableau-de-bord";
-}
+export type SignInState = {
+  error?: "invalidInput" | "invalidCredentials" | "rateLimited" | "emailNotConfirmed";
+  email?: string;
+};
 
 export async function signIn(_prev: SignInState, formData: FormData): Promise<SignInState> {
+  const email = String(formData.get("email") ?? "");
   const parsed = signInSchema.safeParse({
-    email: formData.get("email"),
+    email,
     password: formData.get("password"),
-    redirectTo: formData.get("redirectTo") ?? undefined,
+    next: formData.get("next") ?? undefined,
   });
-  if (!parsed.success) return { error: "invalidInput" };
+  if (!parsed.success) return { error: "invalidInput", email };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
-  if (error) return { error: "invalidCredentials" };
+  if (error) {
+    const key = authErrorKey(error);
+    // One generic message for wrong e-mail or wrong password.
+    if (key === "rateLimited" || key === "emailNotConfirmed") return { error: key, email };
+    return { error: "invalidCredentials", email };
+  }
 
+  const next = safeNextPath(parsed.data.next);
   const locale = await getLocale();
-  redirect({ href: safeRedirectPath(parsed.data.redirectTo), locale });
+  redirect({ href: next ? withoutLocale(next) : "/tableau-de-bord", locale });
   return {};
 }
