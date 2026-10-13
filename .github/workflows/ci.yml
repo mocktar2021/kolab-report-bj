@@ -52,6 +52,8 @@ jobs:
 
       - run: npm run format:check
       - run: npm run lint
+      - name: No secrets in NEXT_PUBLIC_ variables
+        run: node scripts/check-public-env.mjs
       - run: npm run typecheck
       - run: npm test
 
