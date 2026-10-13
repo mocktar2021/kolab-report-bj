@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronsUpDown, Plus, Users } from "lucide-react";
+import { BookText, ChevronsUpDown, Plus, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +43,7 @@ export function WorkspaceMark({ name, className }: { name: string; className?: s
   );
 }
 
-/** Menu to switch the current workspace, manage its members or create a new one. */
+/** Menu to switch the current workspace, open its members or prompt templates, or create a new one. */
 export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
@@ -51,6 +51,7 @@ export function WorkspaceSwitcher({
   onNavigate,
 }: WorkspaceSwitcherProps) {
   const t = useTranslations("Workspaces");
+  const tShell = useTranslations("AppShell");
   const [pending, startTransition] = useTransition();
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId) ?? null;
 
@@ -124,6 +125,12 @@ export function WorkspaceSwitcher({
             </Link>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuItem asChild>
+          <Link href={`/espaces/${current.id}/modeles`} onClick={onNavigate}>
+            <BookText aria-hidden="true" />
+            {tShell("promptLibrary")}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/espaces/nouveau" onClick={onNavigate}>
             <Plus aria-hidden="true" />

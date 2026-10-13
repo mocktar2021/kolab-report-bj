@@ -76,6 +76,10 @@ French is the only locale. Every page lives under `/fr`, and `/` redirects there
 | `/fr/invitations/{token}` | Invitation link from the e-mail (works signed out) |
 | `/fr/rapports/{id}` | Report sections, with assignment and weights for owners and admins |
 | `/fr/espaces/{id}/sections/{id}` | One section: its status, its deliverables with what the app read from them, and for the people who can edit it the upload zone, delete and "Relancer l'analyse" |
+| `/fr/espaces/{id}/modeles` | Prompt library: the workspace's templates, then the global ones (read-only), with "Nouveau modèle" for owners and admins |
+| `/fr/espaces/{id}/modeles/{id}` | One version of a template: settings, text, history and the diff with the version before. Owners and admins publish, archive, add a version, or customize a global template |
+| `/fr/espaces/{id}/modeles/nouveau` | Editor for a new template (owners and admins). `?depuis={id}` starts from an existing version, global or not |
+| `/fr/espaces/{id}/modeles/{id}/modifier` | Editor for the next version of a workspace template (owners and admins) |
 
 Route handlers under `src/app/api` (not localized, skipped by the middleware, so each one checks the session itself):
 

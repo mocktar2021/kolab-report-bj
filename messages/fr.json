@@ -278,7 +278,8 @@
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
     "menuTitle": "Menu",
-    "menuDescription": "Pages et filtres du tableau de bord."
+    "menuDescription": "Pages et filtres du tableau de bord.",
+    "promptLibrary": "Modèles de prompts"
   },
   "CommandPalette": {
     "title": "Palette de commandes",
@@ -615,5 +616,202 @@
     "joinedTitle": "Vous avez rejoint {workspace}",
     "joined": "Vous êtes membre de cet espace de travail.",
     "open": "Ouvrir l'espace"
+  },
+  "Prompts": {
+    "metaTitle": "Modèles de prompts",
+    "title": "Modèles de prompts",
+    "subtitle": "Les consignes que l'IA suit pour rédiger les brouillons des sections de {workspace}.",
+    "backToDashboard": "Tableau de bord",
+    "backToLibrary": "Modèles de prompts",
+    "newTemplate": "Nouveau modèle",
+    "readOnlyNote": "Vous consultez les modèles en lecture seule. Les propriétaires et les administrateurs de l'espace les créent et les publient.",
+    "workspaceGroup": "Modèles de l'espace",
+    "globalGroup": "Modèles globaux",
+    "globalGroupHelp": "Fournis avec KolabReport, en lecture seule. Ils changent avec les mises à jour de l'application.",
+    "archivedGroup": "Modèles archivés",
+    "archivedGroupHelp": "Aucune de leurs versions n'est publiée. Publiez-en une pour remettre le modèle en service.",
+    "count": "{count, plural, =0 {Aucun modèle} one {# modèle} other {# modèles}}",
+    "emptyManager": "Aucun modèle propre à cet espace pour le moment. Créez-en un, ou personnalisez un modèle global.",
+    "emptyMember": "Aucun modèle propre à cet espace pour le moment. Les propriétaires et les administrateurs de l'espace peuvent en créer.",
+    "itemVersions": "v{version} · {count, plural, one {# version} other {# versions}}",
+    "itemPublished": "v{version} publiée",
+    "globalBadge": "Global",
+    "status": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "archived": "Archivé"
+    },
+    "workspaceScope": "Modèle de l'espace",
+    "versionLabel": "Version {version}",
+    "byOn": "Par {name}, le <time>{date}</time>",
+    "historyByOn": "{name}, <time>{date}</time>",
+    "globalAuthor": "KolabReport",
+    "unknownAuthor": "Ancien membre",
+    "changelogLine": "<label>Note de version :</label> {changelog}",
+    "globalNote": "Ce modèle global est fourni avec KolabReport. Il ne change qu'avec les mises à jour de l'application.",
+    "globalNoteManager": "Ce modèle global est fourni avec KolabReport et ne se modifie pas. Personnalisez-le pour en faire une copie propre à votre espace.",
+    "settingsTitle": "Réglages",
+    "tokens": "{count, number} jetons",
+    "byDefault": "Par défaut",
+    "variablesTitle": "Variables utilisées",
+    "noVariables": "Ce modèle n'utilise aucune variable.",
+    "templateTitle": "Texte du modèle",
+    "historyTitle": "Historique",
+    "historyCount": "{count, plural, one {# version} other {# versions}}",
+    "shownVersion": "Affichée",
+    "diffTitle": "Changements depuis la version {version}",
+    "diffFirstTitle": "Changements",
+    "diffFirst": "C'est la première version de ce modèle.",
+    "diffTooLarge": "Trop de changements entre les deux versions pour les afficher ligne par ligne. Ouvrez la version {version} depuis l'historique pour comparer.",
+    "diffSame": "Le texte du modèle n'a pas changé.",
+    "diffLabel": "Lignes ajoutées et supprimées depuis la version {version}",
+    "diffAdded": "Ajouté :",
+    "diffRemoved": "Supprimé :",
+    "diffSkipped": "{count, plural, one {# ligne inchangée} other {# lignes inchangées}}",
+    "fieldsTitle": "Réglages modifiés",
+    "fieldsSame": "Les autres réglages n'ont pas changé.",
+    "before": "Avant",
+    "after": "Après",
+    "none": "Aucune",
+    "fields": {
+      "title": "Titre",
+      "description": "Description",
+      "template": "Modèle",
+      "outputSchema": "Type de résultat",
+      "modelTier": "Modèle d'IA",
+      "temperature": "Température",
+      "maxOutputTokens": "Longueur maximale",
+      "changelog": "Note de version"
+    },
+    "actions": {
+      "newVersion": "Nouvelle version",
+      "publish": "Publier cette version",
+      "archive": "Archiver",
+      "customize": "Personnaliser"
+    },
+    "archiveTitle": "Archiver la version publiée ?",
+    "archiveDescription": "Le modèle n'aura plus de version publiée tant que vous n'en publiez pas une autre. Toutes ses versions restent dans l'historique.",
+    "archiveConfirm": "Archiver",
+    "cancel": "Annuler",
+    "forbiddenTitle": "Page réservée",
+    "forbiddenDescription": "Seuls les propriétaires et les administrateurs de l'espace créent et modifient ses modèles de prompts.",
+    "backToLibraryButton": "Retour aux modèles",
+    "editor": {
+      "newMetaTitle": "Nouveau modèle",
+      "newTitle": "Nouveau modèle",
+      "newSubtitle": "Le modèle sera propre à l'espace {workspace}. Une fois publié, il servira aux brouillons de ses sections.",
+      "customizeSubtitle": "Copie de « {title} », version {version}. Le modèle d'origine ne change pas.",
+      "customizedFrom": "Repris de « {title} », version {version}.",
+      "editMetaTitle": "Nouvelle version",
+      "editEyebrow": "Nouvelle version",
+      "editSubtitle": "Elle sera enregistrée comme version {version}. Les versions précédentes restent dans l'historique et peuvent être publiées à nouveau.",
+      "optional": "(facultative)",
+      "descriptionHelp": "Une phrase qui dit à quoi sert le modèle.",
+      "templateHelp": "Les consignes envoyées à l'IA. Chaque variable entre doubles accolades est remplacée par le contenu de la section.",
+      "variablesLabel": "Insérer une variable",
+      "insertVariable": "Insérer {token} : {label}",
+      "detected": "Variables utilisées :",
+      "noneDetected": "Aucune variable pour le moment.",
+      "unknown": "{count, plural, one {Variable inconnue} other {Variables inconnues}} : {names}. Utilisez les variables proposées au-dessus du modèle.",
+      "unclosed": "Une variable n'est pas refermée : il manque les deux accolades fermantes.",
+      "invalidHint": "Corrigez le modèle pour pouvoir l'enregistrer.",
+      "temperatureHelp": "Entre 0 et 1, par exemple 0,3. Plus la valeur est basse, plus le texte est régulier.",
+      "maxOutputTokensHelp": "Entre 256 et 8 192 jetons. Un jeton fait environ 4 caractères.",
+      "changelogHelp": "Ce qui change par rapport à la version précédente.",
+      "changelogHelpFirst": "Ce qui distingue ce modèle, si besoin.",
+      "placeholderDefault": "Par défaut",
+      "preview": "Aperçu",
+      "previewHelp": "Le modèle rempli avec une section d'exemple, tel que l'IA le recevra. Les valeurs sont fictives.",
+      "previewEmpty": "Le modèle est vide.",
+      "publish": "Publier",
+      "saveDraft": "Enregistrer en brouillon",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "conflictVersion": "Quelqu'un a enregistré une autre version de ce modèle pendant que vous le modifiiez. Rechargez pour enregistrer votre texte à la suite de cette version : il reste dans le formulaire.",
+      "conflictNew": "Un autre modèle de l'espace a été créé avec ce titre au même moment. Changez le titre ou réessayez.",
+      "reload": "Recharger"
+    },
+    "variables": {
+      "section_title": {
+        "label": "Titre de la section",
+        "description": "Le titre de la section à rédiger.",
+        "sample": "Bilan des consommations d'énergie"
+      },
+      "section_instructions": {
+        "label": "Consignes de la section",
+        "description": "Ce que le coordinateur attend de la section.",
+        "sample": "Présenter les consommations 2024 et 2025 du siège et de l'annexe, puis les comparer aux bâtiments récents du parc."
+      },
+      "report_title": {
+        "label": "Titre du rapport",
+        "description": "Le titre du rapport qui contient la section.",
+        "sample": "Audit énergétique du siège"
+      },
+      "report_context": {
+        "label": "Contexte du rapport",
+        "description": "Le client, l'objet et le périmètre du rapport.",
+        "sample": "Audit demandé par la direction générale avant la rénovation du siège de Cotonou, prévue en 2027. Périmètre : bâtiment principal et annexe, 6 200 m² au total."
+      },
+      "deliverables": {
+        "label": "Livrables",
+        "description": "Le texte lu dans les livrables de la section, fichier par fichier, en Markdown.",
+        "sample": "### Rapport d'étude.docx\n\nLe siège consomme 182 kWh/m² par an, contre 120 kWh/m² pour les bâtiments récents du parc. La climatisation représente 61 % de la facture.\n\n### Consommations.xlsx\n\n| Bâtiment | 2024 (kWh) | 2025 (kWh) |\n| --- | --- | --- |\n| Siège | 1 092 000 | 1 128 000 |\n| Annexe | 45 000 | 47 500 |"
+      },
+      "workspace_name": {
+        "label": "Nom de l'espace",
+        "description": "Le nom de l'espace de travail.",
+        "sample": "Audit énergétique 2026"
+      }
+    },
+    "outputSchemas": {
+      "section_draft": {
+        "label": "Brouillon de section",
+        "description": "Le texte de la section en Markdown, avec ses intertitres et les livrables cités."
+      },
+      "executive_summary": {
+        "label": "Résumé exécutif",
+        "description": "Un résumé court du rapport, suivi de trois à cinq points clés."
+      },
+      "recommendations": {
+        "label": "Recommandations",
+        "description": "Des recommandations classées par priorité, chacune avec le constat et le livrable qui la justifient."
+      },
+      "data_analysis": {
+        "label": "Analyse de données",
+        "description": "Ce que montrent les tableaux : chiffres, évolutions, écarts et limites des données."
+      }
+    },
+    "modelTiers": {
+      "standard": {
+        "label": "Standard",
+        "description": "Le modèle principal, pour les textes longs et détaillés."
+      },
+      "fast": {
+        "label": "Rapide",
+        "description": "Un modèle plus rapide et moins coûteux, pour les textes courts."
+      }
+    },
+    "fieldErrors": {
+      "titleLength": "Saisissez un titre de 2 à 200 caractères.",
+      "descriptionLength": "Saisissez une description de 500 caractères au plus.",
+      "templateEmpty": "Saisissez le texte du modèle.",
+      "templateLength": "Le modèle dépasse 20 000 caractères. Raccourcissez-le.",
+      "templateUnclosed": "Une variable n'est pas refermée : il manque les deux accolades fermantes.",
+      "templateUnknown": "Le modèle utilise une variable inconnue. Utilisez les variables proposées.",
+      "changelogRequired": "Décrivez ce qui change dans cette version.",
+      "changelogLength": "Saisissez une note de 500 caractères au plus.",
+      "outputSchema": "Choisissez un type de résultat.",
+      "modelTier": "Choisissez un modèle d'IA.",
+      "temperatureRange": "Saisissez un nombre entre 0 et 1, par exemple 0,3.",
+      "maxOutputTokensRange": "Saisissez un nombre entier entre 256 et 8 192.",
+      "invalidCharacters": "Ce texte contient un caractère invisible que l'application ne peut pas enregistrer. Retapez-le ou collez-le depuis un éditeur de texte simple."
+    },
+    "actionErrors": {
+      "forbidden": "Seuls les propriétaires et les administrateurs de l'espace modifient ses modèles.",
+      "notFound": "Cette version n'existe plus ou n'appartient pas à cet espace de travail.",
+      "conflict": "Ce modèle a changé entre-temps. Rechargez la page puis réessayez.",
+      "invalidInput": "Certaines informations ne sont pas valides. Vérifiez les champs signalés.",
+      "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant."
+    }
   }
 }
