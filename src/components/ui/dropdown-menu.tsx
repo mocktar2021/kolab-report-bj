@@ -58,7 +58,7 @@ const DropdownMenuRadioItem = React.forwardRef<
     {children}
     <span className="absolute right-2.5 flex items-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Check className="!text-primary" aria-hidden="true" />
+        <Check className="!text-highlight" aria-hidden="true" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
   </DropdownMenuPrimitive.RadioItem>

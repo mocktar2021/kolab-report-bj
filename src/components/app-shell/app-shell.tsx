@@ -63,7 +63,7 @@ export function AppShell({ user, children }: AppShellProps) {
         <Sidebar user={user} onOpenPalette={openPalette} />
       </Suspense>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-black/5 bg-white/70 px-3 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80 lg:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md lg:hidden">
         <button
           type="button"
           onClick={() => setMenuOpen(true)}

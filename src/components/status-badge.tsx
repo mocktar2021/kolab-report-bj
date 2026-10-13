@@ -11,10 +11,11 @@ const BADGE_STYLES: Record<SectionStatus, string> = {
     "bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20",
 };
 
+// Dots read the --status-* tokens, which are lighter on the dark theme.
 export const STATUS_DOT_STYLES: Record<SectionStatus, string> = {
-  not_started: "bg-slate-400",
-  in_progress: "bg-amber-500",
-  completed: "bg-emerald-500",
+  not_started: "bg-status-not-started",
+  in_progress: "bg-status-in-progress",
+  completed: "bg-status-completed",
 };
 
 type StatusBadgeProps = {

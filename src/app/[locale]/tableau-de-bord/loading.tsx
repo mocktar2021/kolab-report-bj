@@ -20,7 +20,7 @@ export default function TableauDeBordLoading() {
 
       <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {Array.from({ length: KPI_PLACEHOLDERS }, (_, index) => (
-          <div key={index} className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+          <div key={index} className="surface-card rounded-2xl border p-4 shadow-sm sm:p-5">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="mt-4 h-12 w-16 rounded-lg" />
             <Skeleton className="mt-3 h-4 w-28" />
@@ -28,7 +28,7 @@ export default function TableauDeBordLoading() {
         ))}
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-2xl border bg-card shadow-sm">
+      <div className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm">
         <div className="flex items-center justify-between gap-4 border-b px-5 py-4">
           <div>
             <Skeleton className="h-6 w-24" />

@@ -24,7 +24,7 @@ export function SearchTrigger({ onOpen, collapsible = false, className }: Search
       aria-label={t("searchLabel")}
       aria-keyshortcuts="Meta+K Control+K"
       className={cn(
-        "group flex h-9 w-full items-center gap-2.5 rounded-lg border bg-background/70 px-2.5 text-sm text-muted-foreground shadow-sm outline-none transition-[color,border-color,box-shadow] hover:border-zinc-300 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:hover:border-zinc-600",
+        "group flex h-9 w-full items-center gap-2.5 rounded-lg border bg-background/70 px-2.5 text-sm text-muted-foreground shadow-sm outline-none transition-[color,border-color,box-shadow] hover:border-foreground/20 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
         collapsible && "sidebar-collapsed:justify-center sidebar-collapsed:px-0",
         className,
       )}

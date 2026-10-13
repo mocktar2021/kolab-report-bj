@@ -12,6 +12,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline: "border border-border bg-card shadow-sm hover:bg-accent hover:text-accent-foreground",
+        // Secondary pill: raised, with a soft layered shadow on the light
+        // theme and a faint top highlight on the dark one.
+        soft: "border bg-card text-foreground shadow-md hover:bg-accent dark:border-white/10 dark:bg-white/[0.06] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_8px_24px_-8px_rgb(0_0_0/0.6)] dark:hover:bg-white/10",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         glass: "glass text-foreground shadow-sm hover:bg-white/90 dark:hover:bg-zinc-800/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",

@@ -29,13 +29,12 @@ export default async function ConnexionPage({
 
   return (
     <main className="relative isolate flex min-h-dvh flex-col items-center justify-center px-4 py-12">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-glow" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-grid" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-glow" />
 
       <Link href="/" aria-label={tLanding("home")} className="mb-8 rounded-full">
         <Logo />
       </Link>
-      <Card className="w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
+      <Card className="surface-card w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
         <CardHeader>
           <CardTitle className="text-h2">{t("signInTitle")}</CardTitle>
           <CardDescription>{t("signInSubtitle")}</CardDescription>

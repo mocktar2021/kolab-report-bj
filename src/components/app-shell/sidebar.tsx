@@ -30,7 +30,7 @@ export function Sidebar({ user, onOpenPalette }: SidebarProps) {
   return (
     <aside
       id={SIDEBAR_ID}
-      className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/80 backdrop-blur-md transition-[width] duration-300 ease-out-expo lg:flex sidebar-collapsed:w-[4.5rem]"
+      className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/60 backdrop-blur-md transition-[width] duration-300 ease-out-expo lg:flex sidebar-collapsed:w-[4.5rem]"
     >
       <div className="flex h-16 shrink-0 items-center px-5 sidebar-collapsed:justify-center sidebar-collapsed:px-0">
         <Link href="/tableau-de-bord" aria-label={t("home")} className="rounded-lg">

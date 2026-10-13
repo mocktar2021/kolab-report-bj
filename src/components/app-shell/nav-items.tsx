@@ -43,7 +43,7 @@ export function NavItems({ variant, onNavigate }: NavItemsProps) {
       <div>
         <p
           className={cn(
-            "px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground",
+            "px-2.5 text-xs font-medium text-muted-foreground",
             collapsible && "sidebar-collapsed:sr-only",
           )}
         >
@@ -100,18 +100,18 @@ function NavItem({ href, label, icon, active, variant, onNavigate }: NavItemProp
             <motion.span
               layoutId={`${variant}-nav-active`}
               aria-hidden="true"
-              className="absolute inset-0 rounded-lg bg-primary/[0.07] ring-1 ring-inset ring-primary/20"
+              className="absolute inset-0 rounded-lg bg-highlight/[0.08] ring-1 ring-inset ring-highlight/25"
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
             />
             <motion.span
               layoutId={`${variant}-nav-bar`}
               aria-hidden="true"
-              className="absolute -left-3 bottom-2 top-2 w-[3px] rounded-r-full bg-primary shadow-glow"
+              className="absolute -left-3 bottom-2 top-2 w-[3px] rounded-r-full bg-highlight shadow-glow"
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
             />
           </>
         ) : null}
-        <span className={cn("relative", active && "text-primary")}>{icon}</span>
+        <span className={cn("relative", active && "text-highlight")}>{icon}</span>
         <span className={cn("relative truncate", collapsible && "sidebar-collapsed:sr-only")}>
           {label}
         </span>

@@ -14,7 +14,7 @@ export const THEME_STORAGE_KEY = "kolabreport:theme";
 /** Browser UI color (address bar, PWA title bar) for each resolved theme. */
 export const THEME_COLORS = {
   light: "#FAFAFA",
-  dark: "#09090B",
+  dark: "#0E0E0E",
 } as const;
 
 export function isThemeChoice(value: unknown): value is ThemeChoice {

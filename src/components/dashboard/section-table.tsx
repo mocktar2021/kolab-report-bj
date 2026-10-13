@@ -29,7 +29,7 @@ export function SectionTable({ sections, matchingSections, activeStatus }: Secti
   return (
     <section
       aria-labelledby="sections-title"
-      className="mt-8 overflow-hidden rounded-2xl border bg-card shadow-sm"
+      className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm"
     >
       <SectionTableHeader count={matchingSections} activeStatus={activeStatus} />
 
@@ -39,7 +39,7 @@ export function SectionTable({ sections, matchingSections, activeStatus }: Secti
         <>
           <table className="hidden w-full text-sm md:table">
             <caption className="sr-only">{t("table.caption")}</caption>
-            <thead className="border-b bg-muted/40 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <thead className="border-b bg-muted/40 text-left text-xs font-medium text-muted-foreground">
               <tr>
                 <th scope="col" className="px-5 py-2.5 font-medium">
                   {t("table.section")}
@@ -161,7 +161,7 @@ function SectionTableHeader({
                   className={cn(
                     "flex h-7 items-center whitespace-nowrap rounded-full px-2 text-xs font-medium sm:px-3 outline-none transition-[color,background-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-ring",
                     active
-                      ? "bg-card text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      ? "bg-card text-highlight shadow-sm ring-1 ring-border"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -190,7 +190,7 @@ function Assignee({
       <span className="flex items-center gap-2 text-muted-foreground">
         <span
           aria-hidden="true"
-          className="size-6 shrink-0 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600"
+          className="size-6 shrink-0 rounded-full border border-dashed border-foreground/25"
         />
         {t("unassigned")}
       </span>
@@ -201,7 +201,7 @@ function Assignee({
     <span className="flex min-w-0 items-center gap-2" title={assignee.email}>
       <span
         aria-hidden="true"
-        className="flex size-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-zinc-700 ring-1 ring-inset ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700"
+        className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-foreground ring-1 ring-inset ring-border"
       >
         {initialsOf(assignee.name)}
       </span>
@@ -241,7 +241,7 @@ export function SectionsError() {
   return (
     <section
       role="alert"
-      className="mt-8 flex flex-col items-center rounded-2xl border bg-card px-6 py-16 text-center shadow-sm"
+      className="surface-card mt-8 flex flex-col items-center rounded-2xl border px-6 py-16 text-center shadow-sm"
     >
       <span className="flex size-12 items-center justify-center rounded-2xl border bg-muted/60">
         <AlertCircle className="size-5 text-muted-foreground" aria-hidden="true" />
