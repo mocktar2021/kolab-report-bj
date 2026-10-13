@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
+import { getDraftPanel } from "@/lib/ai/server";
 import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
@@ -13,8 +14,10 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { DeliverableList, type DeliverableRow } from "./deliverable-list";
 import { DeliverableUploader } from "./deliverable-uploader";
+import { DraftPanel } from "./draft-panel";
 import type { ParseState } from "./parse-badge";
 import { ParseWatcher } from "./parse-watcher";
+import { SectionContent } from "./section-content";
 import { SectionStatusControl } from "./section-status";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +32,7 @@ async function loadSection(workspaceId: string, sectionId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("report_sections")
-    .select("id, title, instructions, status, assigned_to, report:reports(id, title)")
+    .select("id, title, instructions, status, assigned_to, content, report:reports(id, title)")
     .eq("id", sectionId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
@@ -54,8 +57,9 @@ export default async function SectionPage({ params }: { params: Params }) {
   const access = await requireWorkspaceRole(workspaceId);
   if (!access) notFound();
 
+  const canEdit = canEditSection(access, section.assigned_to);
   const supabase = await createClient();
-  const [{ data: files }, members] = await Promise.all([
+  const [{ data: files }, members, draft] = await Promise.all([
     supabase
       .from("deliverables")
       .select(
@@ -65,10 +69,11 @@ export default async function SectionPage({ params }: { params: Params }) {
       .not("uploaded_at", "is", null)
       .order("uploaded_at", { ascending: false }),
     getWorkspaceMembers(workspaceId),
+    // Templates and the draft waiting for a decision, for the people who can act on them.
+    canEdit ? getDraftPanel(workspaceId, section.id, access.userId) : null,
   ]);
 
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
-  const canEdit = canEditSection(access, section.assigned_to);
   const mine = section.assigned_to === access.userId;
   const status = sectionStatusSchema.catch("not_started").parse(section.status);
   const staleBefore = Date.now() - STALE_PARSE_MS;
@@ -133,6 +138,19 @@ export default async function SectionPage({ params }: { params: Params }) {
           <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{section.instructions}</p>
         ) : null}
       </header>
+
+      <SectionContent
+        content={draft ? draft.content : section.content}
+        draftHint={draft?.availability === "enabled"}
+      />
+      {draft ? (
+        <DraftPanel
+          workspaceId={workspaceId}
+          sectionId={section.id}
+          data={draft}
+          manager={isManager(access.role)}
+        />
+      ) : null}
 
       {canEdit ? (
         <DeliverableUploader sectionId={section.id} />

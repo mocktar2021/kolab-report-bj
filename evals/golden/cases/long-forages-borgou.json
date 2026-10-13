@@ -1,0 +1,103 @@
+{
+  "id": "long-forages-borgou",
+  "category": "long",
+  "description": "Trois fichiers Word de plus de 150 000 caractères, un classeur de quatre feuilles de 200 lignes et une note courte, bien au-delà du budget de 60 000 tokens. Le contexte doit être coupé et résumé, et la section doit garder les chiffres de la synthèse et de la note.",
+  "template": "synthese-section",
+  "workspaceName": "Atelier Sèdo Conseil",
+  "report": {
+    "title": "Bilan 2025 du programme de maintenance des forages du Borgou",
+    "description": "Programme de maintenance de 214 forages à pompe manuelle dans huit communes du Borgou."
+  },
+  "section": {
+    "title": "Fonctionnement des forages en 2025",
+    "instructions": "Donner le taux de panne, les causes principales et les délais de remise en service. S'appuyer sur la synthèse du rapport annuel et sur la note du comité de pilotage."
+  },
+  "deliverables": [
+    {
+      "id": "5bfaf840-77ac-400b-852a-8d015e8e2b6b",
+      "fileName": "rapport-annuel-forages.docx",
+      "kind": "document",
+      "uploadedAt": "2026-01-08T09:00:00Z",
+      "markdownFile": "long-forages-borgou/rapport-annuel-forages.md",
+      "generated": { "type": "narrative", "topic": "forages", "seed": 11, "sections": 190 }
+    },
+    {
+      "id": "43ce6492-475c-42dd-a6f5-e20b6056e447",
+      "fileName": "releves-forages-2025.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-01-09T11:30:00Z",
+      "generated": {
+        "type": "table",
+        "topic": "forages",
+        "seed": 23,
+        "sheets": [
+          { "name": "T1 2025", "rows": 200 },
+          { "name": "T2 2025", "rows": 200 },
+          { "name": "T3 2025", "rows": 200 },
+          { "name": "T4 2025", "rows": 200 }
+        ]
+      }
+    },
+    {
+      "id": "35581367-4270-4da2-ac3a-bbb7d61ecb42",
+      "fileName": "tournees-premier-semestre.docx",
+      "kind": "document",
+      "uploadedAt": "2026-01-12T16:00:00Z",
+      "markdown": "# Comptes rendus des tournées de maintenance, premier semestre 2025\n\nCe document rassemble les comptes rendus des tournées de l'équipe de suivi, dans l'ordre des visites.",
+      "generated": { "type": "narrative", "topic": "forages", "seed": 13, "sections": 170 }
+    },
+    {
+      "id": "688da404-3f66-41e8-8a33-fa02625f1ced",
+      "fileName": "tournees-second-semestre.docx",
+      "kind": "document",
+      "uploadedAt": "2026-01-12T16:05:00Z",
+      "markdown": "# Comptes rendus des tournées de maintenance, second semestre 2025\n\nCe document rassemble les comptes rendus des tournées de l'équipe de suivi, dans l'ordre des visites.",
+      "generated": { "type": "narrative", "topic": "forages", "seed": 17, "sections": 170 }
+    },
+    {
+      "id": "c581b5ff-e729-4af0-a1bf-0bac7b2669a3",
+      "fileName": "note-comite-pilotage.docx",
+      "kind": "document",
+      "uploadedAt": "2026-01-16T08:20:00Z",
+      "markdownFile": "long-forages-borgou/note-comite-pilotage.md"
+    }
+  ],
+  "reference": {
+    "markdown": "### Taux de panne\n\nAu 31 décembre 2025, 37 des 214 forages suivis étaient en panne, soit un taux de panne de 17 %, contre 24 % fin 2024 (rapport-annuel-forages.docx). Le comité de pilotage retient la même baisse (note-comite-pilotage.docx).\n\n### Causes des pannes\n\n- Usure des joints et des cuirs de pompe : 21 cas.\n- Tringlerie cassée : 9 cas.\n- Forage ensablé : 7 cas.\n\nLes pannes se concentrent à Kalalé et à Nikki, avec 22 des 37 pannes. Chacune de ces communes n'a qu'un artisan réparateur pour plus de 40 forages.\n\n### Délais de remise en service\n\nLe délai moyen de remise en service passe de 34 jours en 2024 à 19 jours en 2025. Le rapport attribue ce progrès au stock de pièces détachées ouvert à Parakou en mars 2025.\n\n### Suites décidées\n\nLe comité de pilotage a décidé de recruter un artisan réparateur de plus à Kalalé et un à Nikki avant avril 2026, d'étendre le stock de pièces aux joints et aux cuirs, et de faire le point sur les forages ensablés avant la saison sèche 2026.",
+    "keyPoints": [
+      {
+        "id": "taux-panne",
+        "text": "Taux de panne de 17 % fin 2025.",
+        "anyOf": [["17%"]]
+      },
+      {
+        "id": "pannes",
+        "text": "37 forages en panne sur 214.",
+        "anyOf": [["37"], ["214"]]
+      },
+      {
+        "id": "taux-2024",
+        "text": "Le taux était de 24 % fin 2024.",
+        "anyOf": [["24%"]]
+      },
+      {
+        "id": "causes",
+        "text": "Joints et cuirs usés, tringlerie cassée, ensablement.",
+        "anyOf": [["joint*", "cuir*"], ["tringlerie*"], ["ensabl*"]]
+      },
+      {
+        "id": "delais",
+        "text": "Délai de remise en service de 19 jours contre 34 jours.",
+        "anyOf": [["19 jours"], ["34 jours", "34"]]
+      },
+      {
+        "id": "communes",
+        "text": "Kalalé et Nikki concentrent 22 des 37 pannes.",
+        "anyOf": [["kalale"], ["nikki"]]
+      }
+    ],
+    "mustCite": ["L1", "L5"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 150, "max": 1100 }
+  }
+}

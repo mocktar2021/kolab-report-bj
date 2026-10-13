@@ -1,0 +1,82 @@
+{
+  "id": "xlsx-cantines-zou",
+  "category": "xlsx",
+  "description": "Un classeur Excel de trois feuilles : repas, coûts et notes, sur deux années scolaires. L'analyse doit reprendre les chiffres exacts avec leur unité, relever le recul de Zogbodomey et sa cause, et dire que les coûts de 2023-2024 manquent.",
+  "template": "analyse-donnees",
+  "workspaceName": "Bureau Agbo Statistiques",
+  "report": {
+    "title": "Bilan des cantines scolaires du Zou, années 2023-2024 et 2024-2025",
+    "description": "Programme de cantines scolaires soutenu par le Fonds Akassa pour l'école dans cinq communes du Zou."
+  },
+  "section": {
+    "title": "Coûts et fréquentation des cantines",
+    "instructions": "Analyser le nombre de repas servis, le coût par repas et les jours de fonctionnement par commune. Comparer les deux années scolaires."
+  },
+  "deliverables": [
+    {
+      "id": "696986bc-59f2-4cb5-98a7-e0a6f15baafe",
+      "fileName": "suivi-cantines-zou.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-08-21T11:15:00Z",
+      "markdownFile": "xlsx-cantines-zou/suivi-cantines-zou.md"
+    }
+  ],
+  "reference": {
+    "markdown": "Les 81 cantines des cinq communes ont servi 1 709 900 repas en 2024-2025, contre 1 684 300 en 2023-2024 (suivi-cantines-zou.xlsx). Le volume est donc stable sur l'ensemble, mais les communes évoluent de façon très différente.\n\n### Observations\n\n- **Zogbodomey en recul.** Les repas servis passent de 244 100 à 198 700, et les cantines n'ont fonctionné que 104 jours en 2024-2025, le chiffre le plus bas. Cinq cantines ont fermé de janvier à mars 2025 après une rupture de stock de riz.\n- **Covè et Abomey en hausse.** Covè passe de 201 400 à 236 900 repas et Abomey de 412 300 à 455 800. Covè a le plus grand nombre de jours de fonctionnement (148).\n- **Bohicon en légère baisse.** 517 200 repas contre 538 900, avec des données partielles pour deux écoles entrées en cours d'année.\n- **Coût par repas.** Il va de 285 FCFA à Bohicon à 340 FCFA à Zogbodomey. Le coût total de 2024-2025 est de 514 022 500 FCFA.\n- **Contribution des parents.** Elle varie de 6 % à Zogbodomey à 15 % à Covè.\n\n### Limites des données\n\n- Les coûts de 2023-2024 ne figurent pas dans le fichier : la comparaison des coûts entre les deux années n'est pas possible.\n- Les chiffres de Bohicon sont partiels pour deux écoles.\n- Le fichier ne donne pas le nombre d'élèves, ce qui empêche de calculer des repas par élève.",
+    "keyPoints": [
+      {
+        "id": "total-repas",
+        "text": "1 709 900 repas servis en 2024-2025.",
+        "anyOf": [["1709900", "1.71 million*"]]
+      },
+      {
+        "id": "comparaison",
+        "text": "1 684 300 repas servis en 2023-2024.",
+        "anyOf": [["1684300", "1.68 million*"]]
+      },
+      {
+        "id": "zogbodomey",
+        "text": "Recul de Zogbodomey, de 244 100 à 198 700 repas.",
+        "anyOf": [["zogbodomey"], ["198700", "baisse*", "recul*", "diminu*", "chute*"]]
+      },
+      {
+        "id": "jours",
+        "text": "Zogbodomey n'a fonctionné que 104 jours.",
+        "anyOf": [["104"]]
+      },
+      {
+        "id": "cout-repas",
+        "text": "Le coût par repas va de 285 à 340 FCFA.",
+        "anyOf": [["285"], ["340"]]
+      },
+      {
+        "id": "parents",
+        "text": "La part payée par les parents tombe à 6 % à Zogbodomey.",
+        "anyOf": [["6%"], ["parent*"]]
+      },
+      {
+        "id": "rupture",
+        "text": "Fermetures après une rupture de stock de riz.",
+        "anyOf": [["rupture*"], ["riz", "stock*"]]
+      },
+      {
+        "id": "limite-couts",
+        "text": "Les coûts de 2023-2024 ne sont pas disponibles.",
+        "anyOf": [
+          ["2023-2024"],
+          [
+            "pas disponible*",
+            "ne sont pas disponible*",
+            "non disponible*",
+            "manqu*",
+            "absen*",
+            "ne figurent pas"
+          ]
+        ]
+      }
+    ],
+    "mustCite": ["L1"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 150, "max": 1000 }
+  }
+}

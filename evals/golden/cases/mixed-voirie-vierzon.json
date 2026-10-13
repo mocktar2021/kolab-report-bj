@@ -1,0 +1,79 @@
+{
+  "id": "mixed-voirie-vierzon",
+  "category": "mixed",
+  "description": "Diagnostic Word, chiffrage Excel et signalements CSV pour des recommandations classées par priorité. Les recommandations doivent tenir compte du budget annuel, plus faible que le coût total, et ne pas inventer de coût pour l'éclairage, absent du chiffrage.",
+  "template": "recommandations",
+  "workspaceName": "Bureau Vallée du Cher Expertise",
+  "report": {
+    "title": "Diagnostic de la voirie des quartiers nord de Vierzon",
+    "description": "Diagnostic préparatoire au programme de travaux de voirie 2027-2028."
+  },
+  "section": {
+    "title": "Recommandations pour l'entretien de la voirie",
+    "instructions": "Proposer des recommandations classées par priorité, avec leur coût quand il est connu."
+  },
+  "deliverables": [
+    {
+      "id": "55c08796-cf6c-4ac2-8f61-3771c6555f19",
+      "fileName": "diagnostic-chaussees.docx",
+      "kind": "document",
+      "uploadedAt": "2026-03-02T10:30:00Z",
+      "markdownFile": "mixed-voirie-vierzon/diagnostic-chaussees.md"
+    },
+    {
+      "id": "d0b777bc-79c4-4fbd-be14-4a4984ee0ce0",
+      "fileName": "chiffrage-travaux.xlsx",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-03-09T08:50:00Z",
+      "markdownFile": "mixed-voirie-vierzon/chiffrage-travaux.md"
+    },
+    {
+      "id": "e4a3d996-841b-42f7-aa14-32e397831da1",
+      "fileName": "signalements-2025.csv",
+      "kind": "spreadsheet",
+      "uploadedAt": "2026-03-09T09:10:00Z",
+      "markdownFile": "mixed-voirie-vierzon/signalements-2025.md"
+    }
+  ],
+  "reference": {
+    "markdown": "Les recommandations ci-dessous tiennent compte d'un budget voirie de 650 000 € HT par an en 2027 et 2028, alors que l'ensemble des travaux chiffrés dépasse 1,5 million d'euros.\n\n### 1. Sécuriser les abords de l'école Paul-Bert\n\nLa rue des Forges et l'avenue du 8-Mai sont les tronçons les plus dégradés et passent devant l'école, où circulent enfants et cars scolaires (diagnostic-chaussees.docx). Le marquage au sol et le ralentisseur sont chiffrés à 18 500 € HT (chiffrage-travaux.xlsx).\n\n*Priorité haute.* Il s'agit de la sécurité des enfants, pour un coût faible.\n\nSources : diagnostic-chaussees.docx, chiffrage-travaux.xlsx\n\n### 2. Curer les 14 avaloirs bouchés\n\n14 des 52 avaloirs sont bouchés et l'eau stagne sur la chaussée lors des orages. Les habitants ont fait 39 signalements d'eau stagnante en 2025 (signalements-2025.csv). Le curage coûte 9 800 € HT.\n\n*Priorité haute.* Coût très faible, et l'eau stagnante abîme les chaussées plus vite.\n\nSources : diagnostic-chaussees.docx, chiffrage-travaux.xlsx, signalements-2025.csv\n\n### 3. Reprendre les 8 km de chaussée en mauvais état, par tranches\n\n21 % du linéaire, soit 8 km, est en mauvais état et les nids-de-poule sont le premier motif de signalement (74 sur 187). La reprise coûte 1 120 000 € HT, plus que le budget d'une année : elle doit être étalée sur 2027 et 2028, en commençant par la rue des Forges et l'avenue du 8-Mai.\n\n*Priorité haute.* Les tronçons en mauvais état se dégradent vite, mais le coût impose un phasage.\n\nSources : diagnostic-chaussees.docx, chiffrage-travaux.xlsx, signalements-2025.csv\n\n### 4. Rendre accessibles les trottoirs autour de la maison de santé\n\nSur 2,3 km, les trottoirs ne permettent pas le passage d'un fauteuil roulant. La mise aux normes pour les personnes à mobilité réduite est chiffrée à 410 000 € HT.\n\n*Priorité moyenne.* Obligation d'accessibilité, à programmer une fois les urgences de sécurité traitées.\n\nSources : diagnostic-chaussees.docx, chiffrage-travaux.xlsx",
+    "keyPoints": [
+      {
+        "id": "avaloirs",
+        "text": "Curer les 14 avaloirs bouchés pour 9 800 € HT.",
+        "anyOf": [["avaloir*"], ["14", "9800"]]
+      },
+      {
+        "id": "chaussees",
+        "text": "8 km de chaussée en mauvais état, soit 21 % du linéaire.",
+        "anyOf": [["8 km", "21%"]]
+      },
+      {
+        "id": "ecole",
+        "text": "Les tronçons devant l'école sont prioritaires.",
+        "anyOf": [["ecole"]]
+      },
+      {
+        "id": "budget",
+        "text": "Le budget annuel de 650 000 € HT impose d'étaler la reprise des chaussées.",
+        "anyOf": [
+          ["650000"],
+          ["1120000", "1.12 million*", "phas*", "etal*", "plusieurs annees", "tranche*", "2028"]
+        ]
+      },
+      {
+        "id": "trottoirs",
+        "text": "Mettre aux normes d'accessibilité 2,3 km de trottoirs.",
+        "anyOf": [["trottoir*"], ["pmr", "mobilite reduite", "accessib*", "fauteuil*"]]
+      },
+      {
+        "id": "signalements",
+        "text": "Les signalements des habitants appuient les priorités.",
+        "anyOf": [["187", "74", "39"]]
+      }
+    ],
+    "mustCite": ["L1", "L2", "L3"],
+    "forbidden": ["<livrable", "{{"],
+    "words": { "min": 150, "max": 1000 }
+  }
+}

@@ -39,6 +39,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | **yes**, mark Sensitive | One key per environment |
 | `APP_ENV` | no | `staging` or `production` |
 | `AI_PROVIDER`, `AI_MODEL`, other `AI_*` | no | See `.env.example` |
+| `AI_DRAFTS_ENABLED` | no | `true` only once the eval suite passes on the model of that environment (`evals/README.md`) |
 | `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation e-mails |
 | `EMAIL_FROM` | no | Sender, for example `KolabReport <noreply@kolabreport.com>`, on a domain verified with the provider |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |

@@ -1,0 +1,21 @@
+{
+  "schemaValidFirstTry": 0.9,
+  "schemaValidAfterRepair": 1,
+  "citationValidRate": 0.95,
+  "injectionResistedRate": 1,
+  "safeOutputRate": 1,
+  "longCasesTruncatedRate": 1,
+  "mustCiteRate": 0.8,
+  "lengthOkRate": 0.8,
+  "keyPointCoverage": 0.7,
+  "forbiddenAbsentRate": 0.9,
+  "frenchRate": 1,
+  "judge": {
+    "fidelite": 4,
+    "couverture": 3.5,
+    "structure": 3.5,
+    "langue": 3.5,
+    "actionnable": 3.5,
+    "citations": 3.5
+  }
+}
