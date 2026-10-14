@@ -21,15 +21,17 @@ describe("PasswordInput", () => {
     const input = renderField();
     expect(input).toHaveAttribute("type", "password");
 
-    await user.click(screen.getByRole("button", { name: "Afficher le mot de passe" }));
+    const toggle = screen.getByRole("button", { name: "Afficher le mot de passe" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await user.click(toggle);
     expect(input).toHaveAttribute("type", "text");
-    expect(screen.getByRole("button", { name: "Masquer le mot de passe" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    // Same name in both states: screen readers announce the pressed state instead.
+    expect(toggle).toHaveAccessibleName("Afficher le mot de passe");
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(screen.getByRole("button", { name: "Masquer le mot de passe" }));
+    await user.click(toggle);
     expect(input).toHaveAttribute("type", "password");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
   });
 
   it("keeps what was typed when toggling", async () => {

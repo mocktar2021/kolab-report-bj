@@ -18,7 +18,8 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, Omit<React.Compo
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? t("hidePassword") : t("showPassword")}
+          // A toggle keeps one name: aria-pressed says whether the password shows.
+          aria-label={t("showPassword")}
           aria-pressed={visible}
           className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FieldError } from "@/components/auth/field-error";
+import { useFocusOnError, useFocusWhenShown } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +15,12 @@ export function ForgotPasswordForm() {
   const [state, formAction, pending] = useActionState<ForgotState, FormData>(requestPasswordReset, {
     status: "idle",
   });
+  const formRef = useFocusOnError(state, state.status === "error");
+  const doneRef = useFocusWhenShown<HTMLDivElement>(state.status === "sent");
 
   if (state.status === "sent") {
     return (
-      <div role="status" className="space-y-3">
+      <div ref={doneRef} tabIndex={-1} role="status" className="space-y-3 outline-none">
         <MailCheck aria-hidden="true" className="size-6 text-primary" />
         <p className="text-sm text-muted-foreground">{t("forgotSent", { email: state.email })}</p>
         <p className="text-sm text-muted-foreground">{t("checkEmailSpam")}</p>
@@ -28,7 +31,7 @@ export function ForgotPasswordForm() {
   const emailError = state.status === "error" ? state.fieldErrors?.email : undefined;
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form ref={formRef} action={formAction} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label htmlFor="email">{t("email")}</Label>
         <Input
