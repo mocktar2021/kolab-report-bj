@@ -7,6 +7,7 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { useFocusOnError } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-policy";
 import { updatePassword, type ResetState } from "./actions";
 
 export function ResetPasswordForm({ email }: { email: string }) {
@@ -27,16 +28,19 @@ export function ResetPasswordForm({ email }: { email: string }) {
           id="password"
           name="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={PASSWORD_MIN_LENGTH}
           required
           aria-invalid={Boolean(errors.password)}
           aria-describedby={errors.password ? "password-error" : "password-hint"}
         />
         {errors.password ? (
-          <FieldError id="password-error" message={t(`errors.${errors.password}`)} />
+          <FieldError
+            id="password-error"
+            message={t(`errors.${errors.password}`, { min: PASSWORD_MIN_LENGTH })}
+          />
         ) : (
           <p id="password-hint" className="text-sm text-muted-foreground">
-            {t("passwordHint")}
+            {t("passwordHint", { min: PASSWORD_MIN_LENGTH })}
           </p>
         )}
       </div>

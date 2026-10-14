@@ -9,6 +9,7 @@ import { useFocusOnError, useFocusWhenShown } from "@/components/auth/use-focus-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-policy";
 import { signUp, type SignUpState } from "./actions";
 
 export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
@@ -66,16 +67,19 @@ export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
           id="password"
           name="password"
           autoComplete="new-password"
-          minLength={8}
+          minLength={PASSWORD_MIN_LENGTH}
           required
           aria-invalid={Boolean(errors.password)}
           aria-describedby={errors.password ? "password-error" : "password-hint"}
         />
         {errors.password ? (
-          <FieldError id="password-error" message={t(`errors.${errors.password}`)} />
+          <FieldError
+            id="password-error"
+            message={t(`errors.${errors.password}`, { min: PASSWORD_MIN_LENGTH })}
+          />
         ) : (
           <p id="password-hint" className="text-sm text-muted-foreground">
-            {t("passwordHint")}
+            {t("passwordHint", { min: PASSWORD_MIN_LENGTH })}
           </p>
         )}
       </div>

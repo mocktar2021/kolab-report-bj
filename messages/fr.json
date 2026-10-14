@@ -232,7 +232,7 @@
     "signUpTitle": "Créer un compte",
     "signUpSubtitle": "Votre espace pour rédiger des rapports d'expertise en équipe.",
     "fullName": "Nom complet",
-    "passwordHint": "8 caractères minimum.",
+    "passwordHint": "{min} caractères minimum, dont au moins une lettre et un chiffre.",
     "signUpSubmit": "Créer mon compte",
     "legalConsent": "En créant un compte, vous acceptez les <cgu>CGU</cgu>, les <cgv>CGV</cgv> et la <privacy>politique de confidentialité</privacy>.",
     "checkEmailTitle": "Vérifiez votre boîte mail",
@@ -254,7 +254,8 @@
     "errors": {
       "nameRequired": "Indiquez votre nom.",
       "emailInvalid": "Saisissez une adresse e-mail valide.",
-      "passwordTooShort": "Le mot de passe doit faire au moins 8 caractères.",
+      "passwordTooShort": "Le mot de passe doit faire au moins {min} caractères.",
+      "passwordNeedsLetterAndDigit": "Le mot de passe doit contenir au moins une lettre et un chiffre.",
       "passwordMismatch": "Les deux mots de passe ne correspondent pas.",
       "weakPassword": "Ce mot de passe est trop facile à deviner. Choisissez-en un autre.",
       "samePassword": "Choisissez un mot de passe différent de l'ancien.",

@@ -255,7 +255,7 @@ test("sign-up and password reset put the focus on the field to fix", async ({ pa
   await expect(name).toHaveAttribute("aria-invalid", "true");
   await expect(name).toHaveAccessibleDescription("Indiquez votre nom.");
   const password = page.getByLabel("Mot de passe", { exact: true });
-  await expect(password).toHaveAccessibleDescription("Le mot de passe doit faire au moins 8 caractères.");
+  await expect(password).toHaveAccessibleDescription("Le mot de passe doit faire au moins 10 caractères.");
 
   await page.goto("/fr/mot-de-passe-oublie");
   const email = page.getByRole("textbox", { name: "Adresse e-mail" });
