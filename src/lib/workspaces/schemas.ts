@@ -15,10 +15,30 @@ export const sectionTitleSchema = z
   .min(1, "sectionTitleLength")
   .max(200, "sectionTitleLength");
 
+export const uuidSchema = z.string().uuid();
+
+/** Wizard with a new organization (create_workspace_with_owner). */
 export const createWorkspaceSchema = z.object({
   organizationName: organizationNameSchema,
   workspaceName: workspaceNameSchema,
   reportTitle: reportTitleSchema,
+});
+
+/**
+ * Wizard with an organization the user already manages
+ * (create_workspace_in_organization). The id comes from a list, never from
+ * typing, so a bad one is a forged form and gets no field message.
+ */
+export const createWorkspaceInOrganizationSchema = z.object({
+  organizationId: uuidSchema,
+  workspaceName: workspaceNameSchema,
+  reportTitle: reportTitleSchema,
+});
+
+/** "Nouveau rapport" on the dashboard. */
+export const createReportSchema = z.object({
+  workspaceId: uuidSchema,
+  title: reportTitleSchema,
 });
 
 // report_sections.weight is numeric(6, 2) and must be above 0. A comma is
@@ -28,8 +48,6 @@ export const sectionWeightSchema = z
   .trim()
   .transform((value) => Number(value.replace(",", ".")))
   .pipe(z.number({ invalid_type_error: "weightRange" }).min(0.01, "weightRange").max(9999.99, "weightRange"));
-
-export const uuidSchema = z.string().uuid();
 
 export type WorkspaceFieldErrorKey = "nameLength" | "titleLength" | "sectionTitleLength" | "weightRange";
 
