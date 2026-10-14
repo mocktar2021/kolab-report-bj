@@ -55,6 +55,11 @@ test("sign-up asks for a letter and a digit in the password (KRB-58)", async ({ 
   await expect(password).toHaveAccessibleDescription(
     "Le mot de passe doit contenir au moins une lettre et un chiffre.",
   );
+  // Without a Turnstile site key (local, CI): no widget and no Cloudflare script.
+  if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+    await expect(page.getByRole("group", { name: "Vérification anti-robot" })).toHaveCount(0);
+    await expect(page.locator('script[src*="challenges.cloudflare.com"]')).toHaveCount(0);
+  }
 });
 
 test("sign-up sends a French confirmation e-mail that signs the user in", async ({ page }) => {

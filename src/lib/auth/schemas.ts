@@ -17,7 +17,8 @@ export type FieldErrorKey =
   | "passwordTooShort"
   | "passwordTooLong"
   | "passwordNeedsLetterAndDigit"
-  | "passwordMismatch";
+  | "passwordMismatch"
+  | "captchaRequired";
 
 /** First error key per field, from a zod error whose messages are FieldErrorKey values. */
 export function fieldErrors<T extends string>(error: z.ZodError): Partial<Record<T, FieldErrorKey>> {

@@ -10,6 +10,11 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 const isDev = process.env.NODE_ENV === "development";
 // Set by Vercel at build time: "preview" for PR and staging deployments.
 const isVercelPreview = process.env.VERCEL_ENV === "preview";
+// Cloudflare Turnstile on the sign-up, sign-in and reset request forms
+// (KRB-58), only in builds that have a site key (src/lib/auth/captcha.ts).
+const turnstile = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim()
+  ? "https://challenges.cloudflare.com"
+  : "";
 
 // Sentry (KRB-136): fixed at build time so the browser, server and edge
 // bundles report the same release and environment (src/lib/monitoring).
@@ -23,6 +28,9 @@ const sentry = {
  * Content-Security-Policy for every page. Scripts stay limited to this origin
  * (plus inline ones: Next.js, the theme and sidebar scripts), data only goes
  * to this origin and Supabase, and no other site can frame the app.
+ * Turnstile needs its script and its iframe from challenges.cloudflare.com,
+ * nothing else. Every page allows them: a client-side navigation from the
+ * landing page to the sign-in page keeps the landing page's policy.
  */
 function contentSecurityPolicy() {
   const supabase = supabaseUrl ? new URL(supabaseUrl) : null;
@@ -37,7 +45,7 @@ function contentSecurityPolicy() {
     "default-src": ["'self'"],
     // Next.js inlines its bootstrap scripts. Nonces would need every page to
     // render per request, including the static landing and sign-in pages.
-    "script-src": ["'self'", "'unsafe-inline'", isDev ? "'unsafe-eval'" : "", toolbar],
+    "script-src": ["'self'", "'unsafe-inline'", isDev ? "'unsafe-eval'" : "", toolbar, turnstile],
     "style-src": ["'self'", "'unsafe-inline'", toolbar],
     "img-src": [
       "'self'",
@@ -55,7 +63,7 @@ function contentSecurityPolicy() {
       toolbar,
       isVercelPreview ? "wss://ws-us3.pusher.com" : "",
     ],
-    "frame-src": [toolbar || "'none'"],
+    "frame-src": toolbar || turnstile ? [toolbar, turnstile] : ["'none'"],
     "worker-src": ["'self'"],
     "manifest-src": ["'self'"],
     "object-src": ["'none'"],
@@ -107,6 +115,12 @@ const withPWA = withPWAInit({
         // Supabase REST, Auth, Storage, Realtime and Functions: multi-tenant
         // data never goes into a shared cache.
         urlPattern: ({ url }) => /^\/(rest|auth|storage|realtime|functions|graphql)\/v1\//.test(url.pathname),
+        handler: "NetworkOnly",
+      },
+      {
+        // Cloudflare Turnstile. Its script must always come from Cloudflare:
+        // the default cross-origin rule could serve an old copy on a slow network.
+        urlPattern: ({ url }) => url.origin === "https://challenges.cloudflare.com",
         handler: "NetworkOnly",
       },
       {

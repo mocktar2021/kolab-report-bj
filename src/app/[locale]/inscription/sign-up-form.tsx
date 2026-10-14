@@ -5,10 +5,12 @@ import { MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FieldError } from "@/components/auth/field-error";
 import { PasswordInput } from "@/components/auth/password-input";
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { useFocusOnError, useFocusWhenShown } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { turnstileSiteKey } from "@/lib/auth/captcha";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-policy";
 import { signUp, type SignUpState } from "./actions";
 
@@ -17,6 +19,7 @@ export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
   const [state, formAction, pending] = useActionState<SignUpState, FormData>(signUp, { status: "idle" });
   const formRef = useFocusOnError(state, state.status === "error");
   const doneRef = useFocusWhenShown<HTMLDivElement>(state.status === "checkEmail");
+  const siteKey = turnstileSiteKey();
 
   if (state.status === "checkEmail") {
     return (
@@ -83,6 +86,14 @@ export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
           </p>
         )}
       </div>
+      {siteKey ? (
+        <TurnstileField
+          siteKey={siteKey}
+          action="sign-up"
+          resetKey={state}
+          error={errors.captcha && t(`errors.${errors.captcha}`)}
+        />
+      ) : null}
       {state.status === "error" && state.formError ? (
         <p role="alert" className="text-sm text-destructive">
           {t(`errors.${state.formError}`)}
