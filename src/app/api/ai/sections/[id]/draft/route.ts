@@ -17,7 +17,7 @@ import { generateDraft, repairReserve, type TokenUsage } from "@/lib/ai/generate
 import { checkDailyCost, finishGeneration, startGeneration } from "@/lib/ai/generation-store";
 import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
-import { estimateCost, estimateFallbackCost, fallbackModel } from "@/lib/ai/models";
+import { estimateCost, estimateFallbackCost, fallbackModel, noThinking } from "@/lib/ai/models";
 import { draftToMarkdown } from "@/lib/ai/schemas";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
 import type { ContextDeliverable, DraftErrorBody, DraftErrorKey, DraftStreamEvent } from "@/lib/ai/types";
@@ -304,6 +304,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
           prompt,
           maxOutputTokens,
           temperature: 0,
+          providerOptions: noThinking(),
           maxRetries: 1,
           abortSignal: signal,
           experimental_telemetry: telemetry("kolab.summary"),
