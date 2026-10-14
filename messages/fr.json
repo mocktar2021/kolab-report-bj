@@ -489,7 +489,6 @@
     "manageMembers": "Gérer les membres",
     "expertNote": "Vous lisez toutes les sections. Vous modifiez celles qui vous sont attribuées.",
     "viewerNote": "Vous consultez ce rapport en lecture seule.",
-    "sectionsTitle": "Sections",
     "count": "{count, plural, =0 {Aucune section} one {# section} other {# sections}}",
     "emptyManager": "Ajoutez la première section du rapport, puis attribuez-la à un expert.",
     "emptyMember": "Ce rapport n'a pas encore de sections.",
@@ -504,7 +503,55 @@
     "saved": "Enregistré.",
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
-    "addSubmit": "Ajouter"
+    "addSubmit": "Ajouter",
+    "tocTitle": "Sommaire",
+    "reorderHint": "Faites glisser une section par sa poignée pour changer l'ordre. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
+    "edit": "Modifier<hidden> la section {title}</hidden>",
+    "documentTitle": "Texte du rapport",
+    "emptySection": "Section non rédigée.",
+    "contentError": "Le texte de cette section n'a pas pu être affiché.",
+    "reorder": {
+      "handle": "Déplacer la section {title}",
+      "roleDescription": "poignée de déplacement",
+      "instructions": "Appuyez sur Espace pour prendre la section. Déplacez-la avec les flèches haut et bas, puis appuyez sur Espace pour la déposer ou sur Échap pour annuler.",
+      "picked": "Vous déplacez la section {title}, en position {position} sur {count}.",
+      "moved": "La section {title} passe en position {position} sur {count}.",
+      "outside": "La section {title} est hors de la liste.",
+      "dropped": "Section {title} déposée en position {position} sur {count}.",
+      "cancelled": "Déplacement annulé. La section {title} reste en position {position} sur {count}.",
+      "saving": "Enregistrement du nouvel ordre…",
+      "saved": "Ordre des sections enregistré.",
+      "errors": {
+        "forbidden": "Seuls les propriétaires et administrateurs peuvent changer l'ordre des sections.",
+        "stale": "Les sections ont changé dans une autre session. La page affiche maintenant l'ordre à jour, refaites le déplacement si besoin.",
+        "invalidInput": "Le nouvel ordre n'a pas pu être enregistré. Rechargez la page puis réessayez.",
+        "generic": "Le nouvel ordre n'a pas pu être enregistré. Réessayez."
+      }
+    }
+  },
+  "ReportExport": {
+    "docx": "Exporter en .docx",
+    "pdf": "Exporter en PDF",
+    "pending": "Préparation du fichier. Cela peut prendre quelques secondes.",
+    "ready": "Fichier {fileName} prêt, le téléchargement commence.",
+    "errors": {
+      "invalidInput": "La demande d'export n'est pas valide. Rechargez la page puis réessayez.",
+      "forbidden": "Seuls les propriétaires et administrateurs peuvent exporter ce rapport.",
+      "notFound": "Ce rapport n'existe plus ou ne vous est plus accessible.",
+      "rateLimited": "Vous avez atteint la limite de {limit} exports par heure dans cet espace. Réessayez plus tard.",
+      "busy": "Vous avez déjà un export en cours dans cet espace. Attendez qu'il se termine puis réessayez.",
+      "tooLarge": "{format, select, pdf {Ce rapport est trop long pour un PDF. Exportez-le en .docx, qui accepte des rapports plus longs.} other {Ce rapport est trop long pour être exporté. Raccourcissez des sections puis réessayez.}}",
+      "generic": "L'export n'a pas abouti. Réessayez dans un instant."
+    },
+    "recentTitle": "Exports récents",
+    "recentDescription": "Les derniers fichiers .docx et PDF générés pour ce rapport.",
+    "recentEmpty": "Aucun export pour le moment.",
+    "formats": {
+      "docx": "Word (.docx)",
+      "pdf": "PDF"
+    },
+    "download": "<hidden>Télécharger </hidden>{fileName}",
+    "by": "par {name}"
   },
   "Deliverables": {
     "metaTitle": "Section",
@@ -705,6 +752,48 @@
         "invalidInput": "Le commentaire ne doit pas dépasser 1 000 caractères.",
         "generic": "Votre avis n'a pas pu être enregistré. Réessayez."
       }
+    }
+  },
+  "SectionEditor": {
+    "edit": "Modifier le texte",
+    "label": "Texte de la section (Markdown)",
+    "preview": "Aperçu",
+    "previewEmpty": "Le texte est vide.",
+    "previewError": "Cet aperçu n'a pas pu être affiché.",
+    "help": "Titres, listes et tableaux en Markdown. Un texte vide efface le contenu. Ctrl+S ou Cmd+S enregistre.",
+    "count": "{count, number} / {max, number} caractères",
+    "tooLong": "Le texte dépasse {max, number} caractères. Raccourcissez-le pour l'enregistrer.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "saving": "Enregistrement…",
+    "changedMeanwhile": "Le texte enregistré a changé depuis l'ouverture de l'éditeur. En enregistrant, vous pourrez comparer les deux versions.",
+    "notices": {
+      "saved": "Texte enregistré.",
+      "cleared": "Texte effacé. La section n'a plus de contenu.",
+      "kept": "Votre version est enregistrée.",
+      "restored": "La version enregistrée est reprise dans l'éditeur."
+    },
+    "conflict": {
+      "title": "Quelqu'un a modifié cette section pendant que vous écriviez.",
+      "body": "Comparez les deux versions avant d'enregistrer. Votre texte reste dans l'éditeur et vous pouvez encore le modifier.",
+      "again": "La version enregistrée a encore changé. La comparaison montre la plus récente.",
+      "compareLabel": "Votre version et la version enregistrée",
+      "mine": "Votre version",
+      "saved": "Version enregistrée",
+      "empty": "Texte vide",
+      "same": "Les deux versions sont identiques.",
+      "tooLarge": "Les deux versions sont trop différentes pour marquer les lignes qui changent.",
+      "differs": "Ligne différente :",
+      "keep": "Garder ma version",
+      "keepHelp": "Remplace le texte enregistré par le vôtre.",
+      "restore": "Reprendre la version enregistrée",
+      "restoreHelp": "Remplace votre texte dans l'éditeur. Vos changements seront perdus."
+    },
+    "errors": {
+      "forbidden": "Vous ne pouvez plus modifier cette section. Copiez votre texte si vous voulez le garder.",
+      "tooLong": "Le texte dépasse 100 000 caractères. Raccourcissez-le puis réessayez.",
+      "invalidInput": "Le texte n'a pas pu être enregistré. Copiez-le, rechargez la page puis réessayez.",
+      "generic": "Le texte n'a pas pu être enregistré. Réessayez."
     }
   },
   "Invitation": {

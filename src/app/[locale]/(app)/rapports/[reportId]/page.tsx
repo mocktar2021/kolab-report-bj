@@ -4,13 +4,19 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { sectionStatusSchema } from "@/lib/sections";
+import { EXPORTS_PER_HOUR, listReportExports } from "@/lib/reports/exports";
+import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
 import { isAssignable, isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
-import { AddSectionForm, SectionList, type SectionRowData } from "./section-list";
+import { ExportButtons } from "./export-buttons";
+import { LiveReport } from "./live-report";
+import { MasterReport } from "./master-report";
+import { RecentExports } from "./recent-exports";
+import type { ReportSection } from "./report-document";
+import { AddSectionForm } from "./section-list";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +40,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return { title: report?.title ?? t("metaTitle") };
 }
 
+/**
+ * The master report (Story KRB-18): every section in order, with its text.
+ * Members read it all and edit their own sections from it; owners and admins
+ * also assign, weigh and reorder the sections, and export the report.
+ */
 export default async function ReportPage({ params }: { params: Params }) {
   const { locale, reportId } = await params;
   setRequestLocale(locale);
@@ -45,23 +56,25 @@ export default async function ReportPage({ params }: { params: Params }) {
   if (!report) notFound();
   const access = await requireWorkspaceRole(report.workspace_id);
   if (!access) notFound();
+  const manager = isManager(access.role);
 
   const supabase = await createClient();
-  const [{ data: sections }, members, { data: progress }] = await Promise.all([
+  const [{ data: sections }, members, { data: progress }, exports] = await Promise.all([
     supabase
       .from("report_sections")
-      .select("id, title, status, weight, assigned_to")
+      .select("id, title, status, weight, assigned_to, content")
       .eq("report_id", report.id)
       .order("position", { ascending: true })
       .order("created_at", { ascending: true }),
     getWorkspaceMembers(report.workspace_id),
     supabase.from("report_progress").select("completion_percent").eq("report_id", report.id).maybeSingle(),
+    // RLS only lets owners and admins read the exports.
+    manager ? listReportExports(report.id) : [],
   ]);
   if (!sections || !members) notFound();
 
-  const manager = isManager(access.role);
   const names = new Map(members.map((member) => [member.userId, member.name]));
-  const rows: SectionRowData[] = sections.map((section) => ({
+  const rows: ReportSection[] = sections.map((section) => ({
     id: section.id,
     title: section.title,
     status: sectionStatusSchema.catch("not_started").parse(section.status),
@@ -69,6 +82,8 @@ export default async function ReportPage({ params }: { params: Params }) {
     assignedTo: section.assigned_to,
     assigneeName: section.assigned_to ? (names.get(section.assigned_to) ?? null) : null,
     mine: section.assigned_to === access.userId,
+    canEdit: canEditSection(access, section.assigned_to),
+    content: section.content,
   }));
   const assignees = members
     .filter((member) => isAssignable(member.role))
@@ -88,18 +103,21 @@ export default async function ReportPage({ params }: { params: Params }) {
       <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-sm text-muted-foreground">{report.workspace?.name}</p>
-          <h1 className="mt-1 text-h2 text-foreground">{report.title}</h1>
+          <h1 className="mt-1 break-words text-h2 text-foreground">{report.title}</h1>
           <p className="mt-1 text-small text-muted-foreground">
             {t("completion", { percent: format.number(completion / 100, { style: "percent" }) })}
           </p>
         </div>
         {manager ? (
-          <Button asChild variant="outline" shape="pill" className="shrink-0">
-            <Link href={`/espaces/${report.workspace_id}/membres`}>
-              <Users aria-hidden="true" />
-              {t("manageMembers")}
-            </Link>
-          </Button>
+          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+            <Button asChild variant="outline" shape="pill" className="self-start sm:self-end">
+              <Link href={`/espaces/${report.workspace_id}/membres`}>
+                <Users aria-hidden="true" />
+                {t("manageMembers")}
+              </Link>
+            </Button>
+            <ExportButtons reportId={report.id} hourlyLimit={EXPORTS_PER_HOUR} />
+          </div>
         ) : null}
       </header>
 
@@ -109,13 +127,25 @@ export default async function ReportPage({ params }: { params: Params }) {
         </p>
       )}
 
-      <SectionList
+      <MasterReport
+        reportId={report.id}
         workspaceId={report.workspace_id}
         sections={rows}
         assignees={assignees}
         canManage={manager}
+        addSectionForm={manager ? <AddSectionForm reportId={report.id} /> : null}
       />
-      {manager ? <AddSectionForm reportId={report.id} /> : null}
+
+      {manager ? (
+        <RecentExports
+          exports={exports.map((file) => ({
+            ...file,
+            authorName: file.createdBy ? (names.get(file.createdBy) ?? null) : null,
+          }))}
+        />
+      ) : null}
+
+      <LiveReport reportId={report.id} />
     </div>
   );
 }

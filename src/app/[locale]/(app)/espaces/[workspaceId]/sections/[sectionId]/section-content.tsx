@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Markdown } from "@/components/markdown";
 
@@ -5,10 +6,14 @@ type SectionContentProps = {
   content: string | null;
   /** For editors who can ask for a draft: the empty state says it can start the section. */
   draftHint: boolean;
+  /** Next to the title, for example the edit button. */
+  actions?: ReactNode;
+  /** Shown instead of the text when given, for example the editor. */
+  children?: ReactNode;
 };
 
 /** The section's text, as Markdown, for every member who can see the section. */
-export function SectionContent({ content, draftHint }: SectionContentProps) {
+export function SectionContent({ content, draftHint, actions, children }: SectionContentProps) {
   const t = useTranslations("AiDraft");
   const text = content?.trim() ? content : null;
 
@@ -17,8 +22,8 @@ export function SectionContent({ content, draftHint }: SectionContentProps) {
       aria-labelledby="section-content-title"
       className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm"
     >
-      <div className="border-b px-5 py-4">
-        {/* Takes the focus once a draft is accepted. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-5 py-4">
+        {/* Takes the focus once a draft is accepted or the text is saved. */}
         <h2
           id="section-content-title"
           tabIndex={-1}
@@ -26,8 +31,11 @@ export function SectionContent({ content, draftHint }: SectionContentProps) {
         >
           {t("contentTitle")}
         </h2>
+        {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
       </div>
-      {text ? (
+      {children ? (
+        children
+      ) : text ? (
         <div className="break-words px-5 py-4 text-sm leading-relaxed">
           <Markdown
             headingLevel={3}

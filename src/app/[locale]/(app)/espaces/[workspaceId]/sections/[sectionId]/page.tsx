@@ -18,6 +18,7 @@ import { DraftPanel } from "./draft-panel";
 import type { ParseState } from "./parse-badge";
 import { ParseWatcher } from "./parse-watcher";
 import { SectionContent } from "./section-content";
+import { SectionEditor } from "./section-editor";
 import { SectionStatusControl } from "./section-status";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,9 @@ async function loadSection(workspaceId: string, sectionId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("report_sections")
-    .select("id, title, instructions, status, assigned_to, content, report:reports(id, title)")
+    .select(
+      "id, title, instructions, status, assigned_to, content, content_updated_at, report:reports(id, title)",
+    )
     .eq("id", sectionId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
@@ -139,10 +142,18 @@ export default async function SectionPage({ params }: { params: Params }) {
         ) : null}
       </header>
 
-      <SectionContent
-        content={draft ? draft.content : section.content}
-        draftHint={draft?.availability === "enabled"}
-      />
+      {canEdit ? (
+        <SectionEditor
+          key={section.id}
+          sectionId={section.id}
+          // The text and its version come from the same read as the draft panel's.
+          content={draft ? draft.content : section.content}
+          version={draft ? draft.sectionUpdatedAt : section.content_updated_at}
+          draftHint={draft?.availability === "enabled"}
+        />
+      ) : (
+        <SectionContent content={section.content} draftHint={false} />
+      )}
       {draft ? (
         <DraftPanel
           workspaceId={workspaceId}

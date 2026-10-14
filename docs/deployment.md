@@ -20,8 +20,9 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 1. **Auth > URL Configuration**: Site URL = the app URL of that environment. Redirect URLs: `https://<app-domain>/fr/auth/callback`, plus `https://*-<vercel-team-slug>.vercel.app/**` on staging so PR previews can sign in.
 2. **Auth > SMTP**: a real sender (for example Brevo or Resend). The built-in sender is limited to a few e-mails per hour.
 3. **Auth > Email templates**: paste the French templates from `supabase/templates/`, or run `npx supabase link` then `npx supabase config push` (KRB-58).
-4. Nothing to create for storage: the `deliverables` bucket and its policies come from the migrations.
-5. Keep the database password in your password manager. It goes in the GitHub environment below.
+4. Nothing to create for storage: the `deliverables` and `exports` buckets and their policies come from the migrations.
+5. **Database > Publications**: keep Realtime on for `supabase_realtime` (the default). The migrations add `report_sections` to it, so an open master report picks up a new section order from another session. Without Realtime the page still works and refreshes when the tab comes back into focus.
+6. Keep the database password in your password manager. It goes in the GitHub environment below.
 
 ### 2. Vercel project (KRB-131)
 

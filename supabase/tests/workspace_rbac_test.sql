@@ -71,8 +71,8 @@ select throws_ok($$update public.workspace_members set user_id = pg_temp.id('str
 select pg_temp.act_as('expert');
 select throws_ok($$update public.report_sections set title = 'Nouveau titre' where id = pg_temp.id('s1')$$,
   '42501', null, 'expert still cannot rename their section');
-select is(pg_temp.affected($$update public.report_sections set content = 'Brouillon' where id = pg_temp.id('s1')$$),
-  1, 'expert can still write their section');
+select is(pg_temp.affected($$update public.report_sections set status = 'in_progress' where id = pg_temp.id('s1')$$),
+  1, 'expert can still update their section');
 
 -- Section assignees -----------------------------------------------------------
 select pg_temp.act_as('owner');
@@ -90,7 +90,7 @@ alter table public.report_sections disable trigger check_assignee;
 update public.report_sections set assigned_to = pg_temp.id('viewer') where id = pg_temp.id('s3');
 alter table public.report_sections enable trigger check_assignee;
 select pg_temp.act_as('owner');
-select is(pg_temp.affected($$update public.report_sections set assigned_to = assigned_to, content = 'x' where id = pg_temp.id('s3')$$),
+select is(pg_temp.affected($$update public.report_sections set assigned_to = assigned_to, status = 'in_progress' where id = pg_temp.id('s3')$$),
   1, 'resending an unchanged assignee does not hit the assignee check');
 
 select pg_temp.act_as('admin');

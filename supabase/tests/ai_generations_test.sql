@@ -175,10 +175,15 @@ select throws_ok(
 select throws_ok(
   $$select public.accept_ai_generation((select id from run where name = 'second'), 'Texte', 0, now() - interval '1 day')$$,
   '40001', null, 'a section changed since the page loaded is not overwritten');
+-- Moving the section changes updated_at but not the text version (KRB-18).
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.report_sections set position = position + 1 where id = pg_temp.id('s1');
+select pg_temp.act_as('expert');
 select lives_ok(
   $$select public.accept_ai_generation((select id from run where name = 'second'), 'Texte accepté', 12,
-    (select updated_at from public.report_sections where id = pg_temp.id('s1')))$$,
-  'the assigned expert accepts the draft');
+    (select content_updated_at from public.report_sections where id = pg_temp.id('s1')))$$,
+  'the assigned expert accepts the draft with the text version, even after the section moved');
 select results_eq(
   $$select content, status::text, ai_draft, ai_generated_at is not null from public.report_sections where id = pg_temp.id('s1')$$,
   $$values ('Texte accepté', 'in_progress', '{"title": "Brouillon"}'::jsonb, true)$$,

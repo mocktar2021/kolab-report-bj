@@ -3,13 +3,15 @@
 import { Component, createElement, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { isRiskyMarkdown } from "@/lib/markdown-risk";
 import { cn } from "@/lib/utils";
 
 // Markdown from files, from the model or from people becomes React elements:
 // raw HTML is shown as text and never inserted into the page, react-markdown
 // drops javascript: links, and images are left out. Text the model wrote may
 // carry a link a deliverable slipped in, so there links can be shown as text
-// with their address instead of being clickable.
+// with their address instead of being clickable. Text that would take the
+// parser seconds (see isRiskyMarkdown) is shown as plain text, unparsed.
 
 /**
  * Props for the DOM element: our classes plus the element's own, without the
@@ -151,6 +153,7 @@ export function Markdown({
   headings = "shift",
   links = "open",
 }: MarkdownProps) {
+  if (isRiskyMarkdown(children)) return <div className="whitespace-pre-wrap break-words">{children}</div>;
   return (
     <MarkdownBoundary text={children} fallback={fallback}>
       <ReactMarkdown

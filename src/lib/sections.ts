@@ -8,6 +8,9 @@ export const sectionStatusSchema = z.enum(SECTION_STATUSES);
 
 export type SectionStatus = z.infer<typeof sectionStatusSchema>;
 
+/** Longest text of a section, in characters (save_section_content checks it too). */
+export const MAX_SECTION_CONTENT = 100_000;
+
 /**
  * Same rule as private.can_edit_section: managers edit every section,
  * experts only the ones assigned to them.

@@ -89,7 +89,7 @@ export async function getDraftPanel(
   const [{ data: section }, { data: templates }, { count }, { data: latest }] = await Promise.all([
     supabase
       .from("report_sections")
-      .select("content, updated_at")
+      .select("content, content_updated_at")
       .eq("id", sectionId)
       .eq("workspace_id", workspaceId)
       .maybeSingle(),
@@ -158,6 +158,7 @@ export async function getDraftPanel(
     parsedCount: count ?? 0,
     proposal,
     content: section.content,
-    sectionUpdatedAt: section.updated_at,
+    // The text version: reordering or reassigning the section doesn't change it.
+    sectionUpdatedAt: section.content_updated_at,
   };
 }

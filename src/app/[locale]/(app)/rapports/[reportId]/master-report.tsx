@@ -1,0 +1,73 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { Check, LoaderCircle } from "lucide-react";
+import type { ReorderResult } from "./actions";
+import { ReportDocument, type ReportSection } from "./report-document";
+import { SectionList, type Assignee } from "./section-list";
+import { useSectionOrder } from "./use-section-order";
+
+type MasterReportProps = {
+  reportId: string;
+  workspaceId: string;
+  sections: ReportSection[];
+  assignees: Assignee[];
+  canManage: boolean;
+  /** Shown between the table of contents and the text, for managers. */
+  addSectionForm?: ReactNode;
+};
+
+/**
+ * The table of contents and the text of the report, in the same order. A
+ * manager's new order shows in both right away, while it is saved.
+ */
+export function MasterReport({
+  reportId,
+  workspaceId,
+  sections,
+  assignees,
+  canManage,
+  addSectionForm,
+}: MasterReportProps) {
+  const order = useSectionOrder(reportId, sections);
+
+  return (
+    <>
+      <SectionList
+        workspaceId={workspaceId}
+        sections={order.sections}
+        assignees={assignees}
+        canManage={canManage}
+        onReorder={canManage ? order.reorder : undefined}
+        reorderBusy={order.saving}
+        reorderStatus={canManage ? <ReorderStatus saving={order.saving} result={order.result} /> : undefined}
+      />
+      {addSectionForm}
+      <ReportDocument workspaceId={workspaceId} sections={order.sections} />
+    </>
+  );
+}
+
+/** Always rendered, so screen readers hear each change of the live region. */
+function ReorderStatus({ saving, result }: { saving: boolean; result: ReorderResult | null }) {
+  const t = useTranslations("Report.reorder");
+
+  return (
+    <p role="status" aria-live="polite" className="w-full text-xs">
+      {saving ? (
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <LoaderCircle className="size-3.5 motion-safe:animate-spin" aria-hidden="true" />
+          {t("saving")}
+        </span>
+      ) : result?.ok ? (
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <Check className="size-3.5" aria-hidden="true" />
+          {t("saved")}
+        </span>
+      ) : result ? (
+        <span className="text-destructive">{t(`errors.${result.error}`)}</span>
+      ) : null}
+    </p>
+  );
+}
