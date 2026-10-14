@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/fr.json";
 import { reloadPage } from "@/lib/pwa/reload-page";
 import { useUnsavedWork } from "@/lib/unsaved-work";
-import { TAKEOVER_TIMEOUT, UPDATE_CHECK_INTERVAL, UpdateBanner, VISIBLE_CHECK_GAP } from "./update-banner";
+import { UPDATE_CHECK_INTERVAL, UpdateBanner, VISIBLE_CHECK_GAP } from "./update-banner";
 
 vi.mock("@/lib/pwa/reload-page", () => ({ reloadPage: vi.fn() }));
 
@@ -117,19 +117,22 @@ describe("UpdateBanner", () => {
 
     sw.takeOver(next);
     sw.takeOver(next);
-    act(() => vi.advanceTimersByTime(TAKEOVER_TIMEOUT));
     expect(reloadPage).toHaveBeenCalledTimes(1);
   });
 
-  it("reloads after a while if the new version does not take over", async () => {
+  it("never reloads before the new version takes over, however long it takes", async () => {
     const sw = fakeServiceWorker();
     await renderBanner();
-    sw.wait(worker("next"));
+    const next = worker("next");
+    sw.wait(next);
     fireEvent.click(updateButton());
 
-    act(() => vi.advanceTimersByTime(TAKEOVER_TIMEOUT - 1));
+    act(() => vi.advanceTimersByTime(5 * 60 * 1000));
     expect(reloadPage).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(1));
+    fireEvent.click(screen.getByRole("button", { name: "Mise à jour…" }));
+    expect(sw.workbox.messageSkipWaiting).toHaveBeenCalledTimes(1);
+
+    sw.takeOver(next);
     expect(reloadPage).toHaveBeenCalledTimes(1);
   });
 
@@ -147,7 +150,6 @@ describe("UpdateBanner", () => {
     fireEvent.click(updateButton());
     expect(screen.getByRole("status")).toHaveTextContent(UNSAVED);
     expect(sw.workbox.messageSkipWaiting).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(TAKEOVER_TIMEOUT));
     expect(reloadPage).not.toHaveBeenCalled();
   });
 

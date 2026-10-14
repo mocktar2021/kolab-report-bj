@@ -17,8 +17,6 @@ type Workbox = Window["workbox"];
 export const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
 /** A tab coming back into view asks too, at most this often. */
 export const VISIBLE_CHECK_GAP = 60 * 1000;
-/** After "Mettre à jour", reload anyway if the new version has not taken over by then. */
-export const TAKEOVER_TIMEOUT = 10 * 1000;
 
 type Status = "hidden" | "shown" | "unsaved" | "updating";
 
@@ -128,8 +126,10 @@ export function UpdateBanner() {
     }
     requested.current = true;
     // The waiting worker takes over, then onControllerChange reloads the page.
+    // Chrome first waits for the old worker to be idle: a request from the
+    // page right after the click can hold the switch for about 30 s. No
+    // reload before the switch, since a reload during it can hang in Chrome.
     window.workbox.messageSkipWaiting();
-    window.setTimeout(() => reloadOnce(reloading), TAKEOVER_TIMEOUT);
   }
 
   function dismiss() {

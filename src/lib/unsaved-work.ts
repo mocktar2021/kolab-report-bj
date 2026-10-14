@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 // Work a reload would lose: text being edited, files being sent. The browser
 // asks before the page is left, and the update banner (KRB-156) reads
@@ -13,7 +13,9 @@ export function hasUnsavedWork() {
 
 /** While `active`, the browser asks before the page is left or reloaded. */
 export function useUnsavedWork(active: boolean) {
-  useEffect(() => {
+  // A layout effect runs with the commit, so hasUnsavedWork() matches the
+  // screen: once "Texte enregistré." shows, the editor no longer holds the page.
+  useLayoutEffect(() => {
     if (!active) return;
     const holder = Symbol("unsaved-work");
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
