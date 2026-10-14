@@ -539,6 +539,7 @@
       "forbidden": "Seuls les propriétaires et administrateurs peuvent exporter ce rapport.",
       "notFound": "Ce rapport n'existe plus ou ne vous est plus accessible.",
       "rateLimited": "Vous avez atteint la limite de {limit} exports par heure dans cet espace. Réessayez plus tard.",
+      "tooLarge": "{format, select, pdf {Ce rapport est trop long pour un PDF. Exportez-le en .docx, qui accepte des rapports plus longs.} other {Ce rapport est trop long pour être exporté. Raccourcissez des sections puis réessayez.}}",
       "generic": "L'export n'a pas abouti. Réessayez dans un instant."
     },
     "recentTitle": "Exports récents",

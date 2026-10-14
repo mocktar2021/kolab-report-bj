@@ -9,7 +9,7 @@ import type { ExportFormat } from "@/lib/export/types";
 
 const FORMATS: readonly ExportFormat[] = ["docx", "pdf"];
 
-const ERROR_KEYS = ["invalidInput", "forbidden", "notFound", "rateLimited", "generic"] as const;
+const ERROR_KEYS = ["invalidInput", "forbidden", "notFound", "rateLimited", "tooLarge", "generic"] as const;
 
 type ExportError = (typeof ERROR_KEYS)[number];
 
@@ -22,6 +22,7 @@ function exportError(status: number, body: unknown): ExportError {
   if (status === 403) return "forbidden";
   if (status === 404) return "notFound";
   if (status === 429) return "rateLimited";
+  if (status === 413) return "tooLarge";
   return "generic";
 }
 
@@ -39,7 +40,10 @@ function startDownload(url: string) {
   window.location.assign(url);
 }
 
-type ExportState = { kind: "ready"; fileName: string } | { kind: "error"; error: ExportError } | null;
+type ExportState =
+  | { kind: "ready"; fileName: string }
+  | { kind: "error"; error: ExportError; format: ExportFormat }
+  | null;
 
 type ExportButtonsProps = {
   reportId: string;
@@ -79,11 +83,11 @@ export function ExportButtons({ reportId, hourlyLimit, onDownload = startDownloa
         router.refresh();
         onDownload(download.url);
       } else {
-        setState({ kind: "error", error: exportError(response.status, body) });
+        setState({ kind: "error", error: exportError(response.status, body), format });
       }
     } catch {
       // No answer, for example after a network error.
-      setState({ kind: "error", error: "generic" });
+      setState({ kind: "error", error: "generic", format });
     } finally {
       running.current = false;
       setPending(null);
@@ -121,7 +125,9 @@ export function ExportButtons({ reportId, hourlyLimit, onDownload = startDownloa
         ) : state?.kind === "ready" ? (
           <span className="text-muted-foreground">{t("ready", { fileName: state.fileName })}</span>
         ) : state?.kind === "error" ? (
-          <span className="text-destructive">{t(`errors.${state.error}`, { limit: hourlyLimit })}</span>
+          <span className="text-destructive">
+            {t(`errors.${state.error}`, { limit: hourlyLimit, format: state.format })}
+          </span>
         ) : null}
       </p>
     </div>

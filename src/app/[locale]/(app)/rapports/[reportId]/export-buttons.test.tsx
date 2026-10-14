@@ -119,6 +119,21 @@ describe("ExportButtons", () => {
     expect(docx).toHaveAttribute("aria-disabled", "false");
   });
 
+  it("suggests the .docx export when a report is too long for a PDF", async () => {
+    fetchMock.mockResolvedValue(json(413, { error: "tooLarge" }));
+    const user = userEvent.setup();
+    const { onDownload, pdf } = renderButtons();
+
+    await user.click(pdf);
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Ce rapport est trop long pour un PDF. Exportez-le en .docx, qui accepte des rapports plus longs.",
+      ),
+    );
+    expect(onDownload).not.toHaveBeenCalled();
+  });
+
   it.each([
     [403, null, "Seuls les propriétaires et administrateurs peuvent exporter ce rapport."],
     [415, { error: "invalidInput" }, "La demande d'export n'est pas valide."],

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { buildExport, exportFileName } from "@/lib/export";
+import { buildExport, exportFileName, ExportTooLargeError } from "@/lib/export";
 import { EXPORT_FORMATS, EXPORT_MIME_TYPES, type ExportDocument } from "@/lib/export/types";
 import {
   EXPORTS_BUCKET,
@@ -96,6 +96,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
   try {
     file = await buildExport(doc, format);
   } catch (error) {
+    // A report past the format's size cap: the PDF one is lower, .docx may still work.
+    if (error instanceof ExportTooLargeError) return failure(413, "tooLarge");
     console.error("exports: could not build the file", error instanceof Error ? error.message : error);
     return failure(500, "generic");
   }
