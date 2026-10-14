@@ -10,7 +10,7 @@ Every pull request and every push to `master` runs two workflows in GitHub Actio
 2. Writing check on the PR: commit messages and changed files go through `write-like-mocktar` (skipped for Dependabot).
 3. `format:check`, `lint`, `typecheck` and `npm test`.
 4. `scripts/check-public-env.mjs` fails on `NEXT_PUBLIC_` variables named like secrets, since those ship to the browser.
-5. `npm audit --omit=dev --audit-level=critical`. Only critical advisories block. The known high ones are tracked in Jira.
+5. `node scripts/audit-production.mjs` runs `npm audit --omit=dev` and fails on any high or critical advisory, unless `.github/accepted-advisories.json` accepts it. An accepted entry gives the GHSA id, the direct dependencies it may come through, the reason it does not apply and an expiry date. The job fails again once that date passes, or when the advisory comes through another dependency. What is accepted and why: `docs/security/dependencies.md`.
 6. `next build` with placeholder Supabase variables and the `.next/cache` restored.
 
 **Database and end-to-end tests** starts the local Supabase stack with the CLI version from `package-lock.json`, then:
@@ -98,6 +98,7 @@ JSON
 
 ```sh
 npm run format:check && npm run lint && npm run typecheck && npm test && npm run build
+node scripts/audit-production.mjs
 npx supabase start
 npx supabase db reset && npx supabase test db
 npm run db:types && git diff --exit-code src/lib/supabase/database.types.ts

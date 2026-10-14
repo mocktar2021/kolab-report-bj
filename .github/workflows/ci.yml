@@ -59,9 +59,9 @@ jobs:
       - run: npm test
 
       - name: Audit production dependencies
-        # Blocks on critical advisories. High and lower ones are tracked in Jira
-        # and picked up by Dependabot.
-        run: npm audit --omit=dev --audit-level=critical
+        # Blocks on high and critical advisories, except the reviewed ones in
+        # .github/accepted-advisories.json (docs/security/dependencies.md).
+        run: node scripts/audit-production.mjs
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

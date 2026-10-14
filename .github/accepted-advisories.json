@@ -1,0 +1,10 @@
+[
+  {
+    "id": "GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "via": ["@ducanh2912/next-pwa"],
+    "reason": "No patched braces exists (3.0.3 is the latest). It comes in through fast-glob and micromatch, which next-pwa calls only inside its webpack hook during next build, with glob patterns written in its own code and in next.config.mjs. No request or user file reaches it, and next-pwa is not part of the server functions or the browser bundle. See docs/security/dependencies.md.",
+    "reviewed": "2026-10-14",
+    "expires": "2027-01-14"
+  }
+]
