@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../../../messages/fr.json";
+import { hasUnsavedWork } from "@/lib/unsaved-work";
 import { saveSectionContent } from "./content-actions";
 import { SectionEditor } from "./section-editor";
 
@@ -302,8 +303,11 @@ describe("SectionEditor", () => {
     expect(leave()).toBe(false);
     await user.type(textarea(), " Ajout.");
     expect(leave()).toBe(true);
+    // The update banner does not reload the page meanwhile (KRB-156).
+    expect(hasUnsavedWork()).toBe(true);
     await user.click(screen.getByRole("button", { name: "Annuler" }));
     expect(leave()).toBe(false);
+    expect(hasUnsavedWork()).toBe(false);
   });
 
   it("previews the Markdown with links as text, and Ctrl+S still saves from there", async () => {

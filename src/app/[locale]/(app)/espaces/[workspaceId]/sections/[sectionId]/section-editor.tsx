@@ -14,6 +14,7 @@ import { Check, Eye, PencilLine, RotateCcw } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { MAX_SECTION_CONTENT } from "@/lib/sections";
+import { useUnsavedWork } from "@/lib/unsaved-work";
 import { cn } from "@/lib/utils";
 import {
   saveSectionContent,
@@ -109,13 +110,8 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     else conflictRef.current?.focus();
   });
 
-  // Leaving the page would lose the changes.
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  // Leaving the page would lose the changes. The update banner waits too.
+  useUnsavedWork(dirty);
 
   function adopt(next: SectionContentVersion) {
     setKnown(next);

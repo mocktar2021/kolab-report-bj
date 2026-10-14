@@ -9,6 +9,8 @@ supabase/.temp/
 supabase/.branches/
 test-results/
 playwright-report/
+.lighthouseci/
 docs/jira/
 *.md
 supabase/templates/
+.claude/worktrees/

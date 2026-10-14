@@ -7,7 +7,11 @@ import { cn } from "@/lib/utils";
 
 // Radix handles the keyboard: Enter, Space or Arrow Down opens the menu,
 // arrows move between items, Escape closes and returns focus to the trigger.
-const DropdownMenu = DropdownMenuPrimitive.Root;
+// Not modal by default: a modal menu sets aria-hidden on the rest of the page,
+// including the focusable trigger it returns to, which axe reports.
+function DropdownMenu({ modal = false, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  return <DropdownMenuPrimitive.Root modal={modal} {...props} />;
+}
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 

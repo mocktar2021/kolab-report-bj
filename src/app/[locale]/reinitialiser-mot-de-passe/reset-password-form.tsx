@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { FieldError } from "@/components/auth/field-error";
 import { PasswordInput } from "@/components/auth/password-input";
+import { useFocusOnError } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { updatePassword, type ResetState } from "./actions";
@@ -13,10 +14,11 @@ export function ResetPasswordForm({ email }: { email: string }) {
   const [state, formAction, pending] = useActionState<ResetState, FormData>(updatePassword, {
     status: "idle",
   });
+  const formRef = useFocusOnError(state, state.status === "error");
   const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form ref={formRef} action={formAction} className="space-y-4" noValidate>
       {/* Lets password managers save the new password against the right account. */}
       <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />
       <div className="space-y-2">

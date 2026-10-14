@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Check, CircleAlert, LoaderCircle, Upload } from "lucide-react";
@@ -9,6 +9,7 @@ import type { DeliverableErrorKey } from "@/lib/deliverables/errors";
 import { ACCEPTED_EXTENSIONS, checkFileBeforeUpload } from "@/lib/deliverables/file-types";
 import { formatFileSize } from "@/lib/deliverables/format";
 import { uploadDeliverable } from "@/lib/deliverables/upload";
+import { useUnsavedWork } from "@/lib/unsaved-work";
 import { cn } from "@/lib/utils";
 
 type Phase = "waiting" | "uploading" | "checking" | "done" | "error";
@@ -23,6 +24,12 @@ type UploadItem = {
   error?: DeliverableErrorKey;
 };
 
+/** One sentence for screen readers, keyed so the same text can come twice. */
+type Announcement = { key: number; text: string };
+
+/** The log keeps the last few sentences: older ones were read already. */
+const ANNOUNCEMENTS_KEPT = 5;
+
 /** Drop zone and file picker. Files go one after the other, straight to storage. */
 export function DeliverableUploader({ sectionId }: { sectionId: string }) {
   const t = useTranslations("Deliverables");
@@ -31,26 +38,35 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
   const nextKey = useRef(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dragging, setDragging] = useState(false);
 
   const busy = items.some(
     (item) => item.phase === "waiting" || item.phase === "uploading" || item.phase === "checking",
   );
 
-  // Leaving the page would cut the upload short.
-  useEffect(() => {
-    if (!busy) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [busy]);
+  // Leaving the page would cut the upload short. The update banner waits too.
+  useUnsavedWork(busy);
 
   function update(key: number, patch: Partial<UploadItem>) {
     setItems((list) => list.map((item) => (item.key === key ? { ...item, ...patch } : item)));
   }
 
+  // Screen readers hear when a file starts, ends or fails, not every percent of
+  // the progress bar. New sentences are added to a log, so two that come
+  // together are both read.
+  function announce(text: string) {
+    const key = nextKey.current++;
+    setAnnouncements((list) => [...list, { key, text }].slice(-ANNOUNCEMENTS_KEPT));
+  }
+
+  function announceFailure(name: string, error: DeliverableErrorKey) {
+    announce(t("announce.failed", { name, reason: t(`errors.${error}`) }));
+  }
+
   async function send(key: number, file: File) {
     update(key, { phase: "uploading" });
+    announce(t("announce.sending", { name: file.name }));
     // Never throws, so one failure does not stop the files queued after it.
     const result = await uploadDeliverable(sectionId, file, {
       onProgress: (progress) => update(key, { progress }),
@@ -58,9 +74,11 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
     }).catch(() => ({ ok: false as const, error: "generic" as const }));
     if (result.ok) {
       update(key, { phase: "done" });
+      announce(t("announce.done", { name: file.name }));
       router.refresh();
     } else {
       update(key, { phase: "error", error: result.error });
+      announceFailure(file.name, result.error);
     }
   }
 
@@ -79,7 +97,8 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
         progress: 0,
         error: rejection ?? undefined,
       });
-      if (!rejection) queue.current = queue.current.then(() => send(key, file));
+      if (rejection) announceFailure(file.name, rejection);
+      else queue.current = queue.current.then(() => send(key, file));
     }
     setItems((list) => [...added.reverse(), ...list]);
   }
@@ -115,14 +134,14 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
         <Button type="button" variant="outline" shape="pill" onClick={() => inputRef.current?.click()}>
           {t("choose")}
         </Button>
+        {/* Hidden from everyone: the button above opens it, so screen readers list one control. */}
         <input
           ref={inputRef}
           id="deliverable-files"
           type="file"
           multiple
           accept={ACCEPTED_EXTENSIONS}
-          className="sr-only"
-          tabIndex={-1}
+          className="hidden"
           aria-label={t("choose")}
           onChange={(event) => {
             addFiles(event.target.files);
@@ -133,12 +152,18 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
       </div>
 
       {items.length > 0 ? (
-        <ul aria-live="polite" className="mt-4 space-y-2">
+        <ul className="mt-4 space-y-2">
           {items.map((item) => (
             <UploadRow key={item.key} item={item} />
           ))}
         </ul>
       ) : null}
+      {/* Always in the page, so the first sentence is read too. */}
+      <div role="log" className="sr-only">
+        {announcements.map((announcement) => (
+          <p key={announcement.key}>{announcement.text}</p>
+        ))}
+      </div>
     </section>
   );
 }

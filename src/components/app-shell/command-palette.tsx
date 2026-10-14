@@ -18,7 +18,7 @@ import {
 import { useRouter } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
-import { SECTION_STATUSES } from "@/lib/sections";
+import { SECTION_STATUSES } from "@/lib/section-statuses";
 import { cn } from "@/lib/utils";
 
 // Extra search terms without accents, so "deconnexion" or "termine" match.
@@ -56,6 +56,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       onOpenChange={onOpenChange}
       title={t("title")}
       description={t("description")}
+      label={t("inputLabel")}
       footer={
         <div
           aria-hidden="true"
@@ -80,7 +81,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
     >
       <CommandInput placeholder={t("placeholder")} />
-      <CommandList>
+      {/* cmdk names the list "Suggestions" in English by default. */}
+      <CommandList label={t("listLabel")}>
         <CommandEmpty>{t("empty")}</CommandEmpty>
         <CommandGroup heading={t("navigation")}>
           <CommandItem

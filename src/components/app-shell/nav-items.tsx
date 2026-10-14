@@ -3,13 +3,27 @@
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BookText, Gauge, LayoutDashboard } from "lucide-react";
-import { motion } from "motion/react";
+import { LazyMotion } from "motion/react";
+import * as m from "motion/react-m";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
-import { SECTION_STATUSES, sectionStatusSchema } from "@/lib/sections";
+import { SECTION_STATUSES, isSectionStatus } from "@/lib/section-statuses";
 import { cn } from "@/lib/utils";
 
 const DASHBOARD_PATH = "/tableau-de-bord";
+
+// The sliding highlight needs motion's layout features (about 30 kB
+// compressed). They load in their own chunk once the shell has hydrated, so
+// signed-in pages no longer evaluate them on load (KRB-154). Until then the
+// highlight shows in place, without animation.
+//
+// Only from the lg breakpoint, where the sidebar shows. Below it the nav sits
+// in the menu sheet, which closes on navigation, so the highlight never gets
+// to slide and phones skip the download.
+const loadLayoutFeatures = () =>
+  window.matchMedia("(min-width: 1024px)").matches
+    ? import("@/components/motion/layout-features").then((mod) => mod.default)
+    : new Promise<never>(() => {});
 
 type NavItemsProps = {
   /** "sidebar" hides labels when the desktop sidebar is collapsed; "sheet" never does. */
@@ -22,13 +36,21 @@ type NavItemsProps = {
 };
 
 /** Links of the app navigation, shared by the desktop sidebar and the mobile sheet. */
-export function NavItems({ variant, workspaceId, manager = false, onNavigate }: NavItemsProps) {
+export function NavItems(props: NavItemsProps) {
+  return (
+    <LazyMotion features={loadLayoutFeatures}>
+      <NavItemList {...props} />
+    </LazyMotion>
+  );
+}
+
+function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavItemsProps) {
   const t = useTranslations("AppShell");
   const tFilters = useTranslations("Dashboard.filters");
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const parsedStatus = sectionStatusSchema.safeParse(searchParams.get("statut"));
-  const activeStatus = parsedStatus.success ? parsedStatus.data : null;
+  const statut = searchParams.get("statut");
+  const activeStatus = isSectionStatus(statut) ? statut : null;
   const onDashboard = pathname === DASHBOARD_PATH;
   const promptsPath = workspaceId ? `/espaces/${workspaceId}/modeles` : null;
   const aiPath = workspaceId && manager ? `/espaces/${workspaceId}/ia` : null;
@@ -123,13 +145,13 @@ function NavItem({ href, label, icon, active, variant, onNavigate }: NavItemProp
       >
         {active ? (
           <>
-            <motion.span
+            <m.span
               layoutId={`${variant}-nav-active`}
               aria-hidden="true"
               className="absolute inset-0 rounded-lg bg-highlight/[0.08] ring-1 ring-inset ring-highlight/25"
               transition={{ type: "spring", stiffness: 500, damping: 40 }}
             />
-            <motion.span
+            <m.span
               layoutId={`${variant}-nav-bar`}
               aria-hidden="true"
               className="absolute -left-3 bottom-2 top-2 w-[3px] rounded-r-full bg-highlight shadow-glow"

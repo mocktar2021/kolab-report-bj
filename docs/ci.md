@@ -18,9 +18,11 @@ Every pull request and every push to `master` runs two workflows in GitHub Actio
 1. `supabase db reset` applies every migration from an empty database.
 2. `supabase test db` runs the pgTAP suite in `supabase/tests/`.
 3. `npm run db:types` regenerates `src/lib/supabase/database.types.ts`. The job fails if the result differs from the committed file, so a migration always ships with its types.
-4. Writes `.env.local` from `supabase status`, builds the app and runs the Playwright suite. Traces are kept as an artifact when a test fails.
+4. Writes `.env.local` from `supabase status` (`scripts/ci-env-local.sh`), builds the app and runs the Playwright suite. Traces are kept as an artifact when a test fails.
 
-Both jobs run on every PR, not only on PRs that touch `supabase/`, so they can be required checks.
+**Lighthouse** (KRB-153) starts the same local stack, writes the same `.env.local` and builds the same way, then runs `npx lhci autorun`: Lighthouse mobile, 3 runs on `/fr/connexion` and 3 on `/fr/tableau-de-bord` signed in as the seeded demo user. It fails when a median score is under the KRB-25 targets: performance 85, accessibility 95, best practices 95. The dashboard's performance floor is 65 until KRB-172 brings it to 85. The HTML and JSON reports are kept as the `lighthouse-reports` artifact for 14 days. It runs next to the end-to-end job, so it adds no wall-clock time to CI. Thresholds, budgets and how to run it locally: `docs/performance.md`.
+
+All three jobs run on every PR, not only on PRs that touch `supabase/`, so they can be required checks.
 
 ## CodeQL (`.github/workflows/codeql.yml`)
 
@@ -48,6 +50,7 @@ In **Settings > Rules > Rulesets > New branch ruleset**:
 - Require status checks to pass, with the branch up to date:
   - `Lint, typecheck, unit tests, build`
   - `Database and end-to-end tests`
+  - `Lighthouse`
 - Bypass list: add the repository admin role. GitHub does not let an author approve their own PR, so with a single maintainer the admin bypass is the only way to merge your own PRs.
 
 The same ruleset from the terminal:
@@ -79,7 +82,8 @@ gh api repos/mocktar2021/kolab-report-bj/rulesets --method POST --input - <<'JSO
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
           { "context": "Lint, typecheck, unit tests, build" },
-          { "context": "Database and end-to-end tests" }
+          { "context": "Database and end-to-end tests" },
+          { "context": "Lighthouse" }
         ]
       }
     }
@@ -98,4 +102,5 @@ npx supabase start
 npx supabase db reset && npx supabase test db
 npm run db:types && git diff --exit-code src/lib/supabase/database.types.ts
 npm run test:e2e
+npx lhci autorun
 ```

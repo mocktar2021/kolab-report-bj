@@ -1,10 +1,16 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { ArrowUpRight } from "lucide-react";
-import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
 import { SECTION_STATUSES, type SectionStatus } from "@/lib/sections";
 import { cn } from "@/lib/utils";
+
+// The cards rise one after the other with CSS, so they show on first paint.
+// With the motion library they stayed transparent until hydration, and its
+// per-frame work blocked the main thread on phones (KRB-154).
+const ENTER =
+  "motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:duration-700 motion-safe:ease-out-expo";
+const STEP_MS = 60;
 
 // Large figures in the display face, light and tightly tracked.
 const valueClass =
@@ -31,12 +37,12 @@ export function KpiCards({
 
   return (
     <section aria-label={t("kpiLabel")} className="mt-8">
-      <Stagger as="ul" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4" step={0.06}>
-        {SECTION_STATUSES.map((status) => {
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {SECTION_STATUSES.map((status, index) => {
           const active = status === activeStatus;
           const share = totalSections > 0 ? counts[status] / totalSections : 0;
           return (
-            <StaggerItem as="li" key={status}>
+            <li key={status} className={ENTER} style={{ animationDelay: `${index * STEP_MS}ms` }}>
               <Link
                 href={`/tableau-de-bord?statut=${status}`}
                 aria-current={active ? "page" : undefined}
@@ -71,10 +77,10 @@ export function KpiCards({
                   {t("share", { percent: format.number(share, "percent") })}
                 </span>
               </Link>
-            </StaggerItem>
+            </li>
           );
         })}
-        <StaggerItem as="li">
+        <li className={ENTER} style={{ animationDelay: `${SECTION_STATUSES.length * STEP_MS}ms` }}>
           <div className="surface-card flex h-full flex-col rounded-2xl border p-4 shadow-sm sm:p-5">
             <span className="text-[0.8125rem] font-medium text-muted-foreground sm:text-sm">
               {t("completion")}
@@ -90,8 +96,8 @@ export function KpiCards({
               {t("completionHint", { count: reportsWithSections })}
             </span>
           </div>
-        </StaggerItem>
-      </Stagger>
+        </li>
+      </ul>
     </section>
   );
 }

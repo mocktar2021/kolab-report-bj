@@ -32,7 +32,7 @@ Fill `.env.local` with the values printed by `npx supabase status`:
 
 Then run `npm run dev` and open http://localhost:3000. Sign-up e-mails arrive in Mailpit at http://127.0.0.1:54324. `npx supabase db reset` rebuilds the database from the migrations.
 
-The service worker is disabled in development. To test offline behaviour, run `npm run build && npm start`, or set `NEXT_PUBLIC_PWA_ENABLE_IN_DEV=true`.
+The service worker is disabled in development. To test offline behaviour, run `npm run build && npm start`, or set `NEXT_PUBLIC_PWA_ENABLE_IN_DEV=true`. `docs/pwa.md` explains how updates reach open tabs and how to test them.
 
 ## Demo data
 

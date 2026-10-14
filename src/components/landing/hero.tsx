@@ -6,10 +6,12 @@ import { EdgeLines } from "./edge-lines";
 import { HeroCards } from "./hero-cards";
 
 // The hero copy animates with CSS so it starts on first paint, before
-// hydration, and never holds back the largest contentful paint. It is the
-// only entrance on the page that runs without scrolling.
+// hydration. It starts at half opacity, not zero: Chrome skips a fully
+// transparent element as largest contentful paint until a later frame,
+// which comes after hydration on a phone (KRB-154). It is the only entrance
+// on the page that runs without scrolling.
 const enter =
-  "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:duration-1000 motion-safe:ease-out-expo";
+  "motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:duration-1000 motion-safe:ease-out-expo";
 
 export function Hero() {
   const t = useTranslations("Landing.hero");

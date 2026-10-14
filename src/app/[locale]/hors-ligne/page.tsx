@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ReloadWhenOnline } from "@/components/pwa/reload-when-online";
 import { Button } from "@/components/ui/button";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,6 +25,7 @@ export default async function HorsLignePage({ params }: { params: Promise<{ loca
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/fr/tableau-de-bord">{t("retry")}</a>
       </Button>
+      <ReloadWhenOnline />
     </main>
   );
 }

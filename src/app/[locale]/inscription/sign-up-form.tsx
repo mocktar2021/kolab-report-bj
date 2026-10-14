@@ -5,6 +5,7 @@ import { MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FieldError } from "@/components/auth/field-error";
 import { PasswordInput } from "@/components/auth/password-input";
+import { useFocusOnError, useFocusWhenShown } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,10 +14,12 @@ import { signUp, type SignUpState } from "./actions";
 export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
   const t = useTranslations("Auth");
   const [state, formAction, pending] = useActionState<SignUpState, FormData>(signUp, { status: "idle" });
+  const formRef = useFocusOnError(state, state.status === "error");
+  const doneRef = useFocusWhenShown<HTMLDivElement>(state.status === "checkEmail");
 
   if (state.status === "checkEmail") {
     return (
-      <div role="status" className="space-y-3">
+      <div ref={doneRef} tabIndex={-1} role="status" className="space-y-3 outline-none">
         <MailCheck aria-hidden="true" className="size-6 text-primary" />
         <p className="font-medium">{t("checkEmailTitle")}</p>
         <p className="text-sm text-muted-foreground">{t("checkEmailBody", { email: state.email })}</p>
@@ -29,7 +32,7 @@ export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
   const values = state.status === "error" ? state.values : { fullName: "", email: defaultEmail };
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form ref={formRef} action={formAction} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label htmlFor="fullName">{t("fullName")}</Label>
         <Input
