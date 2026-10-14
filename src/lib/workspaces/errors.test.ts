@@ -16,6 +16,10 @@ describe("workspaceErrorKey", () => {
     expect(workspaceErrorKey({ code: "23505" })).toBe("invitationPending");
   });
 
+  it("maps the frozen final report code", () => {
+    expect(workspaceErrorKey({ code: "KR020" })).toBe("reportFinal");
+  });
+
   it("maps permission and validation errors", () => {
     expect(workspaceErrorKey({ code: "42501" })).toBe("forbidden");
     expect(workspaceErrorKey({ code: "22023" })).toBe("invalidInput");

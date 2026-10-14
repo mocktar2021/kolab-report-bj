@@ -45,13 +45,13 @@ export async function POST(_request: Request, { params }: { params: Params }) {
   // in the meantime does not get to keep the file, and neither does anyone
   // once the report is final (KRB-20).
   const access = await requireWorkspaceRole(upload.workspace_id);
-  if (
-    !access ||
-    !canEditSection(access, upload.section?.assigned_to ?? null) ||
-    upload.section?.report?.status === "final"
-  ) {
+  if (!access || !canEditSection(access, upload.section?.assigned_to ?? null)) {
     await discardUpload(upload);
     return errorResponse(403, "forbidden");
+  }
+  if (upload.section?.report?.status === "final") {
+    await discardUpload(upload);
+    return errorResponse(403, "reportFinal");
   }
 
   const check = await checkStoredFile(upload);

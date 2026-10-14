@@ -63,7 +63,8 @@ const SECTIONS = [CONTEXT, ANALYSIS, APPENDIX];
 function renderReport({
   sections = SECTIONS,
   canManage = true,
-}: { sections?: ReportSection[]; canManage?: boolean } = {}) {
+  frozen = false,
+}: { sections?: ReportSection[]; canManage?: boolean; frozen?: boolean } = {}) {
   return render(
     <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
       <MasterReport
@@ -72,6 +73,8 @@ function renderReport({
         sections={sections}
         assignees={[]}
         canManage={canManage}
+        frozen={frozen}
+        addSectionForm={<form aria-label="Nouvelle section" />}
       />
     </NextIntlClientProvider>,
   );
@@ -229,6 +232,19 @@ describe("MasterReport for a manager", () => {
     expect(reorderStatus()).toHaveTextContent(/Les sections ont changé dans une autre session/);
   });
 
+  it("reloads the page when the report became final meanwhile", async () => {
+    vi.mocked(reorderSections).mockResolvedValue({ ok: false, error: "reportFinal" });
+    renderReport();
+
+    await moveWithKeyboard("Analyse", "ArrowDown", 1);
+
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+    expect(tocTitles()).toEqual(["Contexte", "Analyse", "Annexes"]);
+    expect(reorderStatus()).toHaveTextContent(
+      "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
+    );
+  });
+
   it("treats an action that throws as a failed save", async () => {
     vi.mocked(reorderSections).mockRejectedValue(new Error("network"));
     renderReport();
@@ -309,5 +325,39 @@ describe("MasterReport for a reader", () => {
     renderReport({ sections: [], canManage: false });
     expect(screen.getByText("Ce rapport n'a pas encore de sections.")).toBeVisible();
     expect(screen.queryByRole("region", { name: "Texte du rapport" })).toBeNull();
+  });
+});
+
+describe("MasterReport for a final report", () => {
+  it("leaves no way to edit, for a manager too", () => {
+    renderReport({ frozen: true });
+
+    expect(screen.queryAllByRole("button", { name: /^Déplacer la section/ })).toHaveLength(0);
+    expect(screen.queryByText(/Faites glisser une section/)).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Enregistrer" })).toBeNull();
+    expect(screen.queryByRole("form", { name: "Nouvelle section" })).toBeNull();
+    // CONTEXT can be edited when the report is open, not now.
+    expect(screen.queryAllByRole("link", { name: /^Modifier/ })).toHaveLength(0);
+  });
+
+  it("still shows every section, its expert, weight and text", () => {
+    renderReport({ frozen: true });
+
+    expect(tocTitles()).toEqual(["Contexte", "Analyse", "Annexes"]);
+    expect(documentTitles()).toEqual(["1. Contexte", "2. Analyse", "3. Annexes"]);
+    const analysis = within(toc()).getAllByRole("listitem")[1];
+    if (!analysis) throw new Error("missing row");
+    expect(analysis).toHaveTextContent("Eli Expert");
+    expect(analysis).toHaveTextContent("Poids 1");
+    expect(screen.getByRole("article", { name: "1. Contexte" })).toHaveTextContent("Réduire la consommation");
+  });
+
+  it("keeps the add form and the handles while the report is open", () => {
+    renderReport();
+
+    expect(screen.getByRole("form", { name: "Nouvelle section" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Déplacer la section/ })).toHaveLength(3);
   });
 });

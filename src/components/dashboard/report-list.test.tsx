@@ -20,6 +20,7 @@ const EMPTY_ID = "4d3c2b1a-9f8e-4d7c-8b6a-5f4e3d2c1b0a";
 const AUDIT: WorkspaceReport = {
   id: AUDIT_ID,
   title: "Audit énergétique du siège",
+  status: "in_review",
   totalSections: 6,
   counts: { not_started: 2, in_progress: 1, completed: 3 },
   completionPercent: 62.5,
@@ -51,6 +52,7 @@ const AUDIT: WorkspaceReport = {
 const EMPTY: WorkspaceReport = {
   id: EMPTY_ID,
   title: "Rapport vide",
+  status: "draft",
   totalSections: 0,
   counts: { not_started: 0, in_progress: 0, completed: 0 },
   completionPercent: 0,
@@ -93,6 +95,22 @@ describe("ReportList", () => {
         .getAllByRole("listitem")
         .map((item) => item.textContent),
     ).toEqual(["2 non commencées", "1 en cours", "3 terminées"]);
+  });
+
+  it("shows the status of each report as a badge", () => {
+    renderList([AUDIT, EMPTY]);
+
+    expect(card("Audit énergétique du siège").getByText("En revue")).toBeInTheDocument();
+    expect(card("Rapport vide").getByText("Brouillon")).toBeInTheDocument();
+  });
+
+  it("marks a final report with its own badge", () => {
+    renderList([{ ...AUDIT, status: "final" }]);
+
+    const badge = card("Audit énergétique du siège").getByText("Final");
+    expect(badge).toHaveAttribute("data-status", "final");
+    // A lock next to the word, not color alone.
+    expect(badge.querySelector("svg")).not.toBeNull();
   });
 
   it("gives each report a labelled progress bar", () => {

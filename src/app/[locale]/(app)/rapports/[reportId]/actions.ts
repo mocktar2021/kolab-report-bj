@@ -25,6 +25,10 @@ export type SectionActionState =
 
 const FORBIDDEN: SectionActionState = { status: "error", error: "forbidden" };
 
+// A final report is frozen (KRB-20). RLS and the guard trigger refuse the
+// change anyway; checking first gives the right message.
+const REPORT_FINAL: SectionActionState = { status: "error", error: "reportFinal" };
+
 /** Adds a section at the end of the report. Owners and admins only. */
 export async function addSection(_prev: SectionActionState, formData: FormData): Promise<SectionActionState> {
   const reportId = uuidSchema.safeParse(formData.get("reportId"));
@@ -37,10 +41,11 @@ export async function addSection(_prev: SectionActionState, formData: FormData):
   const supabase = await createClient();
   const { data: report } = await supabase
     .from("reports")
-    .select("id, workspace_id")
+    .select("id, workspace_id, status")
     .eq("id", reportId.data)
     .maybeSingle();
   if (!report || !(await requireWorkspaceRole(report.workspace_id, MANAGER_ROLES))) return FORBIDDEN;
+  if (report.status === "final") return REPORT_FINAL;
 
   const { data: last } = await supabase
     .from("report_sections")
@@ -85,10 +90,11 @@ export async function updateSectionAssignment(
   const supabase = await createClient();
   const { data: section } = await supabase
     .from("report_sections")
-    .select("id, workspace_id")
+    .select("id, workspace_id, report:reports(status)")
     .eq("id", sectionId.data)
     .maybeSingle();
   if (!section || !(await requireWorkspaceRole(section.workspace_id, MANAGER_ROLES))) return FORBIDDEN;
+  if (section.report?.status === "final") return REPORT_FINAL;
 
   const { data, error } = await supabase
     .from("report_sections")
@@ -104,7 +110,7 @@ export async function updateSectionAssignment(
 
 export type ReorderResult =
   | { ok: true }
-  | { ok: false; error: "forbidden" | "stale" | "invalidInput" | "generic" };
+  | { ok: false; error: "forbidden" | "stale" | "reportFinal" | "invalidInput" | "generic" };
 
 const reorderSchema = z.object({
   reportId: uuidSchema,
@@ -132,6 +138,8 @@ export async function reorderSections(reportId: string, sectionIds: string[]): P
         return { ok: false, error: "forbidden" };
       case "40001":
         return { ok: false, error: "stale" };
+      case "KR020":
+        return { ok: false, error: "reportFinal" };
       default:
         console.error("reports: could not reorder sections", error.message);
         return { ok: false, error: "generic" };

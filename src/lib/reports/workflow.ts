@@ -59,8 +59,9 @@ export async function getReportWorkflow(
     : null;
 
   if (!manager || report.status !== "final") return { lastChange, snapshot: null };
-  // A report made final before KRB-20 has no change on record, so no snapshot either.
-  if (!lastChange || lastChange.to !== "final") return { lastChange, snapshot: { state: "missing" } };
+  // A report made final before KRB-20 has no change on record: no snapshot
+  // can be tied to it, so there is nothing to offer.
+  if (!lastChange || lastChange.to !== "final") return { lastChange, snapshot: null };
 
   const { data: exports } = await supabase
     .from("report_exports")

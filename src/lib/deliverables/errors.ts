@@ -7,6 +7,7 @@ export type DeliverableErrorKey =
   | "invalidInput"
   | "sectionNotFound"
   | "forbidden"
+  | "reportFinal"
   | "notReceived"
   | "sizeMismatch"
   | "typeMismatch"

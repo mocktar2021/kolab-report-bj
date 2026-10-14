@@ -666,7 +666,7 @@
       "result": {
         "ready": "La version finale est enregistrée.",
         "busy": "La version finale est en cours de création. Rechargez la page dans un instant.",
-        "failed": "La version finale n'a pas pu être enregistrée. Utilisez « Créer la version finale » pour réessayer."
+        "failed": "La version finale n'a pas pu être enregistrée. Utilisez « Créer la version finale » pour réessayer."
       }
     }
   },

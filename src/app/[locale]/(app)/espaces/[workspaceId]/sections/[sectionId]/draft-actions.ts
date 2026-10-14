@@ -16,6 +16,7 @@ export type DraftDecisionError =
   | "notFound"
   | "decided"
   | "conflict"
+  | "reportFinal"
   | "invalidInput"
   | "generic";
 
@@ -44,6 +45,9 @@ function decisionError(error: { code?: string | null; message?: string }): Draft
       return "decided";
     case "40001":
       return "conflict";
+    // The report became final (KRB-20).
+    case "KR020":
+      return "reportFinal";
     case "22023":
     case "22P02":
       return "invalidInput";
