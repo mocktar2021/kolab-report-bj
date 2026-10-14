@@ -415,6 +415,14 @@
     "description": "Cette page n'est pas disponible sans connexion. Les pages déjà consultées restent accessibles ; la synchronisation reprendra automatiquement au retour du réseau.",
     "retry": "Réessayer"
   },
+  "Pwa": {
+    "updateTitle": "Nouvelle version disponible",
+    "updateDescription": "Mettez à jour au moment qui vous convient : la page sera rechargée.",
+    "updateUnsaved": "Vous avez des modifications non enregistrées. Enregistrez-les, puis mettez à jour.",
+    "update": "Mettre à jour",
+    "updating": "Mise à jour…",
+    "later": "Plus tard"
+  },
   "Errors": {
     "title": "La page n'a pas pu s'afficher",
     "description": "Si KolabReport vient d'être mis à jour, rechargez la page pour continuer. Ce que vous avez déjà enregistré est conservé.",

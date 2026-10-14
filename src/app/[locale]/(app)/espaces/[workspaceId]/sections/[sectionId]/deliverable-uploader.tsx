@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Check, CircleAlert, LoaderCircle, Upload } from "lucide-react";
@@ -9,6 +9,7 @@ import type { DeliverableErrorKey } from "@/lib/deliverables/errors";
 import { ACCEPTED_EXTENSIONS, checkFileBeforeUpload } from "@/lib/deliverables/file-types";
 import { formatFileSize } from "@/lib/deliverables/format";
 import { uploadDeliverable } from "@/lib/deliverables/upload";
+import { useUnsavedWork } from "@/lib/unsaved-work";
 import { cn } from "@/lib/utils";
 
 type Phase = "waiting" | "uploading" | "checking" | "done" | "error";
@@ -44,13 +45,8 @@ export function DeliverableUploader({ sectionId }: { sectionId: string }) {
     (item) => item.phase === "waiting" || item.phase === "uploading" || item.phase === "checking",
   );
 
-  // Leaving the page would cut the upload short.
-  useEffect(() => {
-    if (!busy) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [busy]);
+  // Leaving the page would cut the upload short. The update banner waits too.
+  useUnsavedWork(busy);
 
   function update(key: number, patch: Partial<UploadItem>) {
     setItems((list) => list.map((item) => (item.key === key ? { ...item, ...patch } : item)));

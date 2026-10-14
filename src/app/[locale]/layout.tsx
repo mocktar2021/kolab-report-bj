@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { MotionProvider } from "@/components/motion/motion-provider";
+import { UpdateBanner } from "@/components/pwa/update-banner";
 import { THEME_COLORS } from "@/components/theme/theme-config";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { routing } from "@/i18n/routing";
@@ -90,6 +91,7 @@ export default async function LocaleLayout({
         <ThemeProvider>
           <NextIntlClientProvider>
             <MotionProvider>{children}</MotionProvider>
+            <UpdateBanner />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

@@ -74,13 +74,17 @@ function contentSecurityPolicy() {
 
 const withPWA = withPWAInit({
   dest: "public",
-  register: true,
+  // UpdateBanner (src/components/pwa) registers the service worker itself, so
+  // it listens for a waiting version before registering (KRB-156).
+  register: false,
   // The service worker is disabled in dev unless explicitly requested,
   // otherwise stale caches make local development painful.
   disable: process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_PWA_ENABLE_IN_DEV !== "true",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
+  // Reloading every page when the network comes back would throw away text
+  // being edited. Only the offline page reloads itself (ReloadWhenOnline).
+  reloadOnOnline: false,
   cacheStartUrl: true,
   dynamicStartUrl: true,
   fallbacks: {
@@ -90,6 +94,11 @@ const withPWA = withPWAInit({
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     disableDevLogs: true,
+    // A new version installs, then waits: open pages keep the code they
+    // started with. "Mettre à jour" in UpdateBanner sends SKIP_WAITING, and
+    // clientsClaim lets the new version take over the open pages right away.
+    skipWaiting: false,
+    clientsClaim: true,
     // Custom rules are evaluated before the defaults.
     runtimeCaching: [
       // These matchers are copied into sw.js as source text, so they must not
