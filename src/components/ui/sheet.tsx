@@ -4,7 +4,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DialogOverlay } from "./dialog";
+import { DialogOverlay, useReturnFocus } from "./dialog";
 
 // Side panel built on the Radix dialog: focus trap, Escape to close and
 // scroll lock come with it.
@@ -17,11 +17,12 @@ type SheetContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.C
 };
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, SheetContentProps>(
-  ({ className, children, closeLabel, ...props }, ref) => (
+  ({ className, children, closeLabel, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => (
     <DialogPrimitive.Portal>
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
+        {...useReturnFocus({ onOpenAutoFocus, onCloseAutoFocus })}
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-full w-[min(20rem,85vw)] flex-col border-r bg-card shadow-xl focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-200 data-[state=open]:duration-300 motion-safe:data-[state=closed]:slide-out-to-left motion-safe:data-[state=open]:slide-in-from-left",
           className,

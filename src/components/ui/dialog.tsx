@@ -24,14 +24,42 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+type AutoFocusHandlers = Pick<
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
+  "onOpenAutoFocus" | "onCloseAutoFocus"
+>;
+
+/**
+ * Gives the focus back to the element that had it when the dialog opened.
+ * Radix only returns it to a DialogTrigger; our dialogs open from plain
+ * buttons, menus and Ctrl+K, so without this the focus fell to the page on
+ * close. A handler passed by the caller runs first and can still prevent it.
+ */
+function useReturnFocus({ onOpenAutoFocus, onCloseAutoFocus }: AutoFocusHandlers): AutoFocusHandlers {
+  const opener = React.useRef<HTMLElement | null>(null);
+  return {
+    onOpenAutoFocus: (event) => {
+      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      onOpenAutoFocus?.(event);
+    },
+    onCloseAutoFocus: (event) => {
+      onCloseAutoFocus?.(event);
+      if (event.defaultPrevented || !opener.current?.isConnected) return;
+      event.preventDefault();
+      opener.current.focus();
+    },
+  };
+}
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      {...useReturnFocus({ onOpenAutoFocus, onCloseAutoFocus })}
       className={cn(
         "fixed inset-x-0 top-[12vh] z-50 mx-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border bg-popover/95 text-popover-foreground shadow-xl backdrop-blur-xl duration-200 focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:zoom-out-[0.98] motion-safe:data-[state=open]:zoom-in-[0.98] motion-safe:data-[state=open]:slide-in-from-top-2",
         className,
@@ -65,6 +93,7 @@ const DialogDescription = React.forwardRef<
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
 export {
+  useReturnFocus,
   Dialog,
   DialogClose,
   DialogContent,
