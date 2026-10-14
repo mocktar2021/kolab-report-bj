@@ -8,16 +8,22 @@
 --   since the editor loaded it (optimistic concurrency, error 40001).
 -- * reorder_report_sections: new order of a report's sections, in one
 --   statement, for owners and admins.
+-- * Section text is written through those functions only: users lose direct
+--   UPDATE on the text columns, and the text is capped at 100 000 characters.
 -- * report_exports and the private "exports" bucket: every .docx or PDF
---   export, kept for download through signed links. The app writes them with
---   the service role after checking the user manages the workspace.
+--   export, kept for download through signed links. The app claims a slot
+--   (claim_report_export), builds the file, then stores it with the service
+--   role, after checking the user manages the workspace.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
 -- Section text version
 -- -----------------------------------------------------------------------------
 alter table public.report_sections add column content_updated_at timestamptz;
+-- The backfill must not look like an edit of every section.
+alter table public.report_sections disable trigger set_updated_at;
 update public.report_sections set content_updated_at = updated_at;
+alter table public.report_sections enable trigger set_updated_at;
 alter table public.report_sections
   alter column content_updated_at set not null,
   alter column content_updated_at set default clock_timestamp();
@@ -49,6 +55,18 @@ create trigger set_content_updated_at
   for each row execute function private.set_content_updated_at();
 
 revoke all on function private.set_content_updated_at() from public, anon;
+
+-- The text, its version and the accepted AI draft change only through
+-- save_section_content and accept_ai_generation, which check the version and
+-- the length. Users keep direct UPDATE on the other columns their role
+-- allows; RLS and the expert guard still apply. NOT VALID: rows saved before
+-- this check are not scanned.
+revoke update on public.report_sections from authenticated;
+grant update (title, instructions, position, status, weight, assigned_to)
+  on public.report_sections to authenticated;
+alter table public.report_sections
+  add constraint report_sections_content_length
+  check (content is null or char_length(content) <= 100000) not valid;
 
 -- Saves the text of a section for its assigned expert or a manager, if its
 -- version is still p_expected_version. Empty text clears the section. A
@@ -203,14 +221,22 @@ create table public.report_exports (
   report_id      uuid not null,
   format         text not null check (format in ('docx', 'pdf')),
   file_name      text not null check (char_length(file_name) between 1 and 120),
+  -- pending while the file is built, ready once stored, failed otherwise.
+  -- Every attempt counts toward the hourly limit.
+  status         text not null default 'pending' check (status in ('pending', 'ready', 'failed')),
   -- {workspace_id}/{report_id}/{id}.{format} in the "exports" bucket.
-  storage_path   text not null unique,
-  size_bytes     bigint not null check (size_bytes > 0),
-  section_count  integer not null check (section_count >= 0),
+  storage_path   text unique,
+  size_bytes     bigint check (size_bytes > 0),
+  section_count  integer check (section_count >= 0),
   created_by     uuid references public.profiles (id) on delete set null,
   created_at     timestamptz not null default now(),
+  finished_at    timestamptz,
   foreign key (report_id, workspace_id)
-    references public.reports (id, workspace_id) on delete cascade
+    references public.reports (id, workspace_id) on delete cascade,
+  check (
+    status <> 'ready'
+    or (storage_path is not null and size_bytes is not null and section_count is not null and finished_at is not null)
+  )
 );
 
 comment on table public.report_exports is
@@ -229,6 +255,72 @@ create policy "report_exports: managers read"
 revoke all on public.report_exports from anon, authenticated;
 grant select on public.report_exports to authenticated;
 
+-- Reserves an export for p_user_id, whom the app checked manages the report's
+-- workspace, before the file is built. One export at a time per person and
+-- workspace, and p_hourly_limit per hour, failed ones included. A pending
+-- export older than two minutes is past the route's time limit: it died.
+-- Returns the new export id, or why there is none: notFound, busy or
+-- rateLimited.
+create or replace function public.claim_report_export(
+  p_report_id    uuid,
+  p_user_id      uuid,
+  p_format       text,
+  p_file_name    text,
+  p_hourly_limit integer
+)
+returns table (export_id uuid, refusal text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  report public.reports;
+  recent integer;
+  new_id uuid;
+begin
+  select * into report from public.reports r where r.id = p_report_id;
+  if not found then
+    return query select null::uuid, 'notFound'::text;
+    return;
+  end if;
+  perform pg_advisory_xact_lock(
+    hashtextextended('report_exports/' || report.workspace_id::text || '/' || p_user_id::text, 0)
+  );
+
+  update public.report_exports e
+  set status = 'failed', finished_at = now()
+  where e.workspace_id = report.workspace_id
+    and e.created_by = p_user_id
+    and e.status = 'pending'
+    and e.created_at < now() - interval '2 minutes';
+  if exists (
+    select 1 from public.report_exports e
+    where e.workspace_id = report.workspace_id and e.created_by = p_user_id and e.status = 'pending'
+  ) then
+    return query select null::uuid, 'busy'::text;
+    return;
+  end if;
+
+  select count(*) into recent
+  from public.report_exports e
+  where e.workspace_id = report.workspace_id
+    and e.created_by = p_user_id
+    and e.created_at > now() - interval '1 hour';
+  if recent >= p_hourly_limit then
+    return query select null::uuid, 'rateLimited'::text;
+    return;
+  end if;
+
+  insert into public.report_exports (workspace_id, report_id, format, file_name, created_by)
+  values (report.workspace_id, report.id, p_format, p_file_name, p_user_id)
+  returning id into new_id;
+  return query select new_id, null::text;
+end;
+$$;
+
+revoke all on function public.claim_report_export(uuid, uuid, text, text, integer) from public, anon, authenticated;
+grant execute on function public.claim_report_export(uuid, uuid, text, text, integer) to service_role;
+
 -- Private bucket, no policies: the app uploads with the service role and
 -- hands out short signed links after its own checks.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -242,4 +334,8 @@ values (
     'application/pdf'
   ]
 )
-on conflict (id) do nothing;
+-- A bucket already there, from a manual setup, is made private as well.
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;

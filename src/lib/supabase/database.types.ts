@@ -501,12 +501,14 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           file_name: string;
+          finished_at: string | null;
           format: string;
           id: string;
           report_id: string;
-          section_count: number;
-          size_bytes: number;
-          storage_path: string;
+          section_count: number | null;
+          size_bytes: number | null;
+          status: string;
+          storage_path: string | null;
           workspace_id: string;
         };
         ComputedFields: never;
@@ -514,24 +516,28 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           file_name: string;
+          finished_at?: string | null;
           format: string;
           id?: string;
           report_id: string;
-          section_count: number;
-          size_bytes: number;
-          storage_path: string;
+          section_count?: number | null;
+          size_bytes?: number | null;
+          status?: string;
+          storage_path?: string | null;
           workspace_id: string;
         };
         Update: {
           created_at?: string;
           created_by?: string | null;
           file_name?: string;
+          finished_at?: string | null;
           format?: string;
           id?: string;
           report_id?: string;
-          section_count?: number;
-          size_bytes?: number;
-          storage_path?: string;
+          section_count?: number | null;
+          size_bytes?: number | null;
+          status?: string;
+          storage_path?: string | null;
           workspace_id?: string;
         };
         Relationships: [
@@ -999,6 +1005,19 @@ export type Database = {
         }[];
       };
       claim_ai_cost_alert: { Args: { p_threshold: number }; Returns: number };
+      claim_report_export: {
+        Args: {
+          p_file_name: string;
+          p_format: string;
+          p_hourly_limit: number;
+          p_report_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          export_id: string;
+          refusal: string;
+        }[];
+      };
       create_workspace_with_owner: {
         Args: { organization_name: string; report_title: string; workspace_name: string };
         Returns: {

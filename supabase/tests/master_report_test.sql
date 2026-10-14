@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(35);
+select plan(46);
 
 create temp table versions (name text primary key, at timestamptz);
 grant all on versions to authenticated, anon;
@@ -29,8 +29,15 @@ select ok(pg_temp.version_of(pg_temp.id('s1')) > pg_temp.kept('s1'), 'changing t
 select pg_temp.keep('s1', pg_temp.version_of(pg_temp.id('s1')));
 
 select pg_temp.act_as('expert');
-update public.report_sections set content_updated_at = '2000-01-01' where id = pg_temp.id('s1');
-select is(pg_temp.version_of(pg_temp.id('s1')), pg_temp.kept('s1'), 'users cannot set the version themselves');
+select throws_ok($$update public.report_sections set content_updated_at = '2000-01-01' where id = pg_temp.id('s1')$$,
+  '42501', null, 'users cannot set the version themselves');
+select throws_ok($$update public.report_sections set content = 'Sans version' where id = pg_temp.id('s1')$$,
+  '42501', null, 'users cannot write the text without the version check');
+
+reset role;
+select set_config('request.jwt.claims', '', true);
+select throws_ok($$update public.report_sections set content = repeat('a', 100001) where id = pg_temp.id('s1')$$,
+  '23514', null, 'the table refuses text longer than 100 000 characters');
 
 -- Saving the text -----------------------------------------------------------------
 reset role;
@@ -142,9 +149,9 @@ select throws_ok(
 
 -- Exports ---------------------------------------------------------------------------
 reset role;
-insert into public.report_exports (workspace_id, report_id, format, file_name, storage_path, size_bytes, section_count, created_by)
-values (pg_temp.id('w1'), pg_temp.id('r1'), 'docx', 'rapport-a-2026-10-14.docx',
-        pg_temp.id('w1') || '/' || pg_temp.id('r1') || '/x.docx', 1200, 3, pg_temp.id('admin'));
+insert into public.report_exports (workspace_id, report_id, format, file_name, status, storage_path, size_bytes, section_count, created_by, finished_at)
+values (pg_temp.id('w1'), pg_temp.id('r1'), 'docx', 'rapport-a-2026-10-14.docx', 'ready',
+        pg_temp.id('w1') || '/' || pg_temp.id('r1') || '/x.docx', 1200, 3, pg_temp.id('admin'), now());
 
 select pg_temp.act_as('admin');
 select is((select count(*)::int from public.report_exports), 1, 'owners and admins see the exports of their workspace');
@@ -157,6 +164,44 @@ select throws_ok(
   $$insert into public.report_exports (workspace_id, report_id, format, file_name, storage_path, size_bytes, section_count)
     values (pg_temp.id('w1'), pg_temp.id('r1'), 'pdf', 'x.pdf', 'w/r/y.pdf', 10, 1)$$,
   '42501', null, 'users cannot record an export themselves');
+
+-- Claiming an export --------------------------------------------------------------
+create temp table claims (name text primary key, id uuid);
+create or replace function pg_temp.claim(name text, who text, hourly integer) returns text
+language plpgsql as $$
+declare
+  result record;
+begin
+  select * into result from public.claim_report_export(pg_temp.id('r1'), pg_temp.id(who), 'pdf', 'rapport-a.pdf', hourly);
+  if result.export_id is not null then
+    insert into claims values (name, result.export_id);
+    return 'claimed';
+  end if;
+  return result.refusal;
+end;
+$$;
+
+reset role;
+select set_config('request.jwt.claims', '', true);
+select is(pg_temp.claim('a', 'admin', 3), 'claimed', 'a manager gets an export slot');
+select is(pg_temp.claim('x', 'admin', 3), 'busy', 'one export at a time per person');
+update public.report_exports set status = 'failed', finished_at = now() where id = (select id from claims where name = 'a');
+select is(pg_temp.claim('b', 'admin', 3), 'claimed', 'the next one starts once the last ended');
+update public.report_exports set status = 'failed', finished_at = now() where id = (select id from claims where name = 'b');
+select is(pg_temp.claim('c', 'admin', 3), 'rateLimited', 'failed exports count toward the hourly limit');
+
+select is(pg_temp.claim('d', 'owner', 3), 'claimed', 'the limit is per person');
+update public.report_exports set created_at = now() - interval '3 minutes' where id = (select id from claims where name = 'd');
+select is(pg_temp.claim('e', 'owner', 3), 'claimed', 'an export stuck for more than two minutes no longer blocks');
+select is((select status from public.report_exports where id = (select id from claims where name = 'd')), 'failed',
+  'the stuck export is marked failed');
+select is(
+  (select refusal from public.claim_report_export(gen_random_uuid(), pg_temp.id('admin'), 'pdf', 'x.pdf', 3)),
+  'notFound', 'an unknown report has no export');
+select pg_temp.act_as('admin');
+select throws_ok(
+  $$select * from public.claim_report_export(pg_temp.id('r1'), pg_temp.id('admin'), 'pdf', 'x.pdf', 3)$$,
+  '42501', null, 'users cannot claim exports themselves');
 
 reset role;
 select results_eq(
