@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Inter_Tight } from "next/font/google";
 import { notFound } from "next/navigation";
-import { hasLocale, NextIntlClientProvider } from "next-intl";
+import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { THEME_COLORS } from "@/components/theme/theme-config";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { ClientMessages } from "@/i18n/client-messages-provider";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -88,9 +89,10 @@ export default async function LocaleLayout({
     >
       <body className="min-h-dvh">
         <ThemeProvider>
-          <NextIntlClientProvider>
+          {/* Shared messages only: each part of the app sends its own (KRB-154). */}
+          <ClientMessages locale={locale} scope="root">
             <MotionProvider>{children}</MotionProvider>
-          </NextIntlClientProvider>
+          </ClientMessages>
         </ThemeProvider>
       </body>
     </html>

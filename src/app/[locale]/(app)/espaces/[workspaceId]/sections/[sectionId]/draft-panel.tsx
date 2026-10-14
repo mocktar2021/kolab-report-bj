@@ -56,7 +56,7 @@ type DraftPanelProps = {
 /** Draft generation and review, for the people who edit the section. */
 export function DraftPanel({ workspaceId, sectionId, data, manager }: DraftPanelProps) {
   const t = useTranslations("AiDraft");
-  const tPrompts = useTranslations("Prompts");
+  const tSchemas = useTranslations("Prompts.outputSchemas");
   const router = useRouter();
 
   const templates = orderTemplates(data.templates);
@@ -284,9 +284,7 @@ export function DraftPanel({ workspaceId, sectionId, data, manager }: DraftPanel
                 </NativeSelect>
                 <div id="draft-template-help" className="space-y-0.5 text-xs text-muted-foreground">
                   {template.description ? <p className="break-words">{template.description}</p> : null}
-                  <p>
-                    {t("templateType", { type: tPrompts(`outputSchemas.${template.outputSchema}.label`) })}
-                  </p>
+                  <p>{t("templateType", { type: tSchemas(`${template.outputSchema}.label`) })}</p>
                 </div>
               </div>
             ) : (
