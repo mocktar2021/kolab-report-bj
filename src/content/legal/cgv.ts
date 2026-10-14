@@ -141,8 +141,8 @@ export const cgv: LegalDocument = {
       id: "essai-gratuit",
       title: "Essai gratuit",
       body: [
-        `Une organisation peut essayer KolabReport gratuitement pendant ${trial.days} jours, sans carte bancaire, dans les limites du [tableau des offres](#offres-et-prix). Un seul essai est accordé par organisation.`,
-        "À la fin de l'essai, le client peut commander une offre. Sans commande, l'espace passe en lecture seule : les membres peuvent encore lire les rapports et les propriétaires et administrateurs peuvent les exporter, mais personne ne peut plus les modifier.",
+        `Une organisation peut essayer KolabReport gratuitement pendant ${trial.days} jours, sans carte bancaire, dans les limites du [tableau des offres](#offres-et-prix). Un seul essai est accordé par client : une nouvelle organisation créée par le même propriétaire n'ouvre pas de nouvel essai.`,
+        `À la fin de l'essai, le client peut commander une offre. Sans commande, le [délai de grâce](#fin-de-periode) de ${graceDays} jours s'applique, puis l'espace passe en lecture seule : les membres peuvent encore lire les rapports et les propriétaires et administrateurs peuvent les exporter, mais personne ne peut plus les modifier.`,
         "L'essai ne devient jamais un abonnement payant sans action du client.",
       ],
     },
@@ -198,7 +198,8 @@ export const cgv: LegalDocument = {
       title: "Pack IA",
       body: [
         `Le Pack IA ajoute ${packIa.aiDrafts} brouillons IA pour ${fcfaHt(packIa.price)}. Il s'achète en plus d'une offre payante en cours : Indépendant, Cabinet, Institution ou Pass Mission.`,
-        "Les brouillons du pack servent une fois le quota de l'offre épuisé. Ils restent utilisables tant que le client a une offre payante en cours.",
+        "Les brouillons du pack servent une fois le quota de l'offre épuisé. Ils restent valables 12 mois après l'achat, tant que le client a une offre payante en cours.",
+        "Le Pack IA ne s'achète pas pendant l'essai gratuit. Dix packs au plus peuvent être en cours en même temps.",
       ],
     },
     {
