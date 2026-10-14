@@ -21,6 +21,28 @@ test("PWA manifest and service worker are served", async ({ request }) => {
   expect((await request.get("/sw.js")).ok()).toBe(true);
 });
 
+test("the favicon and the app icons are served", async ({ page, request }) => {
+  await page.goto("/fr");
+  await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute(
+    "href",
+    "/icons/icon.svg",
+  );
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+    "href",
+    "/icons/apple-touch-icon.png",
+  );
+
+  for (const path of [
+    "/favicon.ico",
+    "/icons/icon.svg",
+    "/icons/icon-192.png",
+    "/icons/icon-maskable-512.png",
+  ]) {
+    const response = await request.get(path);
+    expect(response.ok(), path).toBe(true);
+  }
+});
+
 test("the root redirects to /fr", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/fr$/);

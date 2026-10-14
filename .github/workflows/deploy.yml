@@ -88,6 +88,9 @@ jobs:
         run: npx supabase db push
 
       - name: Build with the Preview settings (staging Supabase)
+        env:
+          # Fixed per environment, so server action ids survive a deploy (KRB-169).
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
         run: |
           npx --yes "$VERCEL_CLI" pull --yes --environment=preview --token="$VERCEL_TOKEN"
           npx --yes "$VERCEL_CLI" build --token="$VERCEL_TOKEN"
@@ -201,6 +204,9 @@ jobs:
           npx supabase db push
 
       - name: Build with the Production settings
+        env:
+          # Fixed per environment, so server action ids survive a deploy (KRB-169).
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
         run: |
           npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="$VERCEL_TOKEN"
           npx --yes "$VERCEL_CLI" build --prod --token="$VERCEL_TOKEN"
