@@ -91,7 +91,7 @@ For the backups and the advisors check (KRB-141, KRB-142, KRB-144), on `producti
 | `BACKUP_S3_PROVIDER` | variable, optional | rclone provider name of the off-site bucket. Default `Cloudflare`. |
 | `BACKUP_MAX_DELETE` | variable, optional | Most files one run may remove from a bucket's mirror before it stops with an error. Default `200`. Raise it for one run after a large deletion ([`backups.md`](operations/backups.md)). |
 
-Every deploy ends with the smoke tests (KRB-161). Their settings go on the same two environments: `SMOKE_BASE_URL`, the smoke account (`SMOKE_EMAIL`, `SMOKE_PASSWORD`) and the optional ones, listed in [`docs/operations/smoke-tests.md`](operations/smoke-tests.md#setup-once-per-environment) with the one-time setup of the account and its workspace. Without them only the public checks run.
+Every deploy ends with the smoke tests (KRB-161). Their settings go on the same two environments: `SMOKE_BASE_URL`, the smoke account (`SMOKE_EMAIL`, `SMOKE_PASSWORD`) and the optional ones, listed in [`docs/operations/smoke-tests.md`](operations/smoke-tests.md#setup-once-per-environment) with the one-time setup of the account and its workspace. Without `SMOKE_BASE_URL` the smoke run is skipped with a warning; without the account, only the public checks run.
 
 `supabase-advisors.yml` reuses `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` from the first table. The repository variable **`ADVISORS_ENVIRONMENTS`** (optional, a JSON list such as `["staging"]`) picks the environments it checks. Without it, it checks `staging` and `production`.
 

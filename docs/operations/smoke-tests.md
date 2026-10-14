@@ -67,7 +67,7 @@ Their profile goes with them. Never click the confirmation links. Each sign-up a
 
 | Name | Kind | Value |
 | --- | --- | --- |
-| `SMOKE_BASE_URL` | variable | Public URL of the environment: `https://kolabreport.mocktar.com` on staging, the production domain on production. Without it the run uses the URL the deploy step answered, which on production is a generated deployment URL behind Vercel Authentication |
+| `SMOKE_BASE_URL` | variable | Public URL of the environment: `https://kolabreport.mocktar.com` on staging, the production domain on production. Without it the run is skipped with a warning, so deploys stay green until the setup is done. The URL the deploy step answers is never used: Vercel Authentication protects generated deployment URLs |
 | `SMOKE_EMAIL` | secret | E-mail of the smoke account |
 | `SMOKE_PASSWORD` | secret | Its password |
 | `SMOKE_WORKSPACE_ID` | variable, optional | Id of the smoke workspace, from the URL of its members page `/fr/espaces/<id>/membres`. Without it, the workspace is found by name |
