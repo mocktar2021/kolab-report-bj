@@ -91,6 +91,8 @@ For the backups and the advisors check (KRB-141, KRB-142, KRB-144), on `producti
 | `BACKUP_S3_PROVIDER` | variable, optional | rclone provider name of the off-site bucket. Default `Cloudflare`. |
 | `BACKUP_MAX_DELETE` | variable, optional | Most files one run may remove from a bucket's mirror before it stops with an error. Default `200`. Raise it for one run after a large deletion ([`backups.md`](operations/backups.md)). |
 
+Every deploy ends with the smoke tests (KRB-161). Their settings go on the same two environments: `SMOKE_BASE_URL`, the smoke account (`SMOKE_EMAIL`, `SMOKE_PASSWORD`) and the optional ones, listed in [`docs/operations/smoke-tests.md`](operations/smoke-tests.md#setup-once-per-environment) with the one-time setup of the account and its workspace. Without `SMOKE_BASE_URL` the smoke run is skipped with a warning; without the account, only the public checks run.
+
 `supabase-advisors.yml` reuses `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` from the first table. The repository variable **`ADVISORS_ENVIRONMENTS`** (optional, a JSON list such as `["staging"]`) picks the environments it checks. Without it, it checks `staging` and `production`.
 
 ## Secrets rules
@@ -143,6 +145,7 @@ The runbooks are in `docs/operations/`:
 
 - [`backups.md`](operations/backups.md): what Supabase backs up per plan, our RPO and RTO, setup, the restore drill and its log.
 - [`monitoring.md`](operations/monitoring.md): uptime check on `/api/health`, Sentry, logs, advisors and database metrics.
+- [`smoke-tests.md`](operations/smoke-tests.md): the checks that run after each deploy, their setup, what they leave behind and what to do when they fail.
 
 ## Auth e-mails
 
@@ -169,10 +172,11 @@ Setup, per GitHub environment (`staging`, `production`):
 
 ## Releasing
 
-1. Merge to `master`. CI runs, then `deploy.yml` applies the migrations to staging and deploys staging. Check it.
+1. Merge to `master`. CI runs, then `deploy.yml` applies the migrations to staging, deploys staging and runs the smoke tests on it. Check it.
 2. Tag the commit: `git tag v0.3.0 <sha> && git push origin v0.3.0`. Or run **Deploy** by hand with target `production` from `master`.
 3. The **Check the release** job refuses a commit that is not on `master` or whose CI is not green, and lists the migrations added since the previous tag in the run summary.
 4. The production job applies the migrations to production, then builds with the production settings and deploys. With required reviewers turned on, it first waits for your approval in the run.
+5. The smoke tests run on production. When they fail, the run fails: [`docs/operations/smoke-tests.md`](operations/smoke-tests.md#when-it-fails) says what to check, and when to roll back.
 
 ## Writing migrations
 

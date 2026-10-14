@@ -2,7 +2,8 @@ name: Deploy
 
 # Staging: after CI passes on master, migrations go to the staging Supabase
 # project, then the app goes to Vercel. Production: on a v* tag or a manual
-# run from master, same order.
+# run from master, same order. Each deploy ends with the smoke tests
+# (smoke.yml, docs/operations/smoke-tests.md): when they fail, the run fails.
 # Nothing runs until the repository variable DEPLOY_ENABLED is "true".
 # Setup and runbook: docs/deployment.md.
 
@@ -42,6 +43,8 @@ jobs:
     timeout-minutes: 20
     environment:
       name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    outputs:
       url: ${{ steps.deploy.outputs.url }}
     # Never cancel a run that may be halfway through a migration.
     concurrency:
@@ -176,6 +179,8 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     concurrency:
       group: deploy-production
       cancel-in-progress: false
@@ -233,3 +238,30 @@ jobs:
           url=$(npx --yes "$VERCEL_CLI" deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Production: $url" >> "$GITHUB_STEP_SUMMARY"
+
+  # The smoke tests run on the environment just deployed, with its SMOKE_*
+  # settings. secrets: inherit lets the called job read that environment's
+  # secrets; it only uses the SMOKE_* ones and the Vercel bypass secret.
+  smoke-staging:
+    name: Smoke tests on staging
+    needs: staging
+    permissions:
+      contents: read
+    uses: ./.github/workflows/smoke.yml
+    with:
+      environment: staging
+      url: ${{ needs.staging.outputs.url }}
+      sha: ${{ github.event.workflow_run.head_sha || github.sha }}
+    secrets: inherit
+
+  smoke-production:
+    name: Smoke tests on production
+    needs: production
+    permissions:
+      contents: read
+    uses: ./.github/workflows/smoke.yml
+    with:
+      environment: production
+      url: ${{ needs.production.outputs.url }}
+      sha: ${{ github.sha }}
+    secrets: inherit

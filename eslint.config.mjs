@@ -15,6 +15,9 @@ const eslintConfig = [
       ".claude/worktrees/**",
       "build/**",
       ".lighthouseci/**",
+      // Playwright output, such as the HTML report of the smoke tests.
+      "playwright-report/**",
+      "test-results/**",
       "node_modules/**",
       "public/sw.js",
       "public/workbox-*.js",

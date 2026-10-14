@@ -1,6 +1,6 @@
 # Continuous integration
 
-Every pull request and every push to `master` runs two workflows in GitHub Actions. A third one, `deploy.yml`, ships `master` to staging and tags to production (see `docs/deployment.md`).
+Every pull request and every push to `master` runs two workflows in GitHub Actions. A third one, `deploy.yml`, ships `master` to staging and tags to production, then runs the smoke tests (`smoke.yml`) on what it deployed (see `docs/deployment.md` and `docs/operations/smoke-tests.md`).
 
 ## CI (`.github/workflows/ci.yml`)
 
