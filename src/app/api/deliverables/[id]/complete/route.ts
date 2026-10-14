@@ -33,7 +33,7 @@ export async function POST(_request: Request, { params }: { params: Params }) {
   const { data: upload } = await supabase
     .from("deliverables")
     .select(
-      "id, workspace_id, uploaded_by, storage_path, file_name, mime_type, size_bytes, uploaded_at, section:report_sections(assigned_to)",
+      "id, workspace_id, uploaded_by, storage_path, file_name, mime_type, size_bytes, uploaded_at, section:report_sections(assigned_to, report:reports(status))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -42,11 +42,16 @@ export async function POST(_request: Request, { params }: { params: Params }) {
   if (upload.uploaded_at) return NextResponse.json({ ok: true }, { headers: NO_STORE });
 
   // The signed URL stays valid for 2 hours. Someone taken off the section
-  // in the meantime does not get to keep the file.
+  // in the meantime does not get to keep the file, and neither does anyone
+  // once the report is final (KRB-20).
   const access = await requireWorkspaceRole(upload.workspace_id);
   if (!access || !canEditSection(access, upload.section?.assigned_to ?? null)) {
     await discardUpload(upload);
     return errorResponse(403, "forbidden");
+  }
+  if (upload.section?.report?.status === "final") {
+    await discardUpload(upload);
+    return errorResponse(403, "reportFinal");
   }
 
   const check = await checkStoredFile(upload);

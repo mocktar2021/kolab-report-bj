@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildExport, exportFileName, ExportTooLargeError } from "@/lib/export";
-import { EXPORT_FORMATS, EXPORT_MIME_TYPES, type ExportDocument } from "@/lib/export/types";
-import {
-  EXPORTS_BUCKET,
-  EXPORTS_PER_HOUR,
-  exportDownloadPath,
-  NO_STORE,
-  type ExportErrorKey,
-} from "@/lib/reports/exports";
-import { sectionStatusSchema } from "@/lib/sections";
+import { EXPORT_FORMATS } from "@/lib/export/types";
+import { loadExportDocument, markExportFailed, storeExportFile } from "@/lib/reports/export-file";
+import { EXPORTS_PER_HOUR, exportDownloadPath, NO_STORE, type ExportErrorKey } from "@/lib/reports/exports";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { getWorkspaceMembers } from "@/lib/workspaces/members";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
@@ -81,38 +74,12 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   // Every way out from here marks the attempt, so it counts and never stays pending.
   const fail = async (status: number, error: ExportErrorKey) => {
-    await admin
-      .from("report_exports")
-      .update({ status: "failed", finished_at: new Date().toISOString() })
-      .eq("id", exportId)
-      .eq("workspace_id", report.workspace_id);
+    await markExportFailed(admin, exportId, report.workspace_id);
     return failure(status, error);
   };
 
-  const [{ data: sections }, { data: workspace }, members] = await Promise.all([
-    supabase
-      .from("report_sections")
-      .select("title, status, assigned_to, content")
-      .eq("report_id", report.id)
-      .order("position", { ascending: true })
-      .order("created_at", { ascending: true }),
-    supabase.from("workspaces").select("name").eq("id", report.workspace_id).maybeSingle(),
-    getWorkspaceMembers(report.workspace_id),
-  ]);
-  if (!sections || !workspace || !members) return fail(500, "generic");
-  const names = new Map(members.map((member) => [member.userId, member.name]));
-
-  const doc: ExportDocument = {
-    title: report.title,
-    workspaceName: workspace.name,
-    generatedAt,
-    sections: sections.map((section) => ({
-      title: section.title,
-      status: sectionStatusSchema.catch("not_started").parse(section.status),
-      assigneeName: section.assigned_to ? (names.get(section.assigned_to) ?? null) : null,
-      markdown: section.content,
-    })),
-  };
+  const doc = await loadExportDocument(supabase, report, generatedAt);
+  if (!doc) return fail(500, "generic");
 
   let file: Buffer;
   try {
@@ -124,31 +91,14 @@ export async function POST(request: Request, { params }: { params: Params }) {
     return fail(500, "generic");
   }
 
-  const storagePath = `${report.workspace_id}/${report.id}/${exportId}.${format}`;
-  const { error: uploadError } = await admin.storage
-    .from(EXPORTS_BUCKET)
-    .upload(storagePath, file, { contentType: EXPORT_MIME_TYPES[format], upsert: false });
-  if (uploadError) {
-    console.error("exports: could not store the file", uploadError.message);
-    return fail(500, "generic");
-  }
-
-  const { error: readyError } = await admin
-    .from("report_exports")
-    .update({
-      status: "ready",
-      storage_path: storagePath,
-      size_bytes: file.length,
-      section_count: doc.sections.length,
-      finished_at: new Date().toISOString(),
-    })
-    .eq("id", exportId)
-    .eq("workspace_id", report.workspace_id);
-  if (readyError) {
-    console.error("exports: could not record the export", readyError.message);
-    await admin.storage.from(EXPORTS_BUCKET).remove([storagePath]);
-    return fail(500, "generic");
-  }
+  const stored = await storeExportFile(admin, {
+    exportId,
+    report,
+    format,
+    file,
+    sectionCount: doc.sections.length,
+  });
+  if (!stored) return fail(500, "generic");
 
   return NextResponse.json(
     { id: exportId, fileName, url: exportDownloadPath(exportId) },

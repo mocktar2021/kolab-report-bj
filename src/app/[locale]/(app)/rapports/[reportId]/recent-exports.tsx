@@ -1,5 +1,5 @@
 import { useFormatter, useTranslations } from "next-intl";
-import { Download } from "lucide-react";
+import { Download, Lock } from "lucide-react";
 import { formatFileSize } from "@/lib/deliverables/format";
 import type { ReportExportRow } from "@/lib/reports/exports";
 
@@ -54,7 +54,13 @@ export function RecentExports({ exports }: { exports: readonly RecentExport[] })
                   })}
                 </span>
               </a>
-              <p className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-muted-foreground">
+              <p className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-muted-foreground">
+                {file.kind === "final" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+                    <Lock className="size-3" aria-hidden="true" />
+                    {t("finalLabel")}
+                  </span>
+                ) : null}
                 <span>{t(`formats.${file.format}`)}</span>
                 <span>{formatFileSize(file.sizeBytes, format)}</span>
                 <time dateTime={file.createdAt}>

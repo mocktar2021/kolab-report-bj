@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Check, LoaderCircle } from "lucide-react";
 import type { ReorderResult } from "./actions";
@@ -14,6 +14,11 @@ type MasterReportProps = {
   sections: ReportSection[];
   assignees: Assignee[];
   canManage: boolean;
+  /**
+   * The report is final (KRB-20): no reordering, assignment, new section or
+   * edit link, for managers too.
+   */
+  frozen?: boolean;
   /** Shown between the table of contents and the text, for managers. */
   addSectionForm?: ReactNode;
 };
@@ -28,23 +33,29 @@ export function MasterReport({
   sections,
   assignees,
   canManage,
+  frozen = false,
   addSectionForm,
 }: MasterReportProps) {
   const order = useSectionOrder(reportId, sections);
+  const manage = canManage && !frozen;
+  const shown = useMemo(
+    () => (frozen ? order.sections.map((section) => ({ ...section, canEdit: false })) : order.sections),
+    [frozen, order.sections],
+  );
 
   return (
     <>
       <SectionList
         workspaceId={workspaceId}
-        sections={order.sections}
+        sections={shown}
         assignees={assignees}
-        canManage={canManage}
-        onReorder={canManage ? order.reorder : undefined}
+        canManage={manage}
+        onReorder={manage ? order.reorder : undefined}
         reorderBusy={order.saving}
-        reorderStatus={canManage ? <ReorderStatus saving={order.saving} result={order.result} /> : undefined}
+        reorderStatus={manage ? <ReorderStatus saving={order.saving} result={order.result} /> : undefined}
       />
-      {addSectionForm}
-      <ReportDocument workspaceId={workspaceId} sections={order.sections} />
+      {manage ? addSectionForm : null}
+      <ReportDocument workspaceId={workspaceId} sections={shown} />
     </>
   );
 }

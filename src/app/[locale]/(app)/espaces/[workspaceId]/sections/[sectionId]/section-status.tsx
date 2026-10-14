@@ -11,7 +11,7 @@ export function SectionStatusControl({ sectionId, status }: { sectionId: string;
   const t = useTranslations("Deliverables");
   const tStatus = useTranslations("SectionStatus");
   const [optimistic, setOptimistic] = useOptimistic(status);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<"generic" | "reportFinal" | null>(null);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -28,16 +28,16 @@ export function SectionStatusControl({ sectionId, status }: { sectionId: string;
         aria-describedby={failed ? "section-status-error" : undefined}
         onChange={(event) => {
           const next = event.target.value as SectionStatus;
-          setFailed(false);
+          setFailed(null);
           startTransition(async () => {
             setOptimistic(next);
             // On success the action sends the page back with the new status, in
             // this same transition, so the select never shows the old value.
             try {
               const result = await updateSectionStatus(sectionId, next);
-              if (!result.ok) setFailed(true);
+              if (!result.ok) setFailed(result.error ?? "generic");
             } catch {
-              setFailed(true);
+              setFailed("generic");
             }
           });
         }}
@@ -50,7 +50,7 @@ export function SectionStatusControl({ sectionId, status }: { sectionId: string;
       </NativeSelect>
       {failed ? (
         <p id="section-status-error" role="alert" className="text-xs text-destructive">
-          {t("statusError")}
+          {failed === "reportFinal" ? t("statusReportFinal") : t("statusError")}
         </p>
       ) : null}
     </div>

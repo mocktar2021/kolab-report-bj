@@ -10,6 +10,7 @@ import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { NavItems } from "./nav-items";
+import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
 import { useSidebarCollapsed } from "./sidebar-state";
 import { UserAvatar } from "./user-avatar";
@@ -24,11 +25,18 @@ type SidebarProps = {
   user: { name: string; email: string };
   workspaces: MyWorkspace[];
   currentWorkspaceId: string | null;
+  unreadNotifications: number;
   onOpenPalette: () => void;
 };
 
 /** Desktop navigation (lg and up). Width follows <html data-sidebar>. */
-export function Sidebar({ user, workspaces, currentWorkspaceId, onOpenPalette }: SidebarProps) {
+export function Sidebar({
+  user,
+  workspaces,
+  currentWorkspaceId,
+  unreadNotifications,
+  onOpenPalette,
+}: SidebarProps) {
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const { collapsed, toggle } = useSidebarCollapsed();
@@ -39,10 +47,12 @@ export function Sidebar({ user, workspaces, currentWorkspaceId, onOpenPalette }:
       id={SIDEBAR_ID}
       className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/60 backdrop-blur-md transition-[width] duration-300 ease-out-expo lg:flex sidebar-collapsed:w-[4.5rem]"
     >
-      <div className="flex h-16 shrink-0 items-center px-5 sidebar-collapsed:justify-center sidebar-collapsed:px-0">
+      {/* Collapsed, the bell goes under the logo: the rail is too narrow for both. */}
+      <div className="flex h-16 shrink-0 items-center justify-between gap-2 pl-5 pr-3 sidebar-collapsed:h-auto sidebar-collapsed:flex-col sidebar-collapsed:justify-center sidebar-collapsed:px-0 sidebar-collapsed:py-3">
         <Link href="/tableau-de-bord" aria-label={t("home")} className="rounded-lg">
           <Logo wordmarkClassName="sidebar-collapsed:sr-only" />
         </Link>
+        <NotificationBell unread={unreadNotifications} />
       </div>
 
       <div className="space-y-3 px-3">

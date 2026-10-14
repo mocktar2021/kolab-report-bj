@@ -1,6 +1,7 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { initialsOf } from "@/components/app-shell/user-avatar";
+import { ReportStatusBadge } from "@/components/report-status-badge";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
 import type { AssigneeProgress, WorkspaceReport } from "@/lib/dashboard";
@@ -62,9 +63,12 @@ function ReportCard({ report }: { report: WorkspaceReport }) {
                 {report.title}
               </Link>
             </h3>
-            <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-              {t("sections", { count: report.totalSections })}
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <ReportStatusBadge status={report.status} />
+              <p className="text-xs tabular-nums text-muted-foreground">
+                {t("sections", { count: report.totalSections })}
+              </p>
+            </div>
           </div>
           <span className="shrink-0 font-display text-[1.75rem] font-normal leading-none tracking-[-0.03em] tabular-nums text-foreground">
             {percent}

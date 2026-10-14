@@ -13,8 +13,8 @@ const ELI = "bbbbbbbb-2222-4222-8222-222222222222";
 const GONE = "cccccccc-3333-4333-8333-333333333333";
 
 const REPORTS = [
-  { id: AUDIT, title: "Audit énergétique du siège" },
-  { id: EMPTY, title: "Rapport vide" },
+  { id: AUDIT, title: "Audit énergétique du siège", status: "in_review" },
+  { id: EMPTY, title: "Rapport vide", status: "draft" },
 ];
 
 // What report_progress returns for the sections below. The report percent
@@ -70,6 +70,7 @@ describe("buildWorkspaceReports", () => {
       {
         id: AUDIT,
         title: "Audit énergétique du siège",
+        status: "in_review",
         totalSections: 6,
         counts: { not_started: 2, in_progress: 2, completed: 2 },
         completionPercent: 62.5,
@@ -110,6 +111,7 @@ describe("buildWorkspaceReports", () => {
       {
         id: EMPTY,
         title: "Rapport vide",
+        status: "draft",
         totalSections: 0,
         counts: { not_started: 0, in_progress: 0, completed: 0 },
         completionPercent: 0,
@@ -145,6 +147,7 @@ describe("buildWorkspaceReports", () => {
       {
         id: EMPTY,
         title: "Rapport vide",
+        status: "draft",
         totalSections: 0,
         counts: { not_started: 0, in_progress: 0, completed: 0 },
         completionPercent: 0,
@@ -171,6 +174,13 @@ describe("buildWorkspaceReports", () => {
         reports: REPORTS,
         progress: PROGRESS,
         sections: [{ ...SECTIONS[0], status: "archived" }],
+      }),
+    ).toBeNull();
+    expect(
+      buildWorkspaceReports({
+        reports: [{ ...REPORTS[0], status: "published" }],
+        progress: PROGRESS,
+        sections: SECTIONS,
       }),
     ).toBeNull();
     expect(buildWorkspaceReports({ reports: null, progress: PROGRESS, sections: SECTIONS })).toBeNull();
@@ -237,6 +247,8 @@ describe("getWorkspaceReports", () => {
     expect(calls.find((call) => call.table === "report_sections")?.columns).toContain(
       "assignee:profiles!report_sections_assigned_to_fkey(full_name, email)",
     );
+    expect(calls.find((call) => call.table === "reports")?.columns).toContain("status");
+    expect(reports?.map((report) => report.status)).toEqual(["in_review", "draft"]);
   });
 
   it.each(["reports", "report_progress", "report_sections"])("returns null when %s fails", async (table) => {

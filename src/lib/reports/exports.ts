@@ -24,6 +24,8 @@ export type ExportErrorKey =
 
 export type ReportExportRow = {
   id: string;
+  /** manual: from the export buttons. final: stored when the report became final (KRB-20). */
+  kind: "manual" | "final";
   format: ExportFormat;
   fileName: string;
   sizeBytes: number;
@@ -42,13 +44,14 @@ export async function listReportExports(reportId: string, limit = 10): Promise<R
   const supabase = await createClient();
   const { data } = await supabase
     .from("report_exports")
-    .select("id, format, file_name, size_bytes, created_at, created_by")
+    .select("id, kind, format, file_name, size_bytes, created_at, created_by")
     .eq("report_id", reportId.toLowerCase())
     .eq("status", "ready")
     .order("created_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 50));
   return (data ?? []).map((row) => ({
     id: row.id,
+    kind: row.kind === "final" ? "final" : "manual",
     format: row.format === "pdf" ? "pdf" : "docx",
     fileName: row.file_name,
     sizeBytes: Number(row.size_bytes),

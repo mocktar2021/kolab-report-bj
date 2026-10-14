@@ -12,7 +12,8 @@ type LocalOrder = {
  * Order of the sections on the page, moved right away when a manager drops a
  * section and saved in the background. One save runs at a time. A failed save
  * puts the server order back; "stale" also reloads the page data, since
- * another session changed the list.
+ * another session changed the list, and so does "reportFinal", since the
+ * report became final meanwhile.
  *
  * The local order only applies to the list it was made from: any new list from
  * the server (the save itself, or a refresh from another session) wins.
@@ -54,7 +55,7 @@ export function useSectionOrder<T extends { id: string }>(reportId: string, sect
       setResult(outcome);
       if (!outcome.ok) {
         setLocal(null);
-        if (outcome.error === "stale") router.refresh();
+        if (outcome.error === "stale" || outcome.error === "reportFinal") router.refresh();
       }
     },
     [reportId, sections, router],

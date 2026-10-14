@@ -13,6 +13,7 @@ import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { CommandPalette } from "./command-palette";
 import { NavItems } from "./nav-items";
+import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
 import { Sidebar } from "./sidebar";
 import { UserAvatar } from "./user-avatar";
@@ -22,6 +23,8 @@ type AppShellProps = {
   user: { name: string; email: string };
   workspaces: MyWorkspace[];
   currentWorkspaceId: string | null;
+  /** Unread notifications, for the bell. */
+  unreadNotifications: number;
   children: React.ReactNode;
 };
 
@@ -32,7 +35,13 @@ const iconButtonClass =
  * Frame for signed-in pages: sidebar from lg up, a top bar with a sheet menu
  * below lg, and the command palette on Cmd+K or Ctrl+K.
  */
-export function AppShell({ user, workspaces, currentWorkspaceId, children }: AppShellProps) {
+export function AppShell({
+  user,
+  workspaces,
+  currentWorkspaceId,
+  unreadNotifications,
+  children,
+}: AppShellProps) {
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -71,6 +80,7 @@ export function AppShell({ user, workspaces, currentWorkspaceId, children }: App
           user={user}
           workspaces={workspaces}
           currentWorkspaceId={currentWorkspaceId}
+          unreadNotifications={unreadNotifications}
           onOpenPalette={openPalette}
         />
       </Suspense>
@@ -88,12 +98,13 @@ export function AppShell({ user, workspaces, currentWorkspaceId, children }: App
         <Link href="/tableau-de-bord" aria-label={t("home")} className="rounded-lg">
           <Logo />
         </Link>
+        <NotificationBell unread={unreadNotifications} className="ml-auto" />
         <button
           type="button"
           onClick={openPalette}
           aria-label={t("searchLabel")}
           aria-keyshortcuts="Meta+K Control+K"
-          className={`${iconButtonClass} ml-auto`}
+          className={iconButtonClass}
         >
           <Search className="size-5" aria-hidden="true" />
         </button>

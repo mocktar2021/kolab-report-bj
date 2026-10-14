@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { completionPercent } from "@/lib/progress";
+import { reportStatusSchema, type ReportStatus } from "@/lib/reports/status";
 import { SECTION_STATUSES, sectionStatusSchema, type SectionStatus } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 
@@ -157,6 +158,8 @@ export type AssigneeProgress = {
 export type WorkspaceReport = {
   id: string;
   title: string;
+  /** Brouillon, En revue or Final (KRB-20). */
+  status: ReportStatus;
   totalSections: number;
   counts: StatusCounts;
   /** report_progress.completion_percent, 0 to 100 with one decimal. */
@@ -165,7 +168,7 @@ export type WorkspaceReport = {
   assignees: AssigneeProgress[];
 };
 
-const reportRowSchema = z.object({ id: z.string(), title: z.string() });
+const reportRowSchema = z.object({ id: z.string(), title: z.string(), status: reportStatusSchema });
 
 const reportProgressRowSchema = z.object({
   report_id: z.string(),
@@ -256,6 +259,7 @@ export function buildWorkspaceReports(rows: {
     return {
       id: report.id,
       title: report.title,
+      status: report.status,
       totalSections: row?.total_sections ?? 0,
       counts: {
         not_started: row?.not_started_sections ?? 0,
@@ -269,16 +273,17 @@ export function buildWorkspaceReports(rows: {
 }
 
 /**
- * Reports of a workspace, oldest first, with their weighted completion, the
- * count of sections in each status and the breakdown by expert. Uses the
- * signed-in user's client, so RLS applies. Returns null when a query fails.
+ * Reports of a workspace, oldest first, with their status, their weighted
+ * completion, the count of sections in each status and the breakdown by
+ * expert. Uses the signed-in user's client, so RLS applies. Returns null when
+ * a query fails.
  */
 export async function getWorkspaceReports(workspaceId: string): Promise<WorkspaceReport[] | null> {
   const supabase = await createClient();
   const [reports, progress, sections] = await Promise.all([
     supabase
       .from("reports")
-      .select("id, title")
+      .select("id, title, status")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true }),
     supabase

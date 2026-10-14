@@ -43,13 +43,15 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: section } = await supabase
     .from("report_sections")
-    .select("id, workspace_id, assigned_to")
+    .select("id, workspace_id, assigned_to, report:reports(status)")
     .eq("id", sectionId)
     .maybeSingle();
   if (!section) return errorResponse(404, "sectionNotFound");
 
   const access = await requireWorkspaceRole(section.workspace_id);
   if (!access || !canEditSection(access, section.assigned_to)) return errorResponse(403, "forbidden");
+  // A final report takes no new file (KRB-20). RLS refuses the row anyway.
+  if (section.report?.status === "final") return errorResponse(403, "reportFinal");
 
   await removeStaleUploads(supabase, user.id, section.id);
 

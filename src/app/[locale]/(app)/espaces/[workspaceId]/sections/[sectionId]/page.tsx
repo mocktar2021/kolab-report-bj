@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
+import { FrozenReportNotice } from "@/components/frozen-report-notice";
+import { ReportStatusBadge } from "@/components/report-status-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
 import { getDraftPanel } from "@/lib/ai/server";
 import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
+import { isReportFrozen } from "@/lib/reports/status";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -34,7 +37,7 @@ async function loadSection(workspaceId: string, sectionId: string) {
   const { data } = await supabase
     .from("report_sections")
     .select(
-      "id, title, instructions, status, assigned_to, content, content_updated_at, report:reports(id, title)",
+      "id, title, instructions, status, assigned_to, content, content_updated_at, report:reports(id, title, status)",
     )
     .eq("id", sectionId)
     .eq("workspace_id", workspaceId)
@@ -60,7 +63,9 @@ export default async function SectionPage({ params }: { params: Params }) {
   const access = await requireWorkspaceRole(workspaceId);
   if (!access) notFound();
 
-  const canEdit = canEditSection(access, section.assigned_to);
+  // A final report is read-only for everyone, owners included (KRB-20).
+  const frozen = isReportFrozen(section.report.status);
+  const canEdit = !frozen && canEditSection(access, section.assigned_to);
   const supabase = await createClient();
   const [{ data: files }, members, draft] = await Promise.all([
     supabase
@@ -109,13 +114,16 @@ export default async function SectionPage({ params }: { params: Params }) {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
-      <Link
-        href={`/rapports/${section.report.id}`}
-        className="inline-flex max-w-full items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <ArrowLeft className="size-4 shrink-0" aria-hidden="true" />
-        <span className="truncate">{section.report.title}</span>
-      </Link>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <Link
+          href={`/rapports/${section.report.id}`}
+          className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ArrowLeft className="size-4 shrink-0" aria-hidden="true" />
+          <span className="truncate">{section.report.title}</span>
+        </Link>
+        <ReportStatusBadge status={section.report.status} />
+      </div>
 
       <header className="mt-4">
         <h1 className="break-words text-h2 text-foreground">{section.title}</h1>
@@ -140,6 +148,7 @@ export default async function SectionPage({ params }: { params: Params }) {
         {section.instructions ? (
           <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{section.instructions}</p>
         ) : null}
+        {frozen ? <FrozenReportNotice className="mt-4" /> : null}
       </header>
 
       {canEdit ? (
@@ -165,7 +174,7 @@ export default async function SectionPage({ params }: { params: Params }) {
 
       {canEdit ? (
         <DeliverableUploader sectionId={section.id} />
-      ) : (
+      ) : frozen ? null : (
         <p className="mt-6 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           {access.role === "viewer" ? t("readOnlyViewer") : t("readOnlyExpert")}
         </p>

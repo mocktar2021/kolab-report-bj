@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { SIDEBAR_INIT_SCRIPT } from "@/components/app-shell/sidebar-script";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { countUnreadNotifications } from "@/lib/notifications";
 import { getCurrentProfile } from "@/lib/supabase/user";
 import { getCurrentWorkspace, getMyWorkspaces } from "@/lib/workspaces/server";
 
@@ -31,7 +32,11 @@ export default async function AppLayout({
     return redirect({ href: "/connexion", locale });
   }
 
-  const [workspaces, current] = await Promise.all([getMyWorkspaces(), getCurrentWorkspace()]);
+  const [workspaces, current, unreadNotifications] = await Promise.all([
+    getMyWorkspaces(),
+    getCurrentWorkspace(),
+    countUnreadNotifications(),
+  ]);
 
   return (
     <>
@@ -40,6 +45,7 @@ export default async function AppLayout({
         user={{ name: profile.name, email: profile.email }}
         workspaces={workspaces}
         currentWorkspaceId={current?.id ?? null}
+        unreadNotifications={unreadNotifications}
       >
         {children}
       </AppShell>

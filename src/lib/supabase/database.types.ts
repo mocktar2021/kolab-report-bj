@@ -259,6 +259,56 @@ export type Database = {
           },
         ];
       };
+      notifications: {
+        Row: {
+          created_at: string;
+          event_id: string;
+          id: string;
+          read_at: string | null;
+          user_id: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          event_id: string;
+          id?: string;
+          read_at?: string | null;
+          user_id: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          event_id?: string;
+          id?: string;
+          read_at?: string | null;
+          user_id?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_workspace_id_fkey";
+            columns: ["event_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "report_status_events";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       organizations: {
         Row: {
           created_at: string;
@@ -504,10 +554,12 @@ export type Database = {
           finished_at: string | null;
           format: string;
           id: string;
+          kind: string;
           report_id: string;
           section_count: number | null;
           size_bytes: number | null;
           status: string;
+          status_event_id: string | null;
           storage_path: string | null;
           workspace_id: string;
         };
@@ -519,10 +571,12 @@ export type Database = {
           finished_at?: string | null;
           format: string;
           id?: string;
+          kind?: string;
           report_id: string;
           section_count?: number | null;
           size_bytes?: number | null;
           status?: string;
+          status_event_id?: string | null;
           storage_path?: string | null;
           workspace_id: string;
         };
@@ -533,10 +587,12 @@ export type Database = {
           finished_at?: string | null;
           format?: string;
           id?: string;
+          kind?: string;
           report_id?: string;
           section_count?: number | null;
           size_bytes?: number | null;
           status?: string;
+          status_event_id?: string | null;
           storage_path?: string | null;
           workspace_id?: string;
         };
@@ -561,6 +617,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "reports";
             referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "report_exports_status_event_id_fkey";
+            columns: ["status_event_id"];
+            isOneToOne: false;
+            referencedRelation: "report_status_events";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -647,6 +710,59 @@ export type Database = {
           },
           {
             foreignKeyName: "report_sections_report_id_workspace_id_fkey";
+            columns: ["report_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "reports";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
+      report_status_events: {
+        Row: {
+          changed_at: string;
+          changed_by: string | null;
+          from_status: Database["public"]["Enums"]["report_status"];
+          id: string;
+          report_id: string;
+          to_status: Database["public"]["Enums"]["report_status"];
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          changed_at?: string;
+          changed_by?: string | null;
+          from_status: Database["public"]["Enums"]["report_status"];
+          id?: string;
+          report_id: string;
+          to_status: Database["public"]["Enums"]["report_status"];
+          workspace_id: string;
+        };
+        Update: {
+          changed_at?: string;
+          changed_by?: string | null;
+          from_status?: Database["public"]["Enums"]["report_status"];
+          id?: string;
+          report_id?: string;
+          to_status?: Database["public"]["Enums"]["report_status"];
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "report_status_events_changed_by_fkey";
+            columns: ["changed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_status_events_report_id_workspace_id_fkey";
+            columns: ["report_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "report_progress";
+            referencedColumns: ["report_id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "report_status_events_report_id_workspace_id_fkey";
             columns: ["report_id", "workspace_id"];
             isOneToOne: false;
             referencedRelation: "reports";
@@ -1071,6 +1187,17 @@ export type Database = {
         }[];
       };
       start_prompt_rollout: { Args: { p_candidate_id: string; p_percent: number }; Returns: string };
+      transition_report_status: {
+        Args: {
+          p_from: Database["public"]["Enums"]["report_status"];
+          p_report_id: string;
+          p_to: Database["public"]["Enums"]["report_status"];
+        };
+        Returns: {
+          event_id: string;
+          recipients: string[];
+        }[];
+      };
     };
     Enums: {
       ai_generation_status: "running" | "succeeded" | "failed";
