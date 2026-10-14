@@ -18,7 +18,7 @@ Order is always **migrations first, then the app**. A new app version never runs
 Create two projects, `kolabreport-staging` and `kolabreport-production`, in the **EU West (Paris)** region (`eu-west-3`), next to the Vercel functions (`cdg1` in `vercel.json`). For each one:
 
 1. **Auth > URL Configuration**: Site URL = the app URL of that environment. Redirect URLs: `https://<app-domain>/fr/auth/callback`, plus `https://*-<vercel-team-slug>.vercel.app/**` on staging so PR previews can sign in.
-2. **Auth > SMTP** and **Auth > Email templates**: set by the `supabase-auth-emails.yml` workflow from the repository, see [Auth e-mails](#auth-e-mails). Don't use `npx supabase config push` for this: it sends the whole local `[auth]` section, localhost URLs included.
+2. **Auth > SMTP** and **Auth > Email templates**: set by the `supabase-auth-settings.yml` workflow from the repository, see [Auth settings](#auth-settings). Don't use `npx supabase config push` for this: it sends the whole local `[auth]` section, localhost URLs included.
 3. Without custom SMTP, Supabase only delivers Auth e-mails to members of the Supabase team, about 30 an hour, from "Supabase Auth".
 4. Nothing to create for storage: the `deliverables` and `exports` buckets and their policies come from the migrations.
 5. **Database > Publications**: keep Realtime on for `supabase_realtime` (the default). The migrations add `report_sections` to it, so an open master report picks up a new section order from another session. Without Realtime the page still works and refreshes when the tab comes back into focus.
@@ -147,15 +147,15 @@ The runbooks are in `docs/operations/`:
 - [`monitoring.md`](operations/monitoring.md): uptime check on `/api/health`, Sentry, logs, advisors and database metrics.
 - [`smoke-tests.md`](operations/smoke-tests.md): the checks that run after each deploy, their setup, what they leave behind and what to do when they fail.
 
-## Auth e-mails
+## Auth settings
 
-Confirmation, password reset, invitation and e-mail change messages come from Supabase Auth, not from the app. `supabase-auth-emails.yml` (KRB-170) pushes them to a project from the repository:
+Confirmation, password reset, invitation and e-mail change messages come from Supabase Auth, not from the app. `supabase-auth-settings.yml` (KRB-170) pushes them to a project from the repository:
 
 - the French subjects and templates declared in `supabase/config.toml` (`supabase/templates/*.html`), always;
 - the custom SMTP sender, once `SMTP_PASS` and `SMTP_ADMIN_EMAIL` are set on the environment;
 - the site URL and redirect URLs, once `AUTH_SITE_URL` is set.
 
-It changes only those fields (`scripts/supabase-auth-emails.mjs`, `--dry-run` lists them). A push to `master` that touches the templates updates staging. Run it by hand for production: **Actions > Supabase Auth e-mails > Run workflow**.
+It changes only those fields (`scripts/supabase-auth-settings.mjs`, `--dry-run` lists them). A push to `master` that touches the templates updates staging. Run it by hand for production: **Actions > Supabase Auth settings > Run workflow**.
 
 Setup, per GitHub environment (`staging`, `production`):
 

@@ -1,4 +1,4 @@
-// Types for scripts/supabase-auth-emails.mjs, so its test can import it.
+// Types for scripts/supabase-auth-settings.mjs, so its test can import it.
 type Section = { subject?: string; content_path?: string; enabled?: boolean };
 
 export function parseEmailSections(toml: string): {

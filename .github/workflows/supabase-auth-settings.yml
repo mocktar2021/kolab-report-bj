@@ -1,13 +1,13 @@
-name: Supabase Auth e-mails
+name: Supabase Auth settings
 
 # Pushes the French Auth e-mails of the repository to a hosted Supabase
 # project (KRB-170): the subjects and templates of supabase/config.toml, the
 # custom SMTP sender once SMTP_PASS and SMTP_ADMIN_EMAIL are set on the
 # environment, and the site and redirect URLs once AUTH_SITE_URL is set. Only
-# those fields change (scripts/supabase-auth-emails.mjs). A change to the
+# those fields change (scripts/supabase-auth-settings.mjs). A change to the
 # templates on master updates staging; production runs by hand.
 # Nothing runs until the repository variable DEPLOY_ENABLED is "true".
-# Setup: docs/deployment.md, "Auth e-mails".
+# Setup: docs/deployment.md, "Auth settings".
 
 on:
   push:
@@ -15,7 +15,7 @@ on:
     paths:
       - supabase/templates/**
       - supabase/config.toml
-      - scripts/supabase-auth-emails.mjs
+      - scripts/supabase-auth-settings.mjs
   workflow_dispatch:
     inputs:
       environment:
@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   apply:
-    name: Auth e-mails on ${{ inputs.environment || 'staging' }}
+    name: Auth settings on ${{ inputs.environment || 'staging' }}
     if: vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -38,7 +38,7 @@ jobs:
       name: ${{ inputs.environment || 'staging' }}
       deployment: false
     concurrency:
-      group: supabase-auth-emails-${{ inputs.environment || 'staging' }}
+      group: supabase-auth-settings-${{ inputs.environment || 'staging' }}
       cancel-in-progress: false
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -62,4 +62,4 @@ jobs:
 
       # The script uses Node built-ins only, so no npm ci.
       - name: Push the Auth e-mail settings
-        run: node scripts/supabase-auth-emails.mjs
+        run: node scripts/supabase-auth-settings.mjs

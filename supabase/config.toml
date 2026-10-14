@@ -249,7 +249,7 @@ otp_expiry = 3600
 
 # French e-mail templates (KRB-57). Links go through /fr/auth/callback with a
 # token_hash, so they work even when the e-mail is opened on another device.
-# The supabase-auth-emails.yml workflow pushes them to the hosted projects
+# The supabase-auth-settings.yml workflow pushes them to the hosted projects
 # (KRB-170, docs/deployment.md). Not `supabase config push`, which would also
 # send this file's localhost URLs.
 [auth.email.template.confirmation]

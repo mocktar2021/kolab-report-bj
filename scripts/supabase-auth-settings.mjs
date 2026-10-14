@@ -6,9 +6,9 @@
 // Auth setting of the project stays as it is. `supabase config push` would
 // send the whole local [auth] section, localhost URLs included.
 //
-//   SUPABASE_ACCESS_TOKEN=... SUPABASE_PROJECT_REF=... node scripts/supabase-auth-emails.mjs [--dry-run]
+//   SUPABASE_ACCESS_TOKEN=... SUPABASE_PROJECT_REF=... node scripts/supabase-auth-settings.mjs [--dry-run]
 //
-// Run by .github/workflows/supabase-auth-emails.yml. Setup: docs/deployment.md.
+// Run by .github/workflows/supabase-auth-settings.yml. Setup: docs/deployment.md.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

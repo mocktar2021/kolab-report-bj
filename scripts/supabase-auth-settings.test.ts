@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-import { parseEmailSections, smtpFields, templateFields, urlFields } from "./supabase-auth-emails.mjs";
+import { parseEmailSections, smtpFields, templateFields, urlFields } from "./supabase-auth-settings.mjs";
 
 const toml = `
 [auth.email]
