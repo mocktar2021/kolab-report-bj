@@ -82,7 +82,9 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_PWA_ENABLE_IN_DEV !== "true",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
+  // Reloading every page when the network comes back would throw away text
+  // being edited. Only the offline page reloads itself (ReloadWhenOnline).
+  reloadOnOnline: false,
   cacheStartUrl: true,
   dynamicStartUrl: true,
   fallbacks: {
