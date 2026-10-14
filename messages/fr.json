@@ -507,6 +507,7 @@
     "removeTitle": "Retirer {name} ?",
     "removeDescription": "{name} n'aura plus accès à cet espace de travail. Ses sections redeviendront non attribuées.",
     "removeConfirm": "Retirer",
+    "removed": "{name} ne fait plus partie de l'espace de travail.",
     "leave": "Quitter l'espace",
     "leaveTitle": "Quitter cet espace de travail ?",
     "leaveDescription": "Vous n'aurez plus accès à cet espace de travail. Vos sections redeviendront non attribuées.",

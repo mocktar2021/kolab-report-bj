@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { UserAvatar } from "@/components/app-shell/user-avatar";
@@ -27,6 +27,20 @@ type MemberListProps = {
 
 export function MemberList({ workspaceId, members, grantable }: MemberListProps) {
   const t = useTranslations("Members");
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const previous = useRef(members);
+  const [removedNotice, setRemovedNotice] = useState("");
+
+  // A removed member's row goes away with the button that had the focus. The
+  // focus moves to the list title and screen readers hear who left.
+  useEffect(() => {
+    const ids = new Set(members.map((member) => member.userId));
+    const gone = previous.current.filter((member) => !ids.has(member.userId));
+    previous.current = members;
+    if (gone.length === 0) return;
+    setRemovedNotice(gone.map((member) => t("removed", { name: member.name })).join(" "));
+    if (!document.activeElement || document.activeElement === document.body) titleRef.current?.focus();
+  }, [members, t]);
 
   return (
     <section
@@ -34,11 +48,19 @@ export function MemberList({ workspaceId, members, grantable }: MemberListProps)
       className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm"
     >
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
-        <h2 id="members-title" className="font-medium">
+        <h2
+          id="members-title"
+          ref={titleRef}
+          tabIndex={-1}
+          className="rounded-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {t("listTitle")}
         </h2>
         <span className="text-sm text-muted-foreground">{t("count", { count: members.length })}</span>
       </div>
+      <p role="status" className="sr-only">
+        {removedNotice}
+      </p>
       <ul className="divide-y">
         {members.map((member) => (
           <MemberRow key={member.userId} workspaceId={workspaceId} member={member} grantable={grantable} />
