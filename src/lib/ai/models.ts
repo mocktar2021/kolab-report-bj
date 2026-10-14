@@ -163,6 +163,18 @@ export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): 
   }
 }
 
+/**
+ * Provider options for drafts and summaries: no thinking before the answer.
+ * Claude Sonnet 5 and later think by default, and thinking counts inside
+ * `maxOutputTokens`, so a long context left too little room for the JSON.
+ * The Anthropic provider sends `between_tools` to Sonnet 5.5, `disabled` to
+ * models that accept it, and drops it for models that always think. Other
+ * providers ignore it. A new object each time, since callers may mutate it.
+ */
+export function noThinking(): { anthropic: { thinking: { type: "disabled" } } } {
+  return { anthropic: { thinking: { type: "disabled" } } };
+}
+
 /** The fallback model, or null when none is set. */
 export function fallbackModel(settings: AiSettings, env: Env): LanguageModelV3 | null {
   if (!settings.fallback) return null;

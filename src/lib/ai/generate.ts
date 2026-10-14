@@ -2,6 +2,7 @@ import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { NoObjectGeneratedError, streamObject, type LanguageModelUsage, type TelemetrySettings } from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN, estimateTokens } from "./context/tokens";
+import { noThinking } from "./models";
 import { outputSchemaFor, parseDraftOutput, type DraftOutput, type SourceRefs } from "./schemas";
 
 // One draft: the model streams an object for the template's schema. When
@@ -159,6 +160,7 @@ async function attempt(
       prompt,
       temperature: call.temperature,
       maxOutputTokens: call.maxTokens,
+      providerOptions: noThinking(),
       maxRetries: 1,
       abortSignal: signal,
       // Errors arrive in the stream below; this keeps them out of the logs twice.
