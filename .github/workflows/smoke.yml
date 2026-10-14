@@ -1,0 +1,124 @@
+name: Smoke tests
+
+# Checks a deployed environment the way a user would (KRB-161): public pages,
+# /api/health and headers always; with the smoke account's secrets, sign-in,
+# dashboard, upload, file read, export and cleanup; with SMOKE_AI, an AI draft.
+# deploy.yml calls it after each deploy, and it runs by hand from
+# Actions > Smoke tests. A failure fails the deploy run.
+# Runbook and setup: docs/operations/smoke-tests.md.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment whose SMOKE_* settings the run uses
+        type: string
+        required: true
+      url:
+        description: URL the deploy answered, used when the environment has no SMOKE_BASE_URL
+        type: string
+        default: ""
+      sha:
+        description: Deployed commit. The tests come from it and /api/health must report it.
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: "0"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  smoke:
+    name: Smoke tests (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Not a deployment: no entry in the deployment history. Required
+    # reviewers on the environment still hold the run.
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
+    # One run per environment at a time: two runs would share the smoke
+    # section and delete each other's files.
+    concurrency:
+      group: smoke-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      SMOKE_BASE_URL: ${{ vars.SMOKE_BASE_URL || inputs.url }}
+      SMOKE_EXPECTED_RELEASE: ${{ inputs.sha }}
+      SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+      SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+      SMOKE_WORKSPACE_ID: ${{ vars.SMOKE_WORKSPACE_ID }}
+      SMOKE_WORKSPACE_NAME: ${{ vars.SMOKE_WORKSPACE_NAME }}
+      SMOKE_AI: ${{ vars.SMOKE_AI }}
+      SMOKE_SIGNUP_EMAIL: ${{ secrets.SMOKE_SIGNUP_EMAIL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Check the settings
+        env:
+          TARGET: ${{ inputs.environment }}
+        run: |
+          case "$SMOKE_BASE_URL" in
+            https://*) ;;
+            "")
+              echo "::error title=Smoke tests ($TARGET)::No URL to check. Set the SMOKE_BASE_URL variable on the $TARGET environment."
+              exit 1
+              ;;
+            *)
+              echo "::error title=Smoke tests ($TARGET)::SMOKE_BASE_URL must start with https://."
+              exit 1
+              ;;
+          esac
+          signed_in="off: no SMOKE_EMAIL or SMOKE_PASSWORD secret"
+          if [ -n "$SMOKE_EMAIL" ] && [ -n "$SMOKE_PASSWORD" ]; then signed_in="on"; fi
+          ai="off: SMOKE_AI is not true"
+          if [ "$SMOKE_AI" = "true" ]; then
+            if [ "$signed_in" = "on" ]; then ai="on"; else ai="off: it needs the signed-in checks"; fi
+          fi
+          sign_up="off: no SMOKE_SIGNUP_EMAIL secret"
+          if [ -n "$SMOKE_SIGNUP_EMAIL" ]; then sign_up="on"; fi
+          {
+            echo "### Smoke tests on $TARGET"
+            echo
+            echo "- Site: $SMOKE_BASE_URL"
+            echo "- Public checks: on"
+            echo "- Signed-in checks: $signed_in"
+            echo "- AI draft: $ai"
+            echo "- Real sign-up: $sign_up"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The tests of the deployed commit, not whatever master points to now.
+          ref: ${{ inputs.sha || github.sha }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke tests
+        run: npm run test:smoke
+
+      - name: Keep the Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: smoke-report-${{ inputs.environment }}-${{ github.run_attempt }}
+          path: playwright-report/smoke/
+          retention-days: 14
+          if-no-files-found: ignore
