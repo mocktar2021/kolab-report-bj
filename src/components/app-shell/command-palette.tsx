@@ -56,6 +56,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       onOpenChange={onOpenChange}
       title={t("title")}
       description={t("description")}
+      label={t("inputLabel")}
       footer={
         <div
           aria-hidden="true"
@@ -80,7 +81,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
     >
       <CommandInput placeholder={t("placeholder")} />
-      <CommandList>
+      {/* cmdk names the list "Suggestions" in English by default. */}
+      <CommandList label={t("listLabel")}>
         <CommandEmpty>{t("empty")}</CommandEmpty>
         <CommandGroup heading={t("navigation")}>
           <CommandItem
