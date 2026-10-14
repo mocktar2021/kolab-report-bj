@@ -202,6 +202,8 @@ for (const theme of THEMES) {
         await expect(page.getByRole("menu")).toBeVisible();
         await expectNoAxeViolations(page, `theme menu (${theme})`);
         await page.keyboard.press("Escape");
+        // The menu fades out before it leaves the page.
+        await expect(page.getByRole("menu")).toHaveCount(0);
       });
 
       await test.step("workspace menu", async () => {
@@ -209,6 +211,7 @@ for (const theme of THEMES) {
         await expect(page.getByRole("menu")).toBeVisible();
         await expectNoAxeViolations(page, `workspace menu (${theme})`);
         await page.keyboard.press("Escape");
+        await expect(page.getByRole("menu")).toHaveCount(0);
       });
 
       await test.step("remove member dialog", async () => {
