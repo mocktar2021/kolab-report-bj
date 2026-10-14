@@ -7,8 +7,9 @@ test("sends nothing to Sentry without a DSN", async ({ page }) => {
 
   const sent: string[] = [];
   page.on("request", (request) => {
-    const url = request.url();
-    if (url.includes("/monitoring") || url.includes("sentry.io")) sent.push(url);
+    const url = new URL(request.url());
+    const toSentry = url.hostname === "sentry.io" || url.hostname.endsWith(".sentry.io");
+    if (url.pathname.startsWith("/monitoring") || toSentry) sent.push(url.href);
   });
 
   await page.goto("/fr/connexion");
