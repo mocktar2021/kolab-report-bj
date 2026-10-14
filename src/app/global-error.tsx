@@ -14,6 +14,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
     <html lang="fr">
       <body className="min-h-dvh">
         <ErrorScreen
+          error={error}
           title={t.title}
           description={t.description}
           reloadLabel={t.reload}

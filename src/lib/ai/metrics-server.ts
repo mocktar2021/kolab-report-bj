@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { aiSettings } from "./config";
 import { traceUrl } from "./models";
@@ -63,7 +64,7 @@ export async function getPromptMetrics(
     p_since: since,
   });
   if (error || !data) {
-    if (error) console.error("ai dashboard: could not read the metrics", error.message);
+    if (error) log.error("ai dashboard: could not read the metrics", { error: error.message });
     return null;
   }
   return data.map((row) => ({

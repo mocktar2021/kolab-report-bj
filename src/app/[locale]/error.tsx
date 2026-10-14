@@ -10,6 +10,7 @@ export default function LocaleError({ error }: { error: Error & { digest?: strin
 
   return (
     <ErrorScreen
+      error={error}
       title={t("title")}
       description={t("description")}
       reloadLabel={t("reload")}

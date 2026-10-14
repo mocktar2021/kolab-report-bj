@@ -1,0 +1,146 @@
+name: Backup storage
+
+# Nightly off-site copy of the Storage buckets (KRB-142). Supabase database
+# backups hold no Storage files, only their metadata. rclone reads each
+# bucket through the Supabase Storage S3 endpoint and syncs it to
+# mirror/<bucket>/ in an S3-compatible bucket outside Supabase (Cloudflare R2
+# in the EU jurisdiction by default). A file deleted or replaced in the app
+# moves to deleted/<date>/<bucket>/ at the next run, and an R2 lifecycle rule
+# removes it 30 days later. The schedule copies production; a manual run can
+# pick staging. Without the secrets on the environment the job prints a
+# notice and stops. Setup, lifecycle rule and restore:
+# docs/operations/backups.md.
+
+on:
+  schedule:
+    # 02:11 UTC every night, before the storage cleanup job (03:00 UTC).
+    - cron: "11 2 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+
+env:
+  # Pinned rclone release and the SHA-256 of its linux-amd64 zip, from
+  # https://downloads.rclone.org/v1.75.2/SHA256SUMS.
+  RCLONE_VERSION: v1.75.2
+  RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+  BUCKETS: deliverables exports
+
+jobs:
+  sync:
+    name: Copy the ${{ inputs.environment || 'production' }} buckets
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+      deployment: false
+    concurrency:
+      group: backup-storage-${{ inputs.environment || 'production' }}
+      cancel-in-progress: false
+    env:
+      TARGET: ${{ inputs.environment || 'production' }}
+      SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+      SUPABASE_S3_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+      SUPABASE_S3_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+      SUPABASE_S3_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      # Cloudflare for R2. Another S3 service needs its rclone provider name.
+      BACKUP_S3_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER || 'Cloudflare' }}
+      # A run that would remove more files than this from the mirror stops
+      # with an error, so an empty or wrong listing from Supabase cannot empty
+      # the copy quietly. After a large real deletion, run it by hand with a
+      # higher BACKUP_MAX_DELETE.
+      MAX_DELETE: ${{ vars.BACKUP_MAX_DELETE || '200' }}
+    steps:
+      - name: Check the settings
+        id: settings
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in SUPABASE_S3_ENDPOINT SUPABASE_S3_REGION SUPABASE_S3_ACCESS_KEY_ID SUPABASE_S3_SECRET_ACCESS_KEY \
+            BACKUP_S3_ENDPOINT BACKUP_S3_ACCESS_KEY_ID BACKUP_S3_SECRET_ACCESS_KEY BACKUP_S3_BUCKET; do
+            if [ -z "${!name:-}" ]; then missing="${missing:+$missing, }$name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=Storage backup skipped::Missing secrets on the $TARGET environment: $missing. Setup: docs/operations/backups.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install rclone
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o rclone.zip \
+            "https://downloads.rclone.org/$RCLONE_VERSION/rclone-$RCLONE_VERSION-linux-amd64.zip"
+          echo "$RCLONE_SHA256  rclone.zip" | sha256sum -c -
+          unzip -q rclone.zip
+          sudo install -m 0755 "rclone-$RCLONE_VERSION-linux-amd64/rclone" /usr/local/bin/rclone
+          rclone version | head -n 1
+
+      - name: Sync the buckets
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          # rclone reads its remotes from RCLONE_CONFIG_<REMOTE>_<OPTION>.
+          # No config file is read or written.
+          export RCLONE_CONFIG=/dev/null
+          export RCLONE_CONFIG_SUPABASE_TYPE=s3
+          export RCLONE_CONFIG_SUPABASE_PROVIDER=Other
+          export RCLONE_CONFIG_SUPABASE_ENDPOINT="$SUPABASE_S3_ENDPOINT"
+          export RCLONE_CONFIG_SUPABASE_REGION="$SUPABASE_S3_REGION"
+          export RCLONE_CONFIG_SUPABASE_ACCESS_KEY_ID="$SUPABASE_S3_ACCESS_KEY_ID"
+          export RCLONE_CONFIG_SUPABASE_SECRET_ACCESS_KEY="$SUPABASE_S3_SECRET_ACCESS_KEY"
+          export RCLONE_CONFIG_SUPABASE_FORCE_PATH_STYLE=true
+          export RCLONE_CONFIG_BACKUP_TYPE=s3
+          export RCLONE_CONFIG_BACKUP_PROVIDER="$BACKUP_S3_PROVIDER"
+          export RCLONE_CONFIG_BACKUP_ENDPOINT="$BACKUP_S3_ENDPOINT"
+          export RCLONE_CONFIG_BACKUP_REGION=auto
+          export RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY_ID"
+          export RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY"
+          export RCLONE_CONFIG_BACKUP_ACL=private
+          # The R2 token only reaches this bucket: never try to create it.
+          export RCLONE_CONFIG_BACKUP_NO_CHECK_BUCKET=true
+
+          today=$(date -u +%F)
+          {
+            echo "### Storage backup of $TARGET"
+            echo
+            echo "| Bucket | Files in Supabase | Files in the mirror | Size of the mirror |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for bucket in $BUCKETS; do
+            echo "::group::$bucket"
+            # The log level stays at NOTICE, so file names (which can hold
+            # personal data) only appear in errors.
+            rclone sync "supabase:$bucket" "backup:$BACKUP_S3_BUCKET/mirror/$bucket" \
+              --backup-dir "backup:$BACKUP_S3_BUCKET/deleted/$today/$bucket" \
+              --max-delete "$MAX_DELETE" \
+              --checksum --checkers 8 --transfers 4 \
+              --retries 3 --low-level-retries 10 \
+              --stats 60s --stats-one-line --stats-log-level NOTICE
+            source=$(rclone size "supabase:$bucket" --json)
+            mirror=$(rclone size "backup:$BACKUP_S3_BUCKET/mirror/$bucket" --json)
+            echo "::endgroup::"
+            source_count=$(jq -r '.count' <<< "$source")
+            mirror_count=$(jq -r '.count' <<< "$mirror")
+            mirror_size=$(jq -r '.bytes' <<< "$mirror" | numfmt --to=iec --suffix=B)
+            echo "| $bucket | $source_count | $mirror_count | $mirror_size |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$source_count" != "$mirror_count" ]; then
+              # Files uploaded or deleted during the run explain a small gap.
+              echo "::warning title=Storage backup::$bucket has $source_count files in Supabase and $mirror_count in the mirror after the sync."
+            fi
+          done

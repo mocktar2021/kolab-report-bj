@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { log } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
 import type { DeliverableErrorKey } from "./errors";
@@ -45,7 +46,7 @@ export async function removeStaleUploads(supabase: UserClient, userId: string, s
     .lt("created_at", cutoff)
     .select("storage_path");
   if (error) {
-    console.error("deliverables: stale upload cleanup failed", error.message);
+    log.error("deliverables: stale upload cleanup failed", { error: error.message });
     return;
   }
   if (data.length > 0) {
@@ -56,7 +57,7 @@ export async function removeStaleUploads(supabase: UserClient, userId: string, s
 /** Service role: only for paths of rows the caller was allowed to delete. */
 export async function removeObjects(paths: string[]) {
   const { error } = await createAdminClient().storage.from(DELIVERABLES_BUCKET).remove(paths);
-  if (error) console.error("deliverables: could not remove stored files", error.message);
+  if (error) log.error("deliverables: could not remove stored files", { error: error.message });
 }
 
 /** Reads up to `limit` bytes of the body, then stops the download. */
@@ -170,6 +171,6 @@ export async function markUploaded(upload: PendingUpload): Promise<boolean> {
     .is("uploaded_at", null)
     .select("id")
     .maybeSingle();
-  if (error) console.error("deliverables: could not mark a file as uploaded", error.message);
+  if (error) log.error("deliverables: could not mark a file as uploaded", { error: error.message });
   return Boolean(data);
 }

@@ -22,6 +22,7 @@ import { draftToMarkdown } from "@/lib/ai/schemas";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
 import type { ContextDeliverable, DraftErrorBody, DraftErrorKey, DraftStreamEvent } from "@/lib/ai/types";
 import type { ParseMeta } from "@/lib/deliverables/parse/types";
+import { log, withRequestId } from "@/lib/log";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier } from "@/lib/prompts/catalog";
 import { versionForSection } from "@/lib/prompts/rollouts";
 import { canEditSection } from "@/lib/sections";
@@ -86,7 +87,7 @@ async function inBatches<T, R>(items: T[], limit: number, run: (item: T) => Prom
   return results;
 }
 
-export async function POST(request: Request, { params }: { params: Params }) {
+export const POST = withRequestId(async (request: Request, { params }: { params: Params }) => {
   // A JSON content type keeps other sites from posting here with a plain form
   // (KRB-24 F-08), as the export route does.
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
@@ -333,7 +334,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
       spent = summaryUsage;
       built = finalizeContext(plan, summarized.summaries);
     } catch (error) {
-      console.error("ai drafts: could not build the context", error instanceof Error ? error.message : error);
+      log.error("ai drafts: could not build the context", { generationId, error });
     }
 
     const common = (usageEstimated: boolean) => ({
@@ -370,10 +371,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     }
 
     if (built.truncated) {
-      console.info(
-        "ai drafts: context truncated",
-        JSON.stringify({ generationId, decisions: built.decisions }),
-      );
+      log.info("ai drafts: context truncated", { generationId, decisions: built.decisions });
     }
     send({ type: "start", generationId, truncated: built.truncated, deliverables: built.deliverables });
 
@@ -529,7 +527,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 
   // The outcome is recorded even when the person leaves before the end.
   const job = run().catch(async (error) => {
-    console.error("ai drafts: generation crashed", error instanceof Error ? error.message : error);
+    log.error("ai drafts: generation crashed", { generationId, error });
     await finishGeneration(generationId, workspaceId, {
       status: "failed",
       error: "crashed",
@@ -555,4 +553,4 @@ export async function POST(request: Request, { params }: { params: Params }) {
       "X-Accel-Buffering": "no",
     },
   });
-}
+});

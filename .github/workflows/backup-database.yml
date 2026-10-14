@@ -1,0 +1,187 @@
+name: Backup database
+
+# Nightly logical backup of a Supabase database (KRB-141). It dumps the
+# roles, the schema, the data, the migration history and our own triggers
+# and policies on the auth and storage tables, then compresses the files and
+# encrypts them with age. Only the encrypted file leaves the runner, as an
+# artifact kept 14 days. The schedule backs up production; a manual run can
+# pick staging. Without the SUPABASE_DB_URL secret or the
+# BACKUP_AGE_RECIPIENT variable on the environment, the job prints a notice
+# and stops. Setup, restore and drill: docs/operations/backups.md.
+
+on:
+  schedule:
+    # 01:41 UTC every night (02:41 or 03:41 in Paris), on the default branch.
+    - cron: "41 1 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: "0"
+
+jobs:
+  dump:
+    name: Dump the ${{ inputs.environment || 'production' }} database
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # A backup is not a deployment: the job reads the environment's secrets
+    # without adding an entry to its deployment history. Required reviewers
+    # on the environment would still hold the job (docs/operations/backups.md).
+    environment:
+      name: ${{ inputs.environment || 'production' }}
+      deployment: false
+    concurrency:
+      group: backup-database-${{ inputs.environment || 'production' }}
+      cancel-in-progress: false
+    env:
+      TARGET: ${{ inputs.environment || 'production' }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Check the settings
+        id: settings
+        run: |
+          set -euo pipefail
+          missing=""
+          if [ -z "$SUPABASE_DB_URL" ]; then missing="the secret SUPABASE_DB_URL"; fi
+          if [ -z "$BACKUP_AGE_RECIPIENT" ]; then missing="${missing:+$missing and }the variable BACKUP_AGE_RECIPIENT"; fi
+          if [ -n "$missing" ]; then
+            echo "::notice title=Database backup skipped::No $missing on the $TARGET environment. Setup: docs/operations/backups.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # One or more age public keys, separated by spaces, commas or new lines.
+          tr -s ' ,\t\r' '\n' <<< "$BACKUP_AGE_RECIPIENT" | sed '/^$/d' > "$RUNNER_TEMP/recipients.txt"
+          if grep -v -E -q '^age1[0-9a-z]+$' "$RUNNER_TEMP/recipients.txt"; then
+            echo "::error title=Database backup::BACKUP_AGE_RECIPIENT on $TARGET must hold age public keys (age1...), separated by spaces."
+            exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.settings.outputs.ready == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.settings.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      # The Supabase CLI version comes from package-lock.json. `db dump` runs
+      # pg_dump in the Postgres image of supabase/config.toml (major 17).
+      - run: npm ci
+        if: steps.settings.outputs.ready == 'true'
+
+      - name: Install age and psql
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends age postgresql-client > /dev/null
+          age --version
+          psql --version
+
+      - name: Dump, compress and encrypt
+        id: dump
+        if: steps.settings.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          stamp=$(date -u +%Y-%m-%dT%H%MZ)
+          name="kolabreport-$TARGET-db-$stamp"
+          work="$RUNNER_TEMP/$name"
+          mkdir -p "$work" "$RUNNER_TEMP/out"
+
+          # The steps of the Supabase guide "Backup and restore using the CLI".
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$work/roles.sql" --role-only
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$work/schema.sql"
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$work/data.sql" --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$work/history_schema.sql" --schema supabase_migrations
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$work/history_data.sql" --use-copy --data-only \
+            --schema supabase_migrations
+
+          # The schema dump leaves out the auth and storage schemas, and with
+          # them our trigger on auth.users and our policies on storage.objects.
+          # Write them as SQL that can run twice.
+          psql "$SUPABASE_DB_URL" -X -q -A -t -v ON_ERROR_STOP=1 > "$work/extras.sql" <<'SQL'
+          select format('drop trigger if exists %I on %I.%I;', t.tgname, n.nspname, c.relname)
+            || E'\n' || pg_get_triggerdef(t.oid) || ';'
+          from pg_trigger t
+          join pg_class c on c.oid = t.tgrelid
+          join pg_namespace n on n.oid = c.relnamespace
+          join pg_proc p on p.oid = t.tgfoid
+          join pg_namespace pn on pn.oid = p.pronamespace
+          where not t.tgisinternal
+            and n.nspname in ('auth', 'storage')
+            and pn.nspname not in ('auth', 'storage')
+          union all
+          select format('drop policy if exists %I on %I.%I;', policyname, schemaname, tablename)
+            || E'\n' || format('create policy %I on %I.%I as %s for %s to %s%s%s;',
+              policyname, schemaname, tablename, permissive, cmd,
+              (select string_agg(quote_ident(r), ', ') from unnest(roles) r),
+              coalesce(' using (' || qual || ')', ''),
+              coalesce(' with check (' || with_check || ')', ''))
+          from pg_policies
+          where schemaname in ('auth', 'storage');
+          SQL
+
+          # A dump without our tables is worse than no dump: stop here.
+          grep -q '^CREATE TABLE IF NOT EXISTS "public"."reports"' "$work/schema.sql" \
+            || { echo "::error title=Database backup::schema.sql has no public.reports table."; exit 1; }
+          grep -q '^COPY "public"."reports"' "$work/data.sql" \
+            || { echo "::error title=Database backup::data.sql has no data for public.reports."; exit 1; }
+
+          # Row counts at dump time, to compare after a restore. Counts only.
+          awk '
+            /^COPY / { table = $2; rows = 0; inside = 1; next }
+            inside && /^\\\.$/ { print table "\t" rows; inside = 0; next }
+            inside { rows++ }
+          ' "$work/data.sql" | tr -d '"' | sort > "$work/row-counts.tsv"
+          {
+            echo "dumped_at=$stamp"
+            echo "environment=$TARGET"
+            echo "commit=$GITHUB_SHA"
+            echo "supabase_cli=$(npx supabase --version)"
+          } > "$work/MANIFEST"
+          (cd "$work" && sha256sum ./*.sql row-counts.tsv MANIFEST > SHA256SUMS)
+
+          file="$RUNNER_TEMP/out/$name.tar.gz.age"
+          tar -C "$RUNNER_TEMP" -czf - "$name" | age -R "$RUNNER_TEMP/recipients.txt" -o "$file"
+
+          size=$(du -h "$file" | cut -f1)
+          sum=$(sha256sum "$file" | cut -d' ' -f1)
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "artifact=database-$TARGET-$stamp" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Database backup of $TARGET"
+            echo
+            echo "\`$name.tar.gz.age\`, $size, SHA-256 \`$sum\`. Kept 14 days. Restore: docs/operations/backups.md."
+            echo
+            echo "| Table | Rows |"
+            echo "| --- | --- |"
+            awk -F '\t' '$1 ~ /^(public|private)\./ || $1 == "auth.users" || $1 ~ /^storage\.(buckets|objects)$/ {
+              print "| " $1 " | " $2 " |"
+            }' "$work/row-counts.tsv"
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -rf "$work"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.settings.outputs.ready == 'true'
+        with:
+          name: ${{ steps.dump.outputs.artifact }}
+          path: ${{ steps.dump.outputs.file }}
+          retention-days: 14
+          if-no-files-found: error
+          # Already compressed and encrypted.
+          compression-level: 0

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
@@ -51,7 +52,7 @@ function errorOf(error: { code?: string | null; message?: string }): RolloutActi
     case "22P02":
       return "invalidInput";
     default:
-      console.error("prompts: rollout action failed", error.message);
+      log.error("prompts: rollout action failed", { error: error.message });
       return "generic";
   }
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { log } from "@/lib/log";
 import { MAX_SECTION_CONTENT } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/lib/workspaces/schemas";
@@ -72,7 +73,7 @@ export async function saveSectionContent(input: {
       case "22008":
         return { ok: false, error: "invalidInput" };
       default:
-        console.error("sections: could not save the text", error.message);
+        log.error("sections: could not save the text", { error: error.message });
         return { ok: false, error: "generic" };
     }
   }

@@ -54,7 +54,7 @@ Contracts and roles:
 - [ ] Confirm the roles above with a lawyer, and the details of Mocktar Technologies as the legal entity (full name, address, registration, country of establishment).
 - [ ] Ask the lawyer whether an EU representative (Article 27) is needed given where Mocktar Technologies is established, whether Benin's data protection law also applies to firms and users in Benin, and whether a DPO or a DPIA is needed for AI processing of report content.
 - [ ] Write the customer DPA that KolabReport signs with each firm (Article 28), with the subprocessor list from `processors.md`.
-- [ ] Accept or sign the DPA of each subprocessor and record the date in `processors.md`: Supabase, Vercel (its DPA page says it covers Pro and Enterprise customers), the e-mail provider, the LLM provider(s), and Langfuse if tracing is turned on.
+- [ ] Accept or sign the DPA of each subprocessor and record the date in `processors.md`: Supabase, Vercel (its DPA page says it covers Pro and Enterprise customers), the e-mail provider, the LLM provider(s), Langfuse if tracing is turned on, and Sentry once its DSN is set.
 - [ ] Choose the production e-mail provider (`EMAIL_PROVIDER` and the Supabase Auth SMTP sender: Resend or Brevo) and remove the other one from `processors.md`.
 - [ ] Choose the production LLM provider and model, and the fallback (`AI_FALLBACK_PROVIDER`) if any. For each one, confirm in its terms how long it keeps API inputs and outputs and whether it uses them for training. Ask whether zero data retention is available.
 
@@ -68,8 +68,9 @@ People and pages:
 Configuration and engineering:
 
 - [ ] Check production settings: `AI_REDACT_PII=true` (the default), `AI_TRACE_CONTENT=false` unless a DPA with the tracing vendor is signed, e-mail confirmation on in Supabase Auth.
-- [ ] Merge KRB-166 (daily storage cleanup and 90-day retention of exports), then update `retention.md` with what the job really does.
+- [x] Merge KRB-166 (daily storage cleanup and 90-day retention of exports) and describe the job in `retention.md`.
+- [ ] Set `CRON_SECRET` on the Vercel production environment, so the daily storage cleanup runs there.
 - [ ] Decide the retention rules still open in `retention.md`: AI generation content after its section is deleted, notifications, invitations, status history, accounts never confirmed or inactive, and the Supabase Auth audit log.
-- [ ] Turn on Supabase backups for production (Pro plan, PITR optional, KRB-6.3.4) and write their retention in `retention.md`.
+- [ ] Set up the nightly backups of production (database dump and Storage copy, `docs/operations/backups.md`), and decide on the Supabase Pro plan and point-in-time recovery. Their retention is in `retention.md`.
 - [ ] Build self-service data export and account deletion (proposed follow-up at the end of `data-subject-requests.md`). Until then, an operator answers requests with the runbook.
 - [ ] Keep a log of answered requests (date, type, user id, what was done), so erasures can be applied again after a backup restore.

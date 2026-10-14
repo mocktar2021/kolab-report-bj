@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
+import { incomingRequestId, REQUEST_ID_HEADER } from "@/lib/log/request-id";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const handleI18nRouting = createIntlMiddleware(routing);
@@ -37,7 +38,20 @@ function isPublicPath(path: string) {
 // Signed-in users skip the landing, sign-in and sign-up pages.
 const SIGNED_IN_REDIRECT_PATHS = ["/", "/connexion", "/inscription"];
 
+// Every page and server action gets a request id for the logs (KRB-138).
+// next-intl copies request.headers into NextResponse.next({ request: { headers } }),
+// the Next.js way to pass request headers on, so the id set here is what
+// headers() returns in server components and actions (src/lib/log). The
+// response carries it too, so a user can quote it.
 export async function middleware(request: NextRequest) {
+  const requestId = incomingRequestId(request.headers);
+  request.headers.set(REQUEST_ID_HEADER, requestId);
+  const response = await handle(request);
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
+async function handle(request: NextRequest) {
   const response = handleI18nRouting(request);
 
   // Locale redirect (e.g. "/" -> "/fr"): let it happen first.
@@ -77,8 +91,9 @@ function redirectWithCookies(url: URL, from: NextResponse) {
 }
 
 export const config = {
-  // Skip API routes, Next internals, PWA assets and any file with an extension.
+  // Skip API routes, the Sentry tunnel (/monitoring), Next internals, PWA
+  // assets and any file with an extension.
   matcher: [
-    "/((?!api|_next/static|_next/image|_vercel|sw\\.js|workbox-.*|swe-worker-.*|fallback-.*|manifest\\.webmanifest|icons/|.*\\..*).*)",
+    "/((?!api|monitoring|_next/static|_next/image|_vercel|sw\\.js|workbox-.*|swe-worker-.*|fallback-.*|manifest\\.webmanifest|icons/|.*\\..*).*)",
   ],
 };

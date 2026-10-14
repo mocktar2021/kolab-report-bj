@@ -307,7 +307,7 @@ When a firm leaves, or asks for its data to go, the customer DPA should say whet
    delete from public.workspaces where id = '<workspace-id>';
    ```
 
-4. Delete the files from step 2: in the Supabase dashboard, open **Storage**, then each bucket, select the folder named after the workspace id and delete it. The Storage API with the service role works too. Don't delete rows from `storage.objects` with SQL: that removes the record and leaves the file in the underlying store. Once KRB-166 is merged, its daily cleanup job removes these files on its own.
+4. Delete the files from step 2: in the Supabase dashboard, open **Storage**, then each bucket, select the folder named after the workspace id and delete it. The Storage API with the service role works too. Don't delete rows from `storage.objects` with SQL: that removes the record and leaves the file in the underlying store. Deleting the workspace also queued these files, and the daily cleanup job (KRB-166) removes them on its next run, so this step only makes it immediate.
 5. Delete the organization if it has no workspace left:
 
    ```sql

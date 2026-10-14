@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { log } from "@/lib/log";
 import { PROMPT_LIMITS } from "@/lib/prompts/catalog";
 import {
   promptFieldErrors,
@@ -132,7 +133,7 @@ export async function savePromptVersion(request: SavePromptRequest): Promise<Sav
   const { data, error } = result;
   if (error || !data) {
     if (error && errorKey(error) === "generic")
-      console.error("prompts: could not save a version", error.message);
+      log.error("prompts: could not save a version", { error: error.message });
     return { ok: false, error: error ? errorKey(error) : "generic" };
   }
   revalidatePath(LIBRARY_PATH, "layout");
@@ -170,7 +171,8 @@ export async function setPromptStatus(
     .select("id")
     .maybeSingle();
   if (error) {
-    if (errorKey(error) === "generic") console.error("prompts: could not change a status", error.message);
+    if (errorKey(error) === "generic")
+      log.error("prompts: could not change a status", { error: error.message });
     return { ok: false, error: errorKey(error) };
   }
   if (!data) return { ok: false, error: "notFound" };

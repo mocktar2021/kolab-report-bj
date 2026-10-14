@@ -1,6 +1,7 @@
 import "server-only";
 import { escapeHtml } from "@/lib/email/invitation-email";
 import { sendEmail } from "@/lib/email/send";
+import { log } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
 import type { OutputSchema } from "@/lib/prompts/catalog";
@@ -63,7 +64,7 @@ export async function startGeneration(request: StartRequest): Promise<StartResul
     })
     .maybeSingle();
   if (error || !data) {
-    console.error("ai drafts: could not start a generation", error?.message);
+    log.error("ai drafts: could not start a generation", { error: error?.message });
     return { ok: false, refusal: "generic", retryAfter: null };
   }
   if (data.generation_id) return { ok: true, id: data.generation_id };
@@ -126,7 +127,7 @@ export async function finishGeneration(
     .eq("status", "running")
     .select("id")
     .maybeSingle();
-  if (error) console.error("ai drafts: could not record the outcome of a generation", error.message);
+  if (error) log.error("ai drafts: could not record the outcome of a generation", { error: error.message });
   return Boolean(data);
 }
 
@@ -141,14 +142,18 @@ export async function checkDailyCost(alert: { dailyUsd: number; email: string } 
     p_threshold: alert.dailyUsd,
   });
   if (error) {
-    console.error("ai drafts: could not check the daily cost", error.message);
+    log.error("ai drafts: could not check the daily cost", { error: error.message });
     return;
   }
   if (spent === null || spent === undefined) return;
   const environment = process.env.APP_ENV ?? process.env.VERCEL_ENV ?? "development";
   const amount = Number(spent).toFixed(2);
   const threshold = alert.dailyUsd.toFixed(2);
-  console.warn(`ai drafts: daily AI spend ${amount} USD passed ${threshold} USD (${environment})`);
+  log.warn("ai drafts: daily AI spend passed the alert threshold", {
+    spentUsd: Number(amount),
+    thresholdUsd: alert.dailyUsd,
+    environment,
+  });
   const subject = `[KolabReport ${environment}] Dépenses IA du jour : ${amount} USD`;
   const text = `Les générations IA du jour (UTC) ont coûté environ ${amount} USD sur l'environnement ${environment}, au-delà du seuil de ${threshold} USD (AI_DAILY_COST_ALERT_USD).\n\nLe tableau de bord IA de chaque espace donne le détail par version de modèle de prompt. Cette alerte part une fois par jour.`;
   const sent = await sendEmail({
@@ -158,8 +163,9 @@ export async function checkDailyCost(alert: { dailyUsd: number; email: string } 
     html: `<p>${escapeHtml(text).replaceAll("\n\n", "</p><p>")}</p>`,
   });
   if (sent) return;
-  console.error("ai drafts: the daily cost alert e-mail could not be sent");
+  log.error("ai drafts: the daily cost alert e-mail could not be sent");
   // Give the day back so the next generation tries again.
   const { error: releaseError } = await createAdminClient().rpc("release_ai_cost_alert");
-  if (releaseError) console.error("ai drafts: could not release the daily cost alert", releaseError.message);
+  if (releaseError)
+    log.error("ai drafts: could not release the daily cost alert", { error: releaseError.message });
 }

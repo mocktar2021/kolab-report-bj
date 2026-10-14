@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { log } from "@/lib/log";
 import type { Database } from "@/lib/supabase/database.types";
 
 /**
@@ -10,5 +11,5 @@ import type { Database } from "@/lib/supabase/database.types";
  */
 export async function acceptPendingInvitations(supabase: SupabaseClient<Database>) {
   const { error } = await supabase.rpc("accept_my_pending_invitations");
-  if (error) console.error("accept_my_pending_invitations failed", error.message);
+  if (error) log.error("accept_my_pending_invitations failed", { error: error.message });
 }
