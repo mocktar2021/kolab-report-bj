@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 const DASHBOARD_PATH = "/tableau-de-bord";
 
-// The sliding highlight needs motion's layout features (about 40 kB
+// The sliding highlight needs motion's layout features (about 30 kB
 // compressed). They load in their own chunk once the shell has hydrated, so
 // signed-in pages no longer evaluate them on load (KRB-154). Until then the
 // highlight shows in place, without animation.
