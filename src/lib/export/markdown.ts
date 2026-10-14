@@ -2,6 +2,7 @@ import type { Nodes, Root, RootContent, Table } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
+import { isRiskyMarkdown, MARKDOWN_RISK_LIMITS, markdownParseRisk } from "@/lib/markdown-risk";
 
 // Section Markdown (GFM) turned into a short list of blocks that the .docx and
 // PDF builders both draw (KRB-18). The rules match the app's Markdown view:
@@ -10,9 +11,10 @@ import { unified } from "unified";
 // and never interpreted.
 //
 // The parser has inputs that cost quadratic time (thousands of emphasis
-// markers in one paragraph) or overflow the stack (thousands of nested
-// quotes). parseRisk spots them before parsing and the section is then shown
-// as plain text, so one section can't stall or crash an export.
+// markers in one paragraph, of setext headings) or overflow the stack
+// (thousands of nested quotes). parseRisk (src/lib/markdown-risk.ts) spots
+// them before parsing and the section is then shown as plain text, so one
+// section can't stall or crash an export.
 
 export const EXPORT_LIMITS = {
   /** Lists and quotes nested deeper than this are drawn at this depth. */
@@ -24,9 +26,9 @@ export const EXPORT_LIMITS = {
   /** Characters read per section. The database allows 100 000. */
   sectionChars: 200_000,
   /** Leading indentation, quote and list markers allowed on one line. */
-  linePrefix: 200,
-  /** Sum over paragraphs of the squared count of * _ ~ [ ] characters. About 0.3 s of parsing at worst. */
-  emphasisRisk: 5_000_000,
+  linePrefix: MARKDOWN_RISK_LIMITS.prefix,
+  /** Sum over paragraphs of the squared count of * _ ~ [ ] characters. */
+  emphasisRisk: MARKDOWN_RISK_LIMITS.emphasis,
 } as const;
 
 export type TextRun = {
@@ -101,123 +103,8 @@ export function linkText(text: string, url: string): string {
   return address ? `${text} (${address})` : text;
 }
 
-// Every pattern below matches in linear time: no two parts can take the same
-// characters, so a failed match never backtracks far.
-const LINE_PREFIX = /^(?:[ \t>]|[-*+](?=[ \t])|\d{1,9}[.)](?=[ \t]))*/;
-const CONTAINER = /^[ \t>]*/;
-// After the quote markers: an ATX heading, or a list item that can interrupt
-// a paragraph, with at most three spaces of indent.
-const BLOCK_START = /^ {0,3}(?:#{1,6}(?:[ \t]|$)|[-*+][ \t]+\S|1[.)][ \t]+\S)/;
-const LIST_ITEM = /^[-*+][ \t]|^\d{1,9}[.)][ \t]/;
-const NOT_A_HEADER = /^(?:#|```|~~~|<)/;
-// Tested on a line with its trailing spaces removed.
-const DELIMITER_ROW = /^\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?$/;
-const EMPHASIS_CHARACTERS = /[*_~[\]]/g;
-
-/** True when the line always ends the paragraph before it. */
-function startsNewContext(line: string): boolean {
-  let index = 0;
-  // Quote markers, each after at most three spaces and before an optional one.
-  for (;;) {
-    let spaces = 0;
-    while (spaces < 4 && line[index + spaces] === " ") spaces++;
-    if (spaces > 3 || line[index + spaces] !== ">") break;
-    index += spaces + 1;
-    if (line[index] === " ") index++;
-  }
-  return BLOCK_START.test(line.slice(index));
-}
-
-/** Cells of a table row: the unescaped pipes, leading and trailing ones aside. */
-function cellCount(row: string): number {
-  const trimmed = row.trim();
-  let pipes = 0;
-  for (let index = 0; index < trimmed.length; index++) {
-    if (trimmed[index] === "\\") index++;
-    else if (trimmed[index] === "|") pipes++;
-  }
-  if (trimmed.startsWith("|")) pipes--;
-  if (trimmed.length > 1 && trimmed.endsWith("|") && !trimmed.endsWith("\\|")) pipes--;
-  return pipes + 1;
-}
-
-/**
- * How costly the text is to parse, in one linear pass: the longest line
- * prefix of containers, and the sum over paragraphs of the squared number of
- * emphasis and bracket characters. Paragraphs end at blank lines, headings
- * and list items. Each row of a table counts alone, but only when the header
- * and delimiter rows make it certain the parser sees a table. Where it is not
- * sure, it counts lines together, which can only overestimate.
- */
-export function parseRisk(text: string): { prefix: number; emphasis: number } {
-  let prefix = 0;
-  let emphasis = 0;
-  let group = 0;
-  let groupLines = 0;
-  let afterBlank = true;
-  let header: { container: string; cells: number } | null = null;
-  let table: string | null = null;
-  const close = () => {
-    emphasis += group * group;
-    group = 0;
-    groupLines = 0;
-  };
-  for (const line of text.split("\n")) {
-    prefix = Math.max(prefix, LINE_PREFIX.exec(line)?.[0].length ?? 0);
-    const container = CONTAINER.exec(line)?.[0] ?? "";
-    const rest = line.slice(container.length);
-    const count = line.match(EMPHASIS_CHARACTERS)?.length ?? 0;
-    if (!rest.trim()) {
-      close();
-      afterBlank = true;
-      header = null;
-      table = null;
-      continue;
-    }
-    if (table !== null) {
-      if (container === table && rest.startsWith("|")) {
-        close();
-        group = count;
-        continue;
-      }
-      table = null;
-      close();
-    } else if (
-      header &&
-      groupLines === 1 &&
-      container === header.container &&
-      rest.includes("|") &&
-      DELIMITER_ROW.test(rest.trimEnd()) &&
-      cellCount(rest) === header.cells
-    ) {
-      close();
-      table = container;
-      header = null;
-      continue;
-    } else if (startsNewContext(line)) {
-      close();
-    }
-    header =
-      afterBlank &&
-      groupLines === 0 &&
-      rest.includes("|") &&
-      !LIST_ITEM.test(rest) &&
-      !NOT_A_HEADER.test(rest) &&
-      !startsNewContext(line)
-        ? { container, cells: cellCount(rest) }
-        : null;
-    afterBlank = false;
-    group += count;
-    groupLines++;
-  }
-  close();
-  return { prefix, emphasis };
-}
-
-function tooRisky(text: string): boolean {
-  const risk = parseRisk(text);
-  return risk.prefix > EXPORT_LIMITS.linePrefix || risk.emphasis > EXPORT_LIMITS.emphasisRisk;
-}
+/** How costly the text is to parse. See markdownParseRisk. */
+export const parseRisk = markdownParseRisk;
 
 /** Paragraphs split on blank lines, line breaks kept, no Markdown read. */
 function plainBlocks(text: string): Block[] {
@@ -483,7 +370,7 @@ export function sectionBlocks(markdown: string | null): Block[] {
   if (!markdown) return [];
   const text = cleanText(markdown.slice(0, EXPORT_LIMITS.sectionChars));
   if (!text.trim()) return [];
-  if (tooRisky(text)) return plainBlocks(text);
+  if (isRiskyMarkdown(text)) return plainBlocks(text);
   try {
     const tree = parser.parse(text);
     return toBlocks(tree.children, collectDefinitions(tree));

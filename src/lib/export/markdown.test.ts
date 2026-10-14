@@ -205,9 +205,16 @@ describe("limits", () => {
     const cases = [
       "*_".repeat(25_000) + "x" + "_*".repeat(25_000),
       "*_\n".repeat(8_000) + "x" + "\n_*".repeat(8_000),
+      "*a_".repeat(33_000),
       "[a](".repeat(25_000),
       ">".repeat(50_000) + " citation",
       "| *_*_*_*_ |\n".repeat(5_000),
+      // Each of these took from 4 s to minutes (KRB-18).
+      "a\n=\n".repeat(25_000),
+      "> a\n\n".repeat(20_000),
+      "> a\n" + "b\n".repeat(50_000),
+      "- a\n  - b\n".repeat(10_000),
+      "a a\n".repeat(25_000),
     ];
     for (const markdown of cases) {
       const started = performance.now();
@@ -231,6 +238,12 @@ describe("limits", () => {
     expect(parseRisk(fake).emphasis).toBe(40 * 40);
     const real = "| a |\n| - |\n" + "| *_*_ |\n".repeat(10);
     expect(parseRisk(real).emphasis).toBe(10 * 4 * 4);
+  });
+
+  it("still reads a few setext headings", () => {
+    expect(parseRisk("Titre\n=====\n\nTexte").setext).toBeGreaterThan(0);
+    const blocks = sectionBlocks("Titre\n=====\n\nTexte\n\nSous-titre\n----------\n".repeat(50));
+    expect(blocks.filter((block) => block.type === "heading")).toHaveLength(100);
   });
 
   it("measures the deepest line prefix", () => {
