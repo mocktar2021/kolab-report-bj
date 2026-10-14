@@ -9,7 +9,15 @@ import type { ExportFormat } from "@/lib/export/types";
 
 const FORMATS: readonly ExportFormat[] = ["docx", "pdf"];
 
-const ERROR_KEYS = ["invalidInput", "forbidden", "notFound", "rateLimited", "tooLarge", "generic"] as const;
+const ERROR_KEYS = [
+  "invalidInput",
+  "forbidden",
+  "notFound",
+  "rateLimited",
+  "busy",
+  "tooLarge",
+  "generic",
+] as const;
 
 type ExportError = (typeof ERROR_KEYS)[number];
 
@@ -22,6 +30,7 @@ function exportError(status: number, body: unknown): ExportError {
   if (status === 403) return "forbidden";
   if (status === 404) return "notFound";
   if (status === 429) return "rateLimited";
+  if (status === 409) return "busy";
   if (status === 413) return "tooLarge";
   return "generic";
 }

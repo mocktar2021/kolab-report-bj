@@ -28,8 +28,9 @@ export async function GET(_request: Request, { params }: { params: Params }) {
     .from("report_exports")
     .select("workspace_id, storage_path, file_name")
     .eq("id", id.toLowerCase())
+    .eq("status", "ready")
     .maybeSingle();
-  if (!file || !file.storage_path.startsWith(`${file.workspace_id}/`)) return notFound();
+  if (!file?.storage_path || !file.storage_path.startsWith(`${file.workspace_id}/`)) return notFound();
 
   // The bucket has no policies: the service role signs the link, for this
   // row's path only, which RLS just let the user read.

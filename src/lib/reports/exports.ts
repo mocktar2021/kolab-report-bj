@@ -18,6 +18,7 @@ export type ExportErrorKey =
   | "forbidden"
   | "invalidInput"
   | "rateLimited"
+  | "busy"
   | "tooLarge"
   | "generic";
 
@@ -36,13 +37,14 @@ export function exportDownloadPath(exportId: string): string {
   return `/api/exports/${exportId}`;
 }
 
-/** The latest exports of a report, for owners and admins (RLS). */
+/** The latest finished exports of a report, for owners and admins (RLS). */
 export async function listReportExports(reportId: string, limit = 10): Promise<ReportExportRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("report_exports")
     .select("id, format, file_name, size_bytes, created_at, created_by")
     .eq("report_id", reportId.toLowerCase())
+    .eq("status", "ready")
     .order("created_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 50));
   return (data ?? []).map((row) => ({

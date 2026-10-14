@@ -119,6 +119,20 @@ describe("ExportButtons", () => {
     expect(docx).toHaveAttribute("aria-disabled", "false");
   });
 
+  it("says when another export of the person is still running", async () => {
+    fetchMock.mockResolvedValue(json(409, { error: "busy" }));
+    const user = userEvent.setup();
+    const { docx } = renderButtons();
+
+    await user.click(docx);
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Vous avez déjà un export en cours dans cet espace. Attendez qu'il se termine puis réessayez.",
+      ),
+    );
+  });
+
   it("suggests the .docx export when a report is too long for a PDF", async () => {
     fetchMock.mockResolvedValue(json(413, { error: "tooLarge" }));
     const user = userEvent.setup();
