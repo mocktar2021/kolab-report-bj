@@ -71,7 +71,7 @@ export async function storeExportFile(
     return false;
   }
 
-  const { error: readyError } = await admin
+  const { data: recorded, error: readyError } = await admin
     .from("report_exports")
     .update({
       status: "ready",
@@ -81,9 +81,12 @@ export async function storeExportFile(
       finished_at: new Date().toISOString(),
     })
     .eq("id", exportId)
-    .eq("workspace_id", report.workspace_id);
-  if (readyError) {
-    console.error("exports: could not record the export", readyError.message);
+    .eq("workspace_id", report.workspace_id)
+    .select("id");
+  // No row: the report was deleted meanwhile. Its row had no path yet, so
+  // nothing queued the file for removal (KRB-166).
+  if (readyError || recorded.length === 0) {
+    console.error("exports: could not record the export", readyError?.message ?? "the export is gone");
     await admin.storage.from(EXPORTS_BUCKET).remove([storagePath]);
     return false;
   }

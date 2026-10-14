@@ -1134,6 +1134,14 @@ export type Database = {
           refusal: string;
         }[];
       };
+      claim_storage_cleanup: {
+        Args: { p_limit: number };
+        Returns: {
+          bucket: string;
+          id: number;
+          path: string;
+        }[];
+      };
       create_workspace_with_owner: {
         Args: { organization_name: string; report_title: string; workspace_name: string };
         Returns: {
@@ -1144,6 +1152,8 @@ export type Database = {
       };
       discard_ai_generation: { Args: { p_generation_id: string }; Returns: undefined };
       end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
+      expire_report_exports: { Args: { p_days: number }; Returns: number };
+      finish_storage_cleanup: { Args: { p_error?: string; p_ids: number[] }; Returns: number };
       invitation_preview: {
         Args: { token: string };
         Returns: {

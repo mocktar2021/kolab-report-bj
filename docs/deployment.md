@@ -47,6 +47,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation e-mails |
 | `EMAIL_FROM` | no | Sender, for example `KolabReport <noreply@kolabreport.com>`, on a domain verified with the provider |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
+| `CRON_SECRET` | **yes**, mark Sensitive | Random string of at least 16 characters, one per environment (`openssl rand -hex 32`). Vercel Cron sends it to the scheduled jobs, see [Scheduled jobs](#scheduled-jobs) |
 
 5. Note the **Team ID** (Settings > General, or your account ID on a personal plan) and the **Project ID** (project Settings > General). Create a token in Account Settings > Tokens.
 6. Optional: add the staging domain in **Settings > Domains**, connected to **Preview** and the branch `master`, then add the CNAME record Vercel shows at your DNS provider. `deploy.yml` points it at each staging deployment. The production domain comes with KRB-134. HTTPS is automatic.
@@ -80,6 +81,35 @@ Last, set the repository variable **`DEPLOY_ENABLED`** to `true` (Settings > Sec
 - Anything named `NEXT_PUBLIC_*` ships to the browser. CI runs `scripts/check-public-env.mjs`, which fails on names like `NEXT_PUBLIC_*SECRET*` or `NEXT_PUBLIC_*TOKEN*`.
 - The service role key bypasses RLS. Only `src/lib/supabase/admin.ts` reads it, and that module is server-only.
 - If a secret leaks: rotate it in Supabase, Vercel or the provider first, then update the two places above, then redeploy.
+
+## Scheduled jobs
+
+`vercel.json` declares the Vercel Cron jobs. Vercel runs them on the production deployment only, so staging never runs them on its own.
+
+| Path | Schedule (UTC) | What it does |
+| --- | --- | --- |
+| `/api/cron/storage-cleanup` | `0 3 * * *`, once a day | Deletes the exports made with the export buttons that are more than 90 days old, then removes from Storage the files of deleted deliverables, exports, reports and workspaces (KRB-166). The PDF stored when a report became final stays as long as the report. |
+
+How the storage cleanup works:
+
+- Deleting a row of `deliverables` or `report_exports`, directly or through a deleted report or workspace, queues the file's path in `private.storage_cleanup_queue` (a trigger, in the same transaction).
+- The job takes the queue in batches of 100 and removes the objects with the service role. It stops after 45 seconds and the next run carries on.
+- The file of a deliverable waits until 2 hours 15 minutes after it was registered: until then its signed upload URL can still put a file at that path.
+- A failed removal stays in the queue with its error and is tried again the next day.
+
+Setup: set `CRON_SECRET` on the Vercel project (table above). Vercel sends it as `Authorization: Bearer <CRON_SECRET>`. Without it, or with fewer than 16 characters, the route answers 401 to every call and logs why. On the Hobby plan a daily job runs at some point within the scheduled hour.
+
+To run it by hand, for example on staging:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" https://<app-domain>/api/cron/storage-cleanup
+```
+
+It answers counts only, for example `{"expiredExports":0,"removed":12,"failed":0,"timedOut":false,"ok":true}`. `timedOut: true` means the queue was not empty after 45 seconds. A 500 means a database call or a removal failed: check the function logs. Failed removals stay queued for the next run. To see what is waiting, in the SQL editor:
+
+```sql
+select bucket, count(*), max(attempts), max(last_error) from private.storage_cleanup_queue group by bucket;
+```
 
 ## Releasing
 
