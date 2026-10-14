@@ -22,7 +22,7 @@
   "Landing": {
     "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
     "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement section par section.",
-    "skipToContent": "Aller au contenu",
+    "skipToContent": "Aller au contenu principal",
     "nav": {
       "label": "Navigation principale",
       "home": "KolabReport, accueil",
@@ -266,13 +266,13 @@
     }
   },
   "AppShell": {
-    "skipToContent": "Aller au contenu",
+    "skipToContent": "Aller au contenu principal",
     "navLabel": "Navigation de l'application",
     "home": "KolabReport, tableau de bord",
     "dashboard": "Tableau de bord",
     "statusGroup": "Sections",
     "search": "Rechercher",
-    "searchLabel": "Ouvrir la palette de commandes",
+    "searchLabel": "Rechercher : ouvrir la palette de commandes",
     "collapse": "Réduire le menu",
     "expand": "Déployer le menu",
     "openMenu": "Ouvrir le menu",

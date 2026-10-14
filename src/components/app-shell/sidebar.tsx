@@ -29,7 +29,11 @@ type SidebarProps = {
   onOpenPalette: () => void;
 };
 
-/** Desktop navigation (lg and up). Width follows <html data-sidebar>. */
+/**
+ * Desktop navigation (lg and up). Width follows <html data-sidebar>. It is the
+ * page header on wide screens, so screen readers list it as the banner
+ * landmark, like the top bar below lg.
+ */
 export function Sidebar({
   user,
   workspaces,
@@ -43,7 +47,7 @@ export function Sidebar({
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
   return (
-    <aside
+    <header
       id={SIDEBAR_ID}
       className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r bg-card/60 backdrop-blur-md transition-[width] duration-300 ease-out-expo lg:flex sidebar-collapsed:w-[4.5rem]"
     >
@@ -101,6 +105,6 @@ export function Sidebar({
           <span className="sidebar-collapsed:sr-only">{collapsed ? t("expand") : t("collapse")}</span>
         </button>
       </div>
-    </aside>
+    </header>
   );
 }
