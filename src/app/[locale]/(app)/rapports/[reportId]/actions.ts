@@ -101,3 +101,41 @@ export async function updateSectionAssignment(
   revalidatePath("/", "layout");
   return { status: "success" };
 }
+
+export type ReorderResult =
+  | { ok: true }
+  | { ok: false; error: "forbidden" | "stale" | "invalidInput" | "generic" };
+
+const reorderSchema = z.object({
+  reportId: uuidSchema,
+  sectionIds: z.array(uuidSchema).max(500),
+});
+
+/**
+ * New order of a report's sections, owners and admins only. sectionIds lists
+ * every section once; the database rejects any other list as stale, which
+ * means another session added, removed or moved a section first.
+ */
+export async function reorderSections(reportId: string, sectionIds: string[]): Promise<ReorderResult> {
+  const parsed = reorderSchema.safeParse({ reportId, sectionIds });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reorder_report_sections", {
+    p_report_id: parsed.data.reportId.toLowerCase(),
+    p_section_ids: parsed.data.sectionIds.map((id) => id.toLowerCase()),
+  });
+  if (error) {
+    switch (error.code) {
+      case "42501":
+      case "P0002":
+        return { ok: false, error: "forbidden" };
+      case "40001":
+        return { ok: false, error: "stale" };
+      default:
+        console.error("reports: could not reorder sections", error.message);
+        return { ok: false, error: "generic" };
+    }
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

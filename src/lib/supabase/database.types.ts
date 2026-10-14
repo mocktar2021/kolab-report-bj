@@ -496,6 +496,68 @@ export type Database = {
           },
         ];
       };
+      report_exports: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          file_name: string;
+          format: string;
+          id: string;
+          report_id: string;
+          section_count: number;
+          size_bytes: number;
+          storage_path: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          file_name: string;
+          format: string;
+          id?: string;
+          report_id: string;
+          section_count: number;
+          size_bytes: number;
+          storage_path: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          file_name?: string;
+          format?: string;
+          id?: string;
+          report_id?: string;
+          section_count?: number;
+          size_bytes?: number;
+          storage_path?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "report_exports_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "report_exports_report_id_workspace_id_fkey";
+            columns: ["report_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "report_progress";
+            referencedColumns: ["report_id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "report_exports_report_id_workspace_id_fkey";
+            columns: ["report_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "reports";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
       report_sections: {
         Row: {
           ai_draft: Json | null;
@@ -503,6 +565,7 @@ export type Database = {
           assigned_to: string | null;
           completed_at: string | null;
           content: string | null;
+          content_updated_at: string;
           created_at: string;
           id: string;
           instructions: string | null;
@@ -522,6 +585,7 @@ export type Database = {
           assigned_to?: string | null;
           completed_at?: string | null;
           content?: string | null;
+          content_updated_at?: string;
           created_at?: string;
           id?: string;
           instructions?: string | null;
@@ -540,6 +604,7 @@ export type Database = {
           assigned_to?: string | null;
           completed_at?: string | null;
           content?: string | null;
+          content_updated_at?: string;
           created_at?: string;
           id?: string;
           instructions?: string | null;
@@ -957,7 +1022,12 @@ export type Database = {
         }[];
       };
       release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
+      reorder_report_sections: { Args: { p_report_id: string; p_section_ids: string[] }; Returns: undefined };
       rollback_prompt_publish: { Args: { p_version_id: string }; Returns: string };
+      save_section_content: {
+        Args: { p_content: string; p_expected_version: string; p_section_id: string };
+        Returns: string;
+      };
       set_prompt_rollout_percent: { Args: { p_percent: number; p_rollout_id: string }; Returns: undefined };
       start_ai_generation: {
         Args: {
