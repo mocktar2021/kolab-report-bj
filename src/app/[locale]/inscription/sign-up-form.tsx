@@ -10,6 +10,7 @@ import { useFocusOnError, useFocusWhenShown } from "@/components/auth/use-focus-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link } from "@/i18n/navigation";
 import { turnstileSiteKey } from "@/lib/auth/captcha";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-policy";
 import { signUp, type SignUpState } from "./actions";
@@ -102,6 +103,25 @@ export function SignUpForm({ defaultEmail = "" }: { defaultEmail?: string }) {
       <Button type="submit" shape="pill" className="h-10 w-full" disabled={pending}>
         {t("signUpSubmit")}
       </Button>
+      <p className="text-xs text-muted-foreground">
+        {t.rich("legalConsent", {
+          cgu: (chunks) => (
+            <Link href="/cgu" prefetch={false} className="underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+          cgv: (chunks) => (
+            <Link href="/cgv" prefetch={false} className="underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+          privacy: (chunks) => (
+            <Link href="/confidentialite" prefetch={false} className="underline underline-offset-4">
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
     </form>
   );
 }
