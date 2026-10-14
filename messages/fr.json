@@ -250,7 +250,6 @@
     "resetExpiredBody": "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau pour choisir votre mot de passe.",
     "resetExpiredCta": "Demander un nouveau lien",
     "showPassword": "Afficher le mot de passe",
-    "hidePassword": "Masquer le mot de passe",
     "errors": {
       "nameRequired": "Indiquez votre nom.",
       "emailInvalid": "Saisissez une adresse e-mail valide.",
@@ -771,8 +770,6 @@
     "deleteTitle": "Supprimer {name} ?",
     "deleteDescription": "Le fichier est retiré de la section et ne servira plus aux brouillons. Vous ne pourrez pas le récupérer.",
     "deleted": "{name} a été supprimé.",
-    "confirmDelete": "Confirmer",
-    "confirmDeleteLabel": "Confirmer la suppression de {name}",
     "cancel": "Annuler",
     "actionErrors": {
       "forbidden": "Vous ne pouvez pas faire cela sur ce fichier.",
