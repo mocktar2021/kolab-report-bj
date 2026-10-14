@@ -121,7 +121,12 @@ export function ProgressShowcase() {
         <EdgeLines side="left" className="-left-4 top-10 hidden lg:block xl:-left-6" />
         <EdgeLines side="right" className="-right-4 bottom-0 hidden lg:block xl:-right-6" />
 
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden lg:block">
+        {/* Decoration only: see data-decorative in hero-cards.tsx. */}
+        <div
+          aria-hidden="true"
+          data-decorative=""
+          className="pointer-events-none absolute inset-0 hidden lg:block"
+        >
           <div className={cn("absolute left-[12%] top-6 w-64 opacity-70", fadeToCenterLeft)}>
             <MasterOutlineCard />
           </div>
