@@ -852,7 +852,7 @@ The product owner asked to go with the recommendations. Answered by the tech lea
 - **Q7.** Yes to all four rules in 6.3.
 - **Q8.** 30-day launch period at Cabinet level. Production has no organization yet, so this only applies on staging, where the product owner's own organizations go on Institution through the operator script.
 - **Q9.** Yes. Once engagements can go into an existing organization (175-1), a second organization is rare.
-- **Q10.** Proposed to the product owner: no refund of a started period, since the trial lets customers try first; a payment made by mistake (twice, or the wrong amount) is refunded in full. Pending his answer, and the CGV must say the same.
+- **Q10.** Confirmed by the product owner: no refund of a started period, since the trial lets customers try first; a payment made by mistake (twice, or the wrong amount) is refunded in full. The CGV (`/fr/cgv#remboursement`) say the same, plus the cases the law requires.
 - **Q11.** Yes, the quarter is 3 months with no discount; only the year gets one.
 - **Q12.** 1 000 AI drafts a month, a 2-hour onboarding session, 12 months minimum.
 - **Q13.** Derive the token budget from the plan: drafts allowed times the p95 tokens per draft. Measure p95 tokens and cost per draft on staging first (set the `AI_PRICE_*` variables). If the p95 cost goes over 60 FCFA a draft, raise the Pack IA to 15 000 FCFA.
