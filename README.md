@@ -34,6 +34,30 @@ Then run `npm run dev` and open http://localhost:3000. Sign-up e-mails arrive in
 
 The service worker is disabled in development. To test offline behaviour, run `npm run build && npm start`, or set `NEXT_PUBLIC_PWA_ENABLE_IN_DEV=true`.
 
+## Demo data
+
+`supabase/seed.sql` adds a demo workspace after the migrations, on `npx supabase start` with a new database and on every `npx supabase db reset`. It stays local: `supabase db push` only runs it with `--include-seed`, which `npm run db:push` and the deploy workflow never pass, so staging and production never get these accounts.
+
+All demo accounts use the password `Kolab-demo-2026`:
+
+| E-mail | Name | Role |
+| --- | --- | --- |
+| `awa.dossou@kolabreport.test` | Awa Dossou | owner |
+| `koffi.agossou@kolabreport.test` | Koffi Agossou | admin |
+| `rachida.yessoufou@kolabreport.test` | Rachida Yessoufou | expert |
+| `sylvain.kouagou@kolabreport.test` | Sylvain Kouagou | expert |
+| `prudence.ahouansou@kolabreport.test` | Prudence Ahouansou | viewer |
+
+They share the workspace "Eau potable Atacora" (organization Cabinet Sèdo Conseil) and its draft report "Rapport d'évaluation à mi-parcours": 8 sections in French, 2 completed, 2 in progress and 4 not started, 2 of them unassigned. There are no deliverables and no AI drafts.
+
+To add the demo data to a database you already use, without a reset, run the file with psql. It skips the rows that already exist, so running it again changes nothing:
+
+```bash
+docker exec -i supabase_db_kolab-report-bj psql -U postgres -v ON_ERROR_STOP=1 < supabase/seed.sql
+```
+
+The seeded rows have fixed ids starting with `5eed0000`. The pgTAP and Playwright suites create their own data and do not depend on them.
+
 ## Scripts
 
 | Command | Purpose |
