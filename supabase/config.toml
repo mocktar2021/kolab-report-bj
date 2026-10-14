@@ -199,6 +199,11 @@ password_requirements = "letters_digits"
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.rate_limit]
+# KRB-58: supabase-auth-settings.yml pushes email_sent (with custom SMTP only),
+# sign_in_sign_ups, token_verifications and token_refresh to the hosted
+# projects. SMS, anonymous and Web3 sign-ins are off, so their limits stay
+# local. The per IP limits see the Vercel servers, not the visitors: the forms
+# call Supabase from server actions. That is why they stay at the defaults.
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
@@ -215,9 +220,11 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# CAPTCHA on sign-up and sign-in (KRB-58). Off locally. To turn it on, set the
-# Turnstile secret here or in the hosted dashboard and render the widget on the
-# sign-up form with NEXT_PUBLIC_TURNSTILE_SITE_KEY.
+# Cloudflare Turnstile on sign-up, sign-in and reset requests (KRB-58). Off
+# locally, so the e2e tests run without a widget. On the hosted projects,
+# supabase-auth-settings.yml turns it on with TURNSTILE_SECRET_KEY once
+# AUTH_CAPTCHA_ENABLED is "true", after NEXT_PUBLIC_TURNSTILE_SITE_KEY is
+# deployed (docs/deployment.md, "Auth settings").
 # [auth.captcha]
 # enabled = true
 # provider = "turnstile"

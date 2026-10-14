@@ -1,11 +1,13 @@
 name: Supabase Auth settings
 
-# Pushes the French Auth e-mails of the repository to a hosted Supabase
-# project (KRB-170): the subjects and templates of supabase/config.toml, the
-# custom SMTP sender once SMTP_PASS and SMTP_ADMIN_EMAIL are set on the
-# environment, and the site and redirect URLs once AUTH_SITE_URL is set. Only
-# those fields change (scripts/supabase-auth-settings.mjs). A change to the
-# templates on master updates staging; production runs by hand.
+# Pushes the Auth settings of the repository to a hosted Supabase project:
+# the French subjects and templates (KRB-170), the password policy and the
+# rate limits of supabase/config.toml (KRB-58), the custom SMTP sender once
+# SMTP_PASS and SMTP_ADMIN_EMAIL are set on the environment, the site and
+# redirect URLs once AUTH_SITE_URL is set, and the Turnstile captcha once
+# AUTH_CAPTCHA_ENABLED is "true" and TURNSTILE_SECRET_KEY is set. Only those
+# fields change (scripts/supabase-auth-settings.mjs). A change to them on
+# master updates staging; production runs by hand.
 # Nothing runs until the repository variable DEPLOY_ENABLED is "true".
 # Setup: docs/deployment.md, "Auth settings".
 
@@ -51,6 +53,10 @@ jobs:
       SMTP_USER: ${{ vars.SMTP_USER }}
       AUTH_SITE_URL: ${{ vars.AUTH_SITE_URL }}
       AUTH_REDIRECT_URLS: ${{ vars.AUTH_REDIRECT_URLS }}
+      # Set AUTH_CAPTCHA_ENABLED to "true" only once the app built with
+      # NEXT_PUBLIC_TURNSTILE_SITE_KEY is live, or sign-ups and sign-ins break.
+      AUTH_CAPTCHA_ENABLED: ${{ vars.AUTH_CAPTCHA_ENABLED }}
+      TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,5 +67,5 @@ jobs:
           node-version: 22
 
       # The script uses Node built-ins only, so no npm ci.
-      - name: Push the Auth e-mail settings
+      - name: Push the Auth settings
         run: node scripts/supabase-auth-settings.mjs
