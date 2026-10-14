@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { LogOut, Menu, Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
@@ -11,7 +12,6 @@ import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
-import { CommandPalette } from "./command-palette";
 import { NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
@@ -27,6 +27,12 @@ type AppShellProps = {
   unreadNotifications: number;
   children: React.ReactNode;
 };
+
+// The palette and cmdk load the first time it opens, not with every page
+// (KRB-154).
+const CommandPalette = dynamic(() => import("./command-palette").then((mod) => mod.CommandPalette), {
+  ssr: false,
+});
 
 const iconButtonClass =
   "flex size-9 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
@@ -45,11 +51,14 @@ export function AppShell({
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Stays mounted once opened, so it can play its closing animation.
+  const [paletteMounted, setPaletteMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
   const openPalette = useCallback(() => {
     setMenuOpen(false);
+    setPaletteMounted(true);
     setPaletteOpen(true);
   }, []);
 
@@ -58,6 +67,7 @@ export function AppShell({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setMenuOpen(false);
+        setPaletteMounted(true);
         setPaletteOpen((open) => !open);
       }
     }
@@ -165,7 +175,7 @@ export function AppShell({
         </main>
       </div>
 
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      {paletteMounted ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
     </div>
   );
 }
