@@ -52,7 +52,7 @@ Processors are described in [`processors.md`](processors.md) and retention in [`
 | Data categories | `reports`: title, description, status, due date, `created_by`. `report_sections`: title, instructions, content (Markdown, up to 100,000 characters), `ai_draft` (the accepted AI draft), `assigned_to`, status and dates. `deliverables`: file name, type, size, storage path, extracted text (`parsed_content`, for Word, Excel, CSV, text and Markdown files), `parse_meta`, `uploaded_by`. Files in the `deliverables` bucket: Word, Excel, CSV, PowerPoint, PDF, text, images and diagrams, 50 MB at most. `report_status_events`: who moved a report between draft, review and final, and when. |
 | Recipients | Supabase (database, Storage, Realtime: section changes reach the open pages of members), Vercel (renders pages, reads and parses files in a function). Members of the workspace, according to their role. The LLM provider only when a member asks for an AI draft (activity 4). |
 | Transfers outside the EU | See [`processors.md`](processors.md) |
-| Retention | Until the firm deletes it or the workspace is deleted. Stored files of rows deleted by cascade stay in Storage until the cleanup job of KRB-166 removes them. See [`retention.md`](retention.md). |
+| Retention | Until the firm deletes it or the workspace is deleted. Stored files of rows deleted by cascade are removed by the daily cleanup job (KRB-166). See [`retention.md`](retention.md). |
 | Security measures | RLS by workspace and role: viewers read, experts write only the sections assigned to them, owners and admins manage. A final report is frozen until an owner reopens it. Private bucket, files read through signed links valid 60 seconds after an access check. Uploads go to a path registered beforehand and are checked (size, type, first bytes, scripts in SVG refused). Users can't replace or delete a stored file: the app removes it with the service role once the row is gone. |
 
 ## 4. AI draft generation
@@ -109,7 +109,7 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 | Data categories | `report_exports`: who exported, when, format, file name, size, number of sections, kind (`manual` or `final`), the status change of a final snapshot. Files in the `exports` bucket: the report content. |
 | Recipients | Supabase Storage, Vercel (builds the file in a function), owners and admins of the workspace |
 | Transfers outside the EU | See [`processors.md`](processors.md) |
-| Retention | Today, until the report or workspace is deleted, and files stay in Storage after a cascade delete. Target in KRB-166: manual exports kept 90 days, the final snapshot kept as long as its report. See [`retention.md`](retention.md). |
+| Retention | Manual exports 90 days. The final snapshot as long as its report. The daily cleanup job (KRB-166) removes the files. See [`retention.md`](retention.md). |
 | Security measures | Only owners and admins export or list exports (RLS). Private bucket with no policies: only the service role writes and signs. Download links last 60 seconds and are signed after an RLS check. 20 exports per person, workspace and hour. |
 
 ## 7. Notifications
@@ -134,11 +134,11 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 | Purpose | Run, debug and secure the service, and catch abuse and cost spikes |
 | Legal basis (proposed) | Legitimate interest, Article 6(1)(f): security and operation of the service |
 | Data subjects | Users and visitors of the site |
-| Data categories | Vercel function logs: what the app prints (error messages, counts; the code avoids printing e-mails and report content) plus the request data Vercel records by default. Supabase logs of the API, database, Auth and Storage, which can include IP addresses: provider default. `auth.audit_log_entries` (activity 1). AI traces when `AI_TRACING=true`: generation id, workspace id, prompt version, model, tokens, latency, cost and error code, no prompt or output text unless `AI_TRACE_CONTENT=true` (`src/lib/ai/tracing.ts`). Delivery logs at the e-mail provider. |
-| Recipients | Vercel, Supabase, the e-mail provider, Langfuse or the OTLP backend when tracing is on. People with access to these dashboards: **to confirm** (list them, and check two-factor sign-in on each account). |
+| Data categories | Vercel function logs: what the app prints (error messages, counts; the code avoids printing e-mails and report content) plus the request data Vercel records by default. Supabase logs of the API, database, Auth and Storage, which can include IP addresses: provider default. `auth.audit_log_entries` (activity 1). AI traces when `AI_TRACING=true`: generation id, workspace id, prompt version, model, tokens, latency, cost and error code, no prompt or output text unless `AI_TRACE_CONTENT=true` (`src/lib/ai/tracing.ts`). Sentry when `NEXT_PUBLIC_SENTRY_DSN` is set (`src/lib/monitoring`): errors of the browser, the server and the middleware with their message and stack trace, the Supabase user id of a signed-in user (no e-mail, name or IP address), the URL without its query string, the route, browser and OS, release and environment, scrubbed breadcrumbs, and in production 1 in 10 browser page loads as traces. Delivery logs at the e-mail provider. |
+| Recipients | Vercel, Supabase, the e-mail provider, Langfuse or the OTLP backend when tracing is on, Sentry when its DSN is set. People with access to these dashboards: **to confirm** (list them, and check two-factor sign-in on each account). |
 | Transfers outside the EU | See [`processors.md`](processors.md) |
 | Retention | Provider defaults. Nothing in the repository sets a log retention. See [`retention.md`](retention.md). |
-| Security measures | Only AI spans leave the server when tracing is on (`AiSpanFilter`). Sentry is planned with the user id only and no e-mail (KRB-6.3.1), not wired yet. |
+| Security measures | Only AI spans leave the server when tracing is on (`AiSpanFilter`). Sentry gets the user id and nothing else about the user. Before sending, `src/lib/monitoring/scrub.ts` drops cookies, request bodies, headers other than user agent and content type, query strings and extra context, and masks e-mail addresses, invitation tokens, auth codes and AI output in messages (unit tests in `scrub.test.ts`). Browser events go through `/monitoring` on the app's own origin, and the Sentry organization is in the EU region. |
 
 ## Measures that apply to every activity
 

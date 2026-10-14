@@ -76,6 +76,23 @@ On each environment:
 
 Last, set the repository variable **`DEPLOY_ENABLED`** to `true` (Settings > Secrets and variables > Actions > Variables > Repository variables). Until then every job in `deploy.yml` is skipped. It has to be a repository variable: the jobs check it before they enter an environment, so a copy on an environment is never read.
 
+For the backups and the advisors check (KRB-141, KRB-142, KRB-144), on `production`, and on `staging` too if you want it backed up. Each job prints a notice and does nothing while its values are missing. Setup steps: [`docs/operations/backups.md`](operations/backups.md#setup).
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `SUPABASE_DB_URL` | secret, optional | Session pooler string of that environment's project (port 5432, same value as `DIRECT_URL` in Vercel), for `backup-database.yml` |
+| `BACKUP_AGE_RECIPIENT` | variable, optional | age public key (`age1...`) that encrypts the nightly dump. The private key stays in the password manager. |
+| `SUPABASE_S3_ENDPOINT` | secret, optional | `https://<project-ref>.storage.supabase.co/storage/v1/s3`, for `backup-storage.yml` |
+| `SUPABASE_S3_REGION` | secret, optional | `eu-west-3` |
+| `SUPABASE_S3_ACCESS_KEY_ID` / `SUPABASE_S3_SECRET_ACCESS_KEY` | secret, optional | Storage S3 access key of that project. It reads and deletes every file and bypasses RLS. |
+| `BACKUP_S3_ENDPOINT` | secret, optional | Off-site bucket endpoint, `https://<account-id>.eu.r2.cloudflarestorage.com` for Cloudflare R2 in the EU |
+| `BACKUP_S3_ACCESS_KEY_ID` / `BACKUP_S3_SECRET_ACCESS_KEY` | secret, optional | R2 API token with Object Read & Write on that bucket only |
+| `BACKUP_S3_BUCKET` | secret, optional | Bucket name, for example `kolabreport-backup-production` |
+| `BACKUP_S3_PROVIDER` | variable, optional | rclone provider name of the off-site bucket. Default `Cloudflare`. |
+| `BACKUP_MAX_DELETE` | variable, optional | Most files one run may remove from a bucket's mirror before it stops with an error. Default `200`. Raise it for one run after a large deletion ([`backups.md`](operations/backups.md)). |
+
+`supabase-advisors.yml` reuses `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` from the first table. The repository variable **`ADVISORS_ENVIRONMENTS`** (optional, a JSON list such as `["staging"]`) picks the environments it checks. Without it, it checks `staging` and `production`.
+
 ## Secrets rules
 
 - Secrets live in Vercel environment variables (marked Sensitive) and GitHub environment secrets, one value per environment. Never in the repository, never in `.env.example`.
@@ -112,6 +129,21 @@ It answers counts only, for example `{"expiredExports":0,"removed":12,"failed":0
 select bucket, count(*), max(attempts), max(last_error) from private.storage_cleanup_queue group by bucket;
 ```
 
+## Backups and monitoring
+
+Three scheduled GitHub workflows run from `master`, next to the Vercel Cron job above. GitHub e-mails their failures.
+
+| Workflow | Schedule (UTC) | What it does |
+| --- | --- | --- |
+| `backup-database.yml` | `41 1 * * *` | Logical dump of the production database, encrypted with age, kept 14 days as an artifact (KRB-141) |
+| `backup-storage.yml` | `11 2 * * *` | Copies the `deliverables` and `exports` buckets to an R2 bucket in the EU, deleted files kept 30 days (KRB-142) |
+| `supabase-advisors.yml` | `23 6 * * *` | Security and performance advisors of each project, fails on an `ERROR` lint (KRB-144) |
+
+The runbooks are in `docs/operations/`:
+
+- [`backups.md`](operations/backups.md): what Supabase backs up per plan, our RPO and RTO, setup, the restore drill and its log.
+- [`monitoring.md`](operations/monitoring.md): uptime check on `/api/health`, Sentry, logs, advisors and database metrics.
+
 ## Releasing
 
 1. Merge to `master`. CI runs, then `deploy.yml` applies the migrations to staging and deploys staging. Check it.
@@ -134,6 +166,6 @@ Production keeps serving the previous app version while a migration runs, and a 
 
 **App.** In Vercel, open the project, **Deployments**, pick the last good production deployment and choose **Instant Rollback**. From a terminal: `npx vercel rollback <deployment-url> --token=...`. It takes a few seconds and needs no rebuild. After a rollback, Vercel stops moving the production domain to new deployments: once the fix is deployed, promote it in the dashboard or with `npx vercel promote <deployment-url>`.
 
-**Database.** Migrations are not rolled back. Because they are expand-only, the previous app version keeps working on the migrated schema. Fix forward with a new migration and a new release. For data loss, restore from Supabase backups (daily backups come with the Pro plan, point-in-time recovery is an add-on) into a new project first, check it, then switch.
+**Database.** Migrations are not rolled back. Because they are expand-only, the previous app version keeps working on the migrated schema. Fix forward with a new migration and a new release. For data loss, restore into a new project first, check it, then switch: from the nightly dump on the Free plan, from Supabase's daily backups or point-in-time recovery on Pro. Storage files come back from the R2 copy. Steps: [`docs/operations/backups.md`](operations/backups.md#restore-drill).
 
 **Order for a bad release:** roll back the app in Vercel, open a Jira bug, fix on a branch, merge, tag a new version.

@@ -10,6 +10,9 @@ These are the services that receive personal data from KolabReport. For report c
 | Anthropic | AI drafts when `AI_PROVIDER=anthropic` (the default) or as fallback | US company, **to confirm** | To sign / to confirm |
 | OpenAI | AI drafts when `AI_PROVIDER=openai` or as fallback | US company, **to confirm** | To sign / to confirm, only if used |
 | Langfuse | Traces of AI calls, only with `AI_TRACING=true` | EU (Ireland) with the default `https://cloud.langfuse.com` | Only if tracing is turned on |
+| Sentry | Error monitoring, only with `NEXT_PUBLIC_SENTRY_DSN` set | EU data storage location (`de.sentry.io`), US company | To sign / to confirm, before the DSN is set on production |
+| Cloudflare R2 | Off-site copy of the Storage files, only once the `backup-storage.yml` secrets are set | EU jurisdiction bucket | To sign / to confirm, before the job runs on production |
+| GitHub | Runs the nightly backup jobs and keeps the encrypted database dump 14 days, only once their secrets are set | Not chosen, US company | To confirm for this account's plan |
 
 ## Supabase
 
@@ -76,11 +79,38 @@ The Vercel AI SDK talks to Anthropic (`@ai-sdk/anthropic`) or OpenAI (`@ai-sdk/o
 - **DPA**: Langfuse's privacy FAQ says you can sign one: https://langfuse.com/security/privacy-faq
 - **Status**: not needed while tracing is off. Any other OTLP backend set through `OTEL_EXPORTER_OTLP_ENDPOINT` would be a new subprocessor and has to be added here.
 
+## Sentry (optional)
+
+- **When**: only when `NEXT_PUBLIC_SENTRY_DSN` is set at build time (`src/lib/monitoring`, KRB-136). Off by default. Setup: [`docs/operations/monitoring.md`](../operations/monitoring.md#sentry).
+- **Receives**: the errors of the browser, the server and the middleware: error type, message and stack trace, the Supabase user id of a signed-in user, the page or request URL without its query string, the route, the browser and OS (from the user agent), release and environment, and breadcrumbs (clicks, navigations, requests, console lines). In production, also 1 in 10 browser page loads and navigations as traces, and session counts for crash-free rates. No e-mail, name or IP address: the SDK's `dataCollection.userInfo` is off and the project setting "Prevent Storing of IP Addresses" has to be on. Before anything leaves, `src/lib/monitoring/scrub.ts` masks e-mail addresses, invitation tokens, auth codes and AI output in messages, and drops cookies, request bodies, headers other than user agent and content type, and extra context. An error message can still quote other data the code was handling: the scrubbing only catches the known cases.
+- **Region**: the organization is created with the EU data storage location, so events, releases and source maps stay in the EU (API at `de.sentry.io`). Per https://docs.sentry.io/organization/data-storage-location/, some account data stays in the US whatever the region: users, tokens, DSN keys, project settings. Sentry is Functional Software, Inc., a US company.
+- **DPA**: https://sentry.io/legal/dpa/ (version 5.1.0 of May 29, 2024 on 2026-10-14, with Standard Contractual Clauses). Subprocessors: https://sentry.io/legal/subprocessors/
+- **Status**: to sign / to confirm before the DSN is set on production.
+
+## Backups
+
+Two nightly GitHub Actions jobs copy production data out of Supabase (KRB-141, KRB-142, [`docs/operations/backups.md`](../operations/backups.md)). Each one does nothing until its secrets are set. Once they run, the two services below receive customer data. Both are in the table at the top with that condition.
+
+### Cloudflare R2 (optional)
+
+- **When**: only once the `backup-storage.yml` secrets are set on a GitHub environment.
+- **Receives**: a copy of every file in the `deliverables` and `exports` buckets, as uploaded (reports, spreadsheets, any personal data inside them), under their Storage paths (workspace and section ids, file names). A file deleted in the app moves to a `deleted/` prefix at the next nightly run and stays 30 more days, then a lifecycle rule removes it ([`retention.md`](retention.md#backups)). No database rows, no accounts.
+- **Region**: the bucket is created with the **EU jurisdiction**, which Cloudflare says guarantees that its objects are stored in the EU, and it is reached through the `<account-id>.eu.r2.cloudflarestorage.com` endpoint (https://developers.cloudflare.com/r2/reference/data-location/). R2 encrypts objects at rest. Cloudflare's own access for support or its subprocessors: **to confirm** in the DPA.
+- **DPA**: https://www.cloudflare.com/cloudflare-customer-dpa/ (version 6.4 of April 2026 was the latest on 2026-10-14). GDPR page with the subprocessor list: https://www.cloudflare.com/trust-hub/gdpr/
+- **Status**: to sign / to confirm before the storage job runs on production. Another S3-compatible service can replace R2 (`BACKUP_S3_PROVIDER`): pick one with an EU region and a DPA, and update this section.
+
+### GitHub (Actions runners and artifacts)
+
+- **When**: once `backup-database.yml` or `backup-storage.yml` runs with its secrets.
+- **Receives**: the GitHub-hosted runner of each run holds the plain database dump (every table, accounts and password hashes included) or the Storage files while the job runs, and deletes the machine afterwards. Only the database dump is kept: encrypted with age for our own key, as a run artifact, for 14 days. GitHub can't read it without the private key, which stays with the owner.
+- **Region**: GitHub-hosted runners and artifacts are not in a region we choose. GitHub's DPA lets it transfer personal data to the United States or any country where GitHub or its subprocessors operate. A self-hosted runner in the EU would keep the plain data in the EU, at the cost of running that machine.
+- **DPA**: GitHub Data Protection Agreement, part of the GitHub Customer Agreement: https://github.com/customer-terms/github-data-protection-agreement. Whether it covers this account's plan: **to confirm**.
+- **Status**: to confirm before the backup jobs run on production.
+
 ## Not subprocessors of customer data
 
-- **GitHub**: holds the code and runs CI. CI uses the local seed accounts and the synthetic eval cases, never customer data.
+- **GitHub, for the code and CI**: CI uses the local seed accounts and the synthetic eval cases, never customer data. The backup jobs are the exception, see [Backups](#backups).
 - **Mailpit**: local and e2e only.
-- **Sentry**: planned in KRB-6.3.1, not wired. Add it here when it is.
 
 ## When this list changes
 

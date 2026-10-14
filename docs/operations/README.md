@@ -1,0 +1,17 @@
+# Operations
+
+Runbooks for running KolabReport in production: what watches it, what backs it up, and what to do when something breaks (story KRB-23). Setup of the environments and their secrets is in [`docs/deployment.md`](../deployment.md).
+
+| File | What it holds |
+| --- | --- |
+| [`backups.md`](backups.md) | What Supabase backs up per plan, our RPO and RTO, the nightly database dump and Storage copy, the restore drill and its log |
+| [`monitoring.md`](monitoring.md) | Logs, Sentry, the uptime check on `/api/health` and its alert routing, the Supabase advisors and the database metrics |
+
+Scheduled jobs that support these pages:
+
+| Job | Where | Schedule (UTC) |
+| --- | --- | --- |
+| Database dump | `.github/workflows/backup-database.yml` | 01:41 every night |
+| Storage copy | `.github/workflows/backup-storage.yml` | 02:11 every night |
+| Storage cleanup | Vercel Cron, `/api/cron/storage-cleanup` | Once a day in the 03:00 hour |
+| Supabase advisors | `.github/workflows/supabase-advisors.yml` | 06:23 every morning |

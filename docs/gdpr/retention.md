@@ -1,11 +1,11 @@
 # Retention policy
 
-How long KolabReport keeps each kind of personal data. The "Today" column is what the code and the migrations do as of 2026-10-14. The "Target" column is either work in progress (KRB-166) or a rule the owner still has to decide, marked **to decide**. For report content the firm is the controller (see [`README.md`](README.md)): the firm decides when its reports go, and these rules are the defaults KolabReport applies for it.
+How long KolabReport keeps each kind of personal data. The "Today" column is what the code and the migrations do as of 2026-10-14. The "Target" column is a rule the owner still has to decide, marked **to decide**, or the same as today. For report content the firm is the controller (see [`README.md`](README.md)): the firm decides when its reports go, and these rules are the defaults KolabReport applies for it.
 
 Two facts shape most of the table:
 
 - The app has no screen to delete an account, an organization, a workspace, a report or a section. A deliverable can be deleted from its section page, and a member can leave or be removed. Everything else is deleted by an operator on request ([`data-subject-requests.md`](data-subject-requests.md)).
-- Deleting a row in the database does not delete its file in Storage, except when the app deletes a deliverable itself. Files of rows removed by a cascade (a deleted section, report or workspace) stay in the bucket until the cleanup job of KRB-166 removes them.
+- Deleting a deliverable or an export row, directly or by a cascade (a deleted section, report or workspace), queues its file. A daily job (KRB-166, `/api/cron/storage-cleanup`) removes the queued files. A deliverable's file waits at least 2 hours 15 minutes after its upload started, because a signed upload link stays valid 2 hours.
 
 ## Database
 
@@ -18,7 +18,7 @@ Two facts shape most of the table:
 | Memberships | `workspace_members` | Until the member leaves or is removed, or the account or workspace is deleted | Same |
 | Invitations | `workspace_invitations` (invitee e-mail, token hash) | The link works once and for 7 days. The row stays until the workspace or the inviter's account is deleted, and stays even when the invitee deletes their own account. | **To decide**: remove used, revoked and expired invitations after a set time |
 | Reports and sections | `reports`, `report_sections` (text, accepted AI draft, assignee) | Until an operator deletes them, or the workspace is deleted. When an assignee's account is deleted, their sections become unassigned. | Set by the firm |
-| Deliverables | `deliverables` (file name, extracted text, uploader) | Until a section editor deletes the file in the app, or its section, report or workspace is deleted. An upload never finished is deleted, row and file, after one day, the next time the same person starts an upload in that section. | Same, plus the KRB-166 cleanup for files |
+| Deliverables | `deliverables` (file name, extracted text, uploader) | Until a section editor deletes the file in the app, or its section, report or workspace is deleted. An upload never finished is deleted, row and file, after one day, the next time the same person starts an upload in that section. | Same |
 | AI generations | `ai_generations` | The whole row stays until the workspace is deleted, see [below](#ai-generations) | **To decide**: clear the content columns once the section is gone |
 | Prompt templates | `prompt_library`, `prompt_rollouts` | Versions are never deleted, only archived, until the workspace is deleted. The author link becomes null when the author's account is deleted. | Same |
 | Exports | `report_exports` | Until the report or workspace is deleted. An export still pending after 2 minutes is marked failed. | 90 days, see [below](#exports) |
@@ -28,12 +28,12 @@ Two facts shape most of the table:
 
 ## Storage files
 
-| Bucket | Today | Target (KRB-166) |
+| Bucket | Today | Target |
 | --- | --- | --- |
-| `deliverables` | Removed by the app when a file is deleted from the section page, when an upload fails the checks, and when an unfinished upload is cleaned up. Files whose row went with a section, report or workspace stay. | A daily job removes stored files whose row no longer exists |
-| `exports` | Removed only when the app fails to record an export it just stored. Every other file stays, including after its report is deleted. | Manual exports kept 90 days. The final snapshot of a report kept as long as the report. The daily job removes files whose row no longer exists. |
+| `deliverables` | Removed by the app when a file is deleted from the section page, when an upload fails the checks, and when an unfinished upload is cleaned up. When the row goes with its section, report or workspace, the daily job removes the file. | Same |
+| `exports` | A manual export is kept 90 days: the daily job deletes the row and then its file. A final snapshot is kept as long as its report, and the daily job removes it after the report is deleted. | Same |
 
-KRB-166 is not merged yet. Update this page with what the job does once it is: how often it runs, whether it deletes the export row with its file, and what it does with older final snapshots. A report can be finalized, reopened and finalized again, which stores one final snapshot per finalization. Whether all of them are kept, or only the latest, is **to decide** in KRB-166.
+The daily job runs at 03:00 UTC from Vercel Cron (`vercel.json`; on the Hobby plan, at some point in that hour) and only works when `CRON_SECRET` is set on the Vercel environment ([`docs/deployment.md`](../deployment.md#scheduled-jobs)). A report finalized, reopened and finalized again keeps one final snapshot per finalization, all of them as long as the report. Keeping only the latest one is **to decide**.
 
 ## AI generations
 
@@ -50,11 +50,11 @@ Provider side: how long Anthropic or OpenAI keep prompts and outputs is set by t
 
 ## Exports
 
-Target policy, being built in KRB-166:
+Policy since KRB-166:
 
-- A manual export (`kind = 'manual'`, from the export buttons) is kept 90 days, then removed.
+- A manual export (`kind = 'manual'`, from the export buttons) is kept 90 days, then the daily job deletes its row and its file.
 - The final snapshot (`kind = 'final'`, the PDF stored when a report becomes final) is kept as long as the report.
-- A daily job removes files in the `exports` and `deliverables` buckets whose row no longer exists.
+- When an export or deliverable row is deleted, by the app or by a cascade, the daily job removes its file.
 
 ## Logs
 
@@ -66,13 +66,27 @@ Nothing in the repository sets a log retention, so each one is the provider's de
 | Supabase logs (API, database, Auth, Storage) | Provider default |
 | E-mail provider logs (Resend or Brevo) | Provider default. Brevo's DPA lists what it keeps for transactional e-mails ([`processors.md`](processors.md)). |
 | Langfuse traces, when tracing is on | Provider default, or the project's own setting |
+| Sentry errors and traces, when `NEXT_PUBLIC_SENTRY_DSN` is set | Plan default: errors 30 days on Developer and 90 days on Team and Business, traces 30 days (https://docs.sentry.io/security-legal-pii/security/data-retention-periods/) |
 | LLM provider logs of API calls | Per the provider's terms, **to confirm** |
 
 ## Backups
 
-- Supabase daily backups come with the Pro plan, and point-in-time recovery is an add-on (`docs/deployment.md`). Turning them on and testing a restore is KRB-6.3.4, not done yet. Their retention is the provider's default for the plan: write it here once they are on.
-- Data deleted from the database stays in the backups until they expire. After a restore, apply again every erasure done since the backup date, from the request log (see [`data-subject-requests.md`](data-subject-requests.md)).
-- A backup of Storage files is planned (KRB-6.3.5) and not built. Whether Supabase's own backups include Storage files is **to confirm**.
+How long data deleted in the app survives in the backups (KRB-141, KRB-142). Setup, restore and drill: [`docs/operations/backups.md`](../operations/backups.md). The two GitHub jobs do nothing until their secrets are set; the Supabase rows depend on the plan.
+
+| Copy | Holds | Kept |
+| --- | --- | --- |
+| Nightly database dump (`backup-database.yml`), encrypted with age, stored as a GitHub artifact | Every table: accounts and password hashes, report content, AI generations, Storage metadata | 14 days, then GitHub deletes the artifact |
+| Supabase daily backups | The database, without Storage files | 7 days on Pro. None on the Free plan, which both projects use today. |
+| Supabase point-in-time recovery | The database, to the second | The window bought, 7 days at the lowest price. Pro add-on, not on. |
+| Storage mirror (`backup-storage.yml`), `mirror/` in a Cloudflare R2 bucket in the EU | The current files of `deliverables` and `exports` | As long as the file exists in the app |
+| Storage mirror, `deleted/<date>/` | Files deleted or replaced in the app | 30 days after the nightly run that moved them there, then an R2 lifecycle rule removes them |
+
+What that means for a deletion:
+
+- A row deleted from the database is out of every dump 14 days later. On Pro, Supabase's daily backups keep it 7 days, and PITR keeps it for its window.
+- A file deleted in the app, by a user or by the daily storage cleanup, leaves `mirror/` at the next nightly run, so within a day. Its copy under `deleted/` expires 30 days later, and Cloudflare removes expired objects within about 24 hours. The file is gone from every copy at most about 32 days after the deletion.
+- Supabase's database backups hold no Storage files, only their rows (Supabase docs: "Database backups do not include objects you store via the Storage API").
+- After a restore, apply again every erasure done since the backup date, from the request log (see [`data-subject-requests.md`](data-subject-requests.md)). Before copying a file back from `deleted/`, check the log too: it may have been deleted on request.
 
 ## Browser and device
 
