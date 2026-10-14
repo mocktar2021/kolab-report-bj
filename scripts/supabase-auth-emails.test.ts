@@ -72,7 +72,7 @@ describe("smtpFields", () => {
   it("defaults to Resend and the KolabReport sender name", () => {
     expect(smtpFields({ SMTP_PASS: "re_x", SMTP_ADMIN_EMAIL: "noreply@email.kolab.test" })).toEqual({
       smtp_host: "smtp.resend.com",
-      smtp_port: 465,
+      smtp_port: "465",
       smtp_user: "resend",
       smtp_pass: "re_x",
       smtp_admin_email: "noreply@email.kolab.test",

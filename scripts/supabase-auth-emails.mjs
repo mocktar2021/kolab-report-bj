@@ -76,7 +76,8 @@ export function smtpFields(env) {
   if (!pass || !adminEmail) return null;
   return {
     smtp_host: env.SMTP_HOST?.trim() || "smtp.resend.com",
-    smtp_port: Number(env.SMTP_PORT?.trim() || 465),
+    // The Management API takes the port as text and answers 400 to a number.
+    smtp_port: env.SMTP_PORT?.trim() || "465",
     smtp_user: env.SMTP_USER?.trim() || "resend",
     smtp_pass: pass,
     smtp_admin_email: adminEmail,

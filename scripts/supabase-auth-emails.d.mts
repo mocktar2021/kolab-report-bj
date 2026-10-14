@@ -9,7 +9,7 @@ export function templateFields(
   toml: string,
   read?: (file: string) => Promise<string>,
 ): Promise<Record<string, string | boolean>>;
-export function smtpFields(env: Record<string, string | undefined>): Record<string, string | number> | null;
+export function smtpFields(env: Record<string, string | undefined>): Record<string, string> | null;
 export function urlFields(
   env: Record<string, string | undefined>,
 ): { site_url: string; uri_allow_list: string } | null;
