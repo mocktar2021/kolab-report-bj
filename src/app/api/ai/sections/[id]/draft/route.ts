@@ -87,6 +87,11 @@ async function inBatches<T, R>(items: T[], limit: number, run: (item: T) => Prom
 }
 
 export async function POST(request: Request, { params }: { params: Params }) {
+  // A JSON content type keeps other sites from posting here with a plain form
+  // (KRB-24 F-08), as the export route does.
+  if (!request.headers.get("content-type")?.startsWith("application/json")) {
+    return refuse(415, "invalidRequest");
+  }
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) return refuse(404, "notFound");
 

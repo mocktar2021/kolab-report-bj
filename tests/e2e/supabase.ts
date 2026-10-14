@@ -33,6 +33,12 @@ export async function createTestUser(name: string): Promise<TestUser> {
   return { id: data.user.id, name, email, password };
 }
 
+/** Client with the anon key and no session: a signed-out visitor. */
+export function anonClient() {
+  if (!url || !anonKey) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  return createClient<Database>(url, anonKey, noSession);
+}
+
 /** Client signed in as `user`, subject to RLS like the browser. */
 export async function signedInClient(user: TestUser) {
   if (!url || !anonKey) throw new Error("Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY");
