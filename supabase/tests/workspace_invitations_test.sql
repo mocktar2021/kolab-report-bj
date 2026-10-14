@@ -221,6 +221,8 @@ select is(pg_temp.affected($$update public.workspace_invitations set revoked_at 
 select pg_temp.act_as('outsider');
 insert into public.workspace_invitations (workspace_id, email, role, token_hash)
 values (pg_temp.id('w2'), 'stranger@kolabreport.test', 'admin', pg_temp.token_hash('tok-stranger-w2'));
+-- Joined through another invitation meanwhile (written as the table owner).
+reset role;
 insert into public.workspace_members (workspace_id, user_id, role)
 values (pg_temp.id('w2'), pg_temp.id('stranger'), 'viewer');
 select pg_temp.act_as('stranger');

@@ -13,8 +13,13 @@ select is(pg_temp.affected($$delete from public.workspace_members where user_id 
 select is(pg_temp.affected($$delete from public.workspace_members where user_id = pg_temp.id('expert')$$), 1, 'expert can leave the workspace');
 
 select pg_temp.act_as('admin');
-select lives_ok($$insert into public.workspace_members (workspace_id, user_id, role) values (pg_temp.id('w1'), pg_temp.id('stranger'), 'viewer')$$,
-  'admin can add a viewer');
+select throws_ok($$insert into public.workspace_members (workspace_id, user_id, role) values (pg_temp.id('w1'), pg_temp.id('stranger'), 'viewer')$$,
+  '42501', null, 'admins add people through invitations only, never directly');
+
+-- Joined through an invitation (the accept functions run as the table owner).
+reset role;
+insert into public.workspace_members (workspace_id, user_id, role) values (pg_temp.id('w1'), pg_temp.id('stranger'), 'viewer');
+select pg_temp.act_as('admin');
 select throws_ok($$update public.workspace_members set role = 'owner' where user_id = pg_temp.id('stranger')$$,
   '42501', null, 'admin cannot grant the owner role');
 select is(pg_temp.affected($$update public.workspace_members set role = 'expert' where user_id = pg_temp.id('stranger')$$), 1, 'admin can change a role below owner');

@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(11);
+select plan(14);
 
 select pg_temp.act_as('expert');
 select results_eq('select id from public.workspaces', array[pg_temp.id('w1')], 'expert sees only w1');
@@ -19,6 +19,13 @@ select lives_ok($$insert into public.workspaces (organization_id, name, created_
 
 select pg_temp.act_as('outsider');
 select results_eq('select id from public.workspaces', array[pg_temp.id('w2')], 'outsider only sees w2');
+-- KRB-24: moving w2 into org_a would make the outsider a member of org_a.
+select throws_ok($$update public.workspaces set organization_id = pg_temp.id('org_a') where id = pg_temp.id('w2')$$,
+  '42501', null, 'the owner of w2 cannot move it into another organization');
+select is((select count(*)::int from public.organizations where id = pg_temp.id('org_a')), 0,
+  'so org_a stays hidden from the outsider');
+select throws_ok($$update public.organizations set owner_id = pg_temp.id('stranger') where id = pg_temp.id('org_b')$$,
+  '42501', null, 'an organization owner changes only its name and slug');
 select throws_ok($$insert into public.workspaces (organization_id, name, created_by) values (pg_temp.id('org_a'), 'Intrusion', pg_temp.id('outsider'))$$,
   '42501', null, 'outsider cannot create a workspace in org_a');
 
