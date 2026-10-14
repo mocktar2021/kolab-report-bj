@@ -2,6 +2,7 @@ import http from "node:http";
 import https from "node:https";
 import type { AddressInfo } from "node:net";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { createTestUser, createWorkspaceFor } from "./supabase";
 
 // KRB-25: the installability checks Lighthouse ran before version 12, done
 // with Chrome itself. KRB-156: a new version waits until the user updates.
@@ -131,7 +132,8 @@ async function startAppProxy(target: string) {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", upstream);
     const isWorker = deployed && url.pathname === "/sw.js";
-    const headers = { ...req.headers, host: upstream.host };
+    // The Host header stays the proxy's: server actions compare it with Origin.
+    const headers = { ...req.headers };
     if (isWorker) headers["accept-encoding"] = "identity";
 
     const forward = client.request(url, { method: req.method, headers }, (response) => {
@@ -164,9 +166,10 @@ async function startAppProxy(target: string) {
     nextDeploy() {
       deployed = true;
     },
+    /** Does not wait: the browser may still hold connections open. */
     close() {
+      server.close();
       server.closeAllConnections();
-      return new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };
 }
@@ -188,8 +191,15 @@ function waitingWorker(page: Page) {
   return page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting));
 }
 
+/** What an open tab does every hour. */
+async function checkForUpdate(page: Page) {
+  await page.evaluate(async () => {
+    await (await navigator.serviceWorker.getRegistration())?.update();
+  });
+}
+
 test("a new version waits for the user, then reloads the page once", async ({ context, baseURL }) => {
-  // Each version precaches the app shell before it installs: about 20 s in all.
+  // Two versions install here, and each one precaches the app shell first.
   test.setTimeout(90_000);
   const proxy = await startAppProxy(baseURL ?? "http://localhost:3000");
   try {
@@ -204,11 +214,8 @@ test("a new version waits for the user, then reloads the page once", async ({ co
     const otherBanner = otherTab.getByRole("status").filter({ hasText: BANNER_TITLE });
     await expect(banner).toHaveCount(0);
 
-    // A deploy, then the tab checks for it as it does every hour.
     proxy.nextDeploy();
-    await page.evaluate(async () => {
-      await (await navigator.serviceWorker.getRegistration())?.update();
-    });
+    await checkForUpdate(page);
     await expect(banner).toBeVisible();
     await expect(banner.getByRole("button", { name: "Mettre à jour" })).toBeVisible();
     await expect(banner.getByRole("button", { name: "Plus tard" })).toBeVisible();
@@ -243,6 +250,64 @@ test("a new version waits for the user, then reloads the page once", async ({ co
     await expect(otherBanner).toHaveCount(0);
     expect(otherLoads).toBe(1);
   } finally {
-    await proxy.close();
+    proxy.close();
+  }
+});
+
+test("an update waits while a section holds unsaved text", async ({ page, baseURL }) => {
+  test.setTimeout(90_000);
+  const expert = await createTestUser("Ursule Update");
+  const {
+    api,
+    workspace_id: workspaceId,
+    report_id: reportId,
+  } = await createWorkspaceFor(expert, "Mise à jour");
+  const { data: section, error } = await api
+    .from("report_sections")
+    .insert({ workspace_id: workspaceId, report_id: reportId, title: "Bilan", assigned_to: expert.id })
+    .select("id")
+    .single();
+  if (error || !section) throw error ?? new Error("Could not create the section");
+
+  const proxy = await startAppProxy(baseURL ?? "http://localhost:3000");
+  try {
+    await page.goto(`${proxy.url}/fr/connexion`);
+    await page.getByLabel("Adresse e-mail").fill(expert.email);
+    await page.getByLabel("Mot de passe", { exact: true }).fill(expert.password);
+    await page.getByRole("button", { name: "Se connecter" }).click();
+    await page.waitForURL((url) => !url.pathname.endsWith("/connexion"));
+    await page.goto(`${proxy.url}/fr/espaces/${workspaceId}/sections/${section.id}`);
+    await serviceWorkerReady(page);
+
+    const main = page.getByRole("main");
+    const editor = main.getByLabel("Texte de la section (Markdown)");
+    const text = "Premier jet, pas encore enregistré.";
+    await main.getByRole("button", { name: "Modifier le texte" }).click();
+    await editor.fill(text);
+
+    proxy.nextDeploy();
+    await checkForUpdate(page);
+    const banner = page.getByRole("status").filter({ hasText: BANNER_TITLE });
+    await expect(banner).toBeVisible();
+    let loads = 0;
+    page.on("load", () => loads++);
+
+    // The click asks to save first: no reload, and the new worker still waits.
+    await banner.getByRole("button", { name: "Mettre à jour" }).click();
+    await expect(banner).toContainText("Vous avez des modifications non enregistrées.");
+    expect(await waitingWorker(page)).toBe(true);
+    await expect(editor).toHaveValue(text);
+    expect(loads).toBe(0);
+
+    // Once the text is saved, the same button starts the update. The reload
+    // itself is checked on /fr above: on this page a request right after the
+    // click can hold the switch to the new worker (docs/pwa.md).
+    await main.getByRole("button", { name: "Enregistrer" }).click();
+    await expect(main.getByText("Texte enregistré.")).toBeVisible();
+    await banner.getByRole("button", { name: "Mettre à jour" }).click();
+    const updating = page.getByRole("button", { name: "Mise à jour…" });
+    await expect.poll(async () => loads > 0 || (await updating.isVisible().catch(() => false))).toBe(true);
+  } finally {
+    proxy.close();
   }
 });

@@ -35,8 +35,8 @@ No step by hand and no cache clearing.
 3. Stop the server, run `npm run build` again and start it again. A new build is enough to change `sw.js`.
 4. In the open tab, click "Update" in DevTools > Application > Service workers, or run `(await navigator.serviceWorker.getRegistration()).update()` in the console. Switching to another tab and back also works after a minute.
 5. The banner shows and DevTools lists the new worker as "waiting to activate".
-6. To check unsaved work, sign in, open a section, click "Modifier" and type a few words. "Mettre à jour" then asks you to save first, and the page stays.
-7. With nothing unsaved, "Mettre à jour" reloads the page once and DevTools shows the new worker as activated.
+6. To check unsaved work, sign in, open a section, click "Modifier le texte" and type a few words. "Mettre à jour" then asks you to save first, and the page stays.
+7. With nothing unsaved, "Mettre à jour" reloads the page once and DevTools shows the new worker as activated. If the button stays on "Mise à jour…", close DevTools: Chrome keeps a service worker awake while DevTools is open, so the old worker never becomes idle.
 
 ## Installability test (KRB-25)
 
@@ -46,6 +46,7 @@ Lighthouse 12 removed its PWA category. `tests/e2e/pwa.spec.ts` runs the same ch
 - The manifest has `name`, `short_name`, `display: standalone`, theme and background colours, a `start_url` inside `scope`, and icons 192 and 512 with purpose `any` plus a 512 `maskable` one. Each icon is served as `image/png` at the size it claims.
 - A service worker controls `/fr` after a reload.
 - The update flow, with two tabs: the banner shows, the new worker waits, "Mettre à jour" reloads the tab once under the new worker, and the other tab keeps its page until its user reloads.
+- With a section being edited, "Mettre à jour" asks to save first: the page stays and the new worker keeps waiting. Once the text is saved, the same button starts the update.
 - When the network comes back, the offline page reloads and the landing page does not.
 
 Run it on a production build:
