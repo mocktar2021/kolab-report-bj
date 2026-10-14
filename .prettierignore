@@ -13,3 +13,4 @@ playwright-report/
 docs/jira/
 *.md
 supabase/templates/
+.claude/worktrees/
