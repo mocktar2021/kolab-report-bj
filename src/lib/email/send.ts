@@ -22,8 +22,18 @@ async function post(url: string, headers: Record<string, string>, body: unknown)
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    throw new Error(`E-mail provider answered ${response.status}`);
+    // Resend and Brevo explain a refusal in a "message" field, for example an
+    // unverified sender domain or a revoked key. It never holds the key.
+    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+    const reason = typeof body?.message === "string" ? `: ${body.message.slice(0, 200)}` : "";
+    throw new Error(`E-mail provider answered ${response.status}${reason}`);
   }
+}
+
+/** Logs why nothing was sent, so a missing setting shows up in the logs (KRB-171). */
+function skipped(reason: string, fields?: Record<string, unknown>): false {
+  log.warn(`sendEmail skipped: ${reason}`, fields);
+  return false;
 }
 
 /**
@@ -31,17 +41,18 @@ async function post(url: string, headers: Record<string, string>, body: unknown)
  * - "brevo" (BREVO_API_KEY) or "resend" (RESEND_API_KEY) for staging and production
  * - "mailpit" (MAILPIT_URL) for the local Supabase stack and the e2e tests
  * Returns false, without throwing, when no provider is set or the send fails,
- * so callers can fall back to showing the link.
+ * so callers can fall back to showing the link. Both cases are logged with
+ * the reason. The provider name is read in any case.
  */
 export async function sendEmail(email: Email): Promise<boolean> {
-  const provider = process.env.EMAIL_PROVIDER;
+  const provider = process.env.EMAIL_PROVIDER?.trim().toLowerCase() || undefined;
   const from = parseSender(process.env.EMAIL_FROM);
 
   try {
     switch (provider) {
       case "brevo": {
         const apiKey = process.env.BREVO_API_KEY;
-        if (!apiKey) return false;
+        if (!apiKey) return skipped("BREVO_API_KEY is not set");
         await post(
           "https://api.brevo.com/v3/smtp/email",
           { "api-key": apiKey },
@@ -57,7 +68,7 @@ export async function sendEmail(email: Email): Promise<boolean> {
       }
       case "resend": {
         const apiKey = process.env.RESEND_API_KEY;
-        if (!apiKey) return false;
+        if (!apiKey) return skipped("RESEND_API_KEY is not set");
         await post(
           "https://api.resend.com/emails",
           { Authorization: `Bearer ${apiKey}` },
@@ -87,7 +98,9 @@ export async function sendEmail(email: Email): Promise<boolean> {
         return true;
       }
       default:
-        return false;
+        return provider
+          ? skipped("EMAIL_PROVIDER is not brevo, resend or mailpit", { provider })
+          : skipped("EMAIL_PROVIDER is not set");
     }
   } catch (error) {
     log.error("sendEmail failed", { provider, error });
