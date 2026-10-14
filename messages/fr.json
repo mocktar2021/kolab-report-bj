@@ -359,7 +359,18 @@
       "title": "Rapports",
       "count": "{count, plural, =0 {Aucun rapport} one {# rapport} other {# rapports}}",
       "empty": "Aucun rapport dans cet espace de travail pour le moment.",
-      "sections": "{count, plural, =0 {Aucune section} one {# section} other {# sections}}"
+      "sections": "{count, plural, =0 {Aucune section} one {# section} other {# sections}}",
+      "progressLabel": "Avancement du rapport {title}",
+      "statusLabel": "Sections par statut",
+      "status": {
+        "not_started": "{count, plural, one {# non commencée} other {# non commencées}}",
+        "in_progress": "{count, plural, other {# en cours}}",
+        "completed": "{count, plural, one {# terminée} other {# terminées}}"
+      },
+      "noSections": "Aucune section pour le moment. Les sections ajoutées au rapport apparaissent ici.",
+      "byExpert": "Par expert<hidden> pour {title}</hidden>",
+      "completedOf": "{completed, plural, one {# sur {total, number} terminée} other {# sur {total, number} terminées}}",
+      "unknownMember": "Membre inconnu"
     }
   },
   "SectionStatus": {

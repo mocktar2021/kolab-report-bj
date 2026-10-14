@@ -27,8 +27,9 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 ### 2. Vercel project (KRB-131)
 
 1. Import the GitHub repository in Vercel. Framework: Next.js. Leave the build settings at their defaults.
-2. `vercel.json` already turns off automatic deployments of `master`, so production only ships through `deploy.yml`. PR branches still get previews.
-3. **Settings > Environment Variables**. Set each one for **Preview** with the staging values and for **Production** with the production values:
+2. `vercel.json` already turns off automatic deployments of `master` and `production`, so production only ships through `deploy.yml`. PR branches still get previews.
+3. Create a `production` branch from `master` on GitHub, then set it as the production branch in **Settings > Environments > Production > Branch Tracking**. Nobody pushes to it. Vercel refuses a Preview domain on its production branch, and the staging domain has to follow `master` (step 6).
+4. **Settings > Environment Variables**. Set each one for **Preview** with the staging values and for **Production** with the production values. Mark only the secrets as Sensitive: `deploy.yml` builds with `vercel pull`, which cannot read Sensitive values, so a Sensitive `NEXT_PUBLIC_*` variable reaches the build empty and the build stops.
 
 | Variable | Secret? | Value |
 | --- | --- | --- |
@@ -47,8 +48,9 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `EMAIL_FROM` | no | Sender, for example `KolabReport <noreply@kolabreport.com>`, on a domain verified with the provider |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
 
-4. Note the **Team ID** (Settings > General, or your account ID on a personal plan) and the **Project ID** (project Settings > General). Create a token in Account Settings > Tokens.
-5. Optional: add a staging domain (for example `staging.kolabreport.com`) to the project, and the production domain (KRB-134). HTTPS is automatic.
+5. Note the **Team ID** (Settings > General, or your account ID on a personal plan) and the **Project ID** (project Settings > General). Create a token in Account Settings > Tokens.
+6. Optional: add the staging domain in **Settings > Domains**, connected to **Preview** and the branch `master`, then add the CNAME record Vercel shows at your DNS provider. `deploy.yml` points it at each staging deployment. The production domain comes with KRB-134. HTTPS is automatic.
+7. **Deployment Protection**: Vercel Authentication puts a Vercel login in front of preview domains, the staging domain included. Turn it off when people without a Vercel account test staging. The app's own login still applies.
 
 ### 3. GitHub environments (KRB-132)
 
@@ -70,7 +72,7 @@ On each environment:
 | `VERCEL_PROJECT_ID` | variable | Vercel Project ID |
 | `STAGING_DOMAIN` | variable, staging only, optional | Domain to point at each staging deployment |
 
-Last, set the repository variable **`DEPLOY_ENABLED`** to `true` (Settings > Secrets and variables > Actions > Variables). Until then every job in `deploy.yml` is skipped.
+Last, set the repository variable **`DEPLOY_ENABLED`** to `true` (Settings > Secrets and variables > Actions > Variables > Repository variables). Until then every job in `deploy.yml` is skipped. It has to be a repository variable: the jobs check it before they enter an environment, so a copy on an environment is never read.
 
 ## Secrets rules
 
