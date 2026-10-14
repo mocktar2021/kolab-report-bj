@@ -16,7 +16,14 @@ const DASHBOARD_PATH = "/tableau-de-bord";
 // compressed). They load in their own chunk once the shell has hydrated, so
 // signed-in pages no longer evaluate them on load (KRB-154). Until then the
 // highlight shows in place, without animation.
-const loadLayoutFeatures = () => import("@/components/motion/layout-features").then((mod) => mod.default);
+//
+// Only from the lg breakpoint, where the sidebar shows. Below it the nav sits
+// in the menu sheet, which closes on navigation, so the highlight never gets
+// to slide and phones skip the download.
+const loadLayoutFeatures = () =>
+  window.matchMedia("(min-width: 1024px)").matches
+    ? import("@/components/motion/layout-features").then((mod) => mod.default)
+    : new Promise<never>(() => {});
 
 type NavItemsProps = {
   /** "sidebar" hides labels when the desktop sidebar is collapsed; "sheet" never does. */
