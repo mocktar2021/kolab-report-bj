@@ -100,7 +100,20 @@ export function DraftFeedback({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" size="sm" variant="outline" disabled={!changed || pending} onClick={send}>
+        {/*
+          aria-disabled rather than disabled: once the opinion is saved the
+          button stays focusable, so the focus is not dropped to the page.
+        */}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-disabled={!changed || pending}
+          className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+          onClick={() => {
+            if (changed && !pending) send();
+          }}
+        >
           {t("send")}
         </Button>
         <p role="status" className="text-xs text-muted-foreground">
@@ -137,7 +150,7 @@ function ThumbButton({
       onClick={onClick}
       className={cn(
         pressed &&
-          "border-highlight/40 bg-highlight/10 text-highlight hover:bg-highlight/15 hover:text-highlight",
+          "border-highlight/40 bg-highlight/10 text-highlight hover:bg-highlight/[0.12] hover:text-highlight",
       )}
     >
       {children}
