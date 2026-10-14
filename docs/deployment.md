@@ -18,8 +18,8 @@ Order is always **migrations first, then the app**. A new app version never runs
 Create two projects, `kolabreport-staging` and `kolabreport-production`, in the **EU West (Paris)** region (`eu-west-3`), next to the Vercel functions (`cdg1` in `vercel.json`). For each one:
 
 1. **Auth > URL Configuration**: Site URL = the app URL of that environment. Redirect URLs: `https://<app-domain>/fr/auth/callback`, plus `https://*-<vercel-team-slug>.vercel.app/**` on staging so PR previews can sign in.
-2. **Auth > SMTP**: a real sender (for example Brevo or Resend). The built-in sender is limited to a few e-mails per hour.
-3. **Auth > Email templates**: paste the French templates from `supabase/templates/`, or run `npx supabase link` then `npx supabase config push` (KRB-58).
+2. **Auth > SMTP** and **Auth > Email templates**: set by the `supabase-auth-emails.yml` workflow from the repository, see [Auth e-mails](#auth-e-mails). Don't use `npx supabase config push` for this: it sends the whole local `[auth]` section, localhost URLs included.
+3. Without custom SMTP, Supabase only delivers Auth e-mails to members of the Supabase team, about 30 an hour, from "Supabase Auth".
 4. Nothing to create for storage: the `deliverables` and `exports` buckets and their policies come from the migrations.
 5. **Database > Publications**: keep Realtime on for `supabase_realtime` (the default). The migrations add `report_sections` to it, so an open master report picks up a new section order from another session. Without Realtime the page still works and refreshes when the tab comes back into focus.
 6. Keep the database password in your password manager. It goes in the GitHub environment below.
@@ -44,8 +44,8 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `AI_DRAFTS_ENABLED` | no | `true` only once the eval suite passes on the model of that environment (`evals/README.md`) |
 | `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | **yes** for the secret key, mark Sensitive | Tracing of AI calls, with `AI_TRACING=true` (`docs/ai-evaluation.md`) |
 | `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_PRICE_INPUT_PER_MTOK`, `AI_FALLBACK_PRICE_OUTPUT_PER_MTOK`, `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` | no | Fallback model, its price, and the daily cost alert, see `.env.example` |
-| `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation e-mails |
-| `EMAIL_FROM` | no | Sender, for example `KolabReport <noreply@kolabreport.com>`, on a domain verified with the provider |
+| `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation and report e-mails. Without it, or without the matching key, the app shows the invitation link to copy and logs `sendEmail skipped` with the reason |
+| `EMAIL_FROM` | no | Sender on a domain verified with the provider, for example `KolabReport <noreply@email.kolabreport.mocktar.com>` with Resend |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
 | `CRON_SECRET` | **yes**, mark Sensitive | Random string of at least 16 characters, one per environment (`openssl rand -hex 32`). Vercel Cron sends it to the scheduled jobs, see [Scheduled jobs](#scheduled-jobs) |
 
@@ -143,6 +143,29 @@ The runbooks are in `docs/operations/`:
 
 - [`backups.md`](operations/backups.md): what Supabase backs up per plan, our RPO and RTO, setup, the restore drill and its log.
 - [`monitoring.md`](operations/monitoring.md): uptime check on `/api/health`, Sentry, logs, advisors and database metrics.
+
+## Auth e-mails
+
+Confirmation, password reset, invitation and e-mail change messages come from Supabase Auth, not from the app. `supabase-auth-emails.yml` (KRB-170) pushes them to a project from the repository:
+
+- the French subjects and templates declared in `supabase/config.toml` (`supabase/templates/*.html`), always;
+- the custom SMTP sender, once `SMTP_PASS` and `SMTP_ADMIN_EMAIL` are set on the environment;
+- the site URL and redirect URLs, once `AUTH_SITE_URL` is set.
+
+It changes only those fields (`scripts/supabase-auth-emails.mjs`, `--dry-run` lists them). A push to `master` that touches the templates updates staging. Run it by hand for production: **Actions > Supabase Auth e-mails > Run workflow**.
+
+Setup, per GitHub environment (`staging`, `production`):
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `SMTP_PASS` | secret | A Resend API key with **Sending access** on the verified domain only, for example named `kolabreport-supabase-smtp-staging` |
+| `SMTP_ADMIN_EMAIL` | variable | Sender address on the verified domain, for example `noreply@email.kolabreport.mocktar.com` |
+| `SMTP_SENDER_NAME` | variable, optional | Default `KolabReport` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | variables, optional | Default `smtp.resend.com`, `465`, `resend`. Set them for Brevo or another provider |
+| `AUTH_SITE_URL` | variable, optional | The app's origin, for example `https://kolabreport.mocktar.com`. Then the redirect list is `<origin>/**` |
+| `AUTH_REDIRECT_URLS` | variable, optional | More redirect URLs, separated by commas, for example `https://*-<vercel-team-slug>.vercel.app/**` on staging |
+
+`SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` are the ones `deploy.yml` already uses. With custom SMTP, Supabase starts at 30 Auth e-mails an hour (**Auth > Rate Limits**); raise it if needed.
 
 ## Releasing
 

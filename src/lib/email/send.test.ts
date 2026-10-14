@@ -23,9 +23,32 @@ describe("sendEmail", () => {
     vi.unstubAllGlobals();
   });
 
-  it("returns false without a provider", async () => {
+  it("returns false without a provider and says why", async () => {
     vi.stubEnv("EMAIL_PROVIDER", "");
+    const warn = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(await sendEmail(email)).toBe(false);
+    expect(String(warn.mock.calls[0]?.[0])).toContain("EMAIL_PROVIDER is not set");
+  });
+
+  it("says which key is missing, and reads the provider in any case", async () => {
+    vi.stubEnv("EMAIL_PROVIDER", " Resend ");
+    vi.stubEnv("RESEND_API_KEY", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const warn = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    expect(await sendEmail(email)).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(String(warn.mock.calls[0]?.[0])).toContain("RESEND_API_KEY is not set");
+  });
+
+  it("names an unknown provider", async () => {
+    vi.stubEnv("EMAIL_PROVIDER", "sendgrid");
+    const warn = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(await sendEmail(email)).toBe(false);
+    const line = JSON.parse(String(warn.mock.calls[0]?.[0]));
+    expect(line.msg).toContain("EMAIL_PROVIDER is not brevo, resend or mailpit");
+    expect(line.provider).toBe("sendgrid");
   });
 
   it("posts to Brevo with the API key", async () => {
@@ -48,5 +71,18 @@ describe("sendEmail", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     expect(await sendEmail(email)).toBe(false);
+  });
+
+  it("logs the provider's reason for a refusal", async () => {
+    vi.stubEnv("EMAIL_PROVIDER", "resend");
+    vi.stubEnv("RESEND_API_KEY", "key-3");
+    const refusal = { statusCode: 403, name: "validation_error", message: "The domain is not verified." };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(refusal, { status: 403 })));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(await sendEmail(email)).toBe(false);
+    const logged = String(error.mock.calls[0]?.[0]);
+    expect(logged).toContain("403: The domain is not verified.");
+    expect(logged).not.toContain("key-3");
   });
 });

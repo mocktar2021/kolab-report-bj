@@ -1,0 +1,65 @@
+name: Supabase Auth e-mails
+
+# Pushes the French Auth e-mails of the repository to a hosted Supabase
+# project (KRB-170): the subjects and templates of supabase/config.toml, the
+# custom SMTP sender once SMTP_PASS and SMTP_ADMIN_EMAIL are set on the
+# environment, and the site and redirect URLs once AUTH_SITE_URL is set. Only
+# those fields change (scripts/supabase-auth-emails.mjs). A change to the
+# templates on master updates staging; production runs by hand.
+# Nothing runs until the repository variable DEPLOY_ENABLED is "true".
+# Setup: docs/deployment.md, "Auth e-mails".
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - supabase/templates/**
+      - supabase/config.toml
+      - scripts/supabase-auth-emails.mjs
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Auth e-mails on ${{ inputs.environment || 'staging' }}
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Reads the environment's secrets without adding a deployment entry.
+    environment:
+      name: ${{ inputs.environment || 'staging' }}
+      deployment: false
+    concurrency:
+      group: supabase-auth-emails-${{ inputs.environment || 'staging' }}
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      SMTP_ADMIN_EMAIL: ${{ vars.SMTP_ADMIN_EMAIL }}
+      SMTP_SENDER_NAME: ${{ vars.SMTP_SENDER_NAME }}
+      SMTP_HOST: ${{ vars.SMTP_HOST }}
+      SMTP_PORT: ${{ vars.SMTP_PORT }}
+      SMTP_USER: ${{ vars.SMTP_USER }}
+      AUTH_SITE_URL: ${{ vars.AUTH_SITE_URL }}
+      AUTH_REDIRECT_URLS: ${{ vars.AUTH_REDIRECT_URLS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      # The script uses Node built-ins only, so no npm ci.
+      - name: Push the Auth e-mail settings
+        run: node scripts/supabase-auth-emails.mjs
