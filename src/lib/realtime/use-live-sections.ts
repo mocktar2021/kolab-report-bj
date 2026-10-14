@@ -52,11 +52,30 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
 
     // supabase-js only loads after the page is up: no other part of the page needs it.
     void import("@/lib/supabase/client")
-      .then(({ createClient }) => {
+      .then(async ({ createClient }) => {
         if (stopped) return;
         const supabase = createClient();
+        // supabase-js hands the signed-in user's token to Realtime by itself, but
+        // only once it has read the session. A channel that joins before that goes
+        // in with the anon key, and Realtime refuses the subscription since anon
+        // cannot read report_sections. So the token comes first.
+        await supabase.realtime.setAuth();
+        if (stopped) return;
+
         let connected = false;
         let dropped = false;
+        let removed = false;
+
+        function giveUp(reason: string) {
+          console.debug(`live-sections: ${reason}, the page will not update by itself`);
+          removed = true;
+          // With no channel left, the socket would keep retrying for about a
+          // minute before closing: close it now.
+          void supabase.removeChannel(channel).then(() => {
+            if (supabase.getChannels().length === 0) void supabase.realtime.disconnect();
+          });
+        }
+
         // A topic of its own: supabase-js hands back a channel with the same topic
         // while it is still leaving, for example when Strict Mode runs the effect twice.
         const channel = supabase
@@ -64,8 +83,14 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
           .on("postgres_changes", { event: "*", schema: "public", table: "report_sections", filter }, () => {
             clearTimeout(timer);
             timer = setTimeout(() => onChangeRef.current(), LIVE_DEBOUNCE_MS);
+          })
+          // The join itself succeeds even when Realtime then refuses the changes
+          // (no table access, bad filter): it says so in a system message.
+          .on("system", {}, (payload: { extension?: string; status?: string }) => {
+            if (!removed && payload.extension === "postgres_changes" && payload.status === "error") {
+              giveUp("Realtime refused the subscription");
+            }
           });
-        let removed = false;
         removeChannel = () => {
           if (removed) return;
           removed = true;
@@ -90,13 +115,7 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
           } else if (connected) {
             if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") dropped = true;
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.debug("live-sections: Realtime is not reachable, the page will not update by itself");
-            removed = true;
-            // With no channel left, the socket would keep retrying for about a
-            // minute before closing: close it now.
-            void supabase.removeChannel(channel).then(() => {
-              if (supabase.getChannels().length === 0) void supabase.realtime.disconnect();
-            });
+            giveUp("Realtime is not reachable");
           }
         });
       })

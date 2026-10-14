@@ -17,15 +17,25 @@ const realtime = vi.hoisted(() => {
     binding: null as { type: string; filter: Record<string, string> } | null,
     handler: null as Handler | null,
     status: null as StatusCallback | null,
+    system: null as Handler | null,
     channel: {} as Record<string, unknown>,
     removeChannel: vi.fn(async () => "ok"),
     channels: 0,
     disconnect: vi.fn(async () => "ok"),
+    // The order of setAuth and the first channel, to check the token comes first.
+    calls: [] as string[],
+    setAuth: vi.fn(async () => {
+      state.calls.push("setAuth");
+    }),
   };
   state.channel = {
     on(type: string, filter: Record<string, string>, handler: Handler) {
-      state.binding = { type, filter };
-      state.handler = handler;
+      if (type === "system") {
+        state.system = handler;
+      } else {
+        state.binding = { type, filter };
+        state.handler = handler;
+      }
       return state.channel;
     },
     subscribe(callback: StatusCallback) {
@@ -40,11 +50,12 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     channel: (topic: string) => {
       realtime.topics.push(topic);
+      realtime.calls.push("channel");
       return realtime.channel;
     },
     removeChannel: realtime.removeChannel,
     getChannels: () => Array.from({ length: realtime.channels }),
-    realtime: { disconnect: realtime.disconnect },
+    realtime: { disconnect: realtime.disconnect, setAuth: realtime.setAuth },
   }),
 }));
 
@@ -86,9 +97,40 @@ afterEach(() => {
   realtime.binding = null;
   realtime.handler = null;
   realtime.status = null;
+  realtime.system = null;
+  realtime.calls = [];
+  realtime.setAuth.mockClear();
 });
 
 describe("useLiveSections", () => {
+  it("hands Realtime the user's token before it joins the channel", async () => {
+    await renderLive();
+    // Joined with the anon key, the subscription would be refused.
+    expect(realtime.calls).toEqual(["setAuth", "channel"]);
+  });
+
+  it("gives up quietly when Realtime refuses the subscription", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const { onChange } = await renderLive();
+    act(() => realtime.status?.("SUBSCRIBED"));
+
+    // Other system messages change nothing.
+    await act(async () => realtime.system?.({ extension: "postgres_changes", status: "ok" }));
+    expect(realtime.removeChannel).not.toHaveBeenCalled();
+
+    await act(async () =>
+      realtime.system?.({ extension: "postgres_changes", status: "error", message: "Unable to subscribe" }),
+    );
+    expect(realtime.removeChannel).toHaveBeenCalledTimes(1);
+    expect(realtime.disconnect).toHaveBeenCalledTimes(1);
+    expect(debug).toHaveBeenCalledTimes(1);
+
+    // A late status from the removed channel is ignored.
+    act(() => realtime.status?.("CLOSED"));
+    act(() => realtime.status?.("SUBSCRIBED"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("listens to every change of the matching sections, on a topic of its own", async () => {
     await renderLive();
     await renderLive();

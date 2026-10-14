@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Users } from "lucide-react";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
+import { LiveDashboard } from "@/components/dashboard/live-dashboard";
 import { NoWorkspace } from "@/components/dashboard/no-workspace";
 import { ReportList } from "@/components/dashboard/report-list";
 import { SectionTable, SectionsError } from "@/components/dashboard/section-table";
@@ -63,6 +64,14 @@ export default async function TableauDeBordPage({
           </Button>
         ) : null}
       </header>
+
+      {/*
+        Reloads the page when a section of the workspace changes elsewhere
+        (KRB-19). No loading.tsx for this route: with a route loading boundary,
+        Next 15.5 dropped about one router.refresh() result in three in the
+        e2e test, and the dashboard stayed on the old figures.
+      */}
+      {workspace ? <LiveDashboard workspaceId={workspace.id} /> : null}
 
       {!workspace ? (
         <NoWorkspace />

@@ -20,6 +20,8 @@ const realtime = vi.hoisted(() => {
   };
   state.channel = {
     on(type: string, filter: Record<string, string>, handler: Handler) {
+      // The system listener is tested with the shared hook.
+      if (type === "system") return state.channel;
       state.binding = { type, filter };
       state.handler = handler;
       return state.channel;
@@ -41,7 +43,7 @@ vi.mock("@/lib/supabase/client", () => ({
     },
     removeChannel: realtime.removeChannel,
     getChannels: () => [],
-    realtime: { disconnect: vi.fn(async () => "ok") },
+    realtime: { disconnect: vi.fn(async () => "ok"), setAuth: vi.fn(async () => {}) },
   }),
 }));
 
