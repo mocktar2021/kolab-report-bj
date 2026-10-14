@@ -1,4 +1,4 @@
-import type { LanguageModelV1 } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { describe, expect, it, vi } from "vitest";
 import { describeValidationError, generateDraft, repairReserve, type DraftCall } from "./generate";
 import { mockModel, sampleOutput } from "./mock";
@@ -11,12 +11,12 @@ const INVALID = JSON.stringify({
   sources: [{ deliverable: "L9", detail: "x" }],
 });
 
-function answers(...texts: string[]): LanguageModelV1 {
+function answers(...texts: string[]): LanguageModelV3 {
   let call = 0;
   return mockModel(() => texts[Math.min(call++, texts.length - 1)] ?? "");
 }
 
-function draftCall(model: LanguageModelV1, overrides: Partial<DraftCall> = {}): DraftCall {
+function draftCall(model: LanguageModelV3, overrides: Partial<DraftCall> = {}): DraftCall {
   return {
     model,
     schema: "section_draft",
@@ -42,7 +42,9 @@ describe("generateDraft", () => {
     expect(result.output.schema).toBe("section_draft");
     expect(result.repaired).toBe(false);
     expect(result.rawText).toBe(VALID);
-    expect(result.usage.outputTokens).toBeGreaterThan(0);
+    // What the mock reports as the provider: a third of the characters, rounded up.
+    expect(result.usage.outputTokens).toBe(Math.ceil(VALID.length / 3));
+    expect(result.usage.inputTokens).toBeGreaterThan(0);
     expect(result.usageEstimated).toBe(false);
     expect(onPartial.mock.calls.length).toBeGreaterThan(1);
   });

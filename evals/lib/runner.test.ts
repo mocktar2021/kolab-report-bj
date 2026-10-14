@@ -2,7 +2,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { LanguageModelV1 } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { describe, expect, it } from "vitest";
 import { SYSTEM_PROMPT } from "@/lib/ai/context";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
@@ -41,7 +41,7 @@ function find(id: string): LoadedCase {
 }
 
 /** A model that answers each call with the next text of the list, the last one repeated. */
-function scripted(texts: readonly string[]): LanguageModelV1 {
+function scripted(texts: readonly string[]): LanguageModelV3 {
   let call = 0;
   return mockModel(() => texts[Math.min(call++, texts.length - 1)] ?? "");
 }
@@ -132,7 +132,7 @@ describe("runCase repair and failures", () => {
   it("repairs once after an answer that fails the schema", async () => {
     const prompts: string[] = [];
     const model = scripted(['{"title": "Brouillon"}', valid]);
-    const spy: LanguageModelV1 = {
+    const spy: LanguageModelV3 = {
       ...model,
       async doGenerate(options) {
         prompts.push(JSON.stringify(options.prompt));
@@ -163,7 +163,7 @@ describe("runCase repair and failures", () => {
 
   it("does not repair after a provider error", async () => {
     let calls = 0;
-    const failing: LanguageModelV1 = {
+    const failing: LanguageModelV3 = {
       ...mockModel(() => valid),
       async doGenerate() {
         calls++;

@@ -1,4 +1,5 @@
-import { NoObjectGeneratedError, streamObject, type LanguageModelV1, type TelemetrySettings } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
+import { NoObjectGeneratedError, streamObject, type LanguageModelUsage, type TelemetrySettings } from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN, estimateTokens } from "./context/tokens";
 import { outputSchemaFor, parseDraftOutput, type DraftOutput, type SourceRefs } from "./schemas";
@@ -36,7 +37,7 @@ export type DraftResult =
   | ({ ok: false; error: DraftFailure } & DraftOutcome);
 
 export type DraftCall = {
-  model: LanguageModelV1;
+  model: LanguageModelV3;
   schema: OutputSchema;
   refs: SourceRefs;
   system: string;
@@ -50,7 +51,7 @@ export type DraftCall = {
   onPartial: (partial: unknown) => void;
   onRepair: () => void;
   /** Used once when `model` fails before answering. */
-  fallback?: LanguageModelV1 | null;
+  fallback?: LanguageModelV3 | null;
   /** AI SDK spans (src/lib/ai/tracing.ts). */
   telemetry?: TelemetrySettings;
 };
@@ -82,9 +83,9 @@ function addUsage(total: TokenUsage, more: TokenUsage): TokenUsage {
   };
 }
 
-function usageOf(usage: { promptTokens?: number; completionTokens?: number } | undefined): TokenUsage {
-  const input = Number(usage?.promptTokens);
-  const output = Number(usage?.completionTokens);
+function usageOf(usage: Pick<LanguageModelUsage, "inputTokens" | "outputTokens"> | undefined): TokenUsage {
+  const input = Number(usage?.inputTokens);
+  const output = Number(usage?.outputTokens);
   return {
     inputTokens: Number.isFinite(input) ? input : 0,
     outputTokens: Number.isFinite(output) ? output : 0,
@@ -126,7 +127,7 @@ Renvoie l'objet complet, corrigé, dans le format demandé, sans rien ajouter d'
 
 async function attempt(
   call: DraftCall,
-  model: LanguageModelV1,
+  model: LanguageModelV3,
   prompt: string,
   signal: AbortSignal,
 ): Promise<Attempt> {
@@ -157,7 +158,7 @@ async function attempt(
       system: call.system,
       prompt,
       temperature: call.temperature,
-      maxTokens: call.maxTokens,
+      maxOutputTokens: call.maxTokens,
       maxRetries: 1,
       abortSignal: signal,
       // Errors arrive in the stream below; this keeps them out of the logs twice.

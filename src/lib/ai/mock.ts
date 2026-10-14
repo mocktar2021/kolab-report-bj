@@ -1,4 +1,9 @@
-import type { LanguageModelV1, LanguageModelV1StreamPart } from "@ai-sdk/provider";
+import type {
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  LanguageModelV3StreamPart,
+  LanguageModelV3Usage,
+} from "@ai-sdk/provider";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import type { DraftOutputByKey, SourceRefs } from "./schemas";
 
@@ -20,7 +25,7 @@ function tokens(text: string): number {
   return Math.ceil(text.length / 3);
 }
 
-function promptText(prompt: Parameters<LanguageModelV1["doGenerate"]>[0]["prompt"]): string {
+function promptText(prompt: LanguageModelV3CallOptions["prompt"]): string {
   return prompt
     .map((message) =>
       typeof message.content === "string"
@@ -30,43 +35,56 @@ function promptText(prompt: Parameters<LanguageModelV1["doGenerate"]>[0]["prompt
     .join("\n");
 }
 
-/** A model that always answers `respond()`, streamed in small pieces with a short pause between them. */
-export function mockModel(respond: () => string, modelId = "mock"): LanguageModelV1 {
+function usageFor(prompt: LanguageModelV3CallOptions["prompt"], text: string): LanguageModelV3Usage {
+  const input = tokens(promptText(prompt));
+  const output = tokens(text);
   return {
-    specificationVersion: "v1",
+    inputTokens: { total: input, noCache: input, cacheRead: undefined, cacheWrite: undefined },
+    outputTokens: { total: output, text: output, reasoning: undefined },
+  };
+}
+
+const STOP = { unified: "stop", raw: "stop" } as const;
+
+/** A model that always answers `respond()`, streamed in small pieces with a short pause between them. */
+export function mockModel(respond: () => string, modelId = "mock"): LanguageModelV3 {
+  return {
+    specificationVersion: "v3",
     provider: "mock",
     modelId,
-    defaultObjectGenerationMode: "json",
-    supportsStructuredOutputs: false,
+    supportedUrls: {},
     async doGenerate(options) {
       const text = respond();
       return {
-        text,
-        finishReason: "stop",
-        usage: { promptTokens: tokens(promptText(options.prompt)), completionTokens: tokens(text) },
-        rawCall: { rawPrompt: options.prompt, rawSettings: {} },
+        content: [{ type: "text", text }],
+        finishReason: STOP,
+        usage: usageFor(options.prompt, text),
+        warnings: [],
       };
     },
     async doStream(options) {
       const text = respond();
       const parts = chunks(text);
-      const usage = { promptTokens: tokens(promptText(options.prompt)), completionTokens: tokens(text) };
+      const usage = usageFor(options.prompt, text);
       const signal = options.abortSignal;
-      const stream = new ReadableStream<LanguageModelV1StreamPart>({
+      const stream = new ReadableStream<LanguageModelV3StreamPart>({
         async start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] });
+          controller.enqueue({ type: "text-start", id: "0" });
           for (const part of parts) {
             if (signal?.aborted) {
               controller.error(signal.reason);
               return;
             }
-            controller.enqueue({ type: "text-delta", textDelta: part });
+            controller.enqueue({ type: "text-delta", id: "0", delta: part });
             await new Promise((resolve) => setTimeout(resolve, 15));
           }
-          controller.enqueue({ type: "finish", finishReason: "stop", usage });
+          controller.enqueue({ type: "text-end", id: "0" });
+          controller.enqueue({ type: "finish", finishReason: STOP, usage });
           controller.close();
         },
       });
-      return { stream, rawCall: { rawPrompt: options.prompt, rawSettings: {} } };
+      return { stream };
     },
   };
 }

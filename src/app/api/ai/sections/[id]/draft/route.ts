@@ -302,14 +302,14 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
           model: fast,
           system,
           prompt,
-          maxTokens: maxOutputTokens,
+          maxOutputTokens,
           temperature: 0,
           maxRetries: 1,
           abortSignal: signal,
           experimental_telemetry: telemetry("kolab.summary"),
         });
-        usage.inputTokens += result.usage.promptTokens || 0;
-        usage.outputTokens += result.usage.completionTokens || 0;
+        usage.inputTokens += result.totalUsage.inputTokens || 0;
+        usage.outputTokens += result.totalUsage.outputTokens || 0;
         return [chunk.id, result.text.trim() || null] as const;
       } catch {
         // A stopped call was billed for its prompt all the same.
