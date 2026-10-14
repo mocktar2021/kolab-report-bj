@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { generateObject, type LanguageModelV1 } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
+import { generateObject } from "ai";
 import { z } from "zod";
 import { SYSTEM_PROMPT, type BuiltContext } from "@/lib/ai/context";
 import type { GoldenCase } from "./case";
@@ -105,7 +106,7 @@ export type JudgeResult = {
 };
 
 export async function runJudge(params: {
-  model: LanguageModelV1;
+  model: LanguageModelV3;
   rubric: string;
   value: GoldenCase;
   template: Pick<EvalTemplate, "key" | "title">;
@@ -121,7 +122,7 @@ export async function runJudge(params: {
     system: judgeSystem(params.rubric),
     prompt: judgePrompt(params.value, params.template, params.built, params.markdown),
     temperature: 0,
-    maxTokens: JUDGE_MAX_TOKENS,
+    maxOutputTokens: JUDGE_MAX_TOKENS,
     maxRetries: 2,
   });
   const scores = {} as Record<Criterion, number>;
@@ -133,7 +134,7 @@ export async function runJudge(params: {
   return {
     scores,
     justifications,
-    usage: { inputTokens: result.usage.promptTokens, outputTokens: result.usage.completionTokens },
+    usage: { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 },
     latencyMs: Math.round(performance.now() - started),
   };
 }

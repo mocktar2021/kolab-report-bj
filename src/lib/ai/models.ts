@@ -1,6 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import type { LanguageModelV1 } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { z } from "zod";
 import type { ModelTier } from "@/lib/prompts/catalog";
 
@@ -136,34 +136,40 @@ export function readAiSettings(env: Env): AiSettings {
 }
 
 /**
+ * OpenAI through the Chat Completions API, as before AI SDK 5 made the
+ * Responses API the default. Structured outputs use a strict JSON schema
+ * by default since AI SDK 6, so the schema is enforced as it was with
+ * `structuredOutputs: true`.
+ */
+function openAiChat(env: Env, modelId: string): LanguageModelV3 {
+  return createOpenAI({ apiKey: env.OPENAI_API_KEY }).chat(modelId);
+}
+
+/**
  * The model for a tier, or null when the provider can't be called. The mock
  * provider has no model here: callers build one with mockModel() for the
  * output they expect.
  */
-export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): LanguageModelV1 | null {
+export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): LanguageModelV3 | null {
   if (!settings.configured) return null;
   const modelId = settings.models[tier];
   switch (settings.provider) {
     case "anthropic":
       return createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(modelId);
     case "openai":
-      return createOpenAI({ apiKey: env.OPENAI_API_KEY, compatibility: "strict" })(modelId, {
-        structuredOutputs: true,
-      });
+      return openAiChat(env, modelId);
     case "mock":
       return null;
   }
 }
 
 /** The fallback model, or null when none is set. */
-export function fallbackModel(settings: AiSettings, env: Env): LanguageModelV1 | null {
+export function fallbackModel(settings: AiSettings, env: Env): LanguageModelV3 | null {
   if (!settings.fallback) return null;
   const { provider, model } = settings.fallback;
   return provider === "anthropic"
     ? createAnthropic({ apiKey: env.ANTHROPIC_API_KEY })(model)
-    : createOpenAI({ apiKey: env.OPENAI_API_KEY, compatibility: "strict" })(model, {
-        structuredOutputs: true,
-      });
+    : openAiChat(env, model);
 }
 
 /** The link to a trace, or null without a template. */

@@ -1,4 +1,5 @@
-import { generateObject, generateText, NoObjectGeneratedError, type LanguageModelV1 } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
+import { generateObject, generateText, NoObjectGeneratedError, type LanguageModelUsage } from "ai";
 import {
   buildPrompt,
   contextBudget,
@@ -40,10 +41,10 @@ export type RunDeps = {
   /** Model id written in the report. */
   modelId: string;
   /** The model that writes the draft. It gets the refs so the mock can cite them. */
-  generator: (refs: SourceRefs, schema: OutputSchema) => LanguageModelV1;
+  generator: (refs: SourceRefs, schema: OutputSchema) => LanguageModelV3;
   /** The fast model that summarizes overflow chunks. */
-  summarizer: LanguageModelV1;
-  judge: { model: LanguageModelV1; rubric: string } | null;
+  summarizer: LanguageModelV3;
+  judge: { model: LanguageModelV3; rubric: string } | null;
   summaryConcurrency?: number;
 };
 
@@ -108,9 +109,9 @@ export function promptLeak(text: string, prompts: readonly string[], window = LE
   return null;
 }
 
-function usageOf(usage: { promptTokens?: number; completionTokens?: number } | undefined): TokenUsage {
-  const input = Number(usage?.promptTokens);
-  const output = Number(usage?.completionTokens);
+function usageOf(usage: Pick<LanguageModelUsage, "inputTokens" | "outputTokens"> | undefined): TokenUsage {
+  const input = Number(usage?.inputTokens);
+  const output = Number(usage?.outputTokens);
   return {
     inputTokens: Number.isFinite(input) ? input : 0,
     outputTokens: Number.isFinite(output) ? output : 0,
@@ -137,7 +138,7 @@ type Attempt =
   | { ok: false; invalid: boolean; error: unknown; rawText: string; usage: TokenUsage };
 
 async function attempt(
-  model: LanguageModelV1,
+  model: LanguageModelV3,
   schema: OutputSchema,
   refs: SourceRefs,
   call: { system: string; prompt: string; temperature: number; maxTokens: number },
@@ -151,7 +152,7 @@ async function attempt(
       system: call.system,
       prompt: call.prompt,
       temperature: call.temperature,
-      maxTokens: call.maxTokens,
+      maxOutputTokens: call.maxTokens,
       maxRetries: 2,
     });
     return {
@@ -189,12 +190,12 @@ async function summarize(
         model: deps.summarizer,
         system: request.system,
         prompt: request.prompt,
-        maxTokens: request.maxOutputTokens,
+        maxOutputTokens: request.maxOutputTokens,
         temperature: 0,
         maxRetries: 2,
       });
       summaries.set(chunk.id, result.text);
-      usage = addUsage(usage, usageOf(result.usage));
+      usage = addUsage(usage, usageOf(result.totalUsage));
     } catch {
       summaries.set(chunk.id, null);
     }

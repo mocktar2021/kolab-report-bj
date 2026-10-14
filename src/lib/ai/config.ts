@@ -1,5 +1,5 @@
 import "server-only";
-import type { LanguageModelV1 } from "ai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
 import type { ModelTier } from "@/lib/prompts/catalog";
 import { providerModel, readAiSettings, type AiSettings } from "./models";
 
@@ -21,6 +21,6 @@ export function draftAvailability(): DraftAvailability {
 }
 
 /** The provider's model for a tier. Null for the mock provider, which builds its own per request. */
-export function modelFor(tier: ModelTier): LanguageModelV1 | null {
+export function modelFor(tier: ModelTier): LanguageModelV3 | null {
   return providerModel(aiSettings(), tier, process.env);
 }
