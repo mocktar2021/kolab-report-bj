@@ -13,6 +13,7 @@ import { sectionStatusSchema } from "@/lib/sections";
 import { getCurrentProfile } from "@/lib/supabase/user";
 import { isManager } from "@/lib/workspaces/roles";
 import { getCurrentWorkspace } from "@/lib/workspaces/server";
+import { NewReportDialog } from "./new-report-dialog";
 
 // Per-user data behind auth: never prerender or cache.
 export const dynamic = "force-dynamic";
@@ -87,7 +88,14 @@ export default async function TableauDeBordPage({
             reportsWithSections={data.reportsWithSections}
             activeStatus={activeStatus}
           />
-          <ReportList reports={reports} />
+          <ReportList
+            reports={reports}
+            action={
+              isManager(workspace.role) ? (
+                <NewReportDialog workspaceId={workspace.id} workspaceName={workspace.name} />
+              ) : null
+            }
+          />
           <SectionTable
             sections={data.sections}
             matchingSections={data.matchingSections}
