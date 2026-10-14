@@ -197,9 +197,9 @@ export const confidentialite: LegalDocument = {
               ],
               [
                 "[Cloudflare](https://www.cloudflare.com)",
-                "Copie de sauvegarde des fichiers (R2), lorsqu'elle est activée",
-                "Copie des livrables et des exports",
-                "Union européenne",
+                "Copie de sauvegarde des fichiers (R2), lorsqu'elle est activée. Vérification anti-robot (Turnstile) sur l'inscription, la connexion et la demande de nouveau mot de passe, lorsqu'elle est activée",
+                "Copie des livrables et des exports. Pour Turnstile : adresse IP et signaux techniques du navigateur, sans cookie publicitaire",
+                "Union européenne pour R2. Turnstile : réseau mondial de Cloudflare, société établie aux États-Unis",
               ],
               [
                 "[GitHub](https://github.com)",
@@ -374,6 +374,7 @@ export const confidentialite: LegalDocument = {
           },
         },
         "Les polices de caractères sont servies par KolabReport lui-même : votre navigateur ne contacte pas Google.",
+        "Lorsque la vérification anti-robot est activée, les formulaires d'inscription, de connexion et de demande de nouveau mot de passe chargent Cloudflare Turnstile. Turnstile lit des signaux techniques du navigateur pour distinguer une personne d'un robot. Il sert à la sécurité du service, ne sert pas à la publicité et ne demande donc pas de consentement.",
         "Vous pouvez effacer ces éléments dans les réglages de votre navigateur. Sans le cookie de session, vous ne pouvez pas rester connecté.",
       ],
     },
