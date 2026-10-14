@@ -100,7 +100,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const supabase = await createClient();
   const { data: section } = await supabase
     .from("report_sections")
-    .select("id, workspace_id, title, instructions, assigned_to, report:reports(title, description)")
+    .select("id, workspace_id, title, instructions, assigned_to, report:reports(title, description, status)")
     .eq("id", id.toLowerCase())
     .maybeSingle();
   if (!section?.report) return refuse(404, "notFound");
@@ -108,6 +108,8 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const access = await requireWorkspaceRole(section.workspace_id);
   if (!access) return refuse(404, "notFound");
   if (!canEditSection(access, section.assigned_to)) return refuse(403, "forbidden");
+  // A final report is frozen (KRB-20): a draft could not be accepted anyway.
+  if (section.report.status === "final") return refuse(403, "forbidden");
 
   if (draftAvailability() !== "enabled") return refuse(503, "aiUnavailable");
   const settings = aiSettings();
