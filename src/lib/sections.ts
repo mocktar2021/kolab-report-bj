@@ -1,12 +1,10 @@
 import { z } from "zod";
+import { SECTION_STATUSES } from "@/lib/section-statuses";
 import { isManager, type WorkspaceRole } from "@/lib/workspaces/roles";
 
-// Mirrors the public.section_status enum in supabase/migrations.
-export const SECTION_STATUSES = ["not_started", "in_progress", "completed"] as const;
+export { SECTION_STATUSES, isSectionStatus, type SectionStatus } from "@/lib/section-statuses";
 
 export const sectionStatusSchema = z.enum(SECTION_STATUSES);
-
-export type SectionStatus = z.infer<typeof sectionStatusSchema>;
 
 /** Longest text of a section, in characters (save_section_content checks it too). */
 export const MAX_SECTION_CONTENT = 100_000;

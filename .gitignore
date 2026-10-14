@@ -43,5 +43,8 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 
+# lighthouse ci (npx lhci autorun)
+/.lighthouseci/
+
 # eval reports (npm run eval); the bundle goes to /build
 /evals/reports/

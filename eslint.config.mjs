@@ -14,6 +14,7 @@ const eslintConfig = [
       // Git worktrees of local agent sessions, each a full copy of the repository.
       ".claude/worktrees/**",
       "build/**",
+      ".lighthouseci/**",
       "node_modules/**",
       "public/sw.js",
       "public/workbox-*.js",

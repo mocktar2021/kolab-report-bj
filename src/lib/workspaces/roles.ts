@@ -1,11 +1,10 @@
-import { z } from "zod";
+// No zod in this module: the app shell's Client Components import it
+// (KRB-154). workspaceRoleSchema lives in src/lib/workspaces/schemas.ts.
 
 // Mirrors the public.workspace_role enum, from most to least rights.
 export const WORKSPACE_ROLES = ["owner", "admin", "expert", "viewer"] as const;
 
-export const workspaceRoleSchema = z.enum(WORKSPACE_ROLES);
-
-export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
+export type WorkspaceRole = (typeof WORKSPACE_ROLES)[number];
 
 /** Roles that manage members, reports and sections. */
 export const MANAGER_ROLES = ["owner", "admin"] as const satisfies readonly WorkspaceRole[];

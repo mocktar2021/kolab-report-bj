@@ -18,7 +18,7 @@ import {
 import { useRouter } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
-import { SECTION_STATUSES } from "@/lib/sections";
+import { SECTION_STATUSES } from "@/lib/section-statuses";
 import { cn } from "@/lib/utils";
 
 // Extra search terms without accents, so "deconnexion" or "termine" match.

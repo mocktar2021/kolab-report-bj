@@ -26,10 +26,19 @@ export async function AuthShell({
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-glow"
       />
 
-      <Link href="/" aria-label={tNav("home")} className="mb-8 rounded-full">
+      {/*
+        No prefetch on the two links to the landing page: it loaded the
+        landing's JavaScript (motion and more) while the form was hydrating,
+        about half a second of main thread on a phone (KRB-154).
+      */}
+      <Link href="/" prefetch={false} aria-label={tNav("home")} className="mb-8 rounded-full">
         <Logo />
       </Link>
-      <Card className="surface-card w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
+      {/*
+        The fade starts at half opacity: from zero, Chrome only counted the card
+        as largest contentful paint after hydration (KRB-154).
+      */}
+      <Card className="surface-card w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
         <CardHeader>
           {/* The card title is the page heading. */}
           <h1 className="font-display text-h2">{title}</h1>
@@ -40,6 +49,7 @@ export async function AuthShell({
       {footer ? <div className="mt-6 text-center text-sm text-muted-foreground">{footer}</div> : null}
       <Link
         href="/"
+        prefetch={false}
         className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />

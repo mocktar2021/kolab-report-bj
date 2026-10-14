@@ -4,6 +4,7 @@ import { setRequestLocale } from "next-intl/server";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { SIDEBAR_INIT_SCRIPT } from "@/components/app-shell/sidebar-script";
 import { MonitoringUser } from "@/components/monitoring/monitoring-user";
+import { ClientMessages } from "@/i18n/client-messages-provider";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { countUnreadNotifications } from "@/lib/notifications";
@@ -43,14 +44,16 @@ export default async function AppLayout({
     <>
       <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       <MonitoringUser id={profile.id} />
-      <AppShell
-        user={{ name: profile.name, email: profile.email }}
-        workspaces={workspaces}
-        currentWorkspaceId={current?.id ?? null}
-        unreadNotifications={unreadNotifications}
-      >
-        {children}
-      </AppShell>
+      <ClientMessages locale={locale} scope="appShell">
+        <AppShell
+          user={{ name: profile.name, email: profile.email }}
+          workspaces={workspaces}
+          currentWorkspaceId={current?.id ?? null}
+          unreadNotifications={unreadNotifications}
+        >
+          {children}
+        </AppShell>
+      </ClientMessages>
     </>
   );
 }
