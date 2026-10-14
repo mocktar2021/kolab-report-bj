@@ -114,7 +114,8 @@ const reorderSchema = z.object({
 /**
  * New order of a report's sections, owners and admins only. sectionIds lists
  * every section once; the database rejects any other list as stale, which
- * means another session added, removed or moved a section first.
+ * means another session added or removed a section first. Two managers moving
+ * sections at the same time: the last save wins, and live refresh shows it.
  */
 export async function reorderSections(reportId: string, sectionIds: string[]): Promise<ReorderResult> {
   const parsed = reorderSchema.safeParse({ reportId, sectionIds });

@@ -489,7 +489,6 @@
     "manageMembers": "Gérer les membres",
     "expertNote": "Vous lisez toutes les sections. Vous modifiez celles qui vous sont attribuées.",
     "viewerNote": "Vous consultez ce rapport en lecture seule.",
-    "sectionsTitle": "Sections",
     "count": "{count, plural, =0 {Aucune section} one {# section} other {# sections}}",
     "emptyManager": "Ajoutez la première section du rapport, puis attribuez-la à un expert.",
     "emptyMember": "Ce rapport n'a pas encore de sections.",
