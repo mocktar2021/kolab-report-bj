@@ -1154,6 +1154,7 @@ export type Database = {
       end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
       expire_report_exports: { Args: { p_days: number }; Returns: number };
       finish_storage_cleanup: { Args: { p_error?: string; p_ids: number[] }; Returns: number };
+      health_check: { Args: Record<PropertyKey, never>; Returns: boolean };
       invitation_preview: {
         Args: { token: string };
         Returns: {
