@@ -68,6 +68,7 @@ On each environment:
 | `SUPABASE_ACCESS_TOKEN` | secret | Supabase personal access token (Account > Access Tokens) |
 | `SUPABASE_DB_PASSWORD` | secret | Database password of that environment's project |
 | `VERCEL_TOKEN` | secret | Vercel token |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | secret | 32 random bytes in base64 (`openssl rand -base64 32`), one per environment, never changed afterwards. Next.js derives server action ids from it. Without it every build gets a random key, so a form opened before a deploy fails once the deploy is live |
 | `SUPABASE_PROJECT_REF` | variable | Project ref of that environment's project |
 | `VERCEL_ORG_ID` | variable | Vercel Team ID |
 | `VERCEL_PROJECT_ID` | variable | Vercel Project ID |
