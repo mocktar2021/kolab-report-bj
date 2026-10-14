@@ -193,8 +193,11 @@ test("the expert sets the section status and deletes a file", async ({ page }) =
     .single();
   const pdf = fileItem(page, "Plan masse.pdf");
   await pdf.getByRole("button", { name: "Supprimer Plan masse.pdf" }).click();
-  await pdf.getByRole("button", { name: "Confirmer la suppression de Plan masse.pdf" }).click();
-  await expect(filesList(page).getByText("Plan masse.pdf")).toHaveCount(0);
+  await page
+    .getByRole("dialog", { name: "Supprimer Plan masse.pdf ?" })
+    .getByRole("button", { name: "Supprimer", exact: true })
+    .click();
+  await expect(filesList(page).getByText("Plan masse.pdf", { exact: true })).toHaveCount(0);
 
   // The stored file goes with the row.
   const { data: left } = await adminClient()

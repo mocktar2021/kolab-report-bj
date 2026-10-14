@@ -529,7 +529,9 @@ describe("DraftPanel feedback", () => {
     const user = userEvent.setup();
     renderPanel(panelData({ proposal: proposal() }));
     const send = screen.getByRole("button", { name: "Envoyer mon avis" });
-    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("aria-disabled", "true");
+    await user.click(send);
+    expect(rateDraft).not.toHaveBeenCalled();
 
     const useful = screen.getByRole("button", { name: "Utile" });
     await user.click(useful);
@@ -548,7 +550,9 @@ describe("DraftPanel feedback", () => {
       comment: "Clair et juste.",
     });
     expect(await screen.findByText("Avis enregistré.")).toBeVisible();
-    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("aria-disabled", "true");
+    // Still focusable once saved, so the focus stays where it was.
+    expect(send).toHaveFocus();
   });
 
   it("keeps the saved rating and comment", () => {

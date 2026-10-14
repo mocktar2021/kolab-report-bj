@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { adminClient, createTestUser, createWorkspaceFor, type TestUser } from "./supabase";
+import {
+  addParsedDeliverable as addDeliverable,
+  adminClient,
+  createTestUser,
+  createWorkspaceFor,
+  type TestUser,
+} from "./supabase";
 
 // KRB-16: AI drafts of a section. The app runs with AI_PROVIDER=mock and
 // AI_RATE_LIMIT_PER_HOUR=5 (see .github/workflows/ci.yml): the mock answers
@@ -35,24 +41,7 @@ async function addParsedDeliverable(
   uploadedBy: string,
   name: string,
 ) {
-  const id = crypto.randomUUID();
-  const { error } = await adminClient()
-    .from("deliverables")
-    .insert({
-      id,
-      workspace_id: workspaceId,
-      section_id: sectionId,
-      uploaded_by: uploadedBy,
-      storage_path: `${workspaceId}/${sectionId}/${id}-${name}`,
-      file_name: name,
-      mime_type: "text/markdown",
-      size_bytes: PARSED.length,
-      uploaded_at: new Date().toISOString(),
-      parse_status: "parsed",
-      parsed_content: PARSED,
-      parsed_at: new Date().toISOString(),
-    });
-  if (error) throw error;
+  await addDeliverable(workspaceId, sectionId, uploadedBy, name, PARSED);
 }
 
 test.beforeAll(async () => {

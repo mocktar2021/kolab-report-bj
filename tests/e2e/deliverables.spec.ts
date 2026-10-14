@@ -85,7 +85,8 @@ test("an expert uploads a Word file and downloads it back", async ({ page }) => 
     buffer: DOCX,
   });
   const list = main.getByRole("region", { name: "Livrables", exact: true });
-  await expect(list.getByText("Rapport d'étude.docx")).toBeVisible();
+  // exact: the list's status line names the file once its read ends.
+  await expect(list.getByText("Rapport d'étude.docx", { exact: true })).toBeVisible();
   await expect(list.getByText("1 fichier")).toBeVisible();
 
   // Checked and kept: uploaded_at is set and the object sits under {W}/{S}/.
@@ -121,12 +122,15 @@ test("files that are not what their extension says are refused and removed", asy
       buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><rect/></svg>'),
     },
   ]);
-  await expect(page.getByText("Le contenu de ce fichier ne correspond pas à son extension.")).toBeVisible();
-  await expect(page.getByText(/Ce fichier SVG contient du code/)).toBeVisible();
+  // exact: the upload log for screen readers repeats each reason after the file name.
+  await expect(
+    page.getByText("Le contenu de ce fichier ne correspond pas à son extension.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/^Ce fichier SVG contient du code/)).toBeVisible();
 
   const list = page.getByRole("main").getByRole("region", { name: "Livrables", exact: true });
-  await expect(list.getByText("photo.png")).toHaveCount(0);
-  await expect(list.getByText("schema.svg")).toHaveCount(0);
+  await expect(list.getByText("photo.png", { exact: true })).toHaveCount(0);
+  await expect(list.getByText("schema.svg", { exact: true })).toHaveCount(0);
   const { count } = await adminClient()
     .from("deliverables")
     .select("id", { count: "exact", head: true })
@@ -150,14 +154,14 @@ test("the form refuses other types and files over 50 MB before sending anything"
   const big = testInfo.outputPath("enorme.pdf");
   writeFileSync(big, Buffer.alloc(50 * 1024 * 1024 + 1));
   await page.getByLabel("Choisir des fichiers").setInputFiles([big]);
-  await expect(page.getByText("Ce fichier dépasse 50 Mo.")).toBeVisible();
+  await expect(page.getByText("Ce fichier dépasse 50 Mo.", { exact: true })).toBeVisible();
 
   await page.getByLabel("Choisir des fichiers").setInputFiles({
     name: "outil.exe",
     mimeType: "application/x-msdownload",
     buffer: Buffer.from("MZ"),
   });
-  await expect(page.getByText("Ce type de fichier n'est pas accepté.")).toBeVisible();
+  await expect(page.getByText("Ce type de fichier n'est pas accepté.", { exact: true })).toBeVisible();
   expect(requests).toEqual([]);
 });
 

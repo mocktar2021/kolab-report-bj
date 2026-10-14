@@ -247,9 +247,14 @@ export function HeroCards() {
 
   return (
     <>
-      {/* Two faded cards beside the subtitle, from lg up. */}
+      {/*
+        Two faded cards beside the subtitle, from lg up. Pure decoration, so
+        their faded text has no contrast requirement (WCAG 1.4.3). The
+        accessibility tests skip anything marked data-decorative.
+      */}
       <div
         aria-hidden="true"
+        data-decorative=""
         className="pointer-events-none absolute inset-x-0 top-[21rem] hidden lg:block xl:top-[22.5rem]"
       >
         <div

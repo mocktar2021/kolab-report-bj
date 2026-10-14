@@ -21,16 +21,20 @@ Command.displayName = CommandPrimitive.displayName;
 type CommandDialogProps = React.ComponentProps<typeof Dialog> & {
   title: string;
   description: string;
+  /** Name of the search field. cmdk renders it as a hidden label; without it the field has no name. */
+  label: string;
   footer?: React.ReactNode;
 };
 
-function CommandDialog({ title, description, footer, children, ...props }: CommandDialogProps) {
+function CommandDialog({ title, description, label, footer, children, ...props }: CommandDialogProps) {
   return (
     <Dialog {...props}>
       <DialogContent className="overflow-hidden p-0">
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">{description}</DialogDescription>
-        <Command loop>{children}</Command>
+        <Command loop label={label}>
+          {children}
+        </Command>
         {footer}
       </DialogContent>
     </Dialog>
@@ -98,7 +102,14 @@ const CommandSeparator = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <CommandPrimitive.Separator ref={ref} className={cn("-mx-2 my-1 h-px bg-border", className)} {...props} />
+  // Only a line between groups. Hidden from screen readers: a separator is not
+  // allowed inside the listbox that cmdk renders.
+  <CommandPrimitive.Separator
+    ref={ref}
+    aria-hidden="true"
+    className={cn("-mx-2 my-1 h-px bg-border", className)}
+    {...props}
+  />
 ));
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
 

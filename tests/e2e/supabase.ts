@@ -61,3 +61,36 @@ export async function createWorkspaceFor(user: TestUser, workspaceName: string) 
   if (error || !data) throw error ?? new Error("create_workspace_with_owner returned nothing");
   return { api, ...data };
 }
+
+/**
+ * A deliverable already read by the app, written straight to the table. It has
+ * no stored file, so it works without the Storage container: drafts, previews
+ * and deletions only need the row.
+ */
+export async function addParsedDeliverable(
+  workspaceId: string,
+  sectionId: string,
+  uploadedBy: string,
+  name: string,
+  content: string,
+) {
+  const id = crypto.randomUUID();
+  const { error } = await adminClient()
+    .from("deliverables")
+    .insert({
+      id,
+      workspace_id: workspaceId,
+      section_id: sectionId,
+      uploaded_by: uploadedBy,
+      storage_path: `${workspaceId}/${sectionId}/${id}-${name}`,
+      file_name: name,
+      mime_type: "text/markdown",
+      size_bytes: content.length,
+      uploaded_at: new Date().toISOString(),
+      parse_status: "parsed",
+      parsed_content: content,
+      parsed_at: new Date().toISOString(),
+    });
+  if (error) throw error;
+  return id;
+}

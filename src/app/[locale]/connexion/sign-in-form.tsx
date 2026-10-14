@@ -3,11 +3,18 @@
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { PasswordInput } from "@/components/auth/password-input";
+import { useFocusOnError } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
 import { signIn, type SignInState } from "./actions";
+
+const ERROR_ID = "sign-in-error";
+
+// Rough shape check, only to point the error at the right field. The server
+// action does the real check; zod stays out of this page's bundle.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function SignInForm({ next }: { next?: string }) {
   const t = useTranslations("Auth");
@@ -20,8 +27,19 @@ export function SignInForm({ next }: { next?: string }) {
         ? t(state.error)
         : null;
 
+  // Wrong credentials point at both fields: the message does not say which one
+  // is wrong. A bad input points at the address when it is not one, else at the
+  // missing password.
+  const emailLooksValid = EMAIL_SHAPE.test((state.email ?? "").trim());
+  const emailInvalid =
+    state.error === "invalidCredentials" || (state.error === "invalidInput" && !emailLooksValid);
+  const passwordInvalid =
+    state.error === "invalidCredentials" || (state.error === "invalidInput" && emailLooksValid);
+  // The address is kept and the password field is emptied: the password is what to type again.
+  const formRef = useFocusOnError(state, Boolean(state.error), "password");
+
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form ref={formRef} action={formAction} className="space-y-4" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <div className="space-y-2">
         <Label htmlFor="email">{t("email")}</Label>
@@ -32,6 +50,8 @@ export function SignInForm({ next }: { next?: string }) {
           autoComplete="email"
           defaultValue={state.email}
           required
+          aria-invalid={emailInvalid}
+          aria-describedby={emailInvalid ? ERROR_ID : undefined}
         />
       </div>
       <div className="space-y-2">
@@ -44,10 +64,17 @@ export function SignInForm({ next }: { next?: string }) {
             {t("forgotPassword")}
           </Link>
         </div>
-        <PasswordInput id="password" name="password" autoComplete="current-password" required />
+        <PasswordInput
+          id="password"
+          name="password"
+          autoComplete="current-password"
+          required
+          aria-invalid={passwordInvalid}
+          aria-describedby={passwordInvalid ? ERROR_ID : undefined}
+        />
       </div>
       {message ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={ERROR_ID} role="alert" className="text-sm text-destructive">
           {message}
         </p>
       ) : null}

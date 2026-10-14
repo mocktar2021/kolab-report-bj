@@ -22,7 +22,7 @@
   "Landing": {
     "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
     "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement section par section.",
-    "skipToContent": "Aller au contenu",
+    "skipToContent": "Aller au contenu principal",
     "nav": {
       "label": "Navigation principale",
       "home": "KolabReport, accueil",
@@ -266,13 +266,13 @@
     }
   },
   "AppShell": {
-    "skipToContent": "Aller au contenu",
+    "skipToContent": "Aller au contenu principal",
     "navLabel": "Navigation de l'application",
     "home": "KolabReport, tableau de bord",
     "dashboard": "Tableau de bord",
     "statusGroup": "Sections",
     "search": "Rechercher",
-    "searchLabel": "Ouvrir la palette de commandes",
+    "searchLabel": "Rechercher : ouvrir la palette de commandes",
     "collapse": "Réduire le menu",
     "expand": "Déployer le menu",
     "openMenu": "Ouvrir le menu",
@@ -317,7 +317,9 @@
     "title": "Palette de commandes",
     "description": "Recherchez une page, un filtre ou une action, puis validez avec Entrée.",
     "placeholder": "Rechercher une action…",
+    "inputLabel": "Rechercher une action",
     "empty": "Aucune action ne correspond à votre recherche.",
+    "listLabel": "Actions proposées",
     "navigation": "Navigation",
     "goToDashboard": "Aller au tableau de bord",
     "filtersHeading": "Filtrer les sections",
@@ -507,6 +509,7 @@
     "removeTitle": "Retirer {name} ?",
     "removeDescription": "{name} n'aura plus accès à cet espace de travail. Ses sections redeviendront non attribuées.",
     "removeConfirm": "Retirer",
+    "removed": "{name} ne fait plus partie de l'espace de travail.",
     "leave": "Quitter l'espace",
     "leaveTitle": "Quitter cet espace de travail ?",
     "leaveDescription": "Vous n'aurez plus accès à cet espace de travail. Vos sections redeviendront non attribuées.",
@@ -554,6 +557,7 @@
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
     "addSubmit": "Ajouter",
+    "added": "Section « {title} » ajoutée à la fin du rapport.",
     "tocTitle": "Sommaire",
     "reorderHint": "Faites glisser une section par sa poignée pour changer l'ordre. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
     "edit": "Modifier<hidden> la section {title}</hidden>",
@@ -696,6 +700,11 @@
       "checking": "Vérification du fichier",
       "done": "Ajouté"
     },
+    "announce": {
+      "sending": "Envoi de {name} en cours.",
+      "done": "{name} ajouté à la section.",
+      "failed": "{name} n'a pas été ajouté : {reason}"
+    },
     "listTitle": "Livrables",
     "count": "{count, plural, =0 {Aucun fichier} one {# fichier} other {# fichiers}}",
     "empty": "Aucun livrable pour l'instant.",
@@ -733,6 +742,7 @@
       "stale": "Bloqué"
     },
     "parseBadgeLabel": "Analyse : {status}",
+    "parseAnnounce": "{name} : {status, select, parsed {fichier analysé, prêt pour le brouillon.} failed {l'analyse a échoué.} stale {l'analyse ne répond plus.} skipped {fichier conservé sans analyse.} other {analyse terminée.}}",
     "skippedHint": "Fichier conservé tel quel : son contenu ne sert pas encore au brouillon.",
     "pendingHint": "Ce fichier n'a pas encore été analysé.",
     "parseErrors": {
@@ -746,6 +756,7 @@
     "retryLabel": "Relancer l'analyse de {name}",
     "preview": "Aperçu",
     "hidePreview": "Masquer l'aperçu",
+    "hidePreviewLabel": "Masquer l'aperçu de {name}",
     "previewLabel": "Aperçu de {name}",
     "previewTitle": "Ce que l'IA lira",
     "previewLoading": "Chargement de l'aperçu",
@@ -757,6 +768,9 @@
     "imageAlt": "Image {name}",
     "delete": "Supprimer",
     "deleteLabel": "Supprimer {name}",
+    "deleteTitle": "Supprimer {name} ?",
+    "deleteDescription": "Le fichier est retiré de la section et ne servira plus aux brouillons. Vous ne pourrez pas le récupérer.",
+    "deleted": "{name} a été supprimé.",
     "confirmDelete": "Confirmer",
     "confirmDeleteLabel": "Confirmer la suppression de {name}",
     "cancel": "Annuler",
