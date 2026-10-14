@@ -465,6 +465,35 @@ test("menus, dialogs and the command palette are labelled and give the focus bac
   });
 });
 
+test("a manager adds and assigns a section from the keyboard", async ({ page }) => {
+  await signIn(page, setup.owner);
+  await page.goto(`/fr/rapports/${setup.reportId}`);
+  const field = page.getByRole("textbox", { name: "Nouvelle section" });
+  await tabTo(page, field);
+  await page.keyboard.type("Annexes techniques");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Section « Annexes techniques »" })).toHaveText(
+    "Section « Annexes techniques » ajoutée à la fin du rapport.",
+  );
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("");
+
+  // The new row's expert select, then its save button.
+  const expert = page.getByRole("combobox", { name: "Expert de la section Annexes techniques" });
+  await tabTo(page, expert);
+  // Type-ahead on the closed select, as on any native select.
+  await page.keyboard.type("Eloi");
+  await expect(expert).toHaveValue(setup.expert.id);
+  const form = page.locator("form").filter({ has: expert });
+  const save = form.getByRole("button", { name: "Enregistrer" });
+  await tabTo(page, save);
+  await page.keyboard.press("Enter");
+  await expect(form.getByRole("status")).toHaveText("Enregistré.");
+  // Saved: nothing left to save, but the button keeps the focus.
+  await expect(save).toHaveAttribute("aria-disabled", "true");
+  await expect(save).toBeFocused();
+});
+
 test("nothing in English reaches assistive tech", async ({ page }) => {
   await page.goto("/fr/connexion");
   await expectNoEnglish(page, "/fr/connexion");
