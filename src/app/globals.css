@@ -283,4 +283,53 @@
   .dark .text-edge-line {
     color: rgb(0 0 0 / 0.9);
   }
+
+  /*
+   * The light that runs along each edge line (KRB-167). pathLength="1" on the
+   * path makes the dash 14 % of the line whatever its real length. A wide
+   * faint stroke under a thin bright one reads as a glow without an SVG
+   * filter. Ink on the light theme, gold on the dark one.
+   */
+  .edge-line-run {
+    fill: none;
+    stroke-linecap: round;
+    stroke-dasharray: 0.14 1;
+    stroke-dashoffset: 0.14;
+    animation: edge-line-run 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
+  .edge-line-run-glow {
+    stroke: rgb(9 9 11 / 0.08);
+    stroke-width: 6;
+  }
+
+  .edge-line-run-core {
+    stroke: rgb(9 9 11 / 0.5);
+    stroke-width: 2;
+  }
+
+  .dark .edge-line-run-glow {
+    stroke: rgb(232 181 74 / 0.3);
+  }
+
+  .dark .edge-line-run-core {
+    stroke: rgb(246 210 128);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .edge-line-run {
+      animation: none;
+      visibility: hidden;
+    }
+  }
+}
+
+/* From just before the start of the line to past its end. */
+@keyframes edge-line-run {
+  from {
+    stroke-dashoffset: 0.14;
+  }
+  to {
+    stroke-dashoffset: -1;
+  }
 }

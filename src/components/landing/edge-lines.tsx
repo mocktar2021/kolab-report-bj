@@ -22,7 +22,18 @@ type EdgeLinesProps = {
   className?: string;
 };
 
-/** Thin decorative lines at the left or right edge of a section. */
+// The light on each thread starts at its own moment and pace, so the threads
+// never pulse together. Negative delays: it is already moving at first paint.
+const RUNS = PATHS.map((d, index) => ({
+  d,
+  style: { animationDelay: `${-index * 1.1}s`, animationDuration: `${5.5 + (index % 3) * 0.9}s` },
+}));
+
+/**
+ * Thin decorative lines at the left or right edge of a section. A light runs
+ * along each one toward the content: ink on the light theme, gold on the dark
+ * one (KRB-167). CSS only, and still when the visitor asks for less motion.
+ */
 export function EdgeLines({ side, className }: EdgeLinesProps) {
   return (
     <svg
@@ -39,6 +50,12 @@ export function EdgeLines({ side, className }: EdgeLinesProps) {
     >
       {PATHS.map((d) => (
         <path key={d} d={d} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      ))}
+      {RUNS.map(({ d, style }) => (
+        <g key={d}>
+          <path d={d} pathLength={1} className="edge-line-run edge-line-run-glow" style={style} />
+          <path d={d} pathLength={1} className="edge-line-run edge-line-run-core" style={style} />
+        </g>
       ))}
     </svg>
   );
