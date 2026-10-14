@@ -11,7 +11,7 @@ import {
   type TruncationDecision,
 } from "@/lib/ai/context";
 import { describeValidationError, repairPrompt } from "@/lib/ai/generate";
-import { estimateCost, type AiSettings } from "@/lib/ai/models";
+import { estimateCost, noThinking, type AiSettings } from "@/lib/ai/models";
 import {
   citedRefs,
   draftToMarkdown,
@@ -69,6 +69,8 @@ export type CaseResult = {
     schemaValidAfterRepair: boolean;
     repaired: boolean;
     error: string | null;
+    /** Why each refused answer was refused: the finish reason and the first problem. */
+    rejections: string[];
     latencyMs: number;
     usage: TokenUsage;
     costUsd: number | null;
@@ -153,6 +155,7 @@ async function attempt(
       prompt: call.prompt,
       temperature: call.temperature,
       maxOutputTokens: call.maxTokens,
+      providerOptions: noThinking(),
       maxRetries: 2,
     });
     return {
@@ -167,6 +170,14 @@ async function attempt(
     }
     return { ok: false, invalid: false, error, rawText: "", usage: { inputTokens: 0, outputTokens: 0 } };
   }
+}
+
+/** One line on a refused answer, for the run log and the report. */
+function rejection(result: Attempt): string {
+  if (result.ok) return "checks: the object failed the draft checks";
+  const finish = NoObjectGeneratedError.isInstance(result.error) ? result.error.finishReason : undefined;
+  const problem = describeValidationError(result.error).split("\n")[0]?.replace(/^- /, "") ?? "";
+  return `finish ${finish ?? "unknown"}: ${problem}`.slice(0, 200);
 }
 
 function errorMessage(error: unknown): string {
@@ -192,6 +203,7 @@ async function summarize(
         prompt: request.prompt,
         maxOutputTokens: request.maxOutputTokens,
         temperature: 0,
+        providerOptions: noThinking(),
         maxRetries: 2,
       });
       summaries.set(chunk.id, result.text);
@@ -232,6 +244,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
   const rejected: string[] = [];
   let error: string | null = null;
   let repaired = false;
+  const rejections: string[] = [];
 
   const first = await attempt(model, template.outputSchema, built.refs, call);
   usage = addUsage(usage, first.usage);
@@ -239,6 +252,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
   const firstTry = output !== null;
   if (!output) {
     if (first.rawText) rejected.push(first.rawText);
+    if (first.ok || first.invalid) rejections.push(rejection(first));
     if (!first.ok && !first.invalid) {
       error = errorMessage(first.error);
     } else {
@@ -252,6 +266,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
       output = second.ok ? parseDraftOutput(template.outputSchema, built.refs, second.value) : null;
       if (!output) {
         if (second.rawText) rejected.push(second.rawText);
+        if (second.ok || second.invalid) rejections.push(rejection(second));
         error = second.ok || second.invalid ? "invalidOutput" : errorMessage(second.error);
       }
     }
@@ -321,6 +336,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
       schemaValidAfterRepair: output !== null,
       repaired,
       error,
+      rejections,
       latencyMs,
       usage,
       costUsd: estimateCost(settings, deps.tier, usage),

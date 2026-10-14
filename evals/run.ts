@@ -192,9 +192,10 @@ function caseLine(result: CaseResult, index: number, total: number): string {
     result.forbiddenFound.length > 0 ? "forbidden" : "",
     result.truncationOk === false ? "NOT TRUNCATED" : "",
   ].filter(Boolean);
+  const why = result.generation.rejections.map((reason) => `\n      refused: ${reason}`).join("");
   return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${(
     result.generation.latencyMs / 1000
-  ).toFixed(1)} s${extra.length > 0 ? `  ${extra.join(" ")}` : ""}`;
+  ).toFixed(1)} s${extra.length > 0 ? `  ${extra.join(" ")}` : ""}${why}`;
 }
 
 /** Link to the GitHub Actions run, when the runner is in one. */
