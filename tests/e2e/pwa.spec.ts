@@ -130,13 +130,27 @@ async function startAppProxy(target: string) {
   let deployed = false;
 
   const server = http.createServer((req, res) => {
-    const url = new URL(req.url ?? "/", upstream);
-    const isWorker = deployed && url.pathname === "/sw.js";
+    // Only a path goes upstream, never a URL: the proxy talks to the app and
+    // nothing else, whatever the request line holds.
+    const path = req.url ?? "/";
+    if (!path.startsWith("/")) {
+      res.writeHead(400).end();
+      return;
+    }
+    const isWorker = deployed && path.split("?")[0] === "/sw.js";
     // The Host header stays the proxy's: server actions compare it with Origin.
     const headers = { ...req.headers };
     if (isWorker) headers["accept-encoding"] = "identity";
 
-    const forward = client.request(url, { method: req.method, headers }, (response) => {
+    const target = {
+      protocol: upstream.protocol,
+      hostname: upstream.hostname,
+      port: upstream.port,
+      path,
+      method: req.method,
+      headers,
+    };
+    const forward = client.request(target, (response) => {
       if (!isWorker) {
         res.writeHead(response.statusCode ?? 502, response.headers);
         response.pipe(res);
