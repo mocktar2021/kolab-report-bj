@@ -118,22 +118,32 @@ async function signIn(page: Page, user: TestUser) {
   await page.waitForURL((url) => !url.pathname.endsWith("/connexion"));
 }
 
-/** Resolves once the page's Realtime channel listens to Postgres changes. */
-function realtimeReady(page: Page) {
-  return new Promise<void>((resolve) => {
-    page.on("websocket", (socket) => {
-      if (!socket.url().includes("/realtime/v1/")) return;
-      socket.on("framereceived", ({ payload }) => {
-        if (typeof payload !== "string" || !payload.includes('"postgres_changes"')) return;
-        try {
-          const frame = JSON.parse(payload) as { event?: string; payload?: unknown };
-          if (frame.event === "system" && isSubscribedToPostgres(frame.payload)) resolve();
-        } catch {
-          // Not JSON: not the message we wait for.
-        }
-      });
+/**
+ * Follows the page's Realtime sockets: `ready()` is true once an open socket
+ * has a channel that listens to Postgres changes. A page left behind, the one
+ * sign-in lands on for example, closes its socket and stops counting, even
+ * when the close comes after the new page subscribed.
+ */
+function watchRealtime(page: Page) {
+  const listening = new Set<object>();
+  page.on("websocket", (socket) => {
+    if (!socket.url().includes("/realtime/v1/")) return;
+    socket.on("framereceived", ({ payload }) => {
+      if (typeof payload !== "string" || !payload.includes('"postgres_changes"')) return;
+      try {
+        // Protocol 2.0.0 sends [join_ref, ref, topic, event, payload]; 1.0.0 an object.
+        const frame: unknown = JSON.parse(payload);
+        const [event, message] = Array.isArray(frame)
+          ? [frame[3], frame[4]]
+          : [(frame as { event?: unknown }).event, (frame as { payload?: unknown }).payload];
+        if (event === "system" && isSubscribedToPostgres(message)) listening.add(socket);
+      } catch {
+        // Not JSON: not the message we wait for.
+      }
     });
+    socket.on("close", () => listening.delete(socket));
   });
+  return { ready: () => listening.size > 0 };
 }
 
 test("Realtime tells members about a section change and tells outsiders nothing", async () => {
@@ -152,23 +162,29 @@ test("Realtime tells members about a section change and tells outsiders nothing"
 });
 
 test("the owner's dashboard follows the expert's status change without a reload", async ({ browser }) => {
+  // Two sign-ins and two pages before the change itself.
+  test.setTimeout(60_000);
+  // From 50 % on every run, a retry included.
+  await setStatus(setup.ids.mine, "not_started");
   const ownerContext = await browser.newContext();
   const expertContext = await browser.newContext();
   try {
-    const dashboard = await ownerContext.newPage();
-    await signIn(dashboard, setup.owner);
-    const ready = realtimeReady(dashboard);
-    await dashboard.goto("/fr/tableau-de-bord");
-
-    const progress = dashboard.getByRole("progressbar", { name: new RegExp(setup.reportTitle) });
-    await expect(progress).toHaveAttribute("aria-valuenow", "50");
-    await ready;
-
     const section = await expertContext.newPage();
     await signIn(section, setup.expert);
     await section.goto(`/fr/espaces/${setup.workspaceId}/sections/${setup.ids.mine}`);
-    await section.getByLabel("Statut de la section").selectOption({ label: "Terminée" });
-    await expect(section.getByLabel("Statut de la section")).toHaveValue("completed");
+    const status = section.getByLabel("Statut de la section");
+    await expect(status).toHaveValue("not_started");
+
+    const dashboard = await ownerContext.newPage();
+    await signIn(dashboard, setup.owner);
+    const realtime = watchRealtime(dashboard);
+    await dashboard.goto("/fr/tableau-de-bord");
+    const progress = dashboard.getByRole("progressbar", { name: new RegExp(setup.reportTitle) });
+    await expect(progress).toHaveAttribute("aria-valuenow", "50");
+    await expect.poll(() => realtime.ready(), { timeout: 10_000 }).toBe(true);
+
+    await status.selectOption({ label: "Terminée" });
+    await expect(status).toHaveValue("completed");
 
     // The story asks for 2 s on a normal connection; CI machines get some slack.
     await expect(progress).toHaveAttribute("aria-valuenow", "100", { timeout: 5_000 });
