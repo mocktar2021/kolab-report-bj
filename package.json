@@ -4,7 +4,7 @@
   "private": true,
   "description": "KolabReport, plateforme collaborative de rédaction de rapports d'experts assistée par IA (PWA, Next.js, Supabase).",
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "dev": "npm run build:worker && next dev",
@@ -52,6 +52,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-toast": "^1.2.15",
     "@react-pdf/renderer": "^4.9.0",
+    "@sentry/nextjs": "^11.7.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.57.4",
     "@vercel/otel": "^2.1.3",

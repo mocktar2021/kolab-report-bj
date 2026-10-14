@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { loadBrowserSentry } from "@/lib/monitoring/browser";
 
 type ErrorScreenProps = {
+  error: Error & { digest?: string };
   title: string;
   description: string;
   reloadLabel: string;
@@ -17,7 +20,22 @@ type ErrorScreenProps = {
  * purpose: after a deploy the old page's scripts and form actions are gone,
  * and only a fresh load brings the new ones.
  */
-export function ErrorScreen({ title, description, reloadLabel, homeLabel, reference }: ErrorScreenProps) {
+export function ErrorScreen({
+  error,
+  title,
+  description,
+  reloadLabel,
+  homeLabel,
+  reference,
+}: ErrorScreenProps) {
+  useEffect(() => {
+    // React 19 does not pass errors caught by a boundary to window.onerror,
+    // so browser errors are sent here (KRB-136). An error with a digest came
+    // from the server, which already sent it (onRequestError). Does nothing
+    // while Sentry is off.
+    if (!error.digest) void loadBrowserSentry().then((sentry) => sentry?.captureException(error));
+  }, [error]);
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
       <LogoMark className="size-10" />

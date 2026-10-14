@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { z } from "zod";
+import { setMonitoringUser } from "@/lib/monitoring/user";
 import { createClient } from "./server";
 
 const profileSchema = z.object({
@@ -20,6 +21,9 @@ export const getCurrentUser = cache(async () => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // Sentry errors of this request carry the user id, nothing else about the
+  // user (src/lib/monitoring/user.ts).
+  setMonitoringUser(user?.id ?? null);
   return user;
 });
 

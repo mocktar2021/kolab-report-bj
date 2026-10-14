@@ -91,6 +91,16 @@ jobs:
         env:
           # Fixed per environment, so server action ids survive a deploy (KRB-169).
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+          # Sentry (docs/operations/monitoring.md). Without the token, org and
+          # project the build skips the source map upload, without a DSN
+          # Sentry stays off.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+          # On workflow_run, GITHUB_SHA is the tip of master, not always the
+          # commit checked out above.
+          SENTRY_RELEASE: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           npx --yes "$VERCEL_CLI" pull --yes --environment=preview --token="$VERCEL_TOKEN"
           npx --yes "$VERCEL_CLI" build --token="$VERCEL_TOKEN"
@@ -207,6 +217,12 @@ jobs:
         env:
           # Fixed per environment, so server action ids survive a deploy (KRB-169).
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+          # Sentry, as on staging. Here GITHUB_SHA is the deployed commit, so
+          # it is the release.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
         run: |
           npx --yes "$VERCEL_CLI" pull --yes --environment=production --token="$VERCEL_TOKEN"
           npx --yes "$VERCEL_CLI" build --prod --token="$VERCEL_TOKEN"

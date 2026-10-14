@@ -1,5 +1,7 @@
 import withPWAInit from "@ducanh2912/next-pwa";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import createNextIntlPlugin from "next-intl/plugin";
+import { canUploadSourceMaps, sentryEnvironment, sentryRelease } from "./src/lib/monitoring/release.mjs";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -8,6 +10,14 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 const isDev = process.env.NODE_ENV === "development";
 // Set by Vercel at build time: "preview" for PR and staging deployments.
 const isVercelPreview = process.env.VERCEL_ENV === "preview";
+
+// Sentry (KRB-136): fixed at build time so the browser, server and edge
+// bundles report the same release and environment (src/lib/monitoring).
+const sentry = {
+  release: sentryRelease(process.env),
+  environment: sentryEnvironment(process.env),
+  uploadSourceMaps: canUploadSourceMaps(process.env),
+};
 
 /**
  * Content-Security-Policy for every page. Scripts stay limited to this origin
@@ -114,6 +124,11 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Read by src/lib/monitoring/options.ts.
+  env: {
+    NEXT_PUBLIC_SENTRY_RELEASE: sentry.release ?? "",
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT: sentry.environment,
+  },
   images: {
     remotePatterns: supabaseUrl
       ? [
@@ -181,4 +196,44 @@ const nextConfig = {
   },
 };
 
-export default withPWA(withNextIntl(nextConfig));
+/**
+ * Sentry build options. Without SENTRY_AUTH_TOKEN, SENTRY_ORG and
+ * SENTRY_PROJECT (CI, local builds) the build talks to no Sentry server and
+ * makes no source maps. Setup: docs/operations/monitoring.md.
+ * @type {import("@sentry/nextjs/config").SentryBuildOptions}
+ */
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  // Browser events go to /monitoring on this origin, which passes them on to
+  // Sentry: the CSP only allows 'self' and Supabase in connect-src, and ad
+  // blockers block sentry.io. src/middleware.ts skips this path.
+  tunnelRoute: "/monitoring",
+  // Upload logs in CI only, and nothing at all when there is no upload.
+  silent: !process.env.CI || !sentry.uploadSourceMaps,
+  // No build telemetry to Sentry.
+  telemetry: false,
+  release: {
+    name: sentry.release,
+    create: sentry.uploadSourceMaps,
+    // Linking commits needs the GitHub integration in Sentry.
+    setCommits: false,
+    deploy: sentry.uploadSourceMaps ? { env: sentry.environment } : false,
+  },
+  sourcemaps: {
+    disable: !sentry.uploadSourceMaps,
+    // Browser source maps are uploaded, then deleted: they never ship.
+    deleteSourcemapsAfterUpload: true,
+  },
+  widenClientFileUpload: true,
+  // A Sentry outage must not block a deploy: warn and go on.
+  errorHandler(error) {
+    console.warn(`sentry: source map upload failed, the build goes on (${error.message})`);
+  },
+  bundleSizeOptimizations: { excludeDebugStatements: true },
+  // No server tracing, so dependencies are not rewritten at build time.
+  buildTimeInstrumentation: false,
+};
+
+export default withSentryConfig(withPWA(withNextIntl(nextConfig)), sentryBuildOptions);
