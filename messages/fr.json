@@ -234,6 +234,7 @@
     "fullName": "Nom complet",
     "passwordHint": "8 caractères minimum.",
     "signUpSubmit": "Créer mon compte",
+    "legalConsent": "En créant un compte, vous acceptez les <cgu>CGU</cgu>, les <cgv>CGV</cgv> et la <privacy>politique de confidentialité</privacy>.",
     "checkEmailTitle": "Vérifiez votre boîte mail",
     "checkEmailBody": "Nous avons envoyé un lien de confirmation à {email}. Ouvrez-le pour activer votre compte.",
     "checkEmailSpam": "Rien reçu après quelques minutes ? Regardez dans les courriers indésirables.",
@@ -414,6 +415,41 @@
     "title": "Vous êtes hors ligne",
     "description": "Cette page n'est pas disponible sans connexion. Les pages déjà consultées restent accessibles ; la synchronisation reprendra automatiquement au retour du réseau.",
     "retry": "Réessayer"
+  },
+  "Legal": {
+    "eyebrow": "Informations légales",
+    "updatedAt": "Dernière mise à jour : <time>{date}</time>",
+    "toc": "Sommaire",
+    "nav": {
+      "label": "Informations légales",
+      "mentionsLegales": "Mentions légales",
+      "confidentialite": "Confidentialité",
+      "cgu": "Conditions d'utilisation",
+      "cgv": "Conditions de vente",
+      "accordTraitement": "Traitement des données"
+    },
+    "pages": {
+      "mentionsLegales": {
+        "title": "Mentions légales",
+        "description": "Éditeur de KolabReport, directeur de la publication, contact, hébergement et propriété intellectuelle."
+      },
+      "confidentialite": {
+        "title": "Politique de confidentialité",
+        "description": "Données traitées par KolabReport, finalités, sous-traitants, durées de conservation, cookies, IA et exercice de vos droits."
+      },
+      "cgu": {
+        "title": "Conditions générales d'utilisation",
+        "description": "Règles d'utilisation de KolabReport : compte, rôles et invitations, contenus, brouillons IA, disponibilité et responsabilité."
+      },
+      "cgv": {
+        "title": "Conditions générales de vente",
+        "description": "Offres et prix de KolabReport en FCFA, essai gratuit, paiement par FedaPay, périodes prépayées, renouvellement et remboursement."
+      },
+      "accordTraitement": {
+        "title": "Accord de traitement des données",
+        "description": "Engagements de Mocktar Technologies comme sous-traitant des données que votre organisation dépose dans KolabReport."
+      }
+    }
   },
   "Pwa": {
     "updateTitle": "Nouvelle version disponible",

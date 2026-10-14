@@ -26,9 +26,10 @@ function useScrolled(threshold = 8) {
 
 /**
  * Transparent over the hero glow, then a blurred bar with a bottom border
- * once the page scrolls.
+ * once the page scrolls. Other pages, like the legal pages, pass the landing
+ * path as sectionBase so the section links lead back to it.
  */
-export function SiteHeader() {
+export function SiteHeader({ sectionBase = "" }: { sectionBase?: string }) {
   const t = useTranslations("Landing.nav");
   const scrolled = useScrolled();
 
@@ -45,10 +46,10 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 md:flex">
-          <a href="#fonctionnalites" className={navLinkClass}>
+          <a href={`${sectionBase}#fonctionnalites`} className={navLinkClass}>
             {t("features")}
           </a>
-          <a href="#faq" className={navLinkClass}>
+          <a href={`${sectionBase}#faq`} className={navLinkClass}>
             {t("faq")}
           </a>
         </div>

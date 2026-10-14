@@ -1,5 +1,6 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
+import { LEGAL_PAGES } from "@/content/legal/pages";
 import { routing } from "@/i18n/routing";
 import { incomingRequestId, REQUEST_ID_HEADER } from "@/lib/log/request-id";
 import { updateSession } from "@/lib/supabase/middleware";
@@ -21,6 +22,9 @@ const PUBLIC_PATHS = [
   "/hors-ligne",
   // The invitation page works signed out: the token in the link is the proof.
   "/invitations",
+  // Mentions légales, privacy policy, CGU, CGV and data processing agreement.
+  // Signed-in users read them too: they are not in SIGNED_IN_REDIRECT_PATHS.
+  ...Object.values(LEGAL_PAGES),
 ];
 
 const LOCALE_PREFIX = new RegExp(`^/(${routing.locales.join("|")})(?=/|$)`);
