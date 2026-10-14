@@ -17,12 +17,14 @@ npm run test:e2e -- tests/e2e/accessibility.spec.ts tests/e2e/keyboard.spec.ts
 | `tests/e2e/keyboard.spec.ts` | The sign-in, upload and AI draft flows with the keyboard only (Tab, Shift+Tab, Enter, Space, Escape, arrows), plus the skip link, landmarks, page titles, focus indicators, menus, dialogs and French names. |
 | `src/components/auth/password-input.test.tsx` | The show password toggle keeps one name and changes `aria-pressed`. |
 | `src/app/[locale]/(app)/espaces/[workspaceId]/sections/[sectionId]/draft-panel.test.tsx` | The feedback button keeps the focus once the opinion is saved. |
+| `src/app/[locale]/(app)/tableau-de-bord/new-report-dialog.test.tsx` | The "Nouveau rapport" dialog opens on its field, ties a title error to it, keeps the title when the server refuses it, and gives the focus back to the button on cancel. |
+| `tests/e2e/workspaces.spec.ts` | The same dialog in the browser: Escape gives the focus back to the button, Enter opens it again. The wizard's organization choice is a group of radio buttons named by its legend. |
 
 The axe audit covers:
 
 - Public pages: `/fr`, `/fr/connexion` (also with a sign-in error), `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/hors-ligne`.
-- Signed-in pages: dashboard, workspace members, master report, section page (upload zone, file list, AI draft panel), prompt library, AI dashboard, notifications with an unread item, new workspace wizard, and the dashboard at phone width.
-- Interactive states: file preview open, delete dialog, AI draft proposal (preview, differences, editor), command palette, theme menu, workspace menu, remove member dialog, phone menu.
+- Signed-in pages: dashboard, workspace members, master report, section page (upload zone, file list, AI draft panel), prompt library, AI dashboard, notifications with an unread item, new workspace wizard (with its organization choice), and the dashboard at phone width.
+- Interactive states: file preview open, delete dialog, AI draft proposal (preview, differences, editor), command palette, theme menu, workspace menu, new report dialog with a title error, remove member dialog, phone menu.
 
 The keyboard spec checks:
 
