@@ -18,6 +18,12 @@
 -- sections: 2 completed, 2 in progress, 4 not started, 2 of them unassigned.
 -- No deliverables (they need files in Storage) and no AI drafts.
 --
+-- Billing is enforced here, unlike staging and production before the launch
+-- migration (KRB-179), so the tests run with the limits on. The demo
+-- organization has a manual Cabinet entitlement until 2100 instead of the
+-- trial it gets when it is created. New users of the e2e tests get their own
+-- trial with their first organization.
+--
 -- Every row has a fixed id starting with 5eed0000, so it never collides with
 -- the pgTAP fixture ids (00000000-0000-4000-...). Every insert skips rows that
 -- already exist: running the file again changes nothing. It runs in one
@@ -30,6 +36,7 @@
 --   5eed0000-0000-4000-8000-000000000301  workspace
 --   5eed0000-0000-4000-8000-000000000401  report
 --   5eed0000-0000-4000-8000-0000000005NN  report sections (01 to 08)
+--   5eed0000-0000-4000-8000-000000000601  Cabinet entitlement
 -- =============================================================================
 
 begin;
@@ -262,6 +269,30 @@ $$
   $$Termes de référence, liste des villages visités, liste des personnes rencontrées, grille d'entretien et modèle de fiche d'inspection.$$,
   null
 )
+on conflict (id) do nothing;
+
+-- -----------------------------------------------------------------------------
+-- Billing
+-- -----------------------------------------------------------------------------
+update private.billing_settings set enforced = true where not enforced;
+
+-- The organization insert above started a trial. Cabinet replaces it from
+-- the creation of the organization, so the trial is revoked, not ended.
+update public.billing_entitlements
+set revoked_at = now(), revoked_reason = 'Démo locale : offre Cabinet à la place de l''essai'
+where organization_id = '5eed0000-0000-4000-8000-000000000201' and plan = 'trial' and revoked_at is null;
+
+-- Same limits as Cabinet in src/lib/billing/catalog.ts.
+insert into public.billing_entitlements (
+  id, organization_id, scope, plan, source, starts_at, ends_at,
+  max_members, max_reports, drafts_per_month, custom_templates, note
+)
+select
+  '5eed0000-0000-4000-8000-000000000601', o.id, 'subscription', 'cabinet', 'manual',
+  o.created_at, '2100-01-01 00:00:00+00',
+  10, null, 250, true, 'Démo locale et CI'
+from public.organizations o
+where o.id = '5eed0000-0000-4000-8000-000000000201'
 on conflict (id) do nothing;
 
 commit;
