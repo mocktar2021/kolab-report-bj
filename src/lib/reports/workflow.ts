@@ -2,6 +2,7 @@ import "server-only";
 import { reportStatusEmail } from "@/lib/email/report-status-email";
 import { sendEmail, type Email } from "@/lib/email/send";
 import { publicEnv } from "@/lib/env";
+import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { exportDownloadPath } from "./exports";
 import { reportStatusSchema, type ReportAction, type ReportStatus } from "./status";
@@ -118,5 +119,5 @@ export async function statusChangeEmails(input: {
 export async function sendStatusEmails(emails: Email[]) {
   const results = await Promise.allSettled(emails.map((email) => sendEmail(email)));
   const failed = results.filter((result) => result.status === "rejected" || !result.value).length;
-  if (failed > 0) console.warn(`report-status: ${failed} of ${emails.length} e-mail(s) not sent`);
+  if (failed > 0) log.warn("report-status: e-mails not sent", { failed, total: emails.length });
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cronSecretIsUsable, isCronAuthorized } from "@/lib/cron";
+import { log, withRequestId } from "@/lib/log";
 import { runStorageCleanup } from "@/lib/storage/cleanup";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -15,11 +16,11 @@ export const maxDuration = 60;
 
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
-export async function GET(request: Request) {
+export const GET = withRequestId(async (request: Request) => {
   const secret = process.env.CRON_SECRET;
   if (!isCronAuthorized(request.headers.get("authorization"), secret)) {
     if (!cronSecretIsUsable(secret)) {
-      console.error("storage-cleanup: CRON_SECRET is missing or too short, every call is refused");
+      log.error("storage-cleanup: CRON_SECRET is missing or too short, every call is refused");
     }
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: NO_STORE });
   }
@@ -27,4 +28,4 @@ export async function GET(request: Request) {
   const summary = await runStorageCleanup(createAdminClient());
   const status = summary.ok && summary.failed === 0 ? 200 : 500;
   return NextResponse.json(summary, { status, headers: NO_STORE });
-}
+});

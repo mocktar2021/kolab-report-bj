@@ -4,6 +4,7 @@ import { z } from "zod";
 import { checkFileBeforeUpload, fileTypeFor, storageFileName } from "@/lib/deliverables/file-types";
 import { DELIVERABLES_BUCKET, errorResponse, NO_STORE, removeStaleUploads } from "@/lib/deliverables/server";
 import type { UploadUrlResponse } from "@/lib/deliverables/upload";
+import { log, withRequestId } from "@/lib/log";
 import { canEditSection } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
@@ -20,7 +21,7 @@ const bodySchema = z.object({
  * Registers a file for a section and returns a signed URL to upload it
  * straight to storage. The file itself never goes through this server.
  */
-export async function POST(request: Request) {
+export const POST = withRequestId(async (request: Request) => {
   // A JSON content type keeps other sites from posting here with a plain form.
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
     return errorResponse(415, "invalidInput");
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
     .single();
   if (insertError || !row) {
     if (insertError?.code === "42501") return errorResponse(403, "forbidden");
-    console.error("deliverables: could not register an upload", insertError?.message);
+    log.error("deliverables: could not register an upload", { error: insertError?.message });
     return errorResponse(500, "generic");
   }
 
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
     .from(DELIVERABLES_BUCKET)
     .createSignedUploadUrl(storagePath);
   if (signError || !signed) {
-    console.error("deliverables: could not sign an upload URL", signError?.message);
+    log.error("deliverables: could not sign an upload URL", { error: signError?.message });
     await supabase.from("deliverables").delete().eq("id", row.id);
     return errorResponse(500, "generic");
   }
@@ -91,4 +92,4 @@ export async function POST(request: Request) {
     contentType: type.mime,
   };
   return NextResponse.json(body, { status: 201, headers: NO_STORE });
-}
+});

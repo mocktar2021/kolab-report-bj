@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EXPORT_MIME_TYPES, type ExportDocument, type ExportFormat } from "@/lib/export/types";
+import { log } from "@/lib/log";
 import { sectionStatusSchema } from "@/lib/sections";
 import type { Database } from "@/lib/supabase/database.types";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -67,7 +68,7 @@ export async function storeExportFile(
     .from(EXPORTS_BUCKET)
     .upload(storagePath, file, { contentType: EXPORT_MIME_TYPES[format], upsert: false });
   if (uploadError) {
-    console.error("exports: could not store the file", uploadError.message);
+    log.error("exports: could not store the file", { error: uploadError.message });
     return false;
   }
 
@@ -86,7 +87,9 @@ export async function storeExportFile(
   // No row: the report was deleted meanwhile. Its row had no path yet, so
   // nothing queued the file for removal (KRB-166).
   if (readyError || recorded.length === 0) {
-    console.error("exports: could not record the export", readyError?.message ?? "the export is gone");
+    log.error("exports: could not record the export", {
+      error: readyError?.message ?? "the export is gone",
+    });
     await admin.storage.from(EXPORTS_BUCKET).remove([storagePath]);
     return false;
   }

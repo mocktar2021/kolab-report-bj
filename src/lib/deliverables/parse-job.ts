@@ -1,6 +1,7 @@
 import "server-only";
 import { fork } from "node:child_process";
 import path from "node:path";
+import { getRequestId, log } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
 import { type FileExtension, fileTypeFor } from "./file-types";
@@ -49,19 +50,24 @@ export async function claimParse(id: string, workspaceId: string): Promise<Parse
     .or(`parse_status.in.(pending,failed),and(parse_status.eq.processing,updated_at.lt.${staleBefore})`)
     .select("id, workspace_id, storage_path, file_name, updated_at")
     .maybeSingle();
-  if (error) console.error("deliverables: could not claim a parse", error.message);
+  if (error) log.error("deliverables: could not claim a parse", { error: error.message });
   return data;
 }
 
 /**
  * Runs the parsers in a child process, killed when it answers, fails or
  * reaches the deadline. Running out of memory aborts it (SIGABRT).
+ * `requestId` goes on the lines the process logs.
  */
 export function parseInWorker(
   extension: FileExtension,
   bytes: Uint8Array,
   deadline: number,
-  { file = PARSE_WORKER_FILE, heapMb = PARSE_LIMITS.workerHeapMb }: { file?: string; heapMb?: number } = {},
+  {
+    file = PARSE_WORKER_FILE,
+    heapMb = PARSE_LIMITS.workerHeapMb,
+    requestId = null,
+  }: { file?: string; heapMb?: number; requestId?: string | null } = {},
 ): Promise<ParseResult> {
   return new Promise((resolve, reject) => {
     const child = fork(file, [], {
@@ -87,7 +93,7 @@ export function parseInWorker(
       clearTimeout(timer);
       reject(new ParseError(signal === "SIGABRT" ? "tooLarge" : "unreadable"));
     });
-    child.send({ extension, bytes } satisfies WorkerInput);
+    child.send({ extension, bytes, requestId } satisfies WorkerInput);
   });
 }
 
@@ -107,7 +113,7 @@ export async function runParse(claim: ParseClaim): Promise<void> {
       .eq("workspace_id", claim.workspace_id)
       .eq("parse_status", "processing")
       .eq("updated_at", claim.updated_at);
-    if (error) console.error("deliverables: could not save a parse", error.message);
+    if (error) log.error("deliverables: could not save a parse", { error: error.message });
     return !error;
   };
   const fail = (key: string) =>
@@ -123,7 +129,9 @@ export async function runParse(claim: ParseClaim): Promise<void> {
         .from(DELIVERABLES_BUCKET)
         .download(claim.storage_path, {}, { signal: AbortSignal.timeout(deadline - Date.now()) });
       if (error || !data) throw new ParseError("unreadable");
-      result = await parseInWorker(type.extension, new Uint8Array(await data.arrayBuffer()), deadline);
+      result = await parseInWorker(type.extension, new Uint8Array(await data.arrayBuffer()), deadline, {
+        requestId: await getRequestId(),
+      });
     }
     const saved = await save({
       parse_status: result.status,
@@ -134,7 +142,7 @@ export async function runParse(claim: ParseClaim): Promise<void> {
     // Postgres refuses some text (a NUL byte, for one): the file is then marked as unreadable.
     if (!saved) await fail("unreadable");
   } catch (error) {
-    if (!(error instanceof ParseError)) console.error("deliverables: parse failed", error);
+    if (!(error instanceof ParseError)) log.error("deliverables: parse failed", { error });
     await fail(error instanceof ParseError ? error.key : "unreadable");
   }
 }

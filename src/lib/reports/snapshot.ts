@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildExport, exportFileName, ExportTooLargeError } from "@/lib/export";
 import type { ExportFormat } from "@/lib/export/types";
+import { log } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { loadExportDocument, markExportFailed, storeExportFile, type ExportedReport } from "./export-file";
@@ -24,11 +25,11 @@ async function buildSnapshot(
       return { format, file: await buildExport(doc, format) };
     } catch (error) {
       if (error instanceof ExportTooLargeError) continue;
-      console.error("snapshot: could not build the file", error instanceof Error ? error.message : error);
+      log.error("snapshot: could not build the file", { format, error });
       return null;
     }
   }
-  console.error("snapshot: the report is too large for every format");
+  log.error("snapshot: the report is too large for every format");
   return null;
 }
 
@@ -90,7 +91,7 @@ export async function createFinalSnapshot(input: {
     .single();
   if (error?.code === "23505") return "busy";
   if (error || !row) {
-    console.error("snapshot: could not record the snapshot", error?.message);
+    log.error("snapshot: could not record the snapshot", { error: error?.message });
     return "failed";
   }
 

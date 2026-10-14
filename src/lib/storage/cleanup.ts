@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { log } from "@/lib/log";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Removes the stored files of deleted rows (KRB-166). Deleting a
@@ -86,7 +87,7 @@ export async function runStorageCleanup(
     p_days: retentionDays,
   });
   if (expireError) {
-    console.error("storage-cleanup: could not expire old exports", expireError.message);
+    log.error("storage-cleanup: could not expire old exports", { error: expireError.message });
     summary.ok = false;
   } else {
     summary.expiredExports = expired ?? 0;
@@ -101,7 +102,7 @@ export async function runStorageCleanup(
       p_limit: batchSize,
     });
     if (claimError || !batch) {
-      console.error("storage-cleanup: could not claim paths", claimError?.message);
+      log.error("storage-cleanup: could not claim paths", { error: claimError?.message });
       summary.ok = false;
       break;
     }
@@ -113,7 +114,7 @@ export async function runStorageCleanup(
         : { error: { message: "unknown bucket" } };
       if (removeError) {
         // The paths stay queued with the error, and come back next run.
-        console.error("storage-cleanup: could not remove files", bucket, removeError.message);
+        log.error("storage-cleanup: could not remove files", { bucket, error: removeError.message });
         summary.failed += ids.length;
       } else {
         summary.removed += ids.length;
@@ -126,7 +127,7 @@ export async function runStorageCleanup(
       if (finishError) {
         // The claim holds these paths for 15 minutes, then the next run
         // removes them again, which is harmless.
-        console.error("storage-cleanup: could not record removals", finishError.message);
+        log.error("storage-cleanup: could not record removals", { error: finishError.message });
         summary.ok = false;
         return summary;
       }

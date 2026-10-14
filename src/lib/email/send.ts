@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/lib/log";
 
 export type Email = { to: string; subject: string; html: string; text: string };
 
@@ -89,7 +90,7 @@ export async function sendEmail(email: Email): Promise<boolean> {
         return false;
     }
   } catch (error) {
-    console.error("sendEmail failed", error);
+    log.error("sendEmail failed", { provider, error });
     return false;
   }
 }

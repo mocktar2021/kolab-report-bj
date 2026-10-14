@@ -13,7 +13,7 @@ const alert = { dailyUsd: 10, email: "ops@example.com" };
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
-  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  vi.spyOn(console, "log").mockImplementation(() => undefined);
   vi.mocked(createAdminClient).mockReturnValue({ rpc } as unknown as ReturnType<typeof createAdminClient>);
   rpc.mockImplementation(async (name: string) =>
     name === "claim_ai_cost_alert" ? { data: 12.5, error: null } : { data: null, error: null },

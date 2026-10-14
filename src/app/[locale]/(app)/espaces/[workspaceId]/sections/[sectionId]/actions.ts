@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { claimParse, runParse } from "@/lib/deliverables/parse-job";
 import type { ParseMeta } from "@/lib/deliverables/parse/types";
 import { removeObjects } from "@/lib/deliverables/server";
+import { log } from "@/lib/log";
 import { canEditSection, sectionStatusSchema, type SectionStatus } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/lib/workspaces/schemas";
@@ -61,7 +62,7 @@ export async function deleteDeliverable(id: string): Promise<DeliverableActionRe
     .select("storage_path")
     .maybeSingle();
   if (error) {
-    console.error("deliverables: could not delete a file", error.message);
+    log.error("deliverables: could not delete a file", { error: error.message });
     return { ok: false, error: "generic" };
   }
   if (!deleted) return { ok: false, error: "forbidden" };

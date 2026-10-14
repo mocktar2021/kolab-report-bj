@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildExport, exportFileName, ExportTooLargeError } from "@/lib/export";
 import { EXPORT_FORMATS } from "@/lib/export/types";
+import { log, withRequestId } from "@/lib/log";
 import { loadExportDocument, markExportFailed, storeExportFile } from "@/lib/reports/export-file";
 import { EXPORTS_PER_HOUR, exportDownloadPath, NO_STORE, type ExportErrorKey } from "@/lib/reports/exports";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,7 +28,7 @@ function failure(status: number, error: ExportErrorKey) {
   return NextResponse.json({ error }, { status, headers: NO_STORE });
 }
 
-export async function POST(request: Request, { params }: { params: Params }) {
+export const POST = withRequestId(async (request: Request, { params }: { params: Params }) => {
   // A JSON content type keeps other sites from posting here with a plain form.
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
     return failure(415, "invalidInput");
@@ -64,7 +65,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     })
     .maybeSingle();
   if (claimError || !claim) {
-    console.error("exports: could not reserve an export", claimError?.message);
+    log.error("exports: could not reserve an export", { error: claimError?.message });
     return failure(500, "generic");
   }
   if (claim.refusal === "busy") return failure(409, "busy");
@@ -87,7 +88,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   } catch (error) {
     // A report past the format's size cap: the PDF one is lower, .docx may still work.
     if (error instanceof ExportTooLargeError) return fail(413, "tooLarge");
-    console.error("exports: could not build the file", error instanceof Error ? error.message : error);
+    log.error("exports: could not build the file", { error });
     return fail(500, "generic");
   }
 
@@ -104,4 +105,4 @@ export async function POST(request: Request, { params }: { params: Params }) {
     { id: exportId, fileName, url: exportDownloadPath(exportId) },
     { status: 201, headers: NO_STORE },
   );
-}
+});

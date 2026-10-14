@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { log } from "@/lib/log";
 import { createFinalSnapshot, type SnapshotResult } from "@/lib/reports/snapshot";
 import { REPORT_TRANSITIONS, reportActionSchema, type ReportStatus } from "@/lib/reports/status";
 import { sendStatusEmails, statusChangeEmails } from "@/lib/reports/workflow";
@@ -69,7 +70,7 @@ export async function changeReportStatus(
     .rpc("transition_report_status", { p_report_id: report.id, p_from: from, p_to: to })
     .single();
   if (error || !change) {
-    if (!error) console.error("report-status: the change returned nothing");
+    if (!error) log.error("report-status: the change returned nothing");
     return { status: "error", error: statusErrorKey(error) };
   }
 
@@ -85,10 +86,7 @@ export async function changeReportStatus(
     actorName: actor?.name ?? "",
     recipients: change.recipients,
   }).catch((reason: unknown) => {
-    console.error(
-      "report-status: could not prepare the e-mails",
-      reason instanceof Error ? reason.message : reason,
-    );
+    log.error("report-status: could not prepare the e-mails", { error: reason });
     return [];
   });
   after(() => sendStatusEmails(emails));

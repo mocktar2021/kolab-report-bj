@@ -7,6 +7,7 @@ import {
   markUploaded,
   NO_STORE,
 } from "@/lib/deliverables/server";
+import { withRequestId } from "@/lib/log";
 import { canEditSection } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
@@ -22,7 +23,7 @@ export const maxDuration = 60;
  * Called by the browser once the upload is done. Checks the stored file and
  * keeps it, or deletes it with its row and says why.
  */
-export async function POST(_request: Request, { params }: { params: Params }) {
+export const POST = withRequestId(async (_request: Request, { params }: { params: Params }) => {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) return errorResponse(404, "notReceived");
 
@@ -66,4 +67,4 @@ export async function POST(_request: Request, { params }: { params: Params }) {
   const claim = await claimParse(upload.id, upload.workspace_id);
   if (claim) after(() => runParse(claim));
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
-}
+});

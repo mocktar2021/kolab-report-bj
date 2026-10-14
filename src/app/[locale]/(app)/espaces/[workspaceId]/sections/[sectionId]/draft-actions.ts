@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { wordEditDistance } from "@/lib/ai/metrics";
 import { deliverablesOf, storedProposal } from "@/lib/ai/server";
+import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 
@@ -52,7 +53,7 @@ function decisionError(error: { code?: string | null; message?: string }): Draft
     case "22P02":
       return "invalidInput";
     default:
-      console.error("ai drafts: could not record a decision", error.message);
+      log.error("ai drafts: could not record a decision", { error: error.message });
       return "generic";
   }
 }
@@ -133,7 +134,7 @@ export async function rateDraft(input: {
     .select("id")
     .maybeSingle();
   if (error) {
-    console.error("ai drafts: could not save a rating", error.message);
+    log.error("ai drafts: could not save a rating", { error: error.message });
     return { ok: false, error: "generic" };
   }
   // RLS hides drafts the caller may not rate: nothing was updated.

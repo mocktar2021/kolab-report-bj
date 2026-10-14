@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { workspaceErrorKey, type WorkspaceErrorKey } from "@/lib/workspaces/errors";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
@@ -141,7 +142,7 @@ export async function reorderSections(reportId: string, sectionIds: string[]): P
       case "KR020":
         return { ok: false, error: "reportFinal" };
       default:
-        console.error("reports: could not reorder sections", error.message);
+        log.error("reports: could not reorder sections", { error: error.message });
         return { ok: false, error: "generic" };
     }
   }
