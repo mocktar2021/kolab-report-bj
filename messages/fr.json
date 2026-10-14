@@ -282,6 +282,37 @@
     "promptLibrary": "Modèles de prompts",
     "aiDashboard": "Pilotage de l'IA"
   },
+  "Notifications": {
+    "title": "Notifications",
+    "subtitle": "Les changements de statut des rapports auxquels vous participez.",
+    "bell": "{count, plural, =0 {Notifications} one {Notifications, # non lue} other {Notifications, # non lues}}",
+    "unread": "Non lue",
+    "event": {
+      "submit": "{actor} a soumis « {title} » pour revue",
+      "sendBack": "{actor} a repassé « {title} » en brouillon",
+      "finalize": "{actor} a finalisé « {title} »",
+      "reopen": "{actor} a rouvert « {title} »",
+      "other": "{actor} a changé le statut de « {title} »"
+    },
+    "eventNoActor": {
+      "submit": "Le rapport « {title} » a été soumis pour revue",
+      "sendBack": "Le rapport « {title} » est repassé en brouillon",
+      "finalize": "Le rapport « {title} » a été finalisé",
+      "reopen": "Le rapport « {title} » a été rouvert",
+      "other": "Le statut du rapport « {title} » a changé"
+    },
+    "empty": {
+      "title": "Aucune notification",
+      "description": "Quand un rapport auquel vous participez change de statut, vous le voyez ici."
+    },
+    "error": {
+      "title": "Impossible de charger les notifications",
+      "description": "La base de données ne répond pas. Rechargez la page dans un instant."
+    },
+    "olderUnread": "{count, plural, one {# notification plus ancienne n'est pas encore lue.} other {# notifications plus anciennes ne sont pas encore lues.}}",
+    "markAllRead": "Tout marquer comme lu",
+    "markAllReadError": "Les notifications n'ont pas pu être marquées comme lues. Réessayez."
+  },
   "CommandPalette": {
     "title": "Palette de commandes",
     "description": "Recherchez une page, un filtre ou une action, puis validez avec Entrée.",
@@ -411,7 +442,8 @@
       "invitationExpired": "Cette invitation a expiré. Demandez à la personne qui vous a invité de la renvoyer.",
       "invitationOtherEmail": "Cette invitation est destinée à une autre adresse e-mail.",
       "alreadyMember": "Cette personne est déjà membre de l'espace de travail.",
-      "invitationPending": "Une invitation est déjà en attente pour cette adresse. Renvoyez-la depuis la liste."
+      "invitationPending": "Une invitation est déjà en attente pour cette adresse. Renvoyez-la depuis la liste.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier."
     }
   },
   "WorkspaceWizard": {
@@ -536,7 +568,8 @@
         "forbidden": "Seuls les propriétaires et administrateurs peuvent changer l'ordre des sections.",
         "stale": "Les sections ont changé dans une autre session. La page affiche maintenant l'ordre à jour, refaites le déplacement si besoin.",
         "invalidInput": "Le nouvel ordre n'a pas pu être enregistré. Rechargez la page puis réessayez.",
-        "generic": "Le nouvel ordre n'a pas pu être enregistré. Réessayez."
+        "generic": "Le nouvel ordre n'a pas pu être enregistré. Réessayez.",
+        "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier."
       }
     }
   },
@@ -562,7 +595,80 @@
       "pdf": "PDF"
     },
     "download": "<hidden>Télécharger </hidden>{fileName}",
-    "by": "par {name}"
+    "by": "par {name}",
+    "finalLabel": "Version finale"
+  },
+  "ReportStatus": {
+    "labels": {
+      "draft": "Brouillon",
+      "in_review": "En revue",
+      "final": "Final"
+    },
+    "since": {
+      "draft": "Brouillon depuis le <time>{date}</time>",
+      "in_review": "En revue depuis le <time>{date}</time>",
+      "final": "Final depuis le <time>{date}</time>"
+    },
+    "sinceBy": {
+      "draft": "Brouillon depuis le <time>{date}</time>, par {name}",
+      "in_review": "En revue depuis le <time>{date}</time>, par {name}",
+      "final": "Final depuis le <time>{date}</time>, par {name}"
+    },
+    "frozen": "Ce rapport est final : ses sections sont en lecture seule. Un propriétaire peut le rouvrir en brouillon.",
+    "panelTitle": "Revue et finalisation",
+    "ownerOnly": "Seul un propriétaire peut finaliser le rapport ou le rouvrir en brouillon.",
+    "actions": {
+      "submit": "Soumettre pour revue",
+      "sendBack": "Repasser en brouillon",
+      "finalize": "Finaliser",
+      "reopen": "Rouvrir en brouillon"
+    },
+    "confirm": {
+      "sendBack": {
+        "title": "Repasser le rapport en brouillon ?",
+        "description": "Le rapport quitte la revue et les membres concernés sont prévenus. Les sections restent modifiables.",
+        "confirm": "Repasser en brouillon"
+      },
+      "finalize": {
+        "title": "Finaliser le rapport ?",
+        "description": "Ses sections passent en lecture seule pour tout le monde, propriétaires compris. Un PDF de la version finale est enregistré avec les exports du rapport. Un propriétaire pourra le rouvrir en brouillon.",
+        "confirm": "Finaliser le rapport"
+      },
+      "reopen": {
+        "title": "Rouvrir le rapport en brouillon ?",
+        "description": "Ses sections redeviennent modifiables par les experts attribués, les propriétaires et les administrateurs. Le PDF de la version finale reste dans les exports du rapport.",
+        "confirm": "Rouvrir en brouillon"
+      },
+      "cancel": "Annuler"
+    },
+    "pending": "Changement du statut…",
+    "pendingFinalize": "Finalisation du rapport et création de la version finale. Cela peut prendre quelques secondes.",
+    "success": {
+      "submit": "Le rapport est en revue. Les membres concernés sont prévenus.",
+      "sendBack": "Le rapport est repassé en brouillon. Les membres concernés sont prévenus.",
+      "finalize": "Le rapport est final. Les membres concernés sont prévenus.",
+      "reopen": "Le rapport est rouvert en brouillon. Ses sections sont de nouveau modifiables."
+    },
+    "errors": {
+      "forbidden": "Vous n'avez pas les droits pour ce changement. Seul un propriétaire peut finaliser un rapport ou le rouvrir.",
+      "stale": "Le statut du rapport a changé dans une autre session. La page affiche maintenant le statut à jour.",
+      "notFound": "Ce rapport n'existe plus ou ne vous est plus accessible.",
+      "invalidInput": "La demande n'est pas valide. Rechargez la page puis réessayez.",
+      "generic": "Le statut n'a pas pu être changé. Réessayez dans un instant."
+    },
+    "snapshot": {
+      "title": "Version finale",
+      "ready": "Version finale ({format, select, docx {.docx} other {PDF}})",
+      "pending": "La version finale (PDF) est en cours de création. Rechargez la page dans un instant.",
+      "missing": "La version finale (PDF) n'a pas été enregistrée.",
+      "create": "Créer la version finale",
+      "creating": "Création de la version finale…",
+      "result": {
+        "ready": "La version finale est enregistrée.",
+        "busy": "La version finale est en cours de création. Rechargez la page dans un instant.",
+        "failed": "La version finale n'a pas pu être enregistrée. Utilisez « Créer la version finale » pour réessayer."
+      }
+    }
   },
   "Deliverables": {
     "metaTitle": "Section",
@@ -605,10 +711,12 @@
       "contentMismatch": "Le contenu de ce fichier ne correspond pas à son extension.",
       "activeContent": "Ce fichier SVG contient du code (script ou événement). Exportez-le sans script, ou en PNG.",
       "uploadFailed": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
       "generic": "Une erreur est survenue. Réessayez."
     },
     "statusLabel": "Statut de la section",
     "statusError": "Le statut n'a pas pu être enregistré. Réessayez.",
+    "statusReportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
     "parse": {
       "pending": "En attente",
       "processing": "En cours",
@@ -648,6 +756,7 @@
     "actionErrors": {
       "forbidden": "Vous ne pouvez pas faire cela sur ce fichier.",
       "busy": "Une analyse est déjà en cours.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
       "generic": "Une erreur est survenue. Réessayez."
     }
   },
@@ -746,6 +855,7 @@
       "forbidden": "Vous ne pouvez plus modifier cette section.",
       "invalidInput": "Le texte doit compter entre 1 et 100 000 caractères, sans caractère invisible.",
       "conflict": "La section a changé depuis le chargement de la page. Rechargez pour voir son contenu actuel, puis décidez à nouveau.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
       "generic": "La décision n'a pas pu être enregistrée. Réessayez."
     },
     "feedback": {
@@ -804,6 +914,7 @@
       "forbidden": "Vous ne pouvez plus modifier cette section. Copiez votre texte si vous voulez le garder.",
       "tooLong": "Le texte dépasse 100 000 caractères. Raccourcissez-le puis réessayez.",
       "invalidInput": "Le texte n'a pas pu être enregistré. Copiez-le, rechargez la page puis réessayez.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier. Copiez votre texte si vous voulez le garder.",
       "generic": "Le texte n'a pas pu être enregistré. Réessayez."
     }
   },
