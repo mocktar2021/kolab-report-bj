@@ -13,7 +13,7 @@ export default async function NewWorkspacePage({ params }: { params: Promise<{ l
   const t = await getTranslations("WorkspaceWizard");
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:py-12 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:py-12 motion-safe:animate-in motion-safe:fade-in-50 motion-safe:duration-500">
       <header>
         <h1 className="text-h2 text-foreground">{t("title")}</h1>
         <p className="mt-1 text-small text-muted-foreground">{t("subtitle")}</p>

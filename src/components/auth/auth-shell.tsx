@@ -29,7 +29,11 @@ export async function AuthShell({
       <Link href="/" aria-label={tNav("home")} className="mb-8 rounded-full">
         <Logo />
       </Link>
-      <Card className="surface-card w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
+      {/*
+        The fade starts at half opacity: from zero, Chrome only counted the card
+        as largest contentful paint after hydration (KRB-154).
+      */}
+      <Card className="surface-card w-full max-w-sm shadow-xl motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out-expo">
         <CardHeader>
           {/* The card title is the page heading. */}
           <h1 className="font-display text-h2">{title}</h1>

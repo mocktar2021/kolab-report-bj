@@ -43,8 +43,11 @@ export default async function TableauDeBordPage({
     ? await Promise.all([getDashboardData(workspace.id, activeStatus), getWorkspaceReports(workspace.id)])
     : [null, null];
 
+  // Every signed-in page fades in from half opacity, not zero: Chrome does
+  // not count a transparent element as largest contentful paint, so a fade
+  // from zero moved LCP after hydration (KRB-154).
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in-50 motion-safe:duration-500">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{t("greeting", { name: profile?.name ?? "" })}</p>
