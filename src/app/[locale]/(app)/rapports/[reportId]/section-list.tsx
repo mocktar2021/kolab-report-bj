@@ -432,7 +432,17 @@ function AssignmentForm({ section, assignees }: { section: SectionRowData; assig
           title={t("weightHelp")}
         />
       </div>
-      <Button type="submit" size="sm" variant="outline" className="h-9" disabled={pending || !dirty}>
+      {/* aria-disabled: once saved, the button keeps the focus instead of dropping it to the page. */}
+      <Button
+        type="submit"
+        size="sm"
+        variant="outline"
+        className="h-9 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+        aria-disabled={pending || !dirty}
+        onClick={(event) => {
+          if (pending || !dirty) event.preventDefault();
+        }}
+      >
         {t("save")}
       </Button>
       <p id={statusId} role="status" aria-live="polite" className="w-full text-xs lg:text-right">
@@ -461,18 +471,32 @@ export function AddSectionForm({ reportId }: { reportId: string }) {
     status: "idle",
   });
   const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const sentTitle = useRef("");
+  const [addedTitle, setAddedTitle] = useState<string | null>(null);
   const titleError = state.status === "error" ? state.fieldErrors?.title : undefined;
   const formError = state.status === "error" && !state.fieldErrors ? state.error : undefined;
 
   // Clear the field after each section so the next one can be typed right away.
+  // The button is disabled while the section is added, so the focus goes back
+  // to the field, and screen readers hear that the section is in the report.
+  // Runs once per answer: the page refreshes after other changes too.
   useEffect(() => {
-    if (state.status === "success") formRef.current?.reset();
+    if (state.status === "idle") return;
+    if (state.status === "success") {
+      formRef.current?.reset();
+      setAddedTitle(sentTitle.current);
+    } else setAddedTitle(null);
+    inputRef.current?.focus();
   }, [state]);
 
   return (
     <form
       ref={formRef}
-      action={formAction}
+      action={(formData) => {
+        sentTitle.current = String(formData.get("title") ?? "").trim();
+        formAction(formData);
+      }}
       noValidate
       className="surface-card mt-4 rounded-2xl border p-5 shadow-sm"
     >
@@ -480,6 +504,7 @@ export function AddSectionForm({ reportId }: { reportId: string }) {
       <Label htmlFor="new-section-title">{t("addField")}</Label>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <Input
+          ref={inputRef}
           id="new-section-title"
           name="title"
           placeholder={t("addPlaceholder")}
@@ -499,6 +524,9 @@ export function AddSectionForm({ reportId }: { reportId: string }) {
           {tWorkspaces(`errors.${formError}`)}
         </p>
       ) : null}
+      <p role="status" className="sr-only">
+        {addedTitle === null ? null : t("added", { title: addedTitle })}
+      </p>
     </form>
   );
 }

@@ -557,6 +557,7 @@
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
     "addSubmit": "Ajouter",
+    "added": "Section « {title} » ajoutée à la fin du rapport.",
     "tocTitle": "Sommaire",
     "reorderHint": "Faites glisser une section par sa poignée pour changer l'ordre. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
     "edit": "Modifier<hidden> la section {title}</hidden>",
