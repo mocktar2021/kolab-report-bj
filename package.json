@@ -111,6 +111,12 @@
     "typescript": "^5.9.2",
     "vitest": "^3.2.7"
   },
+  "overrides": {
+    "@rollup/plugin-terser": "^1.0.0",
+    "next": {
+      "postcss": "^8.5.23"
+    }
+  },
   "lint-staged": {
     "*.{ts,tsx,mts,mjs,js}": [
       "prettier --write",
