@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
@@ -64,7 +65,16 @@ export function Sidebar({
         <SearchTrigger onOpen={onOpenPalette} collapsible />
       </div>
 
-      <nav aria-label={t("navLabel")} className="mt-6 flex-1 px-3">
+      {/*
+        On a short screen the links scroll, so the account block and the legal
+        links stay visible. pt-1 and pb-1 leave room for the focus rings.
+        Collapsed, the labels show as tooltips beside the rail and must not be
+        clipped; the footer is shorter then, without the legal links.
+      */}
+      <nav
+        aria-label={t("navLabel")}
+        className="mt-5 min-h-0 flex-1 overflow-y-auto px-3 pb-1 pt-1 sidebar-collapsed:overflow-visible"
+      >
         <NavItems
           variant="sidebar"
           workspaceId={currentWorkspaceId}
@@ -104,6 +114,8 @@ export function Sidebar({
           <PanelLeftOpen className="hidden size-4 shrink-0 sidebar-collapsed:block" aria-hidden="true" />
           <span className="sidebar-collapsed:sr-only">{collapsed ? t("expand") : t("collapse")}</span>
         </button>
+        {/* Too long for the collapsed rail: expand the menu to see them. */}
+        <LegalLinks className="px-2.5 pt-2 sidebar-collapsed:hidden" />
       </div>
     </header>
   );

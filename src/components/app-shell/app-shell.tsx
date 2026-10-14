@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { LogOut, Menu, Search } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
@@ -165,6 +166,7 @@ export function AppShell({
                 {tCommon("signOut")}
               </button>
             </form>
+            <LegalLinks className="px-2.5 pt-2" />
           </div>
         </SheetContent>
       </Sheet>

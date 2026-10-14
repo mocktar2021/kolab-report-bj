@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 
@@ -55,6 +56,7 @@ export async function AuthShell({
         <ArrowLeft aria-hidden="true" className="size-4" />
         {t("backHome")}
       </Link>
+      <LegalLinks className="mt-8" listClassName="justify-center" />
     </main>
   );
 }

@@ -13,6 +13,7 @@ These are the services that receive personal data from KolabReport. For report c
 | Sentry | Error monitoring, only with `NEXT_PUBLIC_SENTRY_DSN` set | EU data storage location (`de.sentry.io`), US company | To sign / to confirm, before the DSN is set on production |
 | Cloudflare R2 | Off-site copy of the Storage files, only once the `backup-storage.yml` secrets are set | EU jurisdiction bucket | To sign / to confirm, before the job runs on production |
 | GitHub | Runs the nightly backup jobs and keeps the encrypted database dump 14 days, only once their secrets are set | Not chosen, US company | To confirm for this account's plan |
+| FedaPay | Payment of the offers by mobile money and card, only once billing (KRB-173) ships | To confirm | To confirm, see [FedaPay](#fedapay) |
 
 ## Supabase
 
@@ -106,6 +107,14 @@ Two nightly GitHub Actions jobs copy production data out of Supabase (KRB-141, K
 - **Region**: GitHub-hosted runners and artifacts are not in a region we choose. GitHub's DPA lets it transfer personal data to the United States or any country where GitHub or its subprocessors operate. A self-hosted runner in the EU would keep the plain data in the EU, at the cost of running that machine.
 - **DPA**: GitHub Data Protection Agreement, part of the GitHub Customer Agreement: https://github.com/customer-terms/github-data-protection-agreement. Whether it covers this account's plan: **to confirm**.
 - **Status**: to confirm before the backup jobs run on production.
+
+## FedaPay
+
+- **When**: once billing (Jira epic KRB-173) ships. Nothing in the code calls FedaPay yet. The privacy policy and the CGV (KRB-159) already name it, because the business model sells the offers through it.
+- **Receives**: what the payer types on the FedaPay payment page (card or mobile money details, name, e-mail or phone number), and from KolabReport the amount and the order reference.
+- **Sends back**: the result of the payment. The privacy policy says reference, amount, date, status and payment method. Check this list against the integration when it is built.
+- **Role**: **to confirm**. A payment provider usually acts as a controller for the payment data it needs for its own obligations. The privacy policy lists it with the subprocessors and says it also processes payment data for its own account.
+- **Region and terms**: **to confirm** on https://www.fedapay.com.
 
 ## Not subprocessors of customer data
 
