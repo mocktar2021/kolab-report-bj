@@ -1,61 +1,190 @@
 import { useFormatter, useTranslations } from "next-intl";
-import { ChevronRight, FileText } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { initialsOf } from "@/components/app-shell/user-avatar";
+import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
-import type { WorkspaceReport } from "@/lib/dashboard";
+import type { AssigneeProgress, WorkspaceReport } from "@/lib/dashboard";
+import { SECTION_STATUSES } from "@/lib/sections";
+import { cn } from "@/lib/utils";
 
-/** Reports of the current workspace with their completion. */
+/** Width of a bar fill, kept between 0 and 100 %. */
+function fillWidth(percent: number) {
+  return `${Math.min(100, Math.max(0, percent))}%`;
+}
+
+/** Reports of the current workspace as cards, with their completion and the breakdown by expert. */
 export function ReportList({ reports }: { reports: WorkspaceReport[] }) {
   const t = useTranslations("Dashboard.reports");
-  const format = useFormatter();
 
   return (
-    <section
-      aria-labelledby="reports-title"
-      className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm"
-    >
-      <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
-        <h2 id="reports-title" className="font-medium">
+    <section aria-labelledby="reports-title" className="mt-8">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="reports-title" className="text-h3 text-foreground">
           {t("title")}
         </h2>
-        <span className="text-sm text-muted-foreground">{t("count", { count: reports.length })}</span>
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {t("count", { count: reports.length })}
+        </span>
       </div>
       {reports.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">{t("empty")}</p>
+        <p className="surface-card mt-4 rounded-2xl border px-5 py-8 text-center text-sm text-muted-foreground shadow-sm">
+          {t("empty")}
+        </p>
       ) : (
-        <ul className="divide-y">
+        // Cards keep their own height on wide screens: opening one breakdown
+        // does not stretch the card next to it.
+        <ul className="mt-4 grid gap-3 sm:gap-4 lg:grid-cols-2 lg:items-start">
           {reports.map((report) => (
-            <li key={report.id}>
-              <Link
-                href={`/rapports/${report.id}`}
-                className="group flex items-center gap-4 px-5 py-4 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              >
-                <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-foreground">{report.title}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {t("sections", { count: report.totalSections })}
-                  </span>
-                </span>
-                <span className="hidden w-32 sm:block" aria-hidden="true">
-                  <span className="block h-1.5 overflow-hidden rounded-full bg-muted">
-                    <span
-                      className="block h-full rounded-full bg-highlight"
-                      style={{ width: `${Math.min(100, Math.max(0, report.completionPercent))}%` }}
-                    />
-                  </span>
-                </span>
-                <span className="w-12 text-right text-sm tabular-nums text-muted-foreground">
-                  {format.number(report.completionPercent / 100, { style: "percent" })}
-                </span>
-                <ChevronRight
-                  className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </Link>
-            </li>
+            <ReportCard key={report.id} report={report} />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+function ReportCard({ report }: { report: WorkspaceReport }) {
+  const t = useTranslations("Dashboard.reports");
+  const format = useFormatter();
+  const percent = format.number(report.completionPercent / 100, { style: "percent" });
+
+  return (
+    <li className="surface-card overflow-hidden rounded-2xl border shadow-sm">
+      {/* The title link covers this whole block, so a tap anywhere on it opens the report. */}
+      <div className="group relative p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h3 className="break-words font-medium leading-snug text-foreground">
+              <Link
+                href={`/rapports/${report.id}`}
+                className="underline-offset-4 outline-none after:absolute after:inset-0 after:rounded-2xl group-hover:underline focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring"
+              >
+                {report.title}
+              </Link>
+            </h3>
+            <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+              {t("sections", { count: report.totalSections })}
+            </p>
+          </div>
+          <span className="shrink-0 font-display text-[1.75rem] font-normal leading-none tracking-[-0.03em] tabular-nums text-foreground">
+            {percent}
+          </span>
+        </div>
+
+        <div
+          role="progressbar"
+          aria-label={t("progressLabel", { title: report.title })}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={report.completionPercent}
+          aria-valuetext={percent}
+          className="mt-4 h-2 overflow-hidden rounded-full bg-muted"
+        >
+          <div
+            className="h-full rounded-full bg-highlight transition-[width] duration-700 ease-out-expo motion-reduce:transition-none"
+            style={{ width: fillWidth(report.completionPercent) }}
+          />
+        </div>
+
+        {report.totalSections > 0 ? (
+          <ul
+            aria-label={t("statusLabel")}
+            className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-muted-foreground"
+          >
+            {SECTION_STATUSES.map((status) => (
+              <li key={status} className="flex items-center gap-1.5">
+                <span aria-hidden="true" className={cn("size-1.5 rounded-full", STATUS_DOT_STYLES[status])} />
+                {t(`status.${status}`, { count: report.counts[status] })}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">{t("noSections")}</p>
+        )}
+      </div>
+
+      {report.assignees.length > 0 ? (
+        <AssigneeBreakdown reportTitle={report.title} assignees={report.assignees} />
+      ) : null}
+    </li>
+  );
+}
+
+function AssigneeBreakdown({
+  reportTitle,
+  assignees,
+}: {
+  reportTitle: string;
+  assignees: AssigneeProgress[];
+}) {
+  const t = useTranslations("Dashboard.reports");
+
+  return (
+    <details className="group/details border-t">
+      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-5 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center justify-between gap-3">
+          <span>
+            {t.rich("byExpert", {
+              title: reportTitle,
+              hidden: (chunks) => <span className="sr-only">{chunks}</span>,
+            })}
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 shrink-0 transition-transform duration-200 group-open/details:rotate-180"
+          />
+        </span>
+      </summary>
+      <ul className="divide-y border-t px-4 sm:px-5">
+        {assignees.map((assignee) => (
+          <AssigneeRow key={assignee.userId ?? "unassigned"} assignee={assignee} />
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function AssigneeRow({ assignee }: { assignee: AssigneeProgress }) {
+  const t = useTranslations("Dashboard");
+  const format = useFormatter();
+  const unassigned = assignee.userId === null;
+  const name = unassigned ? t("table.unassigned") : (assignee.name ?? t("reports.unknownMember"));
+
+  return (
+    <li className="flex items-center gap-3 py-3">
+      {unassigned ? (
+        <span
+          aria-hidden="true"
+          className="size-7 shrink-0 rounded-full border border-dashed border-foreground/25"
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-foreground ring-1 ring-inset ring-border"
+        >
+          {assignee.name ? initialsOf(assignee.name) : null}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className={cn("truncate text-sm", unassigned ? "text-muted-foreground" : "text-foreground")}>
+            {name}
+          </span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {format.number(assignee.completionPercent / 100, { style: "percent" })}
+          </span>
+        </div>
+        {/* The percent next to the name says the same thing in text. */}
+        <span aria-hidden="true" className="mt-1.5 block h-1 overflow-hidden rounded-full bg-muted">
+          <span
+            className="block h-full rounded-full bg-highlight"
+            style={{ width: fillWidth(assignee.completionPercent) }}
+          />
+        </span>
+        <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+          {t("reports.completedOf", { completed: assignee.counts.completed, total: assignee.total })}
+        </p>
+      </div>
+    </li>
   );
 }
