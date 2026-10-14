@@ -4,8 +4,8 @@ This is the Article 30 record for KolabReport. It lists each processing activity
 
 | | |
 | --- | --- |
-| Organization keeping the record | Mocktar Technologies, operator of KolabReport. Legal name, address and registration: **to confirm** |
-| Contact for data protection | **To confirm** |
+| Organization keeping the record | Mocktar Technologies, établissement, C 1357 Houeyiho, 07BP91 Cotonou, République du Bénin. RCCM COTONOU N° RB/COT/26 A 119654, IFU 1200900488800. Same details as `src/content/legal/publisher.ts`. |
+| Contact for data protection | support@mocktar.com |
 | EU representative, DPO | **To confirm** whether either is needed |
 | Last updated | 2026-10-14 |
 | Database, Auth and Storage | Supabase, region EU West Paris (`eu-west-3`), per `docs/deployment.md` |

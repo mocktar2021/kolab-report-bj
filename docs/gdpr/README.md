@@ -18,7 +18,7 @@ This is not legal advice. A lawyer should review these documents before launch.
 | Product | KolabReport, operated by Mocktar Technologies |
 | Maintained by | Mocktar Tairou (Mocktar Technologies) |
 | Last reviewed | 2026-10-14 |
-| Contact for data requests | **To confirm**: no address is named yet |
+| Contact for data requests | support@mocktar.com, the address the legal pages give (KRB-159) |
 
 Update these pages in the same pull request as the change when you:
 
@@ -60,8 +60,8 @@ Contracts and roles:
 
 People and pages:
 
-- [ ] Name a contact for data requests (an e-mail address that someone reads) and add it to the table above.
-- [ ] Publish a privacy policy page in French (politique de confidentialité) under `/fr`, with the mentions légales and CGU (KRB-6.6.3). It should list the processors, the retention periods, the rights, the contact, and say that only strictly necessary cookies are used (Supabase session cookies and `kr-espace`, the current workspace).
+- [x] Name a contact for data requests (an e-mail address that someone reads) and add it to the table above.
+- [x] Publish a privacy policy page in French (politique de confidentialité) under `/fr`, with the mentions légales and CGU (KRB-6.6.3). Done in KRB-159: `/fr/confidentialite`, `/fr/mentions-legales`, `/fr/cgu`, `/fr/cgv` and `/fr/accord-traitement-donnees`. The page must follow this folder: see [`docs/legal.md`](../legal.md) for how to update it and the points a lawyer still has to review.
 - [ ] Decide what the customer terms say about sensitive data in deliverables. The masking before AI calls covers e-mails, phone numbers, IBANs, French social security numbers and card numbers, not names, postal addresses or health details (see `record-of-processing.md`).
 - [ ] Write a short breach procedure: who decides, how firms are told without undue delay (as processor), and how the supervisory authority is told within 72 hours when KolabReport is the controller.
 
