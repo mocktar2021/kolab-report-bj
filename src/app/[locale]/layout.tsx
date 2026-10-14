@@ -41,10 +41,12 @@ export async function generateMetadata({
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: "KolabReport", statusBarStyle: "default" },
     formatDetection: { telephone: false },
+    // Drawn from the logo mark by scripts/generate-icons.mjs. Browsers that
+    // read SVG take icon.svg, which follows the device's light or dark mode.
     icons: {
       icon: [
-        { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+        { url: "/favicon.ico", sizes: "32x32" },
+        { url: "/icons/icon.svg", type: "image/svg+xml" },
       ],
       apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
     },
