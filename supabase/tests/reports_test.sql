@@ -1,10 +1,12 @@
 begin;
 \ir fixtures.psql
-select plan(8);
+select plan(10);
 
 select pg_temp.act_as('viewer');
 select results_eq('select id from public.reports', array[pg_temp.id('r1')], 'viewer sees the w1 report');
 select is(pg_temp.affected($$update public.reports set title = 'X' where id = pg_temp.id('r1')$$), 0, 'viewer cannot edit a report');
+select throws_ok($$insert into public.reports (workspace_id, title) values (pg_temp.id('w1'), 'Rapport lecteur')$$,
+  '42501', null, 'viewer cannot create a report');
 
 select pg_temp.act_as('expert');
 select throws_ok($$insert into public.reports (workspace_id, title) values (pg_temp.id('w1'), 'Rapport expert')$$,
@@ -17,6 +19,11 @@ select lives_ok($$insert into public.reports (workspace_id, title) values (pg_te
   'admin can create a report');
 select throws_ok($$insert into public.reports (workspace_id, title) values (pg_temp.id('w2'), 'Rapport chez B')$$,
   '42501', null, 'admin of w1 cannot create a report in w2');
+
+-- KRB-175: "Nouveau rapport" on the dashboard inserts with the user's client.
+select pg_temp.act_as('owner');
+select lives_ok($$insert into public.reports (workspace_id, title) values (pg_temp.id('w1'), 'Rapport proprietaire')$$,
+  'owner can create a report');
 
 select pg_temp.act_as('outsider');
 select results_eq('select id from public.reports', array[pg_temp.id('r2')], 'outsider only sees the w2 report');

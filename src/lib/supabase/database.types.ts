@@ -1142,6 +1142,14 @@ export type Database = {
           path: string;
         }[];
       };
+      create_workspace_in_organization: {
+        Args: { p_organization_id: string; p_report_title: string; p_workspace_name: string };
+        Returns: {
+          organization_id: string;
+          report_id: string;
+          workspace_id: string;
+        }[];
+      };
       create_workspace_with_owner: {
         Args: { organization_name: string; report_title: string; workspace_name: string };
         Returns: {
@@ -1165,6 +1173,13 @@ export type Database = {
           role: Database["public"]["Enums"]["workspace_role"];
           status: string;
           workspace_name: string;
+        }[];
+      };
+      my_manageable_organizations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          name: string;
         }[];
       };
       release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
