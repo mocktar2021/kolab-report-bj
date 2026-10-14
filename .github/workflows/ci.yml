@@ -18,8 +18,9 @@ env:
   HUSKY: "0"
   NEXT_TELEMETRY_DISABLED: "1"
   # Excluded from `supabase start`: nothing in the tests needs them and
-  # each one adds an image to pull.
-  SUPABASE_EXCLUDE: studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta
+  # each one adds an image to pull. Realtime stays: the live dashboard test
+  # (KRB-19) watches one browser update when another one saves.
+  SUPABASE_EXCLUDE: studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
 
 jobs:
   checks:
