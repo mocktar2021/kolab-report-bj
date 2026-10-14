@@ -21,7 +21,12 @@ select throws_ok('select * from public.ai_cost_alerts', '42501', null, 'anon can
 -- Signed-in users keep the API privileges, but not TRUNCATE (it ignores RLS).
 select pg_temp.act_as('owner');
 select throws_ok('truncate public.reports', '42501', null, 'signed-in users cannot truncate a table');
-select ok(has_table_privilege('authenticated', 'public.reports', 'select, insert, update, delete'), 'signed-in users keep select, insert, update and delete');
+-- One privilege per check: has_table_privilege with a list is true when any one is held.
+select ok(has_table_privilege('authenticated', 'public.reports', 'select')
+  and has_table_privilege('authenticated', 'public.reports', 'delete')
+  and has_column_privilege('authenticated', 'public.reports', 'title', 'insert')
+  and has_column_privilege('authenticated', 'public.reports', 'title', 'update'),
+  'signed-in users keep select and delete, and insert and update on the columns they may write');
 
 select * from finish();
 rollback;
