@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { WORKSPACE_ROLES } from "./roles";
+
+export const workspaceRoleSchema = z.enum(WORKSPACE_ROLES);
 
 // Messages are keys under Workspaces.fieldErrors in messages/fr.json. Lengths
 // match the checks on the organizations, workspaces, reports and

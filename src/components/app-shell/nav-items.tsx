@@ -7,7 +7,7 @@ import { LazyMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
-import { SECTION_STATUSES, sectionStatusSchema } from "@/lib/sections";
+import { SECTION_STATUSES, isSectionStatus } from "@/lib/section-statuses";
 import { cn } from "@/lib/utils";
 
 const DASHBOARD_PATH = "/tableau-de-bord";
@@ -42,8 +42,8 @@ function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavI
   const tFilters = useTranslations("Dashboard.filters");
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const parsedStatus = sectionStatusSchema.safeParse(searchParams.get("statut"));
-  const activeStatus = parsedStatus.success ? parsedStatus.data : null;
+  const statut = searchParams.get("statut");
+  const activeStatus = isSectionStatus(statut) ? statut : null;
   const onDashboard = pathname === DASHBOARD_PATH;
   const promptsPath = workspaceId ? `/espaces/${workspaceId}/modeles` : null;
   const aiPath = workspaceId && manager ? `/espaces/${workspaceId}/ia` : null;
