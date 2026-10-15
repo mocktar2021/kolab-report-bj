@@ -1553,6 +1553,7 @@
       },
       "purchaseOffer": "{offer}{quantity, plural, =1 {} other { (x#)}}",
       "purchaseWorkspace": "Espace : {workspace}",
+      "hiddenWorkspace": "Espace Pass Mission",
       "amount": "{amount} FCFA",
       "status": {
         "pending": "En attente",

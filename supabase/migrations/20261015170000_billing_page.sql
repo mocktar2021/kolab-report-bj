@@ -11,8 +11,11 @@
 -- * billing_overview, for billing readers only as before, also returns the
 --   AI drafts used by each line (counted like billing_reserve_draft), what
 --   is left in each pack, the last purchases with their status and the last
---   receipts. Workspace names come with passes and purchases, so the page
---   says which workspace a pass covers. Still no name or e-mail of a person.
+--   receipts. A pass or a purchase names its workspace for the organization
+--   owner, and for members of that workspace; other billing readers get a
+--   null name, which the page shows as "Espace Pass Mission". The list of
+--   workspaces a pass can be bought for follows the same rule. Still no name
+--   or e-mail of a person.
 -- * workspace_billing_usage feeds the hints of the members page, the
 --   "Nouveau rapport" dialog and the AI draft panel. Members who write
 --   (owner, admin, expert) read the AI drafts left; member and report counts
@@ -115,6 +118,26 @@ as $$
     and (d.status = 'counted' or (d.status = 'reserved' and d.created_at > now() - interval '10 minutes'));
 $$;
 
+-- Whether the signed-in user may read the name of a workspace on the billing
+-- page: they own its organization, or they are a member of it.
+create or replace function private.billing_sees_workspace(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.workspaces w
+    join public.organizations o on o.id = w.organization_id
+    where w.id = p_workspace_id and o.owner_id = (select auth.uid())
+  ) or exists (
+    select 1 from public.workspace_members m
+    where m.workspace_id = p_workspace_id and m.user_id = (select auth.uid())
+  );
+$$;
+
 -- -----------------------------------------------------------------------------
 -- The billing page: the overview of KRB-175 with drafts, packs left,
 -- purchases and receipts
@@ -169,7 +192,7 @@ begin
 
   select coalesce(jsonb_agg(jsonb_build_object(
     'workspace_id', w.id,
-    'workspace_name', w.name,
+    'workspace_name', case when private.billing_sees_workspace(w.id) then w.name end,
     'state', a.state,
     'plan', a.plan,
     'source', a.source,
@@ -218,7 +241,7 @@ begin
       'offer_label', p.offer_label,
       'quantity', p.quantity,
       'workspace_id', p.workspace_id,
-      'workspace_name', w.name,
+      'workspace_name', case when private.billing_sees_workspace(w.id) then w.name end,
       'amount_xof', p.amount_xof,
       'status', p.status,
       'fedapay_status', p.fedapay_status,
@@ -270,7 +293,14 @@ begin
       select count(*) from public.billing_purchases p where p.organization_id = p_organization_id),
     'receipts', v_receipts,
     'receipts_total', (
-      select count(*) from public.billing_receipts r where r.organization_id = p_organization_id)
+      select count(*) from public.billing_receipts r where r.organization_id = p_organization_id),
+    -- The workspaces a pass can be bought for, by name: every one for the
+    -- organization owner, the ones they belong to for the others.
+    'workspaces', (
+      select coalesce(jsonb_agg(jsonb_build_object('id', w.id, 'name', w.name) order by w.created_at, w.id), '[]'::jsonb)
+      from public.workspaces w
+      where w.organization_id = p_organization_id and private.billing_sees_workspace(w.id)
+    )
   );
 end;
 $$;
@@ -370,6 +400,7 @@ revoke all on function private.billing_drafts_used(uuid, uuid, text, boolean) fr
 revoke all on function private.billing_line_drafts(uuid, boolean, uuid, text, integer, integer)
   from public, anon, authenticated;
 revoke all on function private.billing_pack_used(uuid) from public, anon, authenticated;
+revoke all on function private.billing_sees_workspace(uuid) from public, anon, authenticated;
 
 revoke all on function public.billing_overview(uuid) from public, anon;
 grant execute on function public.billing_overview(uuid) to authenticated;

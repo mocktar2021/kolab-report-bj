@@ -76,27 +76,23 @@ export default async function SubscriptionPage({
   const supabase = await createClient();
   const now = new Date();
   const since = new Date(now.getTime() - PERIODS_SINCE_DAYS * DAY_MS).toISOString();
-  const [{ data: organization }, { data: periodRows }, { data: workspaces }, { data: details }] =
-    await Promise.all([
-      supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
-      supabase
-        .from("billing_entitlements")
-        .select("scope, plan, source, starts_at, ends_at, grace_days, amount_ht_xof")
-        .eq("organization_id", organizationId)
-        .is("revoked_at", null)
-        .gt("ends_at", since)
-        .order("starts_at"),
-      supabase
-        .from("workspaces")
-        .select("id, name")
-        .eq("organization_id", organizationId)
-        .order("created_at"),
-      supabase
-        .from("organization_billing")
-        .select("legal_name, address, tax_id, billing_email")
-        .eq("organization_id", organizationId)
-        .maybeSingle(),
-    ]);
+  // The workspaces a pass can be bought for come with the overview, under
+  // the rule of its names: all of them for the organization owner.
+  const [{ data: organization }, { data: periodRows }, { data: details }] = await Promise.all([
+    supabase.from("organizations").select("name").eq("id", organizationId).maybeSingle(),
+    supabase
+      .from("billing_entitlements")
+      .select("scope, plan, source, starts_at, ends_at, grace_days, amount_ht_xof")
+      .eq("organization_id", organizationId)
+      .is("revoked_at", null)
+      .gt("ends_at", since)
+      .order("starts_at"),
+    supabase
+      .from("organization_billing")
+      .select("legal_name, address, tax_id, billing_email")
+      .eq("organization_id", organizationId)
+      .maybeSingle(),
+  ]);
   if (!organization) notFound();
 
   const time = (value: string) => new Date(value).getTime();
@@ -207,7 +203,7 @@ export default async function SubscriptionPage({
         organizationId={organizationId}
         canBuy={canBuy}
         rules={rules}
-        workspaces={workspaces ?? []}
+        workspaces={overview.workspaces}
         packNeedsPlan={packNeedsPlan}
       />
 

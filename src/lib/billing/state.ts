@@ -127,6 +127,12 @@ export type BillingOverview = {
   /** The last 100 receipts, newest first. */
   receipts: ReceiptSummary[];
   receiptsTotal: number;
+  /**
+   * Workspaces a pass can be bought for, by name: all of them for the
+   * organization owner, the ones the user belongs to for the others. A pass
+   * or a purchase of another workspace comes with a null workspaceName.
+   */
+  workspaces: { id: string; name: string }[];
 };
 
 /** What the hints of the members page, the report dialog and the draft panel need. */
@@ -313,6 +319,7 @@ const overviewSchema = z
     purchases_total: countSchema.default(0),
     receipts: z.array(receiptSchema).default([]),
     receipts_total: countSchema.default(0),
+    workspaces: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
   })
   .transform(
     (overview): BillingOverview => ({
@@ -346,6 +353,7 @@ const overviewSchema = z
       purchasesTotal: overview.purchases_total,
       receipts: overview.receipts,
       receiptsTotal: overview.receipts_total,
+      workspaces: overview.workspaces,
     }),
   );
 

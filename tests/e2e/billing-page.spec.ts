@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
-import { offerTerms } from "../../src/lib/billing/catalog";
+import { OFFERS, offerTerms } from "../../src/lib/billing/catalog";
 import { pdfText, squash } from "../../src/lib/export/test-pdf-text";
 import { expectNoAxeViolations } from "./a11y";
 import {
@@ -38,21 +38,26 @@ function navigation(page: Page) {
   return page.getByRole("navigation", { name: "Navigation de l'application" });
 }
 
-/** A paid Indépendant month, granted the way the webhook does it. */
-async function paidPurchase(organizationId: string, buyer: TestUser) {
+/**
+ * A paid offer, granted the way the webhook does it: an Indépendant month,
+ * or a Pass Mission for `workspaceId`.
+ */
+async function paidPurchase(organizationId: string, buyer: TestUser, workspaceId?: string) {
   const admin = adminClient();
+  const offer = workspaceId ? OFFERS.mission_pass : OFFERS.independant_1m;
   const { data, error } = await admin
     .rpc("billing_create_purchase", {
       p_organization_id: organizationId,
-      p_offer: "independant_1m",
-      p_offer_label: "Indépendant, 1 mois",
+      p_offer: offer.code,
+      p_offer_label: offer.label,
       p_catalog_version: 1,
       p_quantity: 1,
-      p_terms: offerTerms("independant_1m"),
-      p_amount_ht_xof: 15_000,
+      p_terms: offerTerms(offer.code),
+      p_amount_ht_xof: offer.priceHtXof,
       p_tax_xof: 0,
       p_environment: "mock",
       p_created_by: buyer.id,
+      p_workspace_id: workspaceId,
       p_reuse: false,
     })
     .single();
@@ -70,7 +75,7 @@ async function paidPurchase(organizationId: string, buyer: TestUser) {
       p_source: "reconcile",
       p_transaction_id: transactionId,
       p_status: "approved",
-      p_amount_xof: 15_000,
+      p_amount_xof: offer.priceHtXof,
       p_environment: "mock",
       p_currency: "XOF",
       p_merchant_reference: data.merchant_reference,
@@ -211,12 +216,24 @@ test("the owner sees the plan and the meter, pays, and downloads the receipt", a
 
 test("an admin reads the page and downloads receipts, without buying or editing", async ({ page }) => {
   const [owner, admin] = await Promise.all([createTestUser("Odon Proprio"), createTestUser("Adele Admin")]);
-  const { organization_id: organizationId, workspace_id: workspaceId } = await createWorkspaceFor(
-    owner,
-    "Gestion Ouidah",
-  );
+  const {
+    api,
+    organization_id: organizationId,
+    workspace_id: workspaceId,
+  } = await createWorkspaceFor(owner, "Gestion Ouidah");
   await addMember(workspaceId, admin, "admin");
   const receipt = await paidPurchase(organizationId, owner);
+  // A second engagement of the owner, which the admin does not belong to,
+  // covered by a pass: the admin pays nothing for it and never sees its name.
+  const { data: secret, error } = await api
+    .rpc("create_workspace_in_organization", {
+      p_organization_id: organizationId,
+      p_workspace_name: "Mission Confidentielle Grand-Popo",
+      p_report_title: "Rapport confidentiel",
+    })
+    .single();
+  if (error || !secret) throw error ?? new Error("Could not add the workspace");
+  await paidPurchase(organizationId, owner, secret.workspace_id);
 
   await signIn(page, admin);
   await navigation(page).getByRole("link", { name: "Abonnement" }).click();
@@ -238,6 +255,15 @@ test("an admin reads the page and downloads receipts, without buying or editing"
   const response = await page.request.get(`/api/billing/receipts/${receipt.id}`);
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toBe("application/pdf");
+
+  // The pass of a workspace the admin is not a member of goes unnamed.
+  const passes = page.getByRole("region", { name: "Pass Mission par espace de travail" });
+  await expect(passes.getByText("Espace Pass Mission", { exact: true })).toBeVisible();
+  const history = page.getByRole("region", { name: "Historique des paiements" });
+  await expect(history.getByRole("row", { name: /Pass Mission, 90 jours/ })).toContainText(
+    "Espace Pass Mission",
+  );
+  await expect(page.getByRole("main")).not.toContainText("Confidentielle");
 
   await expectNoAxeViolations(page, "billing page of an admin", { soft: false });
 });

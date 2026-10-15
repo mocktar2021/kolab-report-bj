@@ -76,9 +76,12 @@ export async function PurchaseHistory({ overview }: { overview: BillingOverview 
                       <span className="text-foreground">
                         {t("purchaseOffer", { offer: purchase.offerLabel, quantity: purchase.quantity })}
                       </span>
-                      {purchase.workspaceName ? (
+                      {/* Named for the organization owner and the workspace's members only. */}
+                      {purchase.workspaceId ? (
                         <span className="block text-xs text-muted-foreground">
-                          {t("purchaseWorkspace", { workspace: purchase.workspaceName })}
+                          {purchase.workspaceName
+                            ? t("purchaseWorkspace", { workspace: purchase.workspaceName })
+                            : t("hiddenWorkspace")}
                         </span>
                       ) : null}
                     </th>

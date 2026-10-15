@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(61);
+select plan(67);
 
 -- The billing page (KRB-177, ADR 001 sections 3.5 and 9): billing managers
 -- edit the buyer details of their organization, column by column; billing
@@ -232,13 +232,39 @@ select is(
    from seen where who = 'owner'),
   '{"purchases": 3, "receipts": 3}'::jsonb, 'with their totals');
 select ok(
-  (select body::text !~ '(@|"Owner|"Admin|"Expert|Viewer|Etude)' from seen where who = 'owner'),
-  'still no e-mail and no person''s name');
+  (select body::text !~ '(@|Owner|Admin|Expert|Viewer|Outsider|Stranger)' from seen where who = 'owner'),
+  'still no e-mail and no person''s name, only workspace names');
+
+select is(
+  (select array_agg(w ->> 'name' order by w ->> 'name') from seen, jsonb_array_elements(body -> 'workspaces') w
+   where who = 'owner'),
+  array['Etude A', 'Mission A'],
+  'the organization owner may buy a pass for every workspace, members or not');
 
 select pg_temp.act_as('admin');
+insert into seen values ('admin', public.billing_overview(pg_temp.id('org_a')));
 select is(
-  (select jsonb_array_length(public.billing_overview(pg_temp.id('org_a')) -> 'receipts')), 3,
+  (select jsonb_array_length(body -> 'receipts') from seen where who = 'admin'), 3,
   'an admin reads the same receipts');
+select is(
+  (select jsonb_build_object('id', p -> 'workspace_id', 'name', p -> 'workspace_name')
+   from seen, jsonb_array_elements(body -> 'passes') p where who = 'admin'),
+  '{"id": "00000000-0000-4000-c000-000000000003", "name": null}'::jsonb,
+  'but not the name of a mission workspace the admin is not a member of');
+select is(
+  (select p -> 'workspace_name' from seen, jsonb_array_elements(body -> 'purchases') p
+   where who = 'admin' and p ->> 'offer' = 'mission_pass'),
+  'null'::jsonb, 'nor in the purchase history');
+select is(
+  (select array_agg(w ->> 'name') from seen, jsonb_array_elements(body -> 'workspaces') w where who = 'admin'),
+  array['Etude A'], 'and a pass can only be bought for the workspaces the admin belongs to');
+select ok(
+  (select body::text !~ 'Mission A' from seen where who = 'admin'), 'the name appears nowhere in the overview');
+
+select pg_temp.act_as('expert2');
+select is(
+  (select p ->> 'workspace_name' from jsonb_array_elements(public.billing_overview(pg_temp.id('org_a')) -> 'passes') p),
+  'Mission A', 'the owner of the mission workspace, a member of it, reads its name');
 select pg_temp.act_as('expert');
 select is(public.billing_overview(pg_temp.id('org_a')), null, 'an expert gets no overview');
 select pg_temp.act_as('outsider');

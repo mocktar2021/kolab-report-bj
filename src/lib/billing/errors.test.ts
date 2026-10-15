@@ -216,6 +216,7 @@ describe("describeWorkspaceError", () => {
       purchasesTotal: 0,
       receipts: [],
       receiptsTotal: 0,
+      workspaces: [],
     });
     expect(await describeWorkspaceError({ code: "KR042" }, { organizationId: ORGANIZATION_ID })).toEqual({
       error: "reportLimit",

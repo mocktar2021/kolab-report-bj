@@ -165,7 +165,8 @@ export async function PassList({ overview }: { overview: BillingOverview }) {
           });
           return (
             <li key={pass.workspaceId} className="px-5 py-4 text-sm">
-              <p className="font-medium text-foreground">{pass.workspaceName ?? t("offers.missionTitle")}</p>
+              {/* Named for the organization owner and the workspace's members only. */}
+              <p className="font-medium text-foreground">{pass.workspaceName ?? t("page.hiddenWorkspace")}</p>
               <p className="mt-0.5 text-muted-foreground">{state}</p>
               {pass.plan ? <p className="mt-0.5 tabular-nums text-muted-foreground">{usage}</p> : null}
             </li>

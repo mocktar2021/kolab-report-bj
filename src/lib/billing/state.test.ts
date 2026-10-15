@@ -108,6 +108,7 @@ const OVERVIEW = {
     },
   ],
   receipts_total: 1,
+  workspaces: [{ id: WORKSPACE_ID, name: "Etude Abomey" }],
 };
 
 beforeEach(() => {
@@ -245,12 +246,13 @@ describe("getBillingOverview", () => {
         },
       ],
       receiptsTotal: 1,
+      workspaces: [{ id: WORKSPACE_ID, name: "Etude Abomey" }],
     });
   });
 
   it("still reads an overview without the KRB-177 keys", async () => {
-    const { purchases, purchases_total, receipts, receipts_total, ...older } = OVERVIEW;
-    void [purchases, purchases_total, receipts, receipts_total];
+    const { purchases, purchases_total, receipts, receipts_total, workspaces, ...older } = OVERVIEW;
+    void [purchases, purchases_total, receipts, receipts_total, workspaces];
     answer({
       ...older,
       subscription: { ...OVERVIEW.subscription, drafts: undefined },
@@ -261,6 +263,7 @@ describe("getBillingOverview", () => {
     expect(overview?.packs[0]?.used).toBe(0);
     expect(overview?.purchases).toEqual([]);
     expect(overview?.receiptsTotal).toBe(0);
+    expect(overview?.workspaces).toEqual([]);
   });
 
   it("returns null for someone who cannot read the billing, an error or an odd answer", async () => {
