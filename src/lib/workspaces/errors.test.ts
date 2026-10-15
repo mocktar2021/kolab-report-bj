@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { workspaceErrorKey } from "./errors";
+import { isBillingError, workspaceErrorKey } from "./errors";
 
 describe("workspaceErrorKey", () => {
   it("maps the RBAC trigger codes", () => {
@@ -18,6 +18,23 @@ describe("workspaceErrorKey", () => {
 
   it("maps the frozen final report code", () => {
     expect(workspaceErrorKey({ code: "KR020" })).toBe("reportFinal");
+  });
+
+  it("maps the billing codes to messages without numbers", () => {
+    expect(workspaceErrorKey({ code: "KR040" })).toBe("billingLimit");
+    expect(workspaceErrorKey({ code: "KR041" })).toBe("seatLimitInvitee");
+    expect(workspaceErrorKey({ code: "KR042" })).toBe("billingLimit");
+    expect(workspaceErrorKey({ code: "KR043" })).toBe("billingReadOnly");
+    expect(workspaceErrorKey({ code: "KR044" })).toBe("templatesNotIncluded");
+  });
+
+  it("tells billing refusals apart", () => {
+    expect(["KR040", "KR041", "KR042", "KR043", "KR044"].every((code) => isBillingError({ code }))).toBe(
+      true,
+    );
+    expect(isBillingError({ code: "KR020" })).toBe(false);
+    expect(isBillingError({ code: "42501" })).toBe(false);
+    expect(isBillingError(null)).toBe(false);
   });
 
   it("maps permission and validation errors", () => {

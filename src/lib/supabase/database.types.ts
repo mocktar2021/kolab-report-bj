@@ -225,6 +225,75 @@ export type Database = {
           },
         ];
       };
+      billing_draft_usage: {
+        Row: {
+          created_at: string;
+          entitlement_id: string | null;
+          generation_id: string;
+          organization_id: string;
+          pack_id: string | null;
+          pool: string;
+          settled_at: string | null;
+          status: string;
+          usage_month: string;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          entitlement_id?: string | null;
+          generation_id: string;
+          organization_id: string;
+          pack_id?: string | null;
+          pool: string;
+          settled_at?: string | null;
+          status?: string;
+          usage_month: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          entitlement_id?: string | null;
+          generation_id?: string;
+          organization_id?: string;
+          pack_id?: string | null;
+          pool?: string;
+          settled_at?: string | null;
+          status?: string;
+          usage_month?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_draft_usage_entitlement_id_fkey";
+            columns: ["entitlement_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_entitlements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_draft_usage_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_draft_usage_pack_id_fkey";
+            columns: ["pack_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_ai_packs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_draft_usage_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       billing_entitlements: {
         Row: {
           amount_ht_xof: number;

@@ -55,6 +55,49 @@ begin
 end;
 $$;
 
+-- Back to postgres with no signed-in user, like the server with the service
+-- role: auth.uid() is null, so the billing triggers do not check the write.
+-- A plain `reset role` keeps the last user's claims.
+create or replace function pg_temp.act_as_server() returns void
+language plpgsql as $$
+begin
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Puts an organization on a plan from now on, with the limits of
+-- src/lib/billing/catalog.ts, in place of its trial or earlier plan, which
+-- is revoked. For tests that need more than the trial gives. Returns the
+-- new entitlement's id.
+create or replace function pg_temp.set_plan(org uuid, p_plan text) returns uuid
+language plpgsql as $$
+declare
+  new_id uuid;
+begin
+  update public.billing_entitlements
+  set revoked_at = now(), revoked_reason = 'pgTAP'
+  where organization_id = org and scope = 'subscription' and revoked_at is null;
+  insert into public.billing_entitlements (
+    organization_id, scope, plan, source, starts_at, ends_at,
+    max_members, max_reports, drafts_per_month, custom_templates
+  )
+  select org, 'subscription', l.code, 'manual', now() - interval '1 day', now() + interval '30 days',
+    l.max_members, l.max_reports, l.drafts_per_month, l.custom_templates
+  from (values
+    ('independant', 3, 3, 60, false),
+    ('cabinet', 10, null, 250, true),
+    ('institution', null, null, 1000, true)
+  ) as l (code, max_members, max_reports, drafts_per_month, custom_templates)
+  where l.code = p_plan
+  returning id into new_id;
+  if new_id is null then
+    raise exception 'unknown plan %', p_plan;
+  end if;
+  return new_id;
+end;
+$$;
+
 -- Number of rows an UPDATE or DELETE touched. RLS hides rows instead of
 -- raising, so a blocked write shows up as 0.
 create or replace function pg_temp.affected(statement text) returns integer
@@ -68,6 +111,15 @@ end;
 $$;
 
 grant execute on all functions in schema pg_temp to authenticated, anon;
+
+-- A trial claim outlives its account (ADR 001, section 11). One left by
+-- fixture rows once committed to this database would give org_a and org_b
+-- no trial, so they would be read-only while billing is enforced (the seed
+-- turns it on in CI). The fixtures start without any.
+delete from private.billing_trial_claims c
+using unnest(array['owner','admin','expert','expert2','viewer','outsider','stranger']) as u (name)
+where c.user_id = pg_temp.id(u.name)
+   or c.email_hash = encode(sha256(convert_to(u.name || '@kolabreport.test', 'UTF8')), 'hex');
 
 -- Data, inserted as postgres (RLS does not apply).
 insert into auth.users (id, email, raw_user_meta_data)

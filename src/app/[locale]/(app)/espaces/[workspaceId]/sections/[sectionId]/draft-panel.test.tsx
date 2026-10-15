@@ -346,6 +346,44 @@ describe("DraftPanel generation", () => {
     );
   });
 
+  it("gives the plan's allowance and when it comes back once the month's drafts are used", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: "quotaExceeded",
+              retryAfter: 9 * 24 * 3600,
+              values: { max: 60, date: "1 novembre 2026" },
+            }),
+            { status: 402, headers: { "Retry-After": String(9 * 24 * 3600) } },
+          ),
+      ),
+    );
+    renderPanel();
+    await user.click(screen.getByRole("button", { name: "Générer un brouillon" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Les 60 brouillons IA du mois sont utilisés. Ajoutez un Pack IA ou attendez le 1 novembre 2026.",
+    );
+    expect(alert).not.toHaveTextContent("Réessayez");
+  });
+
+  it("says a read-only workspace gets no draft", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ error: "readOnly" }, { status: 403 })),
+    );
+    renderPanel();
+    await user.click(screen.getByRole("button", { name: "Générer un brouillon" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Cet espace de travail est en lecture seule : aucun brouillon ne peut être généré.",
+    );
+  });
+
   it("says when the request never reached the server", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(

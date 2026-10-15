@@ -2,8 +2,9 @@
 
 import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
+import { describeWorkspaceError } from "@/lib/billing/errors";
 import { createClient } from "@/lib/supabase/server";
-import { workspaceErrorKey, type WorkspaceErrorKey } from "@/lib/workspaces/errors";
+import type { WorkspaceErrorKey, WorkspaceErrorValues } from "@/lib/workspaces/errors";
 import {
   createWorkspaceInOrganizationSchema,
   createWorkspaceSchema,
@@ -20,6 +21,8 @@ export type CreateWorkspaceState =
       status: "error";
       fieldErrors?: Partial<Record<WizardField, WorkspaceFieldErrorKey>>;
       formError?: WorkspaceErrorKey;
+      /** Numbers of the billing messages (member or report limit, read-only). */
+      formErrorValues?: WorkspaceErrorValues;
     };
 
 type Created = { workspace_id: string; report_id: string };
@@ -81,7 +84,10 @@ export async function createWorkspace(
 
   const { data, error } = created;
   if (error || !data) {
-    return { status: "error", formError: workspaceErrorKey(error) };
+    // In an existing organization, its plan may refuse: the creator takes a
+    // seat (KR040), the first report a slot (KR042), or it is read-only (KR043).
+    const described = await describeWorkspaceError(error, organizationId ? { organizationId } : {});
+    return { status: "error", formError: described.error, formErrorValues: described.values };
   }
 
   await setCurrentWorkspaceCookie(data.workspace_id);

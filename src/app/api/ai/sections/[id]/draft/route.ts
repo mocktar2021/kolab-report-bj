@@ -20,7 +20,14 @@ import { mockModel, sampleOutput } from "@/lib/ai/mock";
 import { estimateCost, estimateFallbackCost, fallbackModel, noThinking } from "@/lib/ai/models";
 import { draftToMarkdown } from "@/lib/ai/schemas";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
-import type { ContextDeliverable, DraftErrorBody, DraftErrorKey, DraftStreamEvent } from "@/lib/ai/types";
+import type {
+  ContextDeliverable,
+  DraftErrorBody,
+  DraftErrorKey,
+  DraftErrorValues,
+  DraftStreamEvent,
+} from "@/lib/ai/types";
+import { describeDraftQuota } from "@/lib/billing/errors";
 import type { ParseMeta } from "@/lib/deliverables/parse/types";
 import { log, withRequestId } from "@/lib/log";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier } from "@/lib/prompts/catalog";
@@ -34,8 +41,9 @@ import { requireWorkspaceRole } from "@/lib/workspaces/server";
 // POST /api/ai/sections/[id]/draft: a draft of the section from a published
 // template and the section's parsed deliverables. Checks run first and
 // answer with a JSON error; then the generation is recorded as running
-// (hourly limit and monthly budget included, so no model call happens past
-// them) and the answer streams as NDJSON events (src/lib/ai/types.ts). The
+// (hourly limit, monthly budget and the AI drafts of the organization's plan
+// included, so no model call happens past them) and the answer streams as
+// NDJSON events (src/lib/ai/types.ts). The
 // draft is only a proposal: the section changes when the expert accepts it.
 
 export const runtime = "nodejs";
@@ -60,8 +68,12 @@ const VERSION_COLUMNS =
 
 type Params = Promise<{ id: string }>;
 
-function refuse(status: number, error: DraftErrorKey, retryAfter?: number | null) {
-  const body: DraftErrorBody = retryAfter ? { error, retryAfter } : { error };
+function refuse(status: number, error: DraftErrorKey, retryAfter?: number | null, values?: DraftErrorValues) {
+  const body: DraftErrorBody = {
+    error,
+    ...(retryAfter ? { retryAfter } : {}),
+    ...(values ? { values } : {}),
+  };
   const headers: Record<string, string> = { ...NO_STORE };
   if (retryAfter) headers["Retry-After"] = String(retryAfter);
   return NextResponse.json(body, { status, headers });
@@ -238,6 +250,15 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
         return refuse(409, "busy");
       case "templateUnavailable":
         return refuse(422, "templateUnavailable");
+      // The organization's plan (ADR 001, 7.1). A monthly allowance says
+      // when it comes back; the trial's and a pass's do not.
+      case "quotaExceeded": {
+        const quota = await describeDraftQuota(section.workspace_id, started.retryAfter);
+        return refuse(402, quota.error, started.retryAfter, quota.values);
+      }
+      case "readOnly":
+      case "templateNotIncluded":
+        return refuse(403, started.refusal);
       default:
         return refuse(500, "generic");
     }

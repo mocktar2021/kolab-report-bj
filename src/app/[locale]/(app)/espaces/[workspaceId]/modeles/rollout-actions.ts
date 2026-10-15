@@ -22,6 +22,9 @@ export type RolloutActionError =
   | "noPrevious"
   | "conflict"
   | "invalidInput"
+  // The organization's plan has no custom templates (KR044), or the workspace is read-only (KR043).
+  | "templatesNotIncluded"
+  | "readOnly"
   | "generic";
 
 export type RolloutActionResult = { ok: true } | { ok: false; error: RolloutActionError };
@@ -51,6 +54,10 @@ function errorOf(error: { code?: string | null; message?: string }): RolloutActi
     case "22023":
     case "22P02":
       return "invalidInput";
+    case "KR043":
+      return "readOnly";
+    case "KR044":
+      return "templatesNotIncluded";
     default:
       log.error("prompts: rollout action failed", { error: error.message });
       return "generic";

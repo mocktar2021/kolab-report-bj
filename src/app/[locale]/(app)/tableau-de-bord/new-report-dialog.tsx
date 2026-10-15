@@ -79,6 +79,8 @@ function NewReportForm({ workspaceId }: { workspaceId: string }) {
   const serverError = state.status === "error" ? state.fieldErrors?.title : undefined;
   const fieldError = localError ?? serverError;
   const formError = state.status === "error" ? state.formError : undefined;
+  // The plan's numbers when billing refused the report (limit reached, read-only).
+  const formErrorValues = state.status === "error" ? state.formErrorValues : undefined;
 
   // A title refused by the server: back to the field, which carries the message.
   useEffect(() => {
@@ -127,7 +129,7 @@ function NewReportForm({ workspaceId }: { workspaceId: string }) {
 
       {formError ? (
         <p role="alert" className="mt-4 text-sm text-destructive">
-          {tWorkspaces(`errors.${formError}`)}
+          {tWorkspaces(`errors.${formError}`, formErrorValues)}
         </p>
       ) : null}
 

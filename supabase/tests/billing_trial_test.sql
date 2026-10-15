@@ -86,13 +86,15 @@ select is(
    where not exists (select 1 from public.organization_billing b where b.organization_id = o.id)),
   0, 'every organization has its billing row');
 -- The backfill wrote their row after them, in another transaction. On a new
--- database (CI) there are none; on an older one they are all checked.
+-- database (CI) there are none; on an older one they are all checked. Only
+-- trials matter: an older database may have given the seed's demo
+-- organization its manual Cabinet period since.
 select is(
   (select count(*)::int from public.organizations o
    join public.organization_billing b on b.organization_id = o.id
    where b.created_at > o.created_at
-     and exists (select 1 from public.billing_entitlements e where e.organization_id = o.id)),
-  0, 'organizations from before billing have no entitlement: the launch gives them their period');
+     and exists (select 1 from public.billing_entitlements e where e.organization_id = o.id and e.source = 'trial')),
+  0, 'organizations from before billing got no trial: the launch gives them their period');
 select is(
   (select count(*)::int from public.organizations o
    join public.organization_billing b on b.organization_id = o.id

@@ -35,7 +35,12 @@ select is((select count(*)::int from public.workspaces), 0, 'a user without work
 -- KRB-175: a workspace inside an existing organization -----------------------
 -- org_c belongs to the stranger and has no workspace yet. The admin of w1 is
 -- also an admin of w2, and expert2 (an expert in w1) owns w2 with the outsider.
-reset role;
+-- Each new workspace comes with a report, more than the trial's one active
+-- report: org_a and org_b are on Cabinet, like the demo organization of the
+-- seed. org_c starts the stranger's trial.
+select pg_temp.act_as_server();
+select pg_temp.set_plan(pg_temp.id('org_a'), 'cabinet');
+select pg_temp.set_plan(pg_temp.id('org_b'), 'cabinet');
 insert into public.organizations (id, name, slug, owner_id)
   values ('00000000-0000-4000-b000-000000000003', 'Cabinet C', 'cabinet-c', pg_temp.id('stranger'));
 insert into public.workspace_members (workspace_id, user_id, role) values

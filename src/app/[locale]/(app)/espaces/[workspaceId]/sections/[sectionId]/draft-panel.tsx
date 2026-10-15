@@ -11,13 +11,16 @@ import { Link } from "@/i18n/navigation";
 import { partialDraftMarkdown } from "@/lib/ai/preview";
 import type { DraftPanelData, DraftProposal, DraftTemplateOption } from "@/lib/ai/server";
 import { draftRequestError, readDraftStream } from "@/lib/ai/stream-client";
-import type { DeliverableUse, DraftErrorKey, DraftRequest } from "@/lib/ai/types";
+import type { DeliverableUse, DraftErrorKey, DraftErrorValues, DraftRequest } from "@/lib/ai/types";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { DraftProposalView, type DecisionOutcome } from "./draft-proposal";
 import { TruncationNotice } from "./draft-usage";
 
-/** Why the last request gave no draft. "network": the request never reached the server. */
-type Failure = { error: DraftErrorKey | "network"; retryAfter?: number };
+/**
+ * Why the last request gave no draft. "network": the request never reached
+ * the server. `values` fill in the quota messages ({max}, {date}).
+ */
+type Failure = { error: DraftErrorKey | "network"; retryAfter?: number; values?: DraftErrorValues };
 
 /** What the status line says once nothing runs. */
 type Notice = "done" | "stopped" | DecisionOutcome;
@@ -410,7 +413,7 @@ function TemplateGroup({ label, templates }: { label: string; templates: DraftTe
 /** Why no draft came, when to try again, and that the section kept its content. */
 function FailureMessage({ failure }: { failure: Failure }) {
   const t = useTranslations("AiDraft");
-  const message = failure.error === "network" ? t("network") : t(`errors.${failure.error}`);
+  const message = failure.error === "network" ? t("network") : t(`errors.${failure.error}`, failure.values);
 
   let retry: string | null = null;
   if (failure.error === "rateLimited" || failure.error === "budgetExceeded") {
