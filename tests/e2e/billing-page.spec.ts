@@ -295,6 +295,37 @@ test("experts and viewers get no link, and a 404 on the page and the receipts", 
   }
 });
 
+test("the organization owner keeps the link with an expert role only", async ({ page }) => {
+  const [founder, partner] = await Promise.all([
+    createTestUser("Firmin Fondateur"),
+    createTestUser("Pauline Associee"),
+  ]);
+  const { organization_id: organizationId, workspace_id: workspaceId } = await createWorkspaceFor(
+    founder,
+    "Fondation Kétou",
+  );
+  // The partner owns the workspace, the founder only writes in it.
+  await addMember(workspaceId, partner, "admin");
+  const admin = adminClient();
+  for (const [user, role] of [
+    [partner, "owner"],
+    [founder, "expert"],
+  ] as const) {
+    const { error } = await admin
+      .from("workspace_members")
+      .update({ role })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id);
+    if (error) throw error;
+  }
+
+  await signIn(page, founder);
+  await page.goto("/fr/tableau-de-bord");
+  await navigation(page).getByRole("link", { name: "Abonnement" }).click();
+  await page.waitForURL(`**/fr/organisations/${organizationId}/abonnement`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Abonnement de Cabinet Fondation Kétou");
+});
+
 test("a receipt of another organization is a 404, and so is its billing page", async ({ page }) => {
   const [ownerA, ownerB] = await Promise.all([
     createTestUser("Alix Premier"),

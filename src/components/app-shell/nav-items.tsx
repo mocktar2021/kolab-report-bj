@@ -9,28 +9,8 @@ import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
 import { SECTION_STATUSES, isSectionStatus } from "@/lib/section-statuses";
 import { cn } from "@/lib/utils";
-import { isManager } from "@/lib/workspaces/roles";
-import type { MyWorkspace } from "@/lib/workspaces/types";
 
 const DASHBOARD_PATH = "/tableau-de-bord";
-
-/**
- * The organization of the current workspace when the user reads its billing
- * (ADR 001, 3.5): they own or administer one of its workspaces. Same rule as
- * private.can_read_org_billing, from the memberships the shell already has.
- */
-export function billingOrganizationOf(
-  workspaces: readonly MyWorkspace[],
-  currentWorkspaceId: string | null,
-): string | null {
-  const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
-  if (!current) return null;
-  return workspaces.some(
-    (workspace) => workspace.organizationId === current.organizationId && isManager(workspace.role),
-  )
-    ? current.organizationId
-    : null;
-}
 
 // The sliding highlight needs motion's layout features (about 30 kB
 // compressed). They load in their own chunk once the shell has hydrated, so
@@ -52,7 +32,7 @@ type NavItemsProps = {
   workspaceId: string | null;
   /** Owners and admins of that workspace, who also get its manager-only pages. */
   manager?: boolean;
-  /** The organization whose billing page the user reads (billingOrganizationOf). */
+  /** The organization whose billing page the user reads, once billing is enforced (billingOrganizationOf). */
   billingOrganizationId?: string | null;
   onNavigate?: () => void;
 };

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import { log } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
@@ -487,3 +488,18 @@ export async function getWorkspaceUsage(workspaceId: string): Promise<WorkspaceU
     packDraftsLeft: row.data.pack_drafts_left,
   };
 }
+
+/**
+ * Organizations whose billing page the signed-in user reads, for the
+ * "Abonnement" link (public.my_billing_organizations). Empty while billing is
+ * not enforced, and on error: the link is a shortcut, the page checks again.
+ */
+export const getMyBillingOrganizations = cache(async (): Promise<string[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("my_billing_organizations");
+  if (error) {
+    log.error("billing: could not read the billing organizations", { error: error.message });
+    return [];
+  }
+  return (data ?? []).map((row) => row.organization_id);
+});

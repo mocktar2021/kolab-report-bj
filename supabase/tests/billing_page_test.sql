@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(69);
+select plan(76);
 
 -- The billing page (KRB-177, ADR 001 sections 3.5 and 9): billing managers
 -- edit the buyer details of their organization, column by column; billing
@@ -396,19 +396,55 @@ select results_eq(
   $$select state, drafts_used, drafts_allowance, drafts_period from public.workspace_billing_usage(pg_temp.id('w2'))$$,
   $$values ('trialing', 1, 20, 'total')$$, 'the trial counts its drafts for the whole trial');
 
+-- The "Abonnement" link: billing readers, the organization owner included ------
+select pg_temp.act_as('owner');
+select results_eq('select organization_id from public.my_billing_organizations()', array[pg_temp.id('org_a')],
+  'the organization owner gets the link of org_a');
+select pg_temp.act_as('admin');
+select results_eq('select organization_id from public.my_billing_organizations()', array[pg_temp.id('org_a')],
+  'so does an admin of one of its workspaces');
+select pg_temp.act_as('expert');
+select is((select count(*)::int from public.my_billing_organizations()), 0, 'an expert gets no link');
+select pg_temp.act_as('viewer');
+select is((select count(*)::int from public.my_billing_organizations()), 0, 'nor does a viewer');
+select pg_temp.act_as('outsider');
+select results_eq('select organization_id from public.my_billing_organizations()', array[pg_temp.id('org_b')],
+  'the owner of org_b gets the link of org_b only');
+
+-- The organization owner keeps the link with an expert role only.
+select pg_temp.act_as_server();
+update public.workspace_members set role = 'owner' where workspace_id = pg_temp.id('w1') and user_id = pg_temp.id('admin');
+update public.workspace_members set role = 'expert' where workspace_id = pg_temp.id('w1') and user_id = pg_temp.id('owner');
+select pg_temp.act_as('owner');
+select results_eq('select organization_id from public.my_billing_organizations()', array[pg_temp.id('org_a')],
+  'the organization owner gets the link even as an expert of every workspace');
+
+-- Before the launch, nobody gets it.
+select pg_temp.act_as_server();
+update private.billing_settings set enforced = false;
+select pg_temp.act_as('admin');
+select is((select count(*)::int from public.my_billing_organizations()), 0,
+  'nobody gets the link while billing is not enforced');
+select pg_temp.act_as_server();
+update private.billing_settings set enforced = true;
+
 -- Privileges -----------------------------------------------------------------------
 reset role;
 select ok(
   has_function_privilege('authenticated', 'public.workspace_billing_usage(uuid)', 'execute')
+  and has_function_privilege('authenticated', 'public.my_billing_organizations()', 'execute')
   and not has_function_privilege('anon', 'public.workspace_billing_usage(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.my_billing_organizations()', 'execute')
   and not has_function_privilege('anon', 'public.billing_overview(uuid)', 'execute'),
-  'signed-in users call workspace_billing_usage, visitors call neither function');
+  'signed-in users call workspace_billing_usage and my_billing_organizations, visitors call none of them');
 select is(
   (select coalesce(array_agg(f order by f), '{}')
    from unnest(array[
      'private.billing_drafts_used(uuid, uuid, text, boolean)',
      'private.billing_line_drafts(uuid, boolean, uuid, text, integer, integer)',
-     'private.billing_pack_used(uuid)']) f
+     'private.billing_pack_used(uuid)',
+     'private.billing_sees_workspace(uuid)',
+     'private.billing_purchase_listed(text, text)']) f
    where has_function_privilege('authenticated', f, 'execute') or has_function_privilege('anon', f, 'execute')),
   '{}'::text[], 'nobody signed in calls the new private helpers');
 select ok(

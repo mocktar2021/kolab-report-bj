@@ -13,7 +13,8 @@ import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
-import { billingOrganizationOf, NavItems } from "./nav-items";
+import { billingOrganizationOf } from "@/lib/billing/navigation";
+import { NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
 import { ACCOUNT_PATH, Sidebar } from "./sidebar";
@@ -28,6 +29,8 @@ type AppShellProps = {
   unreadNotifications: number;
   /** The plan of the current workspace, above the page (KRB-178). Outside main, so the skip link lands on the page. */
   banner?: React.ReactNode;
+  /** Organizations whose billing page the user reads, empty before the launch. */
+  billingOrganizationIds: string[];
   children: React.ReactNode;
 };
 
@@ -50,8 +53,10 @@ export function AppShell({
   currentWorkspaceId,
   unreadNotifications,
   banner,
+  billingOrganizationIds,
   children,
 }: AppShellProps) {
+  const billingOrganizationId = billingOrganizationOf(workspaces, currentWorkspaceId, billingOrganizationIds);
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -95,6 +100,7 @@ export function AppShell({
           workspaces={workspaces}
           currentWorkspaceId={currentWorkspaceId}
           unreadNotifications={unreadNotifications}
+          billingOrganizationId={billingOrganizationId}
           onOpenPalette={openPalette}
         />
       </Suspense>
@@ -145,7 +151,7 @@ export function AppShell({
                 variant="sheet"
                 workspaceId={currentWorkspaceId}
                 manager={current ? isManager(current.role) : false}
-                billingOrganizationId={billingOrganizationOf(workspaces, currentWorkspaceId)}
+                billingOrganizationId={billingOrganizationId}
                 onNavigate={() => setMenuOpen(false)}
               />
             </Suspense>

@@ -1843,6 +1843,12 @@ export type Database = {
           user_agent: string;
         }[];
       };
+      my_billing_organizations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          organization_id: string;
+        }[];
+      };
       my_manageable_organizations: {
         Args: Record<PropertyKey, never>;
         Returns: {

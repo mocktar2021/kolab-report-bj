@@ -21,6 +21,8 @@
 --   "Nouveau rapport" dialog and the AI draft panel. Members who write
 --   (owner, admin, expert) read the AI drafts left; member and report counts
 --   go to billing readers only. Viewers and outsiders get no row.
+-- * my_billing_organizations decides the "Abonnement" link of the sidebar:
+--   the organizations whose billing the user reads, none before the launch.
 -- * Receipts are read through the RLS policies of KRB-176. Nothing here
 --   writes a receipt.
 -- =============================================================================
@@ -410,6 +412,33 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- The "Abonnement" link of the sidebar
+-- -----------------------------------------------------------------------------
+-- The organizations whose billing page the signed-in user reads, by the rule
+-- of private.can_read_org_billing: the ones they own, whatever their roles in
+-- its workspaces, and the ones where they own or administer a workspace.
+-- None while billing is not enforced: the link waits for the launch, and
+-- the page stays reachable by its address.
+create or replace function public.my_billing_organizations()
+returns table (organization_id uuid)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select o.id
+  from public.organizations o
+  where private.billing_enforced() and o.owner_id = (select auth.uid())
+  union
+  select w.organization_id
+  from public.workspace_members m
+  join public.workspaces w on w.id = m.workspace_id
+  where private.billing_enforced()
+    and m.user_id = (select auth.uid())
+    and m.role in ('owner', 'admin');
+$$;
+
+-- -----------------------------------------------------------------------------
 -- Function privileges
 -- -----------------------------------------------------------------------------
 revoke all on function private.billing_drafts_used(uuid, uuid, text, boolean) from public, anon, authenticated;
@@ -423,3 +452,5 @@ revoke all on function public.billing_overview(uuid) from public, anon;
 grant execute on function public.billing_overview(uuid) to authenticated;
 revoke all on function public.workspace_billing_usage(uuid) from public, anon;
 grant execute on function public.workspace_billing_usage(uuid) to authenticated;
+revoke all on function public.my_billing_organizations() from public, anon;
+grant execute on function public.my_billing_organizations() to authenticated;

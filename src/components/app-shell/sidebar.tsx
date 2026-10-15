@@ -10,7 +10,7 @@ import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
-import { billingOrganizationOf, NavItems } from "./nav-items";
+import { NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
 import { useSidebarCollapsed } from "./sidebar-state";
@@ -30,6 +30,8 @@ type SidebarProps = {
   workspaces: MyWorkspace[];
   currentWorkspaceId: string | null;
   unreadNotifications: number;
+  /** The organization whose billing page the "Abonnement" link opens, if any. */
+  billingOrganizationId: string | null;
   onOpenPalette: () => void;
 };
 
@@ -43,6 +45,7 @@ export function Sidebar({
   workspaces,
   currentWorkspaceId,
   unreadNotifications,
+  billingOrganizationId,
   onOpenPalette,
 }: SidebarProps) {
   const t = useTranslations("AppShell");
@@ -83,7 +86,7 @@ export function Sidebar({
           variant="sidebar"
           workspaceId={currentWorkspaceId}
           manager={current ? isManager(current.role) : false}
-          billingOrganizationId={billingOrganizationOf(workspaces, currentWorkspaceId)}
+          billingOrganizationId={billingOrganizationId}
         />
       </nav>
 
