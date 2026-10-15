@@ -16,7 +16,14 @@ type VersionActionsProps = {
   newVersionHref: string;
   /** False for the candidate of an active rollout: it is published from the rollout banner, with a confirmation. */
   canPublish?: boolean;
+  /**
+   * Set when the workspace is read-only (KRB-178): a new version and
+   * publishing stay visible, disabled, with this reason. Archiving still works.
+   */
+  readOnlyReason?: string;
 };
+
+const READ_ONLY_ID = "version-actions-read-only";
 
 /** Manager actions on a version of a workspace template. */
 export function VersionActions({
@@ -25,6 +32,7 @@ export function VersionActions({
   status,
   newVersionHref,
   canPublish = true,
+  readOnlyReason,
 }: VersionActionsProps) {
   const t = useTranslations("Prompts");
   const router = useRouter();
@@ -52,18 +60,26 @@ export function VersionActions({
   return (
     <div className="mt-5">
       <div className="flex flex-wrap items-center gap-2">
-        <Button asChild shape="pill">
-          <Link href={newVersionHref}>
+        {readOnlyReason ? (
+          <Button type="button" shape="pill" disabled aria-describedby={READ_ONLY_ID}>
             <FilePlus2 aria-hidden="true" />
             {t("actions.newVersion")}
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild shape="pill">
+            <Link href={newVersionHref}>
+              <FilePlus2 aria-hidden="true" />
+              {t("actions.newVersion")}
+            </Link>
+          </Button>
+        )}
         {status === "published" || !canPublish ? null : (
           <Button
             type="button"
             variant="outline"
             shape="pill"
-            disabled={pending}
+            disabled={pending || Boolean(readOnlyReason)}
+            aria-describedby={readOnlyReason ? READ_ONLY_ID : undefined}
             onClick={() => changeStatus("published")}
           >
             <Send aria-hidden="true" />
@@ -84,6 +100,11 @@ export function VersionActions({
           </Button>
         )}
       </div>
+      {readOnlyReason ? (
+        <p id={READ_ONLY_ID} className="mt-2 text-xs text-muted-foreground">
+          {readOnlyReason}
+        </p>
+      ) : null}
       <div role="status" aria-live="polite" className="mt-2 text-sm">
         {error ? <p className="text-destructive">{t(`actionErrors.${error}`)}</p> : null}
       </div>

@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(83);
+select plan(88);
 
 -- Read-only workspaces and renewal reminders (ADR 001, sections 6.1, 7.3
 -- and 12; KRB-178). org_a runs on Cabinet, then its period is moved back
@@ -121,12 +121,21 @@ select throws_ok($$select public.reorder_report_sections(pg_temp.id('r1'),
 select throws_ok($$insert into public.prompt_library (workspace_id, template_key, title, template)
   values (pg_temp.id('w1'), 'modele-refuse', 'Modele refuse', 'Texte')$$,
   'KR043', null, 'prompt_library: no new template');
-select throws_ok($$update public.prompt_library set status = 'archived' where id = pg_temp.kept_id('throwaway')$$,
-  'KR043', null, 'prompt_library: no status change, archiving included');
+select throws_ok($$update public.prompt_library set status = 'published' where id = pg_temp.kept_id('throwaway')$$,
+  'KR043', null, 'prompt_library: no version published');
 select throws_ok($$select public.set_prompt_rollout_percent(pg_temp.kept_id('rollout'), 40::smallint)$$,
   'KR043', null, 'prompt_rollouts: no new percentage');
-select throws_ok($$select public.end_prompt_rollout(pg_temp.kept_id('rollout'), false)$$,
-  'KR043', null, 'prompt_rollouts: not ended either');
+select throws_ok($$select public.end_prompt_rollout(pg_temp.kept_id('rollout'), true)$$,
+  'KR043', null, 'prompt_rollouts: no rollout ended by publishing its candidate');
+-- Tidying up stays open, like deleting (product owner, 2026-10-15).
+select is(pg_temp.affected($$update public.prompt_library set status = 'archived' where id = pg_temp.kept_id('throwaway')$$),
+  1, 'prompt_library: a version is archived');
+select lives_ok($$select public.end_prompt_rollout(pg_temp.kept_id('rollout'), false)$$,
+  'prompt_rollouts: a rollout is ended');
+select is((select status from public.prompt_rollouts where id = pg_temp.kept_id('rollout')), 'cancelled',
+  'without publishing its candidate');
+select throws_ok($$select public.start_prompt_rollout(pg_temp.kept_id('candidate'), 30::smallint)$$,
+  'KR043', null, 'prompt_rollouts: but no rollout is started again');
 
 select pg_temp.act_as('expert');
 select throws_ok($$select public.save_section_content(pg_temp.id('s1'), 'Texte refusé',
@@ -225,7 +234,8 @@ select is((select assigned_to from public.report_sections where id = pg_temp.id(
 -- (15:00 in Porto-Novo), and H, a month in early 2029.
 -- org_a (owned by owner): F1 then F2 stacked at its end, Cabinet until
 -- 10 June 2030; w4, a second subscription workspace that admin owns too; and
--- wm2, a mission workspace that expert2 owns too, with its pass P.
+-- wm2, a mission workspace that expert2 owns too, with its pass P. viewer
+-- owns both w4 and wm2; stranger is an expert of w1.
 select pg_temp.act_as_server();
 update public.billing_entitlements set revoked_at = now(), revoked_reason = 'pgTAP'
 where organization_id in (pg_temp.id('org_a'), pg_temp.id('org_b')) and revoked_at is null;
@@ -245,7 +255,10 @@ insert into public.workspaces (id, organization_id, name, created_by, billing_mo
   (pg_temp.kept_id('wm2'), pg_temp.id('org_a'), 'Mission A2', pg_temp.id('owner'), 'mission');
 insert into public.workspace_members (workspace_id, user_id, role) values
   (pg_temp.kept_id('w4'), pg_temp.id('admin'), 'owner'),
-  (pg_temp.kept_id('wm2'), pg_temp.id('expert2'), 'owner');
+  (pg_temp.kept_id('w4'), pg_temp.id('viewer'), 'owner'),
+  (pg_temp.kept_id('wm2'), pg_temp.id('expert2'), 'owner'),
+  (pg_temp.kept_id('wm2'), pg_temp.id('viewer'), 'owner'),
+  (pg_temp.id('w1'), pg_temp.id('stranger'), 'expert');
 
 insert into public.billing_entitlements (id, organization_id, workspace_id, scope, plan, source, starts_at, ends_at) values
   (pg_temp.kept_id('E'), pg_temp.id('org_b'), null, 'subscription', 'independant', 'purchase',
@@ -329,14 +342,14 @@ select is(pg_temp.kinds('late'), array['ended'], 'after missed runs, only the la
 select is((select array_agg(kind order by kind) from private.billing_notices where entitlement_id = pg_temp.kept_id('F2')),
   array['ended'], 'd7 and d1 are not sent late');
 select is(pg_temp.recipients('late'),
-  array[pg_temp.id('owner')::text, pg_temp.id('admin')::text],
-  'a subscription notice goes to the organization owner and the owners of its workspaces, not of mission ones');
+  array[pg_temp.id('owner')::text, pg_temp.id('admin')::text, pg_temp.id('viewer')::text],
+  'a subscription notice goes to the organization owner and every workspace owner, except owners of mission workspaces only');
 
 select pg_temp.run('pass', '2030-07-08 05:17+00');
 select results_eq($$select kind, workspace_id, plan from sent where run = 'pass'$$,
   $$values ('d7', pg_temp.kept_id('wm2'), 'mission')$$, 'a pass gets its own notices');
 select is(pg_temp.recipients('pass'),
-  array[pg_temp.id('owner')::text, pg_temp.id('expert2')::text],
+  array[pg_temp.id('owner')::text, pg_temp.id('expert2')::text, pg_temp.id('viewer')::text],
   'they go to the organization owner and the owners of the mission workspace');
 
 -- Another run claimed d1 of P first (it committed before this one).
@@ -387,6 +400,9 @@ select pg_temp.act_as('expert2');
 select is((select array_agg(billing_notice) from public.notifications where kind = 'billing'),
   array['d7'], 'expert2, owner of the mission workspace, sees its pass notice');
 select pg_temp.act_as('viewer');
+select is((select array_agg(billing_notice order by billing_notice) from public.notifications where kind = 'billing'),
+  array['d7', 'ended'], 'someone who owns a subscription workspace and a mission one sees both');
+select pg_temp.act_as('stranger');
 select is((select count(*)::int from public.notifications where kind = 'billing'),
   0, 'other members see none');
 select pg_temp.act_as('owner');

@@ -71,7 +71,13 @@ function renderBanner({
   reach = "workspace",
   currentVersionId = V4.id,
   canManage = true,
-}: { reach?: RolloutReach; currentVersionId?: string; canManage?: boolean } = {}) {
+  readOnlyReason,
+}: {
+  reach?: RolloutReach;
+  currentVersionId?: string;
+  canManage?: boolean;
+  readOnlyReason?: string;
+} = {}) {
   return render(
     withIntl(
       <RolloutBanner
@@ -82,6 +88,7 @@ function renderBanner({
         currentVersionId={currentVersionId}
         base={V3}
         canManage={canManage}
+        readOnlyReason={readOnlyReason}
       />,
     ),
   );
@@ -232,6 +239,27 @@ describe("RolloutBanner on the candidate's page", () => {
         "Ce déploiement est déjà terminé. Rechargez la page pour voir la version publiée.",
       ),
     ).toBeVisible();
+  });
+});
+
+describe("RolloutBanner in a read-only workspace", () => {
+  const reason = messages.Workspaces.errors.readOnlyDisabled;
+
+  it("leaves only stopping the rollout, and says why the rest is off", async () => {
+    const user = userEvent.setup();
+    renderBanner({ readOnlyReason: reason });
+
+    expect(percentInput()).toBeDisabled();
+    for (const name of ["Modifier la part", "Publier pour tous"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription(reason);
+    }
+
+    await user.click(screen.getByRole("button", { name: "Arrêter le déploiement" }));
+    const dialog = await screen.findByRole("dialog", { name: "Arrêter le déploiement ?" });
+    await user.click(within(dialog).getByRole("button", { name: "Arrêter le déploiement" }));
+    expect(endRollout).toHaveBeenCalledWith(WORKSPACE_ID, ROLLOUT_ID, false);
   });
 });
 

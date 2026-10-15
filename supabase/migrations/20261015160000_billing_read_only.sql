@@ -4,7 +4,8 @@
 -- ADR 001 (docs/adr/001-billing-and-fedapay.md), sections 6.1, 7.3 and 12,
 -- and the answers of section 17: a fourth notice when a workspace turns
 -- read-only (Q14), sent to the organization owner and the workspace owners
--- (Q15).
+-- (Q15), with the product owner's answers of 2026-10-15 on who gets them
+-- and on tidying up in read-only.
 --
 -- * Read-only means nothing runs on the workspace's line and the grace is
 --   over, or the line never had an entitlement. PR 175-3 already refuses new
@@ -15,14 +16,18 @@
 --     reports           before update (title, description, due date, status)
 --     report_sections   before insert or update
 --     deliverables      before insert or update
---     prompt_library    before insert or update (workspace templates)
---     prompt_rollouts   before insert or update (workspace rollouts)
+--     prompt_library    before insert or update (workspace templates),
+--                       archiving a version excepted
+--     prompt_rollouts   before insert or update (workspace rollouts),
+--                       ending one without publishing excepted
 --   transition_report_status checks first, since it also writes the history
 --   and the notifications, and the upload policy of the deliverables bucket
 --   refuses a file registered before the switch.
 -- * Deletes are never refused, so an owner can always delete their data.
---   Reading, exports, notifications, rating or discarding an AI draft,
---   leaving, removing members and revoking invitations stay open too.
+--   Tidying up stays open like deleting: archiving a template version and
+--   ending a rollout. Reading, exports, notifications, rating or discarding
+--   an AI draft, leaving, removing members and revoking invitations stay
+--   open too.
 -- * Like 175-3, only writes in a user's name are checked (auth.uid() set),
 --   the definer functions they call included (save_section_content,
 --   accept_ai_generation, reorder_report_sections). Writes of the service
@@ -103,6 +108,19 @@ begin
   -- for rows the policies let the user change.
   if tg_op = 'INSERT' and not private.is_workspace_member(new.workspace_id) then
     return new;
+  end if;
+  -- Tidying up stays open, like deleting: archiving a template version, and
+  -- ending a rollout without publishing its candidate. Publishing,
+  -- starting a rollout and changing its percentage are refused. Nested ifs:
+  -- the other tables have no status of this kind.
+  if tg_op = 'UPDATE' and tg_table_name = 'prompt_library' then
+    if new.status = 'archived' and old.status <> 'archived' then
+      return new;
+    end if;
+  elsif tg_op = 'UPDATE' and tg_table_name = 'prompt_rollouts' then
+    if old.status = 'active' and new.status = 'cancelled' then
+      return new;
+    end if;
   end if;
   perform private.assert_workspace_writable(new.workspace_id);
   return new;
@@ -399,9 +417,12 @@ as $$
   where d.kind is not null;
 $$;
 
--- The people who can renew a line: the organization owner and the owners of
--- the workspaces it covers (every subscription workspace, or the workspace
--- of a pass).
+-- Who a line's reminders go to (product owner, 2026-10-15). The
+-- subscription: the organization owner and every owner of a workspace of
+-- the organization, except workspaces covered by a Pass Mission, which the
+-- subscription does not cover. Someone who owns both kinds gets it through
+-- the subscription workspace. A pass: the organization owner and the owners
+-- of its workspace.
 create or replace function private.billing_notice_recipients(p_organization_id uuid, p_workspace_id uuid)
 returns table (user_id uuid, email text, name text)
 language sql

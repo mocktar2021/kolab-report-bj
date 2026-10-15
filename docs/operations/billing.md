@@ -17,7 +17,7 @@ Nothing about access is stored. Each time the app or the database reads the stat
 
 While `private.billing_settings.enforced` is false, every workspace reads as active with no limit and no reminder is due.
 
-In read-only, the database refuses every insert and update made in a user's name on reports, sections, files, workspace templates and rollouts, plus new reports, invitations, new workspaces, viewers made experts and AI drafts (error `KR043`). It still allows reading, exports, deletes, leaving, removing members, revoking invitations, notifications, and rating or discarding an AI draft. Writes made with the service role are not checked by the database: the code that writes for a user checks first.
+In read-only, the database refuses every insert and update made in a user's name on reports, sections, files, workspace templates and rollouts, plus new reports, invitations, new workspaces, viewers made experts and AI drafts (error `KR043`). It still allows reading, exports, deletes, leaving, removing members, revoking invitations, notifications, and rating or discarding an AI draft. Tidying up templates stays open too, like deleting (product owner, 2026-10-15): archiving a version, and ending a rollout without publishing its candidate. Publishing a version, rolling back, starting a rollout and changing its share are refused. Writes made with the service role are not checked by the database: the code that writes for a user checks first.
 
 ## Move dates on staging to test
 
@@ -83,7 +83,7 @@ Staging only. On production, dates change through a purchase or the operator fun
    - **`emailed_at` is null**: the run stopped after the claim. Look for `billing: cron step failed` or `billing: could not record a reminder` in the logs of that run.
    - **`emails_failed` above 0**: the provider refused some e-mails. Look for `sendEmail failed` or `sendEmail skipped` in the same run, then check `EMAIL_PROVIDER`, `EMAIL_FROM` and the provider key.
 
-4. Check who should have received it: the organization owner and the owners of the workspaces the period covers (every subscription workspace, or the workspace of a pass).
+4. Check who should have received it (product owner, 2026-10-15). A subscription reminder goes to the organization owner and the owners of every workspace it covers: all the workspaces of the organization except the mission workspaces, which follow their own passes. A pass reminder goes to the organization owner and the owners of the pass's workspace. For a pass, replace `w.billing_mode = 'subscription'` with `w.id = '<workspace_id>'`.
 
    ```sql
    select p.id, p.email
@@ -126,7 +126,9 @@ Staging only. On production, dates change through a purchase or the operator fun
 
 A manual grant gives an organization a period without a payment: an Institution deal paid by bank transfer, a goodwill extension, or a fix after an incident.
 
-On production, use `billing_admin_grant` through `scripts/billing/grant.mjs` once PR 179-2 ships. It asks for an actor and a reason and writes the state before and after in `private.billing_events`. Until then there is no supported way on production: ask the product owner first. If a grant cannot wait, a second person reads this transaction before it runs:
+Once KRB-179 ships, use `billing_admin_grant` through `scripts/billing/grant.mjs`. It asks for an actor and a reason and writes the state before and after in `private.billing_events`.
+
+Until then, the transaction below is the emergency way. It runs on production only with the product owner's written OK: keep their message with the reason. A second person reads it before it runs.
 
 ```sql
 begin;

@@ -274,6 +274,11 @@ type RolloutBannerProps = {
   base: VersionRef | null;
   /** Managers, on the candidate's page of a workspace template. */
   canManage: boolean;
+  /**
+   * Set when the workspace is read-only (KRB-178): the share and the publish
+   * stay visible, disabled, with this reason. Ending the rollout still works.
+   */
+  readOnlyReason?: string;
 };
 
 /** Says which version is being rolled out, to what share and since when. */
@@ -285,6 +290,7 @@ export function RolloutBanner({
   currentVersionId,
   base,
   canManage,
+  readOnlyReason,
 }: RolloutBannerProps) {
   const t = useTranslations("Prompts.rollout");
   const format = useFormatter();
@@ -325,7 +331,12 @@ export function RolloutBanner({
         <p className="mt-1 text-sky-900/80 dark:text-sky-100/80">{t("bannerStable")}</p>
       ) : null}
       {canManage && onCandidate ? (
-        <CandidateControls workspaceId={workspaceId} rollout={rollout} base={base} />
+        <CandidateControls
+          workspaceId={workspaceId}
+          rollout={rollout}
+          base={base}
+          readOnlyReason={readOnlyReason}
+        />
       ) : null}
     </div>
   );
@@ -335,15 +346,21 @@ type CandidateControlsProps = {
   workspaceId: string;
   rollout: RolloutInfo;
   base: VersionRef | null;
+  readOnlyReason?: string;
 };
 
-/** Change the share, publish the candidate for everyone, or stop the rollout. */
-function CandidateControls({ workspaceId, rollout, base }: CandidateControlsProps) {
+/**
+ * Change the share, publish the candidate for everyone, or stop the rollout.
+ * In read-only, only stopping is left: it tidies up and publishes nothing.
+ */
+function CandidateControls({ workspaceId, rollout, base, readOnlyReason }: CandidateControlsProps) {
   const t = useTranslations("Prompts.rollout");
   const tPrompts = useTranslations("Prompts");
   const router = useRouter();
   const percentLabel = usePercent();
   const fieldId = useId();
+  const readOnlyId = useId();
+  const readOnly = Boolean(readOnlyReason);
   const [value, setValue] = useState(String(rollout.percent));
   // The kind stays set while the dialog closes, so its text doesn't change during the animation.
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -355,7 +372,7 @@ function CandidateControls({ workspaceId, rollout, base }: CandidateControlsProp
   const baseVersion = base ? String(base.version) : "none";
 
   function savePercent() {
-    if (percent === null || percent === rollout.percent) return;
+    if (readOnly || percent === null || percent === rollout.percent) return;
     setSaved(null);
     run(
       () => setRolloutPercent(workspaceId, rollout.id, percent),
@@ -392,14 +409,15 @@ function CandidateControls({ workspaceId, rollout, base }: CandidateControlsProp
           id={fieldId}
           value={value}
           onChange={setValue}
-          disabled={pending}
-          invalid={percent === null}
+          disabled={pending || readOnly}
+          invalid={!readOnly && percent === null}
           action={
             <Button
               type="submit"
               variant="outline"
               shape="pill"
-              disabled={pending || percent === null || percent === rollout.percent}
+              disabled={pending || readOnly || percent === null || percent === rollout.percent}
+              aria-describedby={readOnly ? readOnlyId : undefined}
             >
               {t("savePercent")}
             </Button>
@@ -407,7 +425,13 @@ function CandidateControls({ workspaceId, rollout, base }: CandidateControlsProp
         />
       </form>
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" shape="pill" disabled={pending} onClick={() => ask("promote")}>
+        <Button
+          type="button"
+          shape="pill"
+          disabled={pending || readOnly}
+          aria-describedby={readOnly ? readOnlyId : undefined}
+          onClick={() => ask("promote")}
+        >
           <Send aria-hidden="true" />
           {t("promote")}
         </Button>
@@ -416,6 +440,11 @@ function CandidateControls({ workspaceId, rollout, base }: CandidateControlsProp
           {t("cancelRollout")}
         </Button>
       </div>
+      {readOnly ? (
+        <p id={readOnlyId} className="text-xs text-muted-foreground">
+          {readOnlyReason}
+        </p>
+      ) : null}
       <div role="status" aria-live="polite" className="text-sm">
         {error ? (
           <p className="text-destructive">{t(`errors.${error}`)}</p>
