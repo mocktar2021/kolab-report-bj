@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { expectNoAxeViolations } from "./a11y";
+import { waitForMessage } from "./mailpit";
 import { adminClient, createTestUser, createWorkspaceFor, signedInClient, type TestUser } from "./supabase";
 
 // KRB-186: the account page. Download my data, transfer an organization,
@@ -275,6 +276,16 @@ test("an owner transfers the organization, then deletes the account and is signe
     .select("id", { count: "exact", head: true })
     .eq("email", edem.email);
   expect(invitations).toBe(0);
+
+  // The record kept outside the database: the id and the date, no address
+  // and no name. Only when the stack sets the mailbox (CI does).
+  const recordBox = process.env.ACCOUNT_DELETION_LOG_EMAIL;
+  if (recordBox) {
+    const record = await waitForMessage(recordBox, edem.id);
+    expect(record.text).toContain(`Identifiant : ${edem.id}`);
+    expect(record.text).not.toContain(edem.email);
+    expect(record.text).not.toContain("Edem");
+  }
 
   // The invitation Edem sent belongs to the workspace and keeps working.
   const { data: sent } = await admin

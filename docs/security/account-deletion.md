@@ -29,4 +29,4 @@ The service role is used for one person at a time, by user id instead of `worksp
 ## To check on the hosted projects
 
 - `prepare_account_deletion` sets `owner` and `owner_id` to null on `storage.objects` as the `postgres` role. It works locally. If a Supabase change ever removes that right, every deletion fails with a logged error and no account is deleted.
-- An app deletion is not in the request log. After a backup restore, the accounts deleted since the backup come back (see the runbook, step 6).
+- Set `ACCOUNT_DELETION_LOG_EMAIL` on staging and production, with a mailbox that only operators read. After a backup restore, the accounts deleted since the backup come back, and that mailbox is the list to delete again (runbook, step 7). The e-mail holds the account id and the date, never the address or the name.

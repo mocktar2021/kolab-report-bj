@@ -258,9 +258,24 @@ The app's deletion stops at the database as well: an operator does these steps i
 
 - **E-mail provider**: look for their address in the provider's logs or contacts and delete it where the provider allows.
 - **LLM provider and traces**: the app sends no user id, name or e-mail to the LLM provider or to the traces, so there is nothing to look up there.
-- **Backups**: they expire on their own schedule. Keep the request in the log so the erasure can be applied again after a restore. A deletion made in the app is not in the request log. After a restore, the accounts deleted in the app since the backup come back: find them in the server logs (`account: deleted`, with the user id) while Vercel still keeps them, and delete them again. Keeping a list of deleted user ids for this is **to decide**.
+- **Backups**: they expire on their own schedule. Keep the request in the log so the erasure can be applied again after a restore ([step 7](#step-7-after-a-backup-restore)).
 - **Trial claim**: kept on purpose, see the table above.
 - Answer the person, at the address they used, once it is done.
+
+### Step 7: after a backup restore
+
+A restore brings back every account deleted after the backup was taken, and it rolls back every table too, so the list of those accounts is kept outside the database:
+
+- each deletion made in the app sends an e-mail to `ACCOUNT_DELETION_LOG_EMAIL` with the account id, the date and the environment, never the e-mail address or the name (`src/lib/account/deletion-record.ts`);
+- each deletion made by hand is in the request log ([Before you start](#before-you-start)).
+
+After restoring a backup taken at time T, on the restored environment:
+
+1. List the ids e-mailed to `ACCOUNT_DELETION_LOG_EMAIL` after T, subject `[KolabReport <environment>] Compte supprimé <id>`, and the deletions of the request log after T.
+2. For each id, run [step 1](#step-1-check-what-blocks-the-delete) to [step 5](#step-5-check). The person may have transferred an organization or named an owner before deleting: that is in the backup only if it happened before T, so step 2 may be needed again.
+3. Write in the request log that the erasures were applied again, with the date of the restore.
+
+If the setting was empty, the app logged `ACCOUNT_DELETION_LOG_EMAIL is not set` once per server instance and sent nothing: look for `account: deleted` lines in the server logs instead, while Vercel still keeps them.
 
 ## Deleting a workspace or an organization
 
@@ -335,5 +350,6 @@ Files that are not read (PDF, PowerPoint, images, diagrams) have no extracted te
 - **Delete my account**: the invitations the person sent stay with their workspace, with no inviter. `my_account_deletion_blockers()` lists what blocks it, with links to the transfer above, to the members page of the workspace, and to the deletion of a workspace or an organization (KRB-180). When nothing blocks, the person types the account's e-mail address and their current password. The server checks the password with a sign-in of its own, then runs step 3 (`prepare_account_deletion`) and step 4 (`auth.admin.deleteUser`) with the service role, signs the browser out and shows `/fr/compte-supprime`.
 - **One deletion at a time**: `claim_account_deletion()` refuses a second deletion while one runs (2 minutes at most), and more than 5 tries in 15 minutes. A double click runs the deletion once, and the password check can't be used to guess passwords. A try that stops (wrong password, a blocker) releases the lock but still counts.
 - **Logs**: `account: deleted`, `account: deletion refused, ...`, `account: organization transferred` and `account: data exported`, with the user id and counts. Never the e-mail address or the password.
+- **Record for a restore**: each deletion e-mails the account id and the date to `ACCOUNT_DELETION_LOG_EMAIL` ([step 7](#step-7-after-a-backup-restore)). A failed or missing e-mail is logged and never stops the deletion.
 
-What still needs an operator: [step 6](#step-6-outside-the-tables), a change of e-mail address, and anyone who can't sign in.
+What still needs an operator: [step 6](#step-6-outside-the-tables), [step 7](#step-7-after-a-backup-restore) after a restore, a change of e-mail address, and anyone who can't sign in.

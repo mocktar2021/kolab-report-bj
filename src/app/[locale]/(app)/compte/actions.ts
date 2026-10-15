@@ -6,6 +6,7 @@ import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { TRANSFER_DONE, TRANSFER_DONE_PARAM } from "@/lib/account/blockers";
+import { recordAccountDeletion } from "@/lib/account/deletion-record";
 import { verifyPassword } from "@/lib/account/password";
 import { readCaptchaToken } from "@/lib/auth/captcha";
 import { log } from "@/lib/log";
@@ -175,6 +176,8 @@ async function runDeletion(
   }
 
   log.info("account: deleted", { userId: user.id, cleared });
+  // The record kept outside the database, for a backup restore. It never fails the deletion.
+  await recordAccountDeletion(user.id);
   return null;
 }
 

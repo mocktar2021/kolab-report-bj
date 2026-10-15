@@ -30,6 +30,7 @@ Two facts shape most of the table:
 | Payments and receipts (KRB-176) | `billing_purchases`, `billing_receipts`, their lines and payment events | Kept when the organization is deleted, with `organization_id` set to null: the receipt holds a copy of the buyer. Only the service role reads them after that. | 10 years under OHADA, **to confirm** with the accountant (ADR 001, A5) |
 | Trial claims | `private.billing_trial_claims` (user id, SHA-256 of the e-mail, organization) | Kept after the account is deleted, so the same address gets no second trial (ADR 001, KRB-186) | **To decide**: a time limit |
 | Account deletion tries | `private.account_deletion_attempts` (user id, start and end) | Deleted with the account. A try older than a day goes at the person's next try. | Same |
+| Record of deleted accounts | E-mails to `ACCOUNT_DELETION_LOG_EMAIL` (account id, date, environment), outside the database so a restore can't roll it back | Kept in that mailbox, and in the e-mail provider's logs for the provider's period | **To decide**: delete each e-mail once no backup taken before it remains, today 14 days ([below](#backups)) |
 
 ## Storage files
 
@@ -95,7 +96,7 @@ What that means for a deletion:
 - A row deleted from the database is out of every dump 14 days later. On Pro, Supabase's daily backups keep it 7 days, and PITR keeps it for its window.
 - A file deleted in the app, by a user or by the daily storage cleanup, leaves `mirror/` at the next nightly run, so within a day. Its copy under `deleted/` expires 30 days later, and Cloudflare removes expired objects within about 24 hours. The file is gone from every copy at most about 32 days after the deletion.
 - Supabase's database backups hold no Storage files, only their rows (Supabase docs: "Database backups do not include objects you store via the Storage API").
-- After a restore, apply again every erasure done since the backup date, from the request log (see [`data-subject-requests.md`](data-subject-requests.md)). Before copying a file back from `deleted/`, check the log too: it may have been deleted on request.
+- After a restore, apply again every erasure done since the backup date, from the request log and the record of deleted accounts (see [`data-subject-requests.md`](data-subject-requests.md#step-7-after-a-backup-restore)). Before copying a file back from `deleted/`, check the log too: it may have been deleted on request.
 
 ## Browser and device
 

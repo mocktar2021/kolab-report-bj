@@ -12,6 +12,8 @@ npx supabase status -o env \
   echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
   echo "EMAIL_PROVIDER=mailpit"
   echo "MAILPIT_URL=http://127.0.0.1:54324"
+  # The record of deleted accounts (KRB-186), checked by tests/e2e/account.spec.ts.
+  echo "ACCOUNT_DELETION_LOG_EMAIL=suppressions@kolabreport.test"
   echo "AI_PROVIDER=mock"
   echo "AI_DRAFTS_ENABLED=true"
   echo "AI_RATE_LIMIT_PER_HOUR=5"

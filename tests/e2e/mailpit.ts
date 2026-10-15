@@ -67,3 +67,27 @@ export async function waitForText(to: string, subject: string, timeoutMs = 20_00
 export async function clearInbox(to: string) {
   await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`, { method: "DELETE" });
 }
+
+/** Waits for an e-mail to `to` whose subject contains `subjectPart`, and returns its subject and text. */
+export async function waitForMessage(
+  to: string,
+  subjectPart: string,
+  timeoutMs = 20_000,
+): Promise<{ subject: string; text: string }> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+    if (res.ok) {
+      const { messages } = (await res.json()) as { messages: MailpitSummary[] };
+      const match = messages.find((m) => m.Subject.includes(subjectPart));
+      if (match) {
+        const detail = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${match.ID}`)).json()) as {
+          Text: string;
+        };
+        return { subject: match.Subject, text: detail.Text };
+      }
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`No e-mail about "${subjectPart}" for ${to} within ${timeoutMs} ms`);
+}
