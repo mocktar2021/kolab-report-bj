@@ -2,9 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { Download } from "lucide-react";
 import { formatBillingDate, formatXof } from "@/lib/billing/format";
 import { RECEIPTS_ANCHOR } from "@/lib/billing/navigation";
-import type { BillingOverview, ReceiptSummary } from "@/lib/billing/state";
+import type { BillingOverview } from "@/lib/billing/state";
 import { purchaseStatusKey } from "@/lib/billing/usage";
 import { cn } from "@/lib/utils";
+import { ReceiptDownload } from "./receipt-download";
 
 const STATUS_STYLES = {
   paid: "bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20",
@@ -18,11 +19,6 @@ const STATUS_STYLES = {
 
 const th = "px-3 py-2.5 text-left font-medium";
 const td = "px-3 py-3 align-top";
-
-/** Where a receipt downloads: the route reads it with the user's rights. */
-export function receiptHref(receipt: Pick<ReceiptSummary, "id">): string {
-  return `/api/billing/receipts/${receipt.id}`;
-}
 
 /** Every payment of the organization with its status, and the receipt of the paid ones. */
 export async function PurchaseHistory({ overview }: { overview: BillingOverview }) {
@@ -101,14 +97,14 @@ export async function PurchaseHistory({ overview }: { overview: BillingOverview 
                     </td>
                     <td className={cn(td, "whitespace-nowrap pr-5")}>
                       {purchase.receiptId && purchase.receiptNumber ? (
-                        <a
-                          href={receiptHref({ id: purchase.receiptId })}
-                          download
-                          aria-label={t("downloadLabel", { number: purchase.receiptNumber })}
-                          className="rounded-sm font-medium tabular-nums text-foreground underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        <ReceiptDownload
+                          receiptId={purchase.receiptId}
+                          label={t("downloadLabel", { number: purchase.receiptNumber })}
+                          failedText={t("downloadFailed")}
+                          className="rounded-sm font-medium tabular-nums text-foreground underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring aria-busy:cursor-wait aria-busy:opacity-60"
                         >
                           {purchase.receiptNumber}
-                        </a>
+                        </ReceiptDownload>
                       ) : (
                         <span className="text-muted-foreground">{t("noReceipt")}</span>
                       )}
@@ -200,15 +196,15 @@ export async function ReceiptList({ overview }: { overview: BillingOverview }) {
                       {t("amount", { amount: formatXof(receipt.totalXof) })}
                     </td>
                     <td className={cn(td, "pr-5 text-right")}>
-                      <a
-                        href={receiptHref(receipt)}
-                        download
-                        aria-label={t("downloadLabel", { number: receipt.number })}
-                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                      <ReceiptDownload
+                        receiptId={receipt.id}
+                        label={t("downloadLabel", { number: receipt.number })}
+                        failedText={t("downloadFailed")}
+                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring aria-busy:cursor-wait aria-busy:opacity-60"
                       >
                         <Download className="size-4" aria-hidden="true" />
                         {t("download")}
-                      </a>
+                      </ReceiptDownload>
                     </td>
                   </tr>
                 );

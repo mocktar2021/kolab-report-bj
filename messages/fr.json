@@ -1571,6 +1571,7 @@
       "receiptsCaption": "Reçus de l'organisation",
       "download": "Télécharger",
       "downloadLabel": "Télécharger le reçu {number} en PDF",
+      "downloadFailed": "Le reçu n'a pas pu être téléchargé. Réessayez dans un instant.",
       "testReceipt": "Test",
       "testReceiptTitle": "Reçu de test, sans valeur comptable",
       "details": {

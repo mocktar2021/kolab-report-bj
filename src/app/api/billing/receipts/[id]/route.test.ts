@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { receiptFileSchema, receiptPdfBytes } from "@/lib/billing/receipt-file";
 import { buildReceiptPdf } from "@/lib/billing/receipt-pdf";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -73,17 +74,16 @@ beforeEach(() => {
 });
 
 describe("GET /api/billing/receipts/[id]", () => {
-  it("sends the PDF as an attachment named after the receipt, never cached", async () => {
+  it("sends the PDF in base64 with the receipt's file name, never cached", async () => {
     const from = readable(ROW);
     const response = await get(RECEIPT_ID.toUpperCase());
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("application/pdf");
-    expect(response.headers.get("content-disposition")).toBe(
-      'attachment; filename="recu-KR-2026-000042.pdf"',
-    );
+    expect(response.headers.get("content-type")).toMatch(/^application\/json/);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(Buffer.from(await response.arrayBuffer()).toString("latin1")).toBe("%PDF-1.3 test");
+    const file = receiptFileSchema.parse(await response.json());
+    expect(file.fileName).toBe("recu-KR-2026-000042.pdf");
+    expect(Buffer.from(receiptPdfBytes(file)).toString("latin1")).toBe("%PDF-1.3 test");
     // Read with the user's client, by the lowercase id, never with the service role.
     expect(from).toHaveBeenCalledWith("billing_receipts");
     expect(from).toHaveBeenCalledWith("billing_receipt_lines");
