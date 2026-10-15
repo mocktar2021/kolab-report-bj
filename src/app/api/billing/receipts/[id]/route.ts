@@ -13,7 +13,8 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 // it, anyone else gets a 404, like a receipt that does not exist. No
 // service role here. The PDF is drawn from the stored rows on every
 // download and never cached. It goes out as base64 in JSON, and the page
-// builds the file (src/lib/billing/receipt-file.ts, KRB-189).
+// builds the file (src/lib/billing/receipt-file.ts, KRB-189). Drawing it
+// needs pdfkit's fonts in the deployment (next.config.mjs).
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,7 +53,16 @@ export const GET = withRequestId(async (_request: Request, { params }: { params:
     return failure(500, "failed");
   }
 
-  const pdf = await buildReceiptPdf(receipt);
+  let pdf: Buffer;
+  try {
+    pdf = await buildReceiptPdf(receipt);
+  } catch (error) {
+    log.error("billing: could not draw a receipt", {
+      receiptId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return failure(500, "failed");
+  }
   const file: ReceiptFile = {
     fileName: receiptFileName(receipt.number),
     pdf: Buffer.from(pdf).toString("base64"),

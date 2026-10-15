@@ -11,7 +11,7 @@ Every pull request and every push to `master` runs two workflows in GitHub Actio
 3. `format:check`, `lint`, `typecheck` and `npm test`.
 4. `scripts/check-public-env.mjs` fails on `NEXT_PUBLIC_` variables named like secrets, since those ship to the browser.
 5. `node scripts/audit-production.mjs` runs `npm audit --omit=dev` and fails on any high or critical advisory, unless `.github/accepted-advisories.json` accepts it. An accepted entry gives the GHSA id, the direct dependencies it may come through, the reason it does not apply and an expiry date. The job fails again once that date passes, or when the advisory comes through another dependency. What is accepted and why: `docs/security/dependencies.md`.
-6. `next build` with placeholder Supabase variables and the `.next/cache` restored.
+6. `next build` with placeholder Supabase variables and the `.next/cache` restored. `npm run build` then runs `scripts/check-pdf-fonts.mjs`, which fails when a route that draws a PDF does not ship pdfkit's standard fonts. Vercel deploys only the files the build traces, and pdfkit loads these fonts in a way the trace misses (KRB-189).
 
 **Database and end-to-end tests** starts the local Supabase stack with the CLI version from `package-lock.json`, then:
 

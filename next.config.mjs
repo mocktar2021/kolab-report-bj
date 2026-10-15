@@ -5,6 +5,9 @@ import { canUploadSourceMaps, sentryEnvironment, sentryRelease } from "./src/lib
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+/** pdfkit's standard fonts, loaded at run time (see outputFileTracingIncludes). */
+const PDF_FONTS = "./node_modules/pdfkit/js/standard-fonts/**/*.cjs";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 const isDev = process.env.NODE_ENV === "development";
@@ -178,9 +181,19 @@ const nextConfig = {
   // The deliverable parsers run from their own bundle (scripts/build-parse-worker.mjs).
   // Only the routes that start a read ship it: the upload check, and the
   // section page whose "Relancer l'analyse" action starts one.
+  // pdfkit loads Helvetica and the other standard fonts with
+  // require("#standard-fonts/...") when a PDF is drawn, and each font requires
+  // a glyph table in standard-fonts/chunks/. The trace misses both: without
+  // these files every PDF fails on Vercel, while next start has all of
+  // node_modules (KRB-189). The routes that draw a PDF ship them:
+  // receipts, report exports, and the report page whose status action takes
+  // the final snapshot. scripts/check-pdf-fonts.mjs checks it after each build.
   outputFileTracingIncludes: {
     "/api/deliverables/[id]/complete": ["./build/parse-worker.cjs"],
     "/[locale]/espaces/[workspaceId]/sections/[sectionId]": ["./build/parse-worker.cjs"],
+    "/api/billing/receipts/[id]": [PDF_FONTS],
+    "/api/reports/[id]/exports": [PDF_FONTS],
+    "/[locale]/rapports/[reportId]": [PDF_FONTS],
   },
   async redirects() {
     // French is the only locale: legacy/English entry points land on French routes.

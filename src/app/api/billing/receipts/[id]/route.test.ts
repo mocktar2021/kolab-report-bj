@@ -115,4 +115,13 @@ describe("GET /api/billing/receipts/[id]", () => {
     readable(ROW, []);
     expect((await get(RECEIPT_ID)).status).toBe(500);
   });
+
+  it("answers 500, never cached, when the PDF cannot be drawn", async () => {
+    readable(ROW);
+    vi.mocked(buildReceiptPdf).mockRejectedValue(new Error("Cannot find module 'Helvetica.cjs'"));
+    const response = await get(RECEIPT_ID);
+    expect(response.status).toBe(500);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(await response.json()).toEqual({ error: "failed" });
+  });
 });
