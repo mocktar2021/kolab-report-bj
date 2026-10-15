@@ -2,6 +2,10 @@ begin;
 \ir fixtures.psql
 select plan(22);
 
+-- The trial allows one active report: org_a is on Cabinet here, like the
+-- demo organization of the seed, so managers can add one.
+select pg_temp.set_plan(pg_temp.id('org_a'), 'cabinet');
+
 -- KRB-24 review (docs/security/audit-2026-10.md): the fixes of KRB-152 and
 -- the cross-workspace calls pgTAP did not cover yet.
 

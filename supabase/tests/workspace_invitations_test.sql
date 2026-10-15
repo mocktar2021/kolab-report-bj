@@ -26,6 +26,10 @@ $$;
 
 grant execute on function pg_temp.token_hash(text), pg_temp.guest(), pg_temp.act_as_guest() to authenticated, anon;
 
+-- The trial counts 5 members, open invitations included, and w1 already has
+-- 4: org_a is on Cabinet here, like the demo organization of the seed.
+select pg_temp.set_plan(pg_temp.id('org_a'), 'cabinet');
+
 -- The accept functions only trust a confirmed e-mail. Fixture users are not
 -- confirmed, so confirm the two that accept invitations. viewer stays
 -- unconfirmed until the end of the accept tests.

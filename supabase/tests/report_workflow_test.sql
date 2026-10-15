@@ -2,6 +2,10 @@ begin;
 \ir fixtures.psql
 select plan(63);
 
+-- The trial allows one active report: org_a is on Cabinet here, like the
+-- demo organization of the seed, so managers can add one.
+select pg_temp.set_plan(pg_temp.id('org_a'), 'cabinet');
+
 create temp table kept (name text primary key, id uuid, ids uuid[]);
 grant all on kept to authenticated, anon;
 

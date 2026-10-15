@@ -2,6 +2,10 @@ begin;
 \ir fixtures.psql
 select plan(10);
 
+-- The trial allows one active report: org_a is on Cabinet here, like the
+-- demo organization of the seed, so managers can add one.
+select pg_temp.set_plan(pg_temp.id('org_a'), 'cabinet');
+
 select pg_temp.act_as('viewer');
 select results_eq('select id from public.reports', array[pg_temp.id('r1')], 'viewer sees the w1 report');
 select is(pg_temp.affected($$update public.reports set title = 'X' where id = pg_temp.id('r1')$$), 0, 'viewer cannot edit a report');
