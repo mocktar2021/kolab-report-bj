@@ -6,6 +6,8 @@ export type MyWorkspace = {
   name: string;
   organizationId: string;
   organizationName: string | null;
+  /** The user is organizations.owner_id of its organization. */
+  ownsOrganization: boolean;
   role: WorkspaceRole;
 };
 

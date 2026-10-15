@@ -6,6 +6,7 @@ import { FrozenReportNotice } from "@/components/frozen-report-notice";
 import { ReportStatusBadge } from "@/components/report-status-badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getReportDeletionPreview } from "@/lib/deletions/preview";
 import { EXPORTS_PER_HOUR, listReportExports } from "@/lib/reports/exports";
 import { allowedReportActions, isReportFrozen } from "@/lib/reports/status";
 import { getReportWorkflow } from "@/lib/reports/workflow";
@@ -23,6 +24,7 @@ import { RecentExports } from "./recent-exports";
 import type { ReportSection } from "./report-document";
 import { ReportStatusControls } from "./report-status-controls";
 import { AddSectionForm } from "./section-list";
+import { DeleteReport } from "./delete-report";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +72,7 @@ export default async function ReportPage({ params }: { params: Params }) {
   const frozen = isReportFrozen(report.status);
 
   const supabase = await createClient();
-  const [{ data: sections }, members, { data: progress }, exports, workflow] = await Promise.all([
+  const [{ data: sections }, members, { data: progress }, exports, workflow, deletion] = await Promise.all([
     supabase
       .from("report_sections")
       .select("id, title, status, weight, assigned_to, content")
@@ -82,6 +84,8 @@ export default async function ReportPage({ params }: { params: Params }) {
     // RLS only lets owners and admins read the exports.
     manager ? listReportExports(report.id) : [],
     getReportWorkflow(report, manager),
+    // What deleting it takes (KRB-180), for owners and admins.
+    manager ? getReportDeletionPreview(report.id) : null,
   ]);
   if (!sections || !members) notFound();
 
@@ -172,6 +176,8 @@ export default async function ReportPage({ params }: { params: Params }) {
           }))}
         />
       ) : null}
+
+      {deletion ? <DeleteReport preview={deletion} role={access.role} /> : null}
 
       <LiveReport reportId={report.id} />
     </div>

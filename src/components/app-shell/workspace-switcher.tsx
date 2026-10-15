@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { BookText, ChevronsUpDown, Gauge, Plus, Users } from "lucide-react";
+import { BookText, Building2, ChevronsUpDown, Gauge, Plus, Settings, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,11 @@ export function WorkspaceMark({ name, className }: { name: string; className?: s
   );
 }
 
-/** Menu to switch the current workspace, open its members, prompt templates or AI dashboard, or create a new one. */
+/**
+ * Menu to switch the current workspace, open its members, prompt templates or
+ * AI dashboard, its settings (owners) and its organization (the organization
+ * owner), or create a new one.
+ */
 export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
@@ -137,6 +141,22 @@ export function WorkspaceSwitcher({
             <Link href={`/espaces/${current.id}/ia`} onClick={onNavigate}>
               <Gauge aria-hidden="true" />
               {tShell("aiDashboard")}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {current.role === "owner" ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/espaces/${current.id}/parametres`} onClick={onNavigate}>
+              <Settings aria-hidden="true" />
+              {t("settings")}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {current.ownsOrganization ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/organisations/${current.organizationId}`} onClick={onNavigate}>
+              <Building2 aria-hidden="true" />
+              {t("organization")}
             </Link>
           </DropdownMenuItem>
         ) : null}
