@@ -190,11 +190,11 @@ select throws_ok($$select public.delete_report('00000000-0000-4000-d000-00000000
   '42501', null, 'an admin cannot delete a final report, even with its title');
 select pg_temp.act_as('owner');
 select throws_ok($$select public.delete_report('00000000-0000-4000-d000-000000000003')$$,
-  'KR050', null, 'an owner must type the title of a final report');
+  'KR070', null, 'an owner must type the title of a final report');
 select throws_ok($$select public.delete_report('00000000-0000-4000-d000-000000000003', 'rapport final 2026')$$,
-  'KR050', null, 'case counts');
+  'KR070', null, 'case counts');
 select throws_ok($$select public.delete_report('00000000-0000-4000-d000-000000000003', 'Rapport final')$$,
-  'KR050', null, 'part of the title is not enough');
+  'KR070', null, 'part of the title is not enough');
 select is(
   public.delete_report('00000000-0000-4000-d000-000000000003', '  Rapport final 2026 ') ->> 'status', 'final',
   'the exact title, spaces around it aside, deletes it');
@@ -240,7 +240,7 @@ select is(public.workspace_deletion_preview(pg_temp.id('w2')), null, 'nor see it
 select throws_ok($$select public.delete_workspace(pg_temp.id('w1'), 'Etude A')$$, '42501', null,
   'an expert of w1 cannot delete w1');
 select pg_temp.act_as('outsider');
-select throws_ok($$select public.delete_workspace(pg_temp.id('w2'), 'Etude')$$, 'KR050', null,
+select throws_ok($$select public.delete_workspace(pg_temp.id('w2'), 'Etude')$$, 'KR070', null,
   'its owner must type its exact name');
 select is(
   public.workspace_deletion_preview(pg_temp.id('w2')) - 'workspace_id' - 'organization_id',
@@ -335,7 +335,7 @@ select results_eq(
     from public.organization_deletion_preview(pg_temp.id('org_a')) p$$,
   $$values ('cabinet', '70', '1', '5')$$,
   'and the billing time it loses: the Cabinet period and 70 drafts of the pack');
-select throws_ok($$select public.delete_organization(pg_temp.id('org_a'), 'Cabinet')$$, 'KR050', null,
+select throws_ok($$select public.delete_organization(pg_temp.id('org_a'), 'Cabinet')$$, 'KR070', null,
   'the owner must type its exact name');
 select results_eq(
   $$select d ->> 'workspaces', d ->> 'reports', d -> 'billing_lost' -> 'subscription' -> 0 ->> 'entitlement_id',

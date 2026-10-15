@@ -17,7 +17,7 @@ export type DeletionState =
 
 /**
  * Maps a Postgres error code from the delete functions to a message key:
- * 42501 not allowed, P0002 not found (or not visible), KR050 the typed title
+ * 42501 not allowed, P0002 not found (or not visible), KR070 the typed title
  * or name does not match, 40001 a workspace was added to the organization
  * meanwhile.
  */
@@ -27,7 +27,7 @@ export function deletionErrorKey(error: { code?: string | null } | null | undefi
       return "forbidden";
     case "P0002":
       return "notFound";
-    case "KR050":
+    case "KR070":
       return "confirmation";
     case "40001":
       return "stale";

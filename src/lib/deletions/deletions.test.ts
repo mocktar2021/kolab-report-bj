@@ -33,7 +33,7 @@ describe("deletionErrorKey", () => {
   it.each([
     ["42501", "forbidden"],
     ["P0002", "notFound"],
-    ["KR050", "confirmation"],
+    ["KR070", "confirmation"],
     ["40001", "stale"],
     ["22P02", "invalidInput"],
     ["XX000", "generic"],

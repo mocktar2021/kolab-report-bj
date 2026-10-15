@@ -40,7 +40,7 @@
 -- Error codes:
 --   42501  signed out, or not allowed to delete it
 --   P0002  not found, or not visible to the caller
---   KR050  the typed title or name does not match
+--   KR070  the typed title or name does not match
 --   40001  a workspace was added to the organization meanwhile: try again
 -- =============================================================================
 
@@ -452,7 +452,7 @@ begin
       raise exception 'Seul un propriétaire de l''espace supprime un rapport final' using errcode = '42501';
     end if;
     if not private.confirmation_matches(p_confirmation, v_report.title) then
-      raise exception 'Saisissez le titre exact du rapport pour confirmer' using errcode = 'KR050';
+      raise exception 'Saisissez le titre exact du rapport pour confirmer' using errcode = 'KR070';
     end if;
   end if;
 
@@ -508,7 +508,7 @@ begin
     raise exception 'Seuls les propriétaires de l''espace de travail peuvent le supprimer' using errcode = '42501';
   end if;
   if not private.confirmation_matches(p_confirmation, v_workspace.name) then
-    raise exception 'Saisissez le nom exact de l''espace de travail pour confirmer' using errcode = 'KR050';
+    raise exception 'Saisissez le nom exact de l''espace de travail pour confirmer' using errcode = 'KR070';
   end if;
 
   v_details := jsonb_build_object(
@@ -588,7 +588,7 @@ begin
   end if;
 
   if not private.confirmation_matches(p_confirmation, v_org.name) then
-    raise exception 'Saisissez le nom exact de l''organisation pour confirmer' using errcode = 'KR050';
+    raise exception 'Saisissez le nom exact de l''organisation pour confirmer' using errcode = 'KR070';
   end if;
 
   foreach v_workspace in array v_workspaces loop
