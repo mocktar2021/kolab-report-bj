@@ -186,6 +186,130 @@ export type Database = {
           },
         ];
       };
+      billing_ai_packs: {
+        Row: {
+          created_at: string;
+          drafts: number;
+          expires_at: string;
+          id: string;
+          organization_id: string;
+          purchase_id: string | null;
+          revoked_at: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          drafts: number;
+          expires_at: string;
+          id?: string;
+          organization_id: string;
+          purchase_id?: string | null;
+          revoked_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          drafts?: number;
+          expires_at?: string;
+          id?: string;
+          organization_id?: string;
+          purchase_id?: string | null;
+          revoked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_ai_packs_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      billing_entitlements: {
+        Row: {
+          amount_ht_xof: number;
+          created_at: string;
+          custom_templates: boolean;
+          drafts_per_month: number | null;
+          drafts_total: number | null;
+          ends_at: string;
+          grace_days: number;
+          id: string;
+          max_members: number | null;
+          max_reports: number | null;
+          note: string | null;
+          organization_id: string;
+          plan: string;
+          purchase_id: string | null;
+          revoked_at: string | null;
+          revoked_reason: string | null;
+          scope: string;
+          source: string;
+          starts_at: string;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_ht_xof?: number;
+          created_at?: string;
+          custom_templates?: boolean;
+          drafts_per_month?: number | null;
+          drafts_total?: number | null;
+          ends_at: string;
+          grace_days?: number;
+          id?: string;
+          max_members?: number | null;
+          max_reports?: number | null;
+          note?: string | null;
+          organization_id: string;
+          plan: string;
+          purchase_id?: string | null;
+          revoked_at?: string | null;
+          revoked_reason?: string | null;
+          scope: string;
+          source: string;
+          starts_at: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          amount_ht_xof?: number;
+          created_at?: string;
+          custom_templates?: boolean;
+          drafts_per_month?: number | null;
+          drafts_total?: number | null;
+          ends_at?: string;
+          grace_days?: number;
+          id?: string;
+          max_members?: number | null;
+          max_reports?: number | null;
+          note?: string | null;
+          organization_id?: string;
+          plan?: string;
+          purchase_id?: string | null;
+          revoked_at?: string | null;
+          revoked_reason?: string | null;
+          scope?: string;
+          source?: string;
+          starts_at?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_entitlements_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_entitlements_workspace_fkey";
+            columns: ["workspace_id", "organization_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
       deliverables: {
         Row: {
           created_at: string;
@@ -305,6 +429,45 @@ export type Database = {
             columns: ["workspace_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      organization_billing: {
+        Row: {
+          address: string | null;
+          billing_email: string | null;
+          created_at: string;
+          legal_name: string | null;
+          organization_id: string;
+          tax_id: string | null;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          address?: string | null;
+          billing_email?: string | null;
+          created_at?: string;
+          legal_name?: string | null;
+          organization_id: string;
+          tax_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          address?: string | null;
+          billing_email?: string | null;
+          created_at?: string;
+          legal_name?: string | null;
+          organization_id?: string;
+          tax_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_billing_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: true;
+            referencedRelation: "organizations";
             referencedColumns: ["id"];
           },
         ];
@@ -940,6 +1103,7 @@ export type Database = {
       workspaces: {
         Row: {
           archived_at: string | null;
+          billing_mode: string;
           created_at: string;
           created_by: string;
           description: string | null;
@@ -951,6 +1115,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           archived_at?: string | null;
+          billing_mode?: string;
           created_at?: string;
           created_by?: string;
           description?: string | null;
@@ -961,6 +1126,7 @@ export type Database = {
         };
         Update: {
           archived_at?: string | null;
+          billing_mode?: string;
           created_at?: string;
           created_by?: string;
           description?: string | null;
@@ -1120,6 +1286,7 @@ export type Database = {
           version: number;
         }[];
       };
+      billing_overview: { Args: { p_organization_id: string }; Returns: Json };
       claim_ai_cost_alert: { Args: { p_threshold: number }; Returns: number };
       claim_report_export: {
         Args: {
@@ -1222,6 +1389,25 @@ export type Database = {
         Returns: {
           event_id: string;
           recipients: string[];
+        }[];
+      };
+      workspace_billing_state: {
+        Args: { p_workspace_id: string };
+        Returns: {
+          billing_mode: string;
+          can_manage_billing: boolean;
+          can_read_billing: boolean;
+          custom_templates: boolean;
+          drafts_per_month: number;
+          drafts_total: number;
+          ends_at: string;
+          grace_ends_at: string;
+          max_members: number;
+          max_reports: number;
+          organization_id: string;
+          plan: string;
+          source: string;
+          state: string;
         }[];
       };
     };

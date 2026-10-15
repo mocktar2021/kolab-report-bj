@@ -17,5 +17,5 @@ Run before pushing: `npm run lint`, `npm run typecheck`, `npm run build`. For au
 ## Project rules
 
 - UI text is French and lives in `messages/fr.json`. Routes are under `/fr`.
-- Every tenant table has `workspace_id` and RLS. New tables need policies in the same migration.
+- Every tenant table has `workspace_id` or `organization_id`, and RLS. New tables need policies in the same migration.
 - The service-role client (`src/lib/supabase/admin.ts`) is server-only and bypasses RLS. Scope every query by `workspace_id` when using it.
