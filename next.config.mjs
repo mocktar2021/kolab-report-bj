@@ -139,6 +139,13 @@ const withPWA = withPWAInit({
           ),
         handler: "NetworkOnly",
       },
+      {
+        // Billing pages and the payment return page show a payment state
+        // that changes from one second to the next (ADR 001, 8.3).
+        urlPattern: ({ url, sameOrigin }) =>
+          sameOrigin && /^\/[a-z]{2}\/organisations\/[^/]+\/abonnement(\/|$)/.test(url.pathname),
+        handler: "NetworkOnly",
+      },
     ],
   },
 });
