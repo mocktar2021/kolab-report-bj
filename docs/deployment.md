@@ -140,7 +140,9 @@ A `review` purchase was paid at FedaPay with an amount, currency, merchant refer
 
 ### Billing page and receipts (KRB-177)
 
-The billing page is `/fr/organisations/<organization id>/abonnement`, linked as "Abonnement" in the sidebar for the organization's owner and the owners and admins of its workspaces. Experts, viewers and everyone else get a 404. Owners pay and edit the billing details; admins only read.
+The billing page is `/fr/organisations/<organization id>/abonnement`, for the organization's owner and the owners and admins of its workspaces. Experts, viewers and everyone else get a 404. Owners pay and edit the billing details; admins only read. A pass or a payment names its workspace for the organization owner and for members of that workspace; other readers see "Espace Pass Mission". The history leaves out expired and canceled checkouts.
+
+The "Abonnement" link of the sidebar follows the same readers, the organization owner included whatever their workspace roles, and only shows once billing is enforced (`private.billing_settings.enforced`, KRB-179). Before the launch the page stays reachable by its address, for tests on staging.
 
 Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draws the PDF on each download from the stored receipt and its lines, read with the user's own client (RLS), and answers 404 to anyone who is not a billing reader of that organization. A receipt never changes once issued, so:
 
