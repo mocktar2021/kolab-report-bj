@@ -48,6 +48,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation and report e-mails. Without it, or without the matching key, the app shows the invitation link to copy and logs `sendEmail skipped` with the reason |
 | `EMAIL_FROM` | no | Sender on a domain verified with the provider, for example `KolabReport <noreply@email.kolabreport.mocktar.com>` with Resend |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
+| `ACCOUNT_DELETION_LOG_EMAIL` | no | Mailbox, read by operators only, that gets the account id and the date of each account deleted in the app. It is the list to delete again after a backup restore (`docs/gdpr/data-subject-requests.md`, step 7). Set a rule on the mailbox that deletes these e-mails after 35 days. Needs `EMAIL_PROVIDER`. Empty: deletions still work and the app logs a warning once |
 | `CRON_SECRET` | **yes**, mark Sensitive | Random string of at least 16 characters, one per environment (`openssl rand -hex 32`). Vercel Cron sends it to the scheduled jobs, see [Scheduled jobs](#scheduled-jobs) |
 | `FEDAPAY_ENVIRONMENT` | no | `sandbox` for Preview, `live` for Production. Anything else turns payments off, see [FedaPay](#4-fedapay-krb-176) |
 | `FEDAPAY_SECRET_KEY` | **yes**, mark Sensitive | Secret API key of the FedaPay account: the sandbox one for Preview, the live one for Production |

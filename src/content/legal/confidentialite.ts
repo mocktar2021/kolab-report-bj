@@ -235,7 +235,7 @@ export const confidentialite: LegalDocument = {
             rows: [
               [
                 "Compte et profil",
-                "Tant que le compte existe. Vous pouvez demander sa suppression à tout moment (voir [Exercer vos droits](#exercer-vos-droits)).",
+                "Tant que le compte existe. Vous pouvez le supprimer vous-même à tout moment (voir [Exercer vos droits](#exercer-vos-droits)).",
               ],
               [
                 "Session de connexion",
@@ -259,8 +259,12 @@ export const confidentialite: LegalDocument = {
               ],
               ["Fichiers supprimés", "Retirés du stockage par une tâche quotidienne."],
               [
-                "Journal des suppressions : qui a supprimé un rapport, un espace de travail ou une organisation, et quand",
+                "Journal des suppressions et des transferts : qui a supprimé un rapport, un espace de travail ou une organisation, ou transféré une organisation, et quand",
                 "12 mois, puis il est effacé. Il ne garde ni titre, ni nom, ni contenu.",
+              ],
+              [
+                "Essai gratuit",
+                "Une empreinte de l'adresse e-mail de la personne qui a ouvert l'essai, sans l'adresse elle-même, pour qu'une même personne n'ait qu'un essai gratuit. Elle est gardée sans limite de durée, même après la suppression du compte.",
               ],
               [
                 "Facturation : factures, reçus, paiements",
@@ -325,8 +329,8 @@ export const confidentialite: LegalDocument = {
       body: [
         `Écrivez à ${SUPPORT_EMAIL} depuis l'adresse e-mail de votre compte. Si vous écrivez depuis une autre adresse, nous vous demandons de confirmer votre identité.`,
         "Nous répondons dans un délai d'un mois. Pour une demande complexe, ce délai peut être prolongé de deux mois : nous vous prévenons alors dans le premier mois.",
-        "L'application ne permet pas encore de télécharger vos données ni de supprimer votre compte vous-même : nous traitons ces demandes à la main. Les propriétaires et administrateurs d'un espace peuvent déjà exporter chaque rapport en Word ou en PDF.",
-        "Si vous êtes le seul propriétaire d'un espace de travail, un autre propriétaire doit être désigné avant la suppression de votre compte. Nous vous guidons dans ce cas.",
+        "Depuis la page **Mon compte** de l'application, vous pouvez vous-même télécharger vos données dans un fichier JSON, corriger votre nom et supprimer votre compte. Le texte des rapports n'est pas dans ce fichier : les propriétaires et administrateurs d'un espace peuvent exporter chaque rapport en Word ou en PDF.",
+        "Si vous êtes propriétaire d'une organisation, ou le seul propriétaire d'un espace de travail, transférez-les ou supprimez-les avant de supprimer votre compte. Cette page indique quoi faire. Les rapports et fichiers que vous avez créés restent dans leurs espaces de travail, sans votre nom, et les paiements et reçus restent rattachés à l'organisation. Pour qu'une même personne n'ait qu'un essai gratuit, nous gardons une empreinte de votre adresse e-mail, sans l'adresse elle-même et sans limite de durée.",
         "Si votre demande porte sur le contenu d'un rapport ou d'un livrable, elle relève de l'organisation qui l'a déposé. Nous la lui transmettons et l'aidons à y répondre.",
       ],
     },

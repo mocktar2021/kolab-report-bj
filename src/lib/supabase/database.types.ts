@@ -655,7 +655,7 @@ export type Database = {
           storage_path: string;
           updated_at: string;
           uploaded_at: string | null;
-          uploaded_by: string;
+          uploaded_by: string | null;
           workspace_id: string;
         };
         ComputedFields: never;
@@ -674,7 +674,7 @@ export type Database = {
           storage_path: string;
           updated_at?: string;
           uploaded_at?: string | null;
-          uploaded_by?: string;
+          uploaded_by?: string | null;
           workspace_id: string;
         };
         Update: {
@@ -692,7 +692,7 @@ export type Database = {
           storage_path?: string;
           updated_at?: string;
           uploaded_at?: string | null;
-          uploaded_by?: string;
+          uploaded_by?: string | null;
           workspace_id?: string;
         };
         Relationships: [
@@ -1265,7 +1265,7 @@ export type Database = {
       reports: {
         Row: {
           created_at: string;
-          created_by: string;
+          created_by: string | null;
           description: string | null;
           due_date: string | null;
           id: string;
@@ -1277,7 +1277,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           created_at?: string;
-          created_by?: string;
+          created_by?: string | null;
           description?: string | null;
           due_date?: string | null;
           id?: string;
@@ -1288,7 +1288,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          created_by?: string;
+          created_by?: string | null;
           description?: string | null;
           due_date?: string | null;
           id?: string;
@@ -1322,7 +1322,7 @@ export type Database = {
           email: string;
           expires_at: string;
           id: string;
-          invited_by: string;
+          invited_by: string | null;
           revoked_at: string | null;
           role: Database["public"]["Enums"]["workspace_role"];
           token_hash: string;
@@ -1337,7 +1337,7 @@ export type Database = {
           email: string;
           expires_at?: string;
           id?: string;
-          invited_by?: string;
+          invited_by?: string | null;
           revoked_at?: string | null;
           role?: Database["public"]["Enums"]["workspace_role"];
           token_hash: string;
@@ -1351,7 +1351,7 @@ export type Database = {
           email?: string;
           expires_at?: string;
           id?: string;
-          invited_by?: string;
+          invited_by?: string | null;
           revoked_at?: string | null;
           role?: Database["public"]["Enums"]["workspace_role"];
           token_hash?: string;
@@ -1434,7 +1434,7 @@ export type Database = {
           archived_at: string | null;
           billing_mode: string;
           created_at: string;
-          created_by: string;
+          created_by: string | null;
           description: string | null;
           id: string;
           name: string;
@@ -1446,7 +1446,7 @@ export type Database = {
           archived_at?: string | null;
           billing_mode?: string;
           created_at?: string;
-          created_by?: string;
+          created_by?: string | null;
           description?: string | null;
           id?: string;
           name: string;
@@ -1457,7 +1457,7 @@ export type Database = {
           archived_at?: string | null;
           billing_mode?: string;
           created_at?: string;
-          created_by?: string;
+          created_by?: string | null;
           description?: string | null;
           id?: string;
           name?: string;
@@ -1717,6 +1717,7 @@ export type Database = {
         Args: { p_purchase_id: string; p_status?: string; p_transaction_id: number };
         Returns: undefined;
       };
+      claim_account_deletion: { Args: Record<PropertyKey, never>; Returns: string };
       claim_ai_cost_alert: { Args: { p_threshold: number }; Returns: number };
       claim_report_export: {
         Args: {
@@ -1776,6 +1777,27 @@ export type Database = {
           workspace_name: string;
         }[];
       };
+      my_account_deletion_blockers: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          kind: string;
+          organization_id: string;
+          organization_name: string;
+          other_members: number;
+          successors: number;
+          workspace_id: string;
+          workspace_name: string;
+        }[];
+      };
+      my_account_sessions: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          created_at: string;
+          ip: string;
+          refreshed_at: string;
+          user_agent: string;
+        }[];
+      };
       my_manageable_organizations: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1784,6 +1806,16 @@ export type Database = {
         }[];
       };
       organization_deletion_preview: { Args: { p_organization_id: string }; Returns: Json };
+      organization_transfer_candidates: {
+        Args: { p_organization_id: string };
+        Returns: {
+          email: string;
+          full_name: string;
+          user_id: string;
+        }[];
+      };
+      prepare_account_deletion: { Args: { p_user_id: string }; Returns: Json };
+      release_account_deletion: { Args: Record<PropertyKey, never>; Returns: undefined };
       release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
       reorder_report_sections: { Args: { p_report_id: string; p_section_ids: string[] }; Returns: undefined };
       report_deletion_preview: { Args: { p_report_id: string }; Returns: Json };
@@ -1816,6 +1848,10 @@ export type Database = {
         }[];
       };
       start_prompt_rollout: { Args: { p_candidate_id: string; p_percent: number }; Returns: string };
+      transfer_organization: {
+        Args: { p_new_owner_id: string; p_organization_id: string };
+        Returns: undefined;
+      };
       transition_report_status: {
         Args: {
           p_from: Database["public"]["Enums"]["report_status"];

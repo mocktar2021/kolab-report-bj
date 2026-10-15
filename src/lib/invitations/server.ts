@@ -67,7 +67,7 @@ export async function sendInvitationEmail(input: {
       link: invitationLink(input.token),
       workspaceName: workspace.name,
       organizationName: workspace.organization?.name ?? null,
-      inviterName: inviter?.name ?? "Un membre de KolabReport",
+      inviterName: inviter?.name ?? null,
       role: input.role,
       expiresAt: input.expiresAt,
     }),

@@ -9,7 +9,7 @@ This is not legal advice. A lawyer should review these documents before launch.
 | [`record-of-processing.md`](record-of-processing.md) | Record of processing activities (Article 30), one table per activity |
 | [`processors.md`](processors.md) | Subprocessors, what each one receives, region and DPA status |
 | [`retention.md`](retention.md) | How long each kind of data is kept, today and as targeted |
-| [`data-subject-requests.md`](data-subject-requests.md) | Operator runbook for access, export, rectification and erasure requests |
+| [`data-subject-requests.md`](data-subject-requests.md) | What the account page does for access, export, rectification and erasure, and the operator runbook for the rest |
 
 ## Owner and review
 
@@ -72,5 +72,5 @@ Configuration and engineering:
 - [ ] Set `CRON_SECRET` on the Vercel production environment, so the daily storage cleanup runs there.
 - [ ] Decide the retention rules still open in `retention.md`: AI generation content after its section is deleted, notifications, invitations, status history, accounts never confirmed or inactive, and the Supabase Auth audit log.
 - [ ] Set up the nightly backups of production (database dump and Storage copy, `docs/operations/backups.md`), and decide on the Supabase Pro plan and point-in-time recovery. Their retention is in `retention.md`.
-- [ ] Build self-service data export and account deletion (proposed follow-up at the end of `data-subject-requests.md`). Until then, an operator answers requests with the runbook.
+- [x] Build self-service data export and account deletion. Done in KRB-186: `/fr/compte`. An operator still answers what the app can't do, with the runbook in `data-subject-requests.md`.
 - [ ] Keep a log of answered requests (date, type, user id, what was done), so erasures can be applied again after a backup restore.

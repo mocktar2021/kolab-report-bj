@@ -39,7 +39,9 @@ export default async function InvitationPage({
     return <Problem title={t("invalidTitle")} message={t("invalid")} signedIn={Boolean(user)} />;
   }
   if (data.status === "expired") {
-    return <Problem title={t("expiredTitle")} message={t("expired")} signedIn={Boolean(user)} />;
+    // Nobody to ask when the sender's account is gone: the workspace's managers resend it.
+    const message = data.invited_by_name ? t("expired") : t("expiredNoInviter");
+    return <Problem title={t("expiredTitle")} message={message} signedIn={Boolean(user)} />;
   }
   if (data.status === "accepted") {
     // Signing in already accepts open invitations, so the person who used this
@@ -62,7 +64,11 @@ export default async function InvitationPage({
   return (
     <AuthShell
       title={t("title", { workspace: data.workspace_name })}
-      description={t("description", { inviter: data.invited_by_name ?? "", role })}
+      description={
+        data.invited_by_name
+          ? t("description", { inviter: data.invited_by_name, role })
+          : t("descriptionNoInviter", { role })
+      }
     >
       <div className="space-y-5">
         <div className="space-y-1 rounded-xl bg-muted/50 p-4 text-sm">

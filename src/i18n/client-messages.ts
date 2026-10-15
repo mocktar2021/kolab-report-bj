@@ -38,6 +38,8 @@ export const CLIENT_MESSAGE_SCOPES = {
   ],
   workspaceWizard: ["WorkspaceWizard", "Workspaces"],
   members: ["Members", "Workspaces"],
+  /** /fr/compte: name, transfer and deletion forms. Auth for the password field and the captcha. */
+  account: ["Account", "Auth"],
   prompts: ["Prompts"],
   section: ["AiDraft", "Deliverables", "Prompts.outputSchemas", "SectionEditor", "SectionStatus"],
   report: ["Report", "ReportExport", "ReportStatus", "SectionStatus", "Workspaces"],

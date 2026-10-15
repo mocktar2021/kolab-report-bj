@@ -2,7 +2,7 @@ import { PUBLISHER, SUPPORT_EMAIL } from "./publisher";
 import type { LegalDocument } from "./types";
 
 export const cgu: LegalDocument = {
-  updatedAt: "2026-10-14",
+  updatedAt: "2026-10-15",
   intro: [
     "Les présentes conditions générales d'utilisation (CGU) fixent les règles d'utilisation de KolabReport. Elles s'appliquent à toute personne qui crée un compte ou utilise le service, quel que soit son rôle.",
   ],
@@ -175,7 +175,8 @@ export const cgu: LegalDocument = {
       id: "fin-utilisation",
       title: "Fin de l'utilisation",
       body: [
-        `Vous pouvez arrêter d'utiliser KolabReport à tout moment et demander la suppression de votre compte à ${SUPPORT_EMAIL}. Si vous êtes le seul propriétaire d'un espace, désignez d'abord un autre propriétaire ou demandez la suppression de l'espace.`,
+        `Vous pouvez arrêter d'utiliser KolabReport à tout moment et supprimer vous-même votre compte depuis la page **Mon compte** de l'application. Vous pouvez aussi demander sa suppression à ${SUPPORT_EMAIL}.`,
+        "La suppression du compte n'est pas possible tant que vous êtes propriétaire d'une organisation ou seul propriétaire d'un espace de travail. Transférez d'abord l'organisation à un propriétaire de l'un de ses espaces, nommez un autre propriétaire de l'espace, ou supprimez l'espace ou l'organisation. La page **Mon compte** indique quoi faire.",
         "Un propriétaire ou un administrateur peut retirer un membre d'un espace. Le membre perd l'accès à cet espace mais garde son compte.",
         `${PUBLISHER.name} peut fermer un compte en cas de manquement grave ou répété aux présentes CGU, après une suspension restée sans effet.`,
         "La fin du contrat d'une organisation est régie par les [conditions générales de vente](/cgv#resiliation) et l'[accord de traitement des données](/accord-traitement-donnees#fin-du-contrat).",
@@ -186,7 +187,7 @@ export const cgu: LegalDocument = {
       title: "Modification des CGU",
       body: [
         `${PUBLISHER.name} peut modifier les présentes CGU. Pour un changement important, elle prévient les utilisateurs par e-mail ou dans l'application au moins 30 jours avant son entrée en vigueur, sauf si la loi ou la sécurité du service impose d'aller plus vite.`,
-        "Utiliser KolabReport après cette date vaut acceptation des nouvelles CGU. Si vous les refusez, vous pouvez cesser d'utiliser le service et demander la suppression de votre compte.",
+        "Utiliser KolabReport après cette date vaut acceptation des nouvelles CGU. Si vous les refusez, vous pouvez cesser d'utiliser le service et supprimer votre compte.",
       ],
     },
     {

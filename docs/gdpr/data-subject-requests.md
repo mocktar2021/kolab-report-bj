@@ -1,6 +1,6 @@
 # Data subject requests
 
-Operator runbook for a request to access, export, correct or delete personal data. **The app has no self-service export or account deletion yet**: an operator answers each request by hand with the steps below. A proposal for the self-service version is at the [end of this page](#follow-up-self-service-export-and-deletion).
+Runbook for a request to access, export, correct or delete personal data. Since KRB-186 a signed-in person does most of it on `/fr/compte`: they download their data, change their name, transfer an organization they own and delete their account. The [last section](#self-service-in-the-app) says what the app does. An operator answers by hand, with the steps below, only what the app can't do: a person who can no longer sign in, a change of e-mail address, and the copies outside the database (backups, the e-mail provider, the Auth audit log).
 
 You run the SQL in the SQL editor of the production Supabase project. The editor connects as `postgres`, which bypasses RLS like the service role, so every query below is scoped to one person or one workspace: keep it that way. Try any step that writes on staging first.
 
@@ -44,7 +44,9 @@ where m.workspace_id = '<workspace-id>' and m.role = 'owner';
 
 ## Access and export
 
-This query returns one JSON document with the account and everything that links to the person: profile, sessions, memberships, invitations, and the records they created or that point at them. It leaves out the text of sections and AI drafts, which is the firm's content: add it only with the firm's agreement, or let the firm export its reports from the app.
+A person who can sign in gets this file themselves: "Télécharger mes données" on `/fr/compte` returns the same JSON, built by `src/lib/account/export.ts`. Use the query when they can't.
+
+This query returns one JSON document with the account and everything that links to the person: profile, sessions, memberships, invitations, and the records they created or that point at them. It also lists the purchases the person made, with their receipt numbers and without the FedaPay details. It leaves out the text of sections and AI drafts, which is the firm's content: add it only with the firm's agreement, or let the firm export its reports from the app.
 
 ```sql
 with target as (
@@ -107,7 +109,16 @@ select jsonb_pretty(jsonb_build_object(
     from public.prompt_library pl join target t on t.id = pl.created_by),
   'prompt_rollouts_started', (select coalesce(jsonb_agg(jsonb_build_object(
       'id', ro.id, 'template_key', ro.template_key, 'created_at', ro.created_at)), '[]')
-    from public.prompt_rollouts ro join target t on t.id = ro.created_by)
+    from public.prompt_rollouts ro join target t on t.id = ro.created_by),
+  'billing_purchases', (select coalesce(jsonb_agg(jsonb_build_object(
+      'id', bp.id, 'organization_id', bp.organization_id, 'workspace_id', bp.workspace_id,
+      'offer', bp.offer, 'offer_label', bp.offer_label, 'quantity', bp.quantity,
+      'amount_ht_xof', bp.amount_ht_xof, 'tax_xof', bp.tax_xof, 'amount_xof', bp.amount_xof,
+      'currency', bp.currency, 'method', bp.method, 'status', bp.status,
+      'merchant_reference', bp.merchant_reference, 'created_at', bp.created_at, 'paid_at', bp.paid_at,
+      'receipt_numbers', (select coalesce(jsonb_agg(br.number order by br.number), '[]')
+        from public.billing_receipts br where br.purchase_id = bp.id))), '[]')
+    from public.billing_purchases bp join target t on t.id = bp.created_by)
 )) as export;
 ```
 
@@ -129,9 +140,9 @@ Send the export to the account's e-mail address, in an encrypted archive or thro
 
 ## Rectification
 
-The app has no screen to edit a profile yet.
+A person changes their name on `/fr/compte`: the app writes `profiles.full_name` and the Auth metadata. The app has no screen to change the e-mail address.
 
-- **Name**: the app shows `profiles.full_name`. Change it there and in the Auth metadata, which still holds the name typed at sign-up:
+- **Name**, when they can't sign in: the app shows `profiles.full_name`. Change it there and in the Auth metadata, which still holds the name typed at sign-up:
 
   ```sql
   update public.profiles set full_name = 'Nouveau Nom' where id = '<user-id>';
@@ -150,7 +161,7 @@ The app has no screen to edit a profile yet.
 
 ## Erasure: deleting an account
 
-Deleting the Auth user deletes the profile, and the foreign keys then decide what happens to everything that points at it. Some rows block the delete until they are handed over. Others survive it and have to be cleared first.
+A person deletes their own account on `/fr/compte` ([Self-service in the app](#self-service-in-the-app)). Follow these steps only when they can't sign in. The database applies the same rules on both paths (migration "account deletion", KRB-186).
 
 ### What deleting the account does
 
@@ -160,53 +171,39 @@ Deleting the Auth user deletes the profile, and the foreign keys then decide wha
 | `profiles` | Deleted (cascade from `auth.users`) |
 | `workspace_members` of the person | Deleted. Their sections become unassigned (trigger `unassign_former_member`). |
 | `workspace_members.invited_by` | Set to null |
-| `workspace_invitations` they sent (open, used or revoked) | Deleted |
+| `workspace_invitations` they sent (open, used or revoked) | Kept with the workspace, `invited_by` set to null. An open one keeps working: the invitation page and e-mail name the workspace only. |
 | `workspace_invitations.accepted_by` | Set to null |
-| `workspace_invitations` sent **to** their e-mail | Kept: linked by e-mail, not by id. Delete them in step 3. |
+| `workspace_invitations` sent **to** their e-mail | Deleted by `prepare_account_deletion` (step 3): they are linked by e-mail, not by id |
 | `notifications` they received | Deleted |
 | `report_sections.assigned_to` | Set to null |
-| `ai_generations.requested_by` | Set to null. Drafts, ratings and `feedback_comment` stay: clear the comment in step 3. |
+| `ai_generations.requested_by` | Set to null. Drafts and ratings stay. `prepare_account_deletion` clears `feedback_comment`. |
+| `workspaces.created_by`, `reports.created_by`, `deliverables.uploaded_by` | Set to null, rows kept with the workspace |
 | `prompt_library.created_by`, `prompt_rollouts.created_by`, `report_exports.created_by`, `report_status_events.changed_by` | Set to null, rows kept (they are the firm's records) |
-| `organizations.owner_id` | **Blocks the delete** (`on delete restrict`) |
-| `workspaces.created_by`, `reports.created_by`, `deliverables.uploaded_by` | **Block the delete** (no `on delete` action, columns not nullable) |
-| Storage objects they own (`storage.objects.owner_id`) | **Block the delete**: Supabase refuses to delete an Auth user who owns Storage objects |
+| Storage objects they own (`storage.objects.owner`, `owner_id`) | Kept with the workspace. `prepare_account_deletion` sets the owner to null first. |
+| `organizations.owner_id` | **Blocks the delete** (`on delete restrict`): transfer or delete the organization first |
+| Being the only owner of a workspace, with or without other members | **Blocks the delete**: the trigger `guard_account_deletion` on `profiles` refuses it with `KR060`, from the app, the dashboard or SQL |
+| `private.billing_trial_claims` (user id, SHA-256 of the e-mail) | Kept: no foreign key, so a new account with the same address gets no second trial (ADR 001) |
+| Billing rows of the organization (entitlements, packs, draft usage, billing details, `private.billing_events`, purchases and receipts) | Kept: they belong to the organization. `billing_purchases.created_by` is set to null. |
+| `private.account_deletion_attempts` | Deleted (cascade). The app's lock and limit on deletion tries. |
 | `auth.audit_log_entries` (user id, name, e-mail, IP) | Kept: no foreign key. See step 6. |
 
-One more case doesn't block anything but has to be handled first: the last-owner guard (`guard_last_owner` in `20261013150000_workspace_rbac.sql`) stops the app from removing a workspace's last owner, but it lets the cascade from a deleted profile through on purpose. Deleting the account of a workspace's only owner would leave a workspace that nobody can manage.
-
-### Step 1: check what needs handling
+### Step 1: check what blocks the delete
 
 ```sql
-with target as (select '<user-id>'::uuid as id)
-select 'organizations owned (blocks the delete)' as item, count(*)
-from public.organizations o join target t on t.id = o.owner_id
-union all
-select 'workspaces created (blocks the delete)', count(*)
-from public.workspaces w join target t on t.id = w.created_by
-union all
-select 'reports created (blocks the delete)', count(*)
-from public.reports r join target t on t.id = r.created_by
-union all
-select 'deliverables uploaded (blocks the delete)', count(*)
-from public.deliverables d join target t on t.id = d.uploaded_by
-union all
-select 'storage objects owned (blocks the delete)', count(*)
-from storage.objects so join target t on so.owner_id = t.id::text
-union all
-select 'workspaces where they are the only owner', count(*)
-from public.workspace_members m join target t on t.id = m.user_id
-where m.role = 'owner'
-  and not exists (
-    select 1 from public.workspace_members o
-    where o.workspace_id = m.workspace_id and o.role = 'owner' and o.user_id <> m.user_id
-  );
+select * from private.account_deletion_blockers('<user-id>');
 ```
 
-If every count is 0, go to step 3.
+No row: go to step 3. Otherwise each row says what to do:
 
-### Step 2: hand over each workspace
+| `kind` | Meaning | Way out |
+| --- | --- | --- |
+| `organization_owner` | They own the organization. `successors` counts the owners of its workspaces who can take it over. | Transfer it (step 2), or its owner deletes it in the app ([Deleting a workspace or an organization](#deleting-a-workspace-or-an-organization)) |
+| `only_owner` | They are the only owner of a workspace that has `other_members` other members | Name another owner (step 2), or an owner of the workspace or of its organization deletes the workspace |
+| `only_member` | They are the only member of a workspace | They delete the workspace, or the organization owner does |
 
-For each workspace in the list from [Find the person](#find-the-person), ask the firm who takes over (`<successor-id>`, a member of that workspace). If the firm wants the workspace gone instead, an owner deletes it in the app ([Deleting a workspace or an organization](#deleting-a-workspace-or-an-organization)); skip this step for it.
+### Step 2: hand over each workspace and organization
+
+For each workspace in step 1, ask the firm who takes over (`<successor-id>`, a member of that workspace). If the firm wants the workspace gone instead, an owner deletes it in the app ([Deleting a workspace or an organization](#deleting-a-workspace-or-an-organization)); skip this step for it.
 
 1. Make the successor an owner. In the app, an owner does it on the workspace's members page. If the leaving person is the only owner and can't do it, run:
 
@@ -215,50 +212,38 @@ For each workspace in the list from [Find the person](#find-the-person), ask the
    where workspace_id = '<workspace-id>' and user_id = '<successor-id>';
    ```
 
-2. Move the records that block the delete to the successor, workspace by workspace. The app will then show the successor as the creator of these reports and the uploader of these files. A migration that lets these columns be null would remove this step (see the follow-up below).
-
-   ```sql
-   update public.workspaces set created_by = '<successor-id>'
-   where id = '<workspace-id>' and created_by = '<user-id>';
-
-   update public.reports set created_by = '<successor-id>'
-   where workspace_id = '<workspace-id>' and created_by = '<user-id>';
-
-   update public.deliverables set uploaded_by = '<successor-id>'
-   where workspace_id = '<workspace-id>' and uploaded_by = '<user-id>';
-
-   -- The stored files of that workspace. This changes ownership metadata only.
-   update storage.objects set owner = '<successor-id>', owner_id = '<successor-id>'
-   where owner_id = '<user-id>' and name like '<workspace-id>' || '/%';
-   ```
-
-3. If they own the organization, move it too. If the firm wants the organization and all its workspaces gone, its owner deletes it in the app instead, from `/fr/organisations/<organization-id>`. Never delete an organization only to free the account: it deletes all its workspaces.
+2. If they own the organization, hand it to an owner of one of its workspaces. In the app, the owner does it on `/fr/compte`, which also writes the billing log and the audit log. By hand, write all three. If the firm wants the organization and all its workspaces gone, its owner deletes it in the app instead, from `/fr/organisations/<organization-id>`. Never delete an organization only to free the account: it deletes all its workspaces.
 
    ```sql
    update public.organizations set owner_id = '<successor-id>'
    where id = '<organization-id>' and owner_id = '<user-id>';
+
+   insert into private.billing_events (organization_id, kind, actor, details)
+   values ('<organization-id>', 'owner_transferred', '<your name>',
+     jsonb_build_object('previous_owner_id', '<user-id>', 'new_owner_id', '<successor-id>'));
+
+   insert into private.audit_events (action, organization_id, details)
+   values ('organization_transferred', '<organization-id>',
+     jsonb_build_object('previous_owner_id', '<user-id>', 'new_owner_id', '<successor-id>', 'by', 'operator'));
    ```
 
-Run the step 1 query again. Every count must be 0.
+Run the step 1 query again. It must return no row.
 
 ### Step 3: clear what would survive the delete
 
 ```sql
--- Free text they wrote about AI drafts. Ratings stay, without a name.
-update public.ai_generations set feedback_comment = null
-where requested_by = '<user-id>' and feedback_comment is not null;
-
--- Invitations sent to their address, in any workspace.
-delete from public.workspace_invitations where email = lower('person@example.com');
+select public.prepare_account_deletion('<user-id>');
 ```
+
+It sets the owner of their Storage objects to null, clears their `feedback_comment` on AI drafts, deletes the invitations sent to their address and their notifications, and returns how many rows each step touched. While step 1 still returns a row, it refuses with `KR060` and changes nothing.
 
 ### Step 4: delete the account
 
 In the Supabase dashboard, open **Authentication > Users**, find the person and choose **Delete user**. From a script, `supabase.auth.admin.deleteUser('<user-id>')` with the service role key does the same.
 
-If the delete fails on a foreign key, a row from step 1 was missed: run step 1 again.
+If the delete fails ("Database error deleting user"), something blocks it again, for example another owner left a workspace in the meantime: run step 1 again.
 
-Supabase's documentation notes that deleting a user does not sign them out: their access token stays valid until it expires (`jwt_expiry`, 3,600 s in `supabase/config.toml`). They can't read workspace data in the meantime, because RLS checks memberships and those are gone.
+Supabase's documentation notes that deleting a user does not sign them out: their access token stays valid until it expires (`jwt_expiry`, 3,600 s in `supabase/config.toml`). The app checks every request with `getUser()`, which fails once the user is gone, and RLS checks memberships, which are gone too.
 
 ### Step 5: check
 
@@ -276,6 +261,8 @@ Every column must be 0.
 
 ### Step 6: outside the tables
 
+The app's deletion stops at the database as well: an operator does these steps in both cases.
+
 - **Auth audit log**: `auth.audit_log_entries` keeps sign-in events with the user id, name and e-mail. How long to keep it is **to decide** ([`retention.md`](retention.md)). If the decision is to remove it on erasure:
 
   ```sql
@@ -284,8 +271,26 @@ Every column must be 0.
 
 - **E-mail provider**: look for their address in the provider's logs or contacts and delete it where the provider allows.
 - **LLM provider and traces**: the app sends no user id, name or e-mail to the LLM provider or to the traces, so there is nothing to look up there.
-- **Backups**: they expire on their own schedule. Keep the request in the log so the erasure can be applied again after a restore.
+- **Backups**: they expire on their own schedule. Keep the request in the log so the erasure can be applied again after a restore ([step 7](#step-7-after-a-backup-restore)).
+- **Trial claim**: kept on purpose and with no time limit, see the table above.
 - Answer the person, at the address they used, once it is done.
+
+### Step 7: after a backup restore
+
+A restore brings back every account deleted after the backup was taken, and it rolls back every table too, so the list of those accounts is kept outside the database:
+
+- each deletion made in the app sends an e-mail to `ACCOUNT_DELETION_LOG_EMAIL` with the account id, the date and the environment, never the e-mail address or the name (`src/lib/account/deletion-record.ts`);
+- each deletion made by hand is in the request log ([Before you start](#before-you-start)).
+
+The mailbox keeps these e-mails 35 days ([`retention.md`](retention.md)), longer than any backup.
+
+After restoring a backup taken at time T, on the restored environment:
+
+1. List the ids e-mailed to `ACCOUNT_DELETION_LOG_EMAIL` after T, subject `[KolabReport <environment>] Compte supprimé <id>`, and the deletions of the request log after T.
+2. For each id, run [step 1](#step-1-check-what-blocks-the-delete) to [step 5](#step-5-check). The person may have transferred an organization or named an owner before deleting: that is in the backup only if it happened before T, so step 2 may be needed again.
+3. Write in the request log that the erasures were applied again, with the date of the restore.
+
+If the setting was empty, the app logged `ACCOUNT_DELETION_LOG_EMAIL is not set` once per server instance and sent nothing: look for `account: deleted` lines in the server logs instead, while Vercel still keeps them.
 
 ## Deleting a workspace or an organization
 
@@ -295,7 +300,7 @@ Since KRB-180 the firm does it in the app; who can delete what is in [`docs/secu
 - An organization with all its workspaces: its owner (`organizations.owner_id`) opens **Gérer l'organisation** in the workspace menu (`/fr/organisations/<organization-id>`), then **Supprimer l'organisation**, and types its name. The dialog lists every workspace that goes and the plan, passes and Pack IA credits that are lost.
 - A report: an owner or admin opens it, then **Supprimer le rapport** at the bottom. A final report needs an owner and its title.
 
-Each deletion queues the stored files of what goes in the cleanup queue, and the daily job (KRB-166) removes them. It is recorded in `private.audit_events`. Payments and receipts stay, detached from the organization ([`retention.md`](retention.md)). Member accounts stay too: each person decides about their own account.
+Each deletion queues the stored files of what goes in the cleanup queue, and the daily job (KRB-166) removes them. It is recorded in `private.audit_events`. Payments and receipts stay, detached from the organization ([`retention.md`](retention.md)). Member accounts stay too: each person decides about their own account, and can delete it on `/fr/compte`.
 
 When the firm asks KolabReport instead (the customer DPA says whether KolabReport deletes or returns the data, **to confirm**), first ask an owner to do it in the app, after exporting what they want to keep. Owners and admins export each report as `.docx` or PDF, and download the files from each section.
 
@@ -350,14 +355,16 @@ where d.workspace_id = '<workspace-id>'
 
 Files that are not read (PDF, PowerPoint, images, diagrams) have no extracted text, so this search can't see inside them. The firm edits or deletes the content in the app. AI generations of a section keep their draft text after the section changes, and lose it when the section goes ([`retention.md`](retention.md)). If the firm asks about a section that still exists, clear `output` and `raw_output` on its generations.
 
-## Follow-up: self-service export and deletion
+## Self-service in the app
 
-Proposed as a new story, not built:
+`/fr/compte` (KRB-186), linked as "Mon compte" under the user's name in the app menu. Every action works on the user of the session (`getUser()`), never on an id from the form or the URL.
 
-- A "Mes données" page in the account area, in French, with three actions:
-  - download my data: a server route that builds the JSON above with the service role, scoped to the signed-in user;
-  - change my name;
-  - delete my account: refused while the person is the only owner of a workspace, with a link to the members page to name another owner first. It then clears `feedback_comment` and the invitations sent to their address, and calls `auth.admin.deleteUser`.
-- A migration that makes `workspaces.created_by`, `reports.created_by` and `deliverables.uploaded_by` nullable with `on delete set null`, so a deletion needs no handover of these rows. `organizations.owner_id` still needs a handover, since it decides who can create workspaces.
-- Storage objects owned by the person block the delete. The deletion route sets `owner` and `owner_id` to null on those objects first.
-- An e2e test of the deletion, with a pgTAP test of the cascades.
+- **Change my name**: writes `profiles.full_name` with the user's client, then the `full_name` of the Auth metadata.
+- **Download my data**: `GET /api/account/export` answers with the JSON of [Access and export](#access-and-export), as an attachment that is never cached (`Cache-Control: private, no-store`). The user's client reads what RLS lets them read: profile, sessions (through `my_account_sessions()`), owned organizations, memberships, assigned sections and notifications. The service role reads the rows that name the person but that RLS may hide, such as a report they created in a workspace they left, an invitation sent to their address, or a purchase they made (`billing_purchases.created_by`, with the numbers of its receipts and none of the FedaPay details). Each of those queries is filtered on the session's user id or e-mail. The file never holds the text of reports, sections, files or drafts.
+- **Transfer an organization**: shown for each organization the user owns. `transfer_organization(org, new_owner)` accepts only the current owner as caller and an owner of one of the organization's workspaces as the new owner (`KR061` otherwise). It writes `owner_transferred` to `private.billing_events` and `organization_transferred` to the audit log of KRB-180, `private.audit_events`. The new owner can then delete the organization or any of its workspaces (KRB-180), and the dialog says so before the transfer. The billing functions read `owner_id` when they run, so the new owner gets the organization's billing rights at once. The billing details (`organization_billing`) and the trial claim don't change.
+- **Delete my account**: the invitations the person sent stay with their workspace, with no inviter. `my_account_deletion_blockers()` lists what blocks it, with links to the transfer above, to the members page of the workspace, and to the deletion of a workspace or an organization (KRB-180). When nothing blocks, the person types the account's e-mail address and their current password. The server checks the password with a sign-in of its own, then runs step 3 (`prepare_account_deletion`) and step 4 (`auth.admin.deleteUser`) with the service role, signs the browser out and shows `/fr/compte-supprime`.
+- **One deletion at a time**: `claim_account_deletion()` refuses a second deletion while one runs (2 minutes at most), and more than 5 tries in 15 minutes. A double click runs the deletion once, and the password check can't be used to guess passwords. A try that stops (wrong password, a blocker) releases the lock but still counts.
+- **Logs**: `account: deleted`, `account: deletion refused, ...`, `account: organization transferred` and `account: data exported`, with the user id and counts. Never the e-mail address or the password.
+- **Record for a restore**: each deletion e-mails the account id and the date to `ACCOUNT_DELETION_LOG_EMAIL` ([step 7](#step-7-after-a-backup-restore)). A failed or missing e-mail is logged and never stops the deletion.
+
+What still needs an operator: [step 6](#step-6-outside-the-tables), [step 7](#step-7-after-a-backup-restore) after a restore, a change of e-mail address, and anyone who can't sign in.

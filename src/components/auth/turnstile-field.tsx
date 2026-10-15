@@ -12,7 +12,7 @@ export const TURNSTILE_SCRIPT_URL = "https://challenges.cloudflare.com/turnstile
 const ERROR_ID = "captcha-error";
 
 /** Shows in Turnstile analytics which form a challenge came from. */
-export type TurnstileAction = "sign-up" | "sign-in" | "password-reset";
+export type TurnstileAction = "sign-up" | "sign-in" | "password-reset" | "account-deletion";
 
 type TurnstileOptions = {
   sitekey: string;

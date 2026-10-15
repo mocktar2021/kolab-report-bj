@@ -284,7 +284,8 @@
     "menuTitle": "Menu",
     "menuDescription": "Pages et filtres du tableau de bord.",
     "promptLibrary": "Modèles de prompts",
-    "aiDashboard": "Pilotage de l'IA"
+    "aiDashboard": "Pilotage de l'IA",
+    "account": "Mon compte"
   },
   "Notifications": {
     "title": "Notifications",
@@ -1026,6 +1027,7 @@
     "metaTitle": "Invitation",
     "title": "Rejoindre {workspace}",
     "description": "{inviter} vous invite en tant que {role}.",
+    "descriptionNoInviter": "Vous êtes invité en tant que {role}.",
     "organization": "Organisation : {organization}",
     "forEmail": "Cette invitation est destinée à {email}.",
     "expires": "Valable jusqu'au {date}.",
@@ -1039,6 +1041,7 @@
     "invalid": "Ce lien d'invitation n'est pas valide. Il a peut-être été annulé ou remplacé par un nouveau. Demandez une nouvelle invitation.",
     "expiredTitle": "Invitation expirée",
     "expired": "Cette invitation a expiré. Demandez à la personne qui vous a invité de la renvoyer.",
+    "expiredNoInviter": "Cette invitation a expiré. Demandez-en une nouvelle à un propriétaire ou un administrateur de l'espace de travail.",
     "usedTitle": "Invitation déjà utilisée",
     "used": "Cette invitation a déjà servi. Connectez-vous pour retrouver l'espace de travail.",
     "toDashboard": "Aller au tableau de bord",
@@ -1046,6 +1049,96 @@
     "joinedTitle": "Vous avez rejoint {workspace}",
     "joined": "Vous êtes membre de cet espace de travail.",
     "open": "Ouvrir l'espace"
+  },
+  "Account": {
+    "metaTitle": "Mon compte",
+    "title": "Mon compte",
+    "subtitle": "Votre nom, vos données, vos organisations et la suppression de votre compte.",
+    "profile": {
+      "title": "Profil",
+      "name": "Nom complet",
+      "nameHint": "Les membres de vos espaces de travail voient ce nom.",
+      "save": "Enregistrer",
+      "saved": "Nom enregistré.",
+      "email": "Adresse e-mail",
+      "emailHint": "Pour changer d'adresse, écrivez à {email} depuis l'adresse de votre compte.",
+      "errors": {
+        "nameRequired": "Indiquez votre nom, en 120 caractères au plus.",
+        "generic": "Le nom n'a pas pu être enregistré. Réessayez dans un instant."
+      }
+    },
+    "data": {
+      "title": "Mes données",
+      "description": "Téléchargez dans un fichier JSON ce que KolabReport garde sur vous : votre compte, vos sessions, vos espaces de travail et vos rôles, vos invitations, et la liste des rapports, fichiers, brouillons IA, exports et achats qui portent votre nom.",
+      "content": "Le texte des rapports et le contenu des fichiers appartiennent à l'organisation qui les a déposés. Ses propriétaires et administrateurs les exportent depuis chaque rapport.",
+      "download": "Télécharger mes données"
+    },
+    "transfer": {
+      "title": "Transférer une organisation",
+      "description": "Vous êtes propriétaire de ces organisations. Le nouveau propriétaire gère la facturation, ajoute des espaces de travail et peut supprimer n'importe lequel d'entre eux, ou l'organisation entière. Il doit déjà être propriétaire de l'un de ses espaces.",
+      "newOwner": "Nouveau propriétaire de {organization}",
+      "choose": "Choisir une personne",
+      "submit": "Transférer",
+      "confirmTitle": "Transférer {organization} ?",
+      "confirmDescription": "{name} devient propriétaire de l'organisation et pourra la supprimer, avec n'importe lequel de ses espaces de travail. Vous gardez vos rôles dans ses espaces, mais seul le nouveau propriétaire pourra vous la rendre.",
+      "confirm": "Transférer l'organisation",
+      "cancel": "Annuler",
+      "done": "L'organisation a été transférée. Son nouveau propriétaire gère maintenant sa facturation et ses espaces de travail.",
+      "noCandidate": "Personne ne peut encore reprendre {organization}. Nommez d'abord un autre propriétaire dans l'un de ses espaces de travail, ou supprimez l'organisation.",
+      "deleteOrganization": "Supprimer l'organisation",
+      "errors": {
+        "invalidInput": "Choisissez la personne qui reprend l'organisation.",
+        "forbidden": "Seul le propriétaire de l'organisation peut la transférer.",
+        "notEligible": "Cette personne doit être propriétaire d'un espace de travail de l'organisation.",
+        "generic": "Le transfert n'a pas abouti. Réessayez dans un instant."
+      }
+    },
+    "delete": {
+      "title": "Supprimer mon compte",
+      "description": "La suppression est définitive.",
+      "removed": "Sont supprimés : votre compte et votre profil, vos rôles dans les espaces de travail, vos notifications, les invitations envoyées à votre adresse et vos commentaires sur les brouillons IA.",
+      "kept": "Restent : les rapports, sections et fichiers que vous avez créés et les invitations que vous avez envoyées, dans leurs espaces de travail et sans votre nom. Les paiements et les reçus restent rattachés à l'organisation, comme la loi l'impose.",
+      "trial": "Un nouveau compte créé avec la même adresse n'a pas droit à un nouvel essai gratuit.",
+      "blockedTitle": "Votre compte ne peut pas encore être supprimé",
+      "blockedDescription": "Réglez d'abord ces points, puis revenez sur cette page.",
+      "blockers": {
+        "organizationOwner": "Vous êtes propriétaire de l'organisation {organization}. Transférez-la à une autre personne ou supprimez-la.",
+        "organizationOwnerAlone": "Vous êtes propriétaire de l'organisation {organization} et personne ne peut la reprendre. Nommez un autre propriétaire dans l'un de ses espaces de travail pour la transférer, ou supprimez-la.",
+        "onlyOwner": "Vous êtes le seul propriétaire de l'espace de travail {workspace}, qui compte {count, plural, one {# autre membre} other {# autres membres}}. Nommez un autre propriétaire ou supprimez l'espace.",
+        "onlyMember": "Vous êtes le seul membre de l'espace de travail {workspace}. Supprimez-le d'abord."
+      },
+      "links": {
+        "transfer": "Transférer l'organisation",
+        "deleteOrganization": "Supprimer l'organisation",
+        "members": "Nommer un autre propriétaire",
+        "deleteWorkspace": "Supprimer l'espace de travail"
+      },
+      "checkFailed": "Impossible de vérifier si votre compte peut être supprimé. Rechargez la page dans un instant.",
+      "open": "Supprimer mon compte",
+      "dialogTitle": "Supprimer votre compte ?",
+      "dialogDescription": "Saisissez l'adresse e-mail de votre compte et votre mot de passe actuel. Vous serez déconnecté et ne pourrez plus vous connecter avec ce compte.",
+      "email": "Adresse e-mail du compte",
+      "password": "Mot de passe actuel",
+      "cancel": "Annuler",
+      "confirm": "Supprimer définitivement",
+      "deleting": "Suppression…",
+      "errors": {
+        "invalidInput": "Saisissez l'adresse e-mail de votre compte et votre mot de passe.",
+        "emailMismatch": "Cette adresse n'est pas celle de votre compte.",
+        "wrongPassword": "Mot de passe incorrect.",
+        "busy": "Une suppression est déjà en cours. Patientez quelques instants.",
+        "rateLimited": "Trop de tentatives. Réessayez dans 15 minutes.",
+        "captchaRequired": "Confirmez que vous n'êtes pas un robot.",
+        "blocked": "Votre compte ne peut pas encore être supprimé. Rechargez la page pour voir ce qui le bloque.",
+        "generic": "La suppression n'a pas abouti et votre compte est toujours là. Réessayez dans un instant."
+      }
+    },
+    "deleted": {
+      "metaTitle": "Compte supprimé",
+      "title": "Compte supprimé",
+      "description": "Votre compte KolabReport et vos données personnelles ont été supprimés. Vous êtes déconnecté.",
+      "kept": "Les rapports et fichiers que vous avez créés restent dans leurs espaces de travail, sans votre nom. Nos sauvegardes chiffrées s'effacent d'elles-mêmes sous 14 jours."
+    }
   },
   "Prompts": {
     "metaTitle": "Modèles de prompts",

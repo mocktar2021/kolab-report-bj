@@ -22,6 +22,8 @@ const PUBLIC_PATHS = [
   "/hors-ligne",
   // The invitation page works signed out: the token in the link is the proof.
   "/invitations",
+  // Where a deleted account lands: the session is already gone (KRB-186).
+  "/compte-supprime",
   // Mentions légales, privacy policy, CGU, CGV and data processing agreement.
   // Signed-in users read them too: they are not in SIGNED_IN_REDIRECT_PATHS.
   ...Object.values(LEGAL_PAGES),
