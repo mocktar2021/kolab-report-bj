@@ -52,6 +52,8 @@ export type Receipt = {
     fedapayTransactionId: number | null;
     fedapayReference: string | null;
     merchantReference: string | null;
+    /** The bank's reference of a transfer recorded by the operator (KRB-179). */
+    transferReference: string | null;
     paidAt: string | null;
   };
   totalHtXof: number;
@@ -102,6 +104,8 @@ const rowSchema = z.object({
     fedapay_transaction_id: z.number().int().nullish(),
     fedapay_reference: text,
     merchant_reference: text,
+    // Absent from the receipts issued before KRB-179.
+    transfer_reference: text,
     paid_at: text,
   }),
   total_ht_xof: amount,
@@ -161,6 +165,7 @@ export function parseReceipt(row: unknown, lines: readonly unknown[]): Receipt |
       fedapayTransactionId: data.payment.fedapay_transaction_id ?? null,
       fedapayReference: data.payment.fedapay_reference,
       merchantReference: data.payment.merchant_reference,
+      transferReference: data.payment.transfer_reference,
       paidAt: data.payment.paid_at,
     },
     totalHtXof: data.total_ht_xof,

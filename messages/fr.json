@@ -1705,6 +1705,7 @@
       "paymentDate": "Payé le {date}",
       "fedapayTransaction": "Transaction FedaPay n° {id}",
       "fedapayReference": "Référence FedaPay : {reference}",
+      "transferReference": "Référence du virement : {reference}",
       "merchantReference": "Référence KolabReport : {reference}",
       "externalInvoice": "Facture normalisée (e-MECeF) : {number}",
       "externalInvoiceNone": "Facture normalisée (e-MECeF) : non émise",

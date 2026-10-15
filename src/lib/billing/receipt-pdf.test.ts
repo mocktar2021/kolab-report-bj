@@ -191,6 +191,24 @@ describe("buildReceiptPdf", () => {
     expectParts(text, "Cabinet Dossou", "Moyen de paiement : Virement bancaire");
     expect(text).not.toContain(squash("Organisation :"));
     expect(text).not.toContain(squash("Transaction FedaPay"));
+    expect(text).not.toContain(squash("Référence du virement"));
     expect(text.match(/IFU:/g)).toHaveLength(1);
+  });
+
+  it("prints the reference of a transfer recorded by the operator (KRB-179)", async () => {
+    const text = await textOf(
+      receipt({
+        environment: "manual",
+        payment: {
+          method: "bank_transfer",
+          mode: null,
+          transfer_reference: "VIR-2026-0147",
+          merchant_reference: "KR-6e1d2c3b-4a59-4f6e-8d7c-1b2a3c4d5e6f",
+          paid_at: "2026-10-13T10:00:00+00:00",
+        },
+      }),
+    );
+    expectParts(text, "Moyen de paiement : Virement bancaire", "Référence du virement : VIR-2026-0147");
+    expect(text).not.toContain(squash("Reçu de test"));
   });
 });

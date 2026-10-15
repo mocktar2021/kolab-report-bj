@@ -130,6 +130,7 @@ function ReceiptDocument({ receipt }: { receipt: Receipt }) {
       ? t("fedapayTransaction", { id: String(payment.fedapayTransactionId) })
       : null,
     payment.fedapayReference ? t("fedapayReference", { reference: payment.fedapayReference }) : null,
+    payment.transferReference ? t("transferReference", { reference: payment.transferReference }) : null,
     payment.merchantReference ? t("merchantReference", { reference: payment.merchantReference }) : null,
   ].filter((value): value is string => value !== null);
 
