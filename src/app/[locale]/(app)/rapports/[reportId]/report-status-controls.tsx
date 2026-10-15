@@ -237,6 +237,7 @@ function StatusFeedback({
   state: ReportStatusState;
 }) {
   const t = useTranslations("ReportStatus");
+  const tWorkspaces = useTranslations("Workspaces");
 
   if (pending) {
     return (
@@ -247,6 +248,14 @@ function StatusFeedback({
     );
   }
   if (state.status === "error") {
+    // The organization's plan refused it: reopening past the report limit, or read-only.
+    if (state.billing) {
+      return (
+        <span className="text-destructive">
+          {tWorkspaces(`errors.${state.billing.error}`, state.billing.values)}
+        </span>
+      );
+    }
     return <span className="text-destructive">{t(`errors.${state.error}`)}</span>;
   }
   if (state.status === "success" && submitted) {

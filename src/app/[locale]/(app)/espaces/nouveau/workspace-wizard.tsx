@@ -276,7 +276,7 @@ export function WorkspaceWizard({ organizations, defaultOrganizationId }: Worksp
 
         {state.status === "error" && state.formError ? (
           <p role="alert" className="mt-4 text-sm text-destructive">
-            {tWorkspaces(`errors.${state.formError}`)}
+            {tWorkspaces(`errors.${state.formError}`, state.formErrorValues)}
           </p>
         ) : null}
 

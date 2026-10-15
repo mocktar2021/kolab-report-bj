@@ -99,9 +99,9 @@ function MemberRow({
   // The current role stays in the list even when the caller cannot grant it
   // (an admin looking at their own row, for example).
   const roleOptions = grantable.includes(member.role) ? grantable : [member.role, ...grantable];
-  const error =
-    (removeState.status === "error" && removeState.error) ||
-    (roleState.status === "error" && roleState.error);
+  const failed =
+    (removeState.status === "error" && removeState) || (roleState.status === "error" && roleState) || null;
+  const error = failed ? failed.error : null;
   const selectId = `role-${member.userId}`;
   const statusId = `member-status-${member.userId}`;
 
@@ -123,7 +123,7 @@ function MemberRow({
           ) : null}
           <p id={statusId} role="status" aria-live="polite" className="text-xs">
             {error ? (
-              <span className="text-destructive">{tWorkspaces(`errors.${error}`)}</span>
+              <span className="text-destructive">{tWorkspaces(`errors.${error}`, failed?.values)}</span>
             ) : roleState.status === "success" && role === member.role ? (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Check className="size-3.5" aria-hidden="true" />

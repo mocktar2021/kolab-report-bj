@@ -109,7 +109,7 @@ function InvitationResult({ state }: { state: InvitationActionState }) {
   const tWorkspaces = useTranslations("Workspaces");
 
   if (state.status === "error") {
-    return <p className="text-destructive">{tWorkspaces(`errors.${state.error}`)}</p>;
+    return <p className="text-destructive">{tWorkspaces(`errors.${state.error}`, state.values)}</p>;
   }
   if (state.status !== "sent") return null;
   if (!state.link) {
