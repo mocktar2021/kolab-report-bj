@@ -1752,6 +1752,9 @@ export type Database = {
           workspace_id: string;
         }[];
       };
+      delete_organization: { Args: { p_confirmation: string; p_organization_id: string }; Returns: Json };
+      delete_report: { Args: { p_confirmation?: string; p_report_id: string }; Returns: Json };
+      delete_workspace: { Args: { p_confirmation: string; p_workspace_id: string }; Returns: Json };
       discard_ai_generation: { Args: { p_generation_id: string }; Returns: undefined };
       end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
       expire_report_exports: { Args: { p_days: number }; Returns: number };
@@ -1776,8 +1779,10 @@ export type Database = {
           name: string;
         }[];
       };
+      organization_deletion_preview: { Args: { p_organization_id: string }; Returns: Json };
       release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
       reorder_report_sections: { Args: { p_report_id: string; p_section_ids: string[] }; Returns: undefined };
+      report_deletion_preview: { Args: { p_report_id: string }; Returns: Json };
       rollback_prompt_publish: { Args: { p_version_id: string }; Returns: string };
       save_section_content: {
         Args: { p_content: string; p_expected_version: string; p_section_id: string };
@@ -1837,6 +1842,7 @@ export type Database = {
           state: string;
         }[];
       };
+      workspace_deletion_preview: { Args: { p_workspace_id: string }; Returns: Json };
     };
     Enums: {
       ai_generation_status: "running" | "succeeded" | "failed";

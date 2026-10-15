@@ -162,7 +162,8 @@ select lives_ok($$insert into public.reports (workspace_id, title) values (pg_te
   'a final report frees its slot');
 select throws_ok($$select pg_temp.move_report('Rapport A', array['final', 'draft'])$$,
   'KR042', null, 'reopening is refused when no slot is free');
-select is(pg_temp.affected($$delete from public.reports where title = 'Rapport 4'$$), 1, 'deleting a report');
+select lives_ok($$select public.delete_report((select id from public.reports where title = 'Rapport 4'))$$,
+  'deleting a report');
 select lives_ok($$select pg_temp.move_report('Rapport A', array['final', 'draft'])$$,
   'frees its slot for the reopened one');
 

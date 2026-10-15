@@ -179,8 +179,8 @@ select is(pg_temp.affected($$update public.reports set title = 'Titre change' wh
   0, 'nor rename the report');
 
 select pg_temp.act_as('admin');
-select is(pg_temp.affected($$delete from public.reports where id = pg_temp.id('r1')$$),
-  0, 'an admin cannot delete a final report');
+select throws_ok($$select public.delete_report(pg_temp.id('r1'), 'Rapport A')$$,
+  '42501', null, 'an admin cannot delete a final report');
 
 -- The trigger stops writes that skip RLS, the service role included.
 reset role;

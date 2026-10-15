@@ -9,11 +9,11 @@ select throws_ok($$insert into public.workspaces (organization_id, name, created
   '42501', null, 'expert cannot create a workspace in org_a');
 
 select pg_temp.act_as('viewer');
-select is(pg_temp.affected($$delete from public.workspaces where id = pg_temp.id('w1')$$), 0, 'viewer cannot delete w1');
+select throws_ok($$select public.delete_workspace(pg_temp.id('w1'), 'Etude A')$$, '42501', null, 'viewer cannot delete w1');
 
 select pg_temp.act_as('admin');
 select is(pg_temp.affected($$update public.workspaces set description = 'Mise a jour' where id = pg_temp.id('w1')$$), 1, 'admin can edit w1');
-select is(pg_temp.affected($$delete from public.workspaces where id = pg_temp.id('w1')$$), 0, 'admin cannot delete w1');
+select throws_ok($$select public.delete_workspace(pg_temp.id('w1'), 'Etude A')$$, '42501', null, 'admin cannot delete w1');
 select lives_ok($$insert into public.workspaces (organization_id, name, created_by) values (pg_temp.id('org_a'), 'Etude admin', pg_temp.id('admin'))$$,
   'admin of a workspace in org_a can create another one there');
 
@@ -142,7 +142,7 @@ select results_eq('select id from public.workspaces', array[pg_temp.id('w1')],
   'an expert of w1 still sees only w1');
 
 select pg_temp.act_as('owner');
-select is(pg_temp.affected($$delete from public.workspaces where id = pg_temp.id('w1')$$), 1, 'owner can delete w1');
+select lives_ok($$select public.delete_workspace(pg_temp.id('w1'), 'Etude A')$$, 'owner can delete w1');
 
 select * from finish();
 rollback;

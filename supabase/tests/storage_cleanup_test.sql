@@ -121,7 +121,7 @@ values (pg_temp.id('w1'), pg_temp.id('r1'), 'pdf', 'final.pdf', 'ready',
         '00000000-0000-4000-8000-000000000001');
 
 select pg_temp.act_as('owner');
-select is(pg_temp.affected($$delete from public.reports where id = pg_temp.id('r1')$$), 1, 'the owner deletes the report');
+select is(public.delete_report(pg_temp.id('r1')) ->> 'sections', '3', 'the owner deletes the report (KRB-180)');
 reset role;
 select results_eq($$select * from pg_temp.queued('deliverables')$$,
   $$values (pg_temp.id('w1') || '/' || pg_temp.id('s2') || '/a-mesures.csv'),
@@ -142,7 +142,7 @@ values (pg_temp.id('w2'), pg_temp.id('s4'), pg_temp.id('outsider'), pg_temp.id('
 select pg_temp.export('r2', 'w2', 'manuel-b', 'manual', '1 hour');
 
 select pg_temp.act_as('outsider');
-select is(pg_temp.affected($$delete from public.workspaces where id = pg_temp.id('w2')$$), 1,
+select is(public.delete_workspace(pg_temp.id('w2'), 'Etude B') ->> 'reports', '1',
   'the owner of the other workspace deletes it');
 reset role;
 select results_eq(
