@@ -180,10 +180,13 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 8
+# Password policy (KRB-58): 10 characters with at least one letter and one
+# digit. The forms check the same rules (src/lib/auth/password-policy.ts) and
+# supabase-auth-settings.yml pushes them to the hosted projects.
+minimum_password_length = 10
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+password_requirements = "letters_digits"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -196,6 +199,11 @@ password_requirements = ""
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.rate_limit]
+# KRB-58: supabase-auth-settings.yml pushes email_sent (with custom SMTP only),
+# sign_in_sign_ups, token_verifications and token_refresh to the hosted
+# projects. SMS, anonymous and Web3 sign-ins are off, so their limits stay
+# local. The per IP limits see the Vercel servers, not the visitors: the forms
+# call Supabase from server actions. That is why they stay at the defaults.
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
@@ -212,9 +220,11 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# CAPTCHA on sign-up and sign-in (KRB-58). Off locally. To turn it on, set the
-# Turnstile secret here or in the hosted dashboard and render the widget on the
-# sign-up form with NEXT_PUBLIC_TURNSTILE_SITE_KEY.
+# Cloudflare Turnstile on sign-up, sign-in and reset requests (KRB-58). Off
+# locally, so the e2e tests run without a widget. On the hosted projects,
+# supabase-auth-settings.yml turns it on with TURNSTILE_SECRET_KEY once
+# AUTH_CAPTCHA_ENABLED is "true", after NEXT_PUBLIC_TURNSTILE_SITE_KEY is
+# deployed (docs/deployment.md, "Auth settings").
 # [auth.captcha]
 # enabled = true
 # provider = "turnstile"
@@ -249,7 +259,7 @@ otp_expiry = 3600
 
 # French e-mail templates (KRB-57). Links go through /fr/auth/callback with a
 # token_hash, so they work even when the e-mail is opened on another device.
-# The supabase-auth-emails.yml workflow pushes them to the hosted projects
+# The supabase-auth-settings.yml workflow pushes them to the hosted projects
 # (KRB-170, docs/deployment.md). Not `supabase config push`, which would also
 # send this file's localhost URLs.
 [auth.email.template.confirmation]

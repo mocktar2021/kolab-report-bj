@@ -3,11 +3,13 @@
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { PasswordInput } from "@/components/auth/password-input";
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { useFocusOnError } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
+import { turnstileSiteKey } from "@/lib/auth/captcha";
 import { signIn, type SignInState } from "./actions";
 
 const ERROR_ID = "sign-in-error";
@@ -19,11 +21,13 @@ const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function SignInForm({ next }: { next?: string }) {
   const t = useTranslations("Auth");
   const [state, formAction, pending] = useActionState<SignInState, FormData>(signIn, {});
+  const siteKey = turnstileSiteKey();
 
+  // A missing or refused captcha shows under the widget, the rest above the button.
   const message =
     state.error === "rateLimited" || state.error === "emailNotConfirmed"
       ? t(`errors.${state.error}`)
-      : state.error
+      : state.error === "invalidInput" || state.error === "invalidCredentials"
         ? t(state.error)
         : null;
 
@@ -73,6 +77,14 @@ export function SignInForm({ next }: { next?: string }) {
           aria-describedby={passwordInvalid ? ERROR_ID : undefined}
         />
       </div>
+      {siteKey ? (
+        <TurnstileField
+          siteKey={siteKey}
+          action="sign-in"
+          resetKey={state}
+          error={state.error === "captchaRequired" ? t("errors.captchaRequired") : undefined}
+        />
+      ) : null}
       {message ? (
         <p id={ERROR_ID} role="alert" className="text-sm text-destructive">
           {message}

@@ -39,7 +39,27 @@ test("sign-up validates fields next to each input", async ({ page }) => {
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page.getByText("Indiquez votre nom.")).toBeVisible();
   await expect(page.getByText("Saisissez une adresse e-mail valide.")).toBeVisible();
-  await expect(page.getByText("Le mot de passe doit faire au moins 8 caractères.")).toBeVisible();
+  await expect(page.getByText("Le mot de passe doit faire au moins 10 caractères.")).toBeVisible();
+});
+
+test("sign-up asks for a letter and a digit in the password (KRB-58)", async ({ page }) => {
+  await page.goto("/fr/inscription");
+  const password = page.getByLabel("Mot de passe", { exact: true });
+  await expect(password).toHaveAccessibleDescription(
+    "10 caractères minimum, dont au moins une lettre et un chiffre.",
+  );
+  await page.getByLabel("Nom complet").fill("Aïcha Kossou");
+  await page.getByLabel("Adresse e-mail").fill(`e2e-policy-${Date.now()}@kolabreport.test`);
+  await password.fill("chaufferie");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await expect(password).toHaveAccessibleDescription(
+    "Le mot de passe doit contenir au moins une lettre et un chiffre.",
+  );
+  // Without a Turnstile site key (local, CI): no widget and no Cloudflare script.
+  if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+    await expect(page.getByRole("group", { name: "Vérification anti-robot" })).toHaveCount(0);
+    await expect(page.locator('script[src*="challenges.cloudflare.com"]')).toHaveCount(0);
+  }
 });
 
 test("sign-up sends a French confirmation e-mail that signs the user in", async ({ page }) => {

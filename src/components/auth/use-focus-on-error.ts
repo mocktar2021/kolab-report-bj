@@ -10,6 +10,8 @@ import { useEffect, useRef } from "react";
  * The focus goes to the field named `prefer` when it is marked invalid, else to
  * the first invalid field, else to the submit button. A new `state` object
  * means a new answer from the action, so the focus moves again on each failure.
+ * The Turnstile widget is a group, not a field: it is marked with
+ * data-invalid instead of aria-invalid.
  */
 export function useFocusOnError(state: object, failed: boolean, prefer?: string) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -22,7 +24,7 @@ export function useFocusOnError(state: object, failed: boolean, prefer?: string)
       : null;
     const target =
       preferred ??
-      form.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+      form.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]') ??
       form.querySelector<HTMLElement>('button[type="submit"]');
     target?.focus();
   }, [state, failed, prefer]);

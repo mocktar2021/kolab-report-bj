@@ -4,10 +4,12 @@ import { useActionState } from "react";
 import { MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FieldError } from "@/components/auth/field-error";
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { useFocusOnError, useFocusWhenShown } from "@/components/auth/use-focus-on-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { turnstileSiteKey } from "@/lib/auth/captcha";
 import { requestPasswordReset, type ForgotState } from "./actions";
 
 export function ForgotPasswordForm() {
@@ -17,6 +19,7 @@ export function ForgotPasswordForm() {
   });
   const formRef = useFocusOnError(state, state.status === "error");
   const doneRef = useFocusWhenShown<HTMLDivElement>(state.status === "sent");
+  const siteKey = turnstileSiteKey();
 
   if (state.status === "sent") {
     return (
@@ -28,7 +31,7 @@ export function ForgotPasswordForm() {
     );
   }
 
-  const emailError = state.status === "error" ? state.fieldErrors?.email : undefined;
+  const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
 
   return (
     <form ref={formRef} action={formAction} className="space-y-4" noValidate>
@@ -41,11 +44,19 @@ export function ForgotPasswordForm() {
           autoComplete="email"
           defaultValue={state.status === "error" ? state.email : ""}
           required
-          aria-invalid={Boolean(emailError)}
-          aria-describedby={emailError ? "email-error" : undefined}
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "email-error" : undefined}
         />
-        <FieldError id="email-error" message={emailError && t(`errors.${emailError}`)} />
+        <FieldError id="email-error" message={errors.email && t(`errors.${errors.email}`)} />
       </div>
+      {siteKey ? (
+        <TurnstileField
+          siteKey={siteKey}
+          action="password-reset"
+          resetKey={state}
+          error={errors.captcha && t(`errors.${errors.captcha}`)}
+        />
+      ) : null}
       {state.status === "error" && state.formError ? (
         <p role="alert" className="text-sm text-destructive">
           {t(`errors.${state.formError}`)}

@@ -18,7 +18,7 @@ Order is always **migrations first, then the app**. A new app version never runs
 Create two projects, `kolabreport-staging` and `kolabreport-production`, in the **EU West (Paris)** region (`eu-west-3`), next to the Vercel functions (`cdg1` in `vercel.json`). For each one:
 
 1. **Auth > URL Configuration**: Site URL = the app URL of that environment. Redirect URLs: `https://<app-domain>/fr/auth/callback`, plus `https://*-<vercel-team-slug>.vercel.app/**` on staging so PR previews can sign in.
-2. **Auth > SMTP** and **Auth > Email templates**: set by the `supabase-auth-emails.yml` workflow from the repository, see [Auth e-mails](#auth-e-mails). Don't use `npx supabase config push` for this: it sends the whole local `[auth]` section, localhost URLs included.
+2. **Auth > SMTP**, **Auth > Email templates**, the password policy, the rate limits and the captcha: set by the `supabase-auth-settings.yml` workflow from the repository, see [Auth settings](#auth-settings). Don't use `npx supabase config push` for this: it sends the whole local `[auth]` section, localhost URLs included.
 3. Without custom SMTP, Supabase only delivers Auth e-mails to members of the Supabase team, about 30 an hour, from "Supabase Auth".
 4. Nothing to create for storage: the `deliverables` and `exports` buckets and their policies come from the migrations.
 5. **Database > Publications**: keep Realtime on for `supabase_realtime` (the default). The migrations add `report_sections` to it, so an open master report picks up a new section order from another session. Without Realtime the page still works and refreshes when the tab comes back into focus.
@@ -36,6 +36,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `NEXT_PUBLIC_APP_URL` | no | App URL of the environment |
 | `NEXT_PUBLIC_SUPABASE_URL` | no | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no | Anon (publishable) key |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | no | Cloudflare Turnstile site key. Without it the forms show no captcha. Set it before turning the captcha on in Supabase, see [Turnstile captcha](#turnstile-captcha) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **yes**, mark Sensitive | Service role key |
 | `DATABASE_URL` / `DIRECT_URL` | **yes**, mark Sensitive | Pooler strings, see `.env.example` |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | **yes**, mark Sensitive | One key per environment |
@@ -147,15 +148,17 @@ The runbooks are in `docs/operations/`:
 - [`monitoring.md`](operations/monitoring.md): uptime check on `/api/health`, Sentry, logs, advisors and database metrics.
 - [`smoke-tests.md`](operations/smoke-tests.md): the checks that run after each deploy, their setup, what they leave behind and what to do when they fail.
 
-## Auth e-mails
+## Auth settings
 
-Confirmation, password reset, invitation and e-mail change messages come from Supabase Auth, not from the app. `supabase-auth-emails.yml` (KRB-170) pushes them to a project from the repository:
+Confirmation, password reset, invitation and e-mail change messages come from Supabase Auth, not from the app, and so do the password policy, the rate limits and the captcha check. `supabase-auth-settings.yml` (KRB-170, KRB-58) pushes them to a project from the repository:
 
 - the French subjects and templates declared in `supabase/config.toml` (`supabase/templates/*.html`), always;
-- the custom SMTP sender, once `SMTP_PASS` and `SMTP_ADMIN_EMAIL` are set on the environment;
-- the site URL and redirect URLs, once `AUTH_SITE_URL` is set.
+- the password policy and the rate limits of `supabase/config.toml`, always (see below);
+- the custom SMTP sender and the e-mail rate limit, once `SMTP_PASS` and `SMTP_ADMIN_EMAIL` are set on the environment;
+- the site URL and redirect URLs, once `AUTH_SITE_URL` is set;
+- the Turnstile captcha, once `AUTH_CAPTCHA_ENABLED` is `true` and `TURNSTILE_SECRET_KEY` is set (see [Turnstile captcha](#turnstile-captcha)).
 
-It changes only those fields (`scripts/supabase-auth-emails.mjs`, `--dry-run` lists them). A push to `master` that touches the templates updates staging. Run it by hand for production: **Actions > Supabase Auth e-mails > Run workflow**.
+It changes only those fields (`scripts/supabase-auth-settings.mjs`, `--dry-run` lists them) and prints field names, never values. A push to `master` that touches `supabase/config.toml` or the templates updates staging. Run it by hand for production: **Actions > Supabase Auth settings > Run workflow**.
 
 Setup, per GitHub environment (`staging`, `production`):
 
@@ -167,8 +170,45 @@ Setup, per GitHub environment (`staging`, `production`):
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | variables, optional | Default `smtp.resend.com`, `465`, `resend`. Set them for Brevo or another provider |
 | `AUTH_SITE_URL` | variable, optional | The app's origin, for example `https://kolabreport.mocktar.com`. Then the redirect list is `<origin>/**` |
 | `AUTH_REDIRECT_URLS` | variable, optional | More redirect URLs, separated by commas, for example `https://*-<vercel-team-slug>.vercel.app/**` on staging |
+| `TURNSTILE_SECRET_KEY` | secret, optional | Secret key of the Turnstile widget |
+| `AUTH_CAPTCHA_ENABLED` | variable, optional | `true` turns the captcha on, `false` turns it off. Unset leaves it as it is. Set `true` only after the steps below |
 
-`SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` are the ones `deploy.yml` already uses. With custom SMTP, Supabase starts at 30 Auth e-mails an hour (**Auth > Rate Limits**); raise it if needed.
+`SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` are the ones `deploy.yml` already uses.
+
+### Password policy and rate limits
+
+`supabase/config.toml` holds the values for the local stack and the hosted projects. Change them there, the workflow pushes them on the merge to `master`.
+
+Passwords need **10 characters, with at least one letter (a to z, without accent) and one digit** (`minimum_password_length = 10`, `password_requirements = "letters_digits"`). This refuses a 10 digit phone number or a single word such as `motdepasse`, and asks for no capital letter or symbol, which are slow to type on a phone and push people toward `Motdepasse1!`. The sign-up and new password forms check the same rules (`src/lib/auth/password-policy.ts`, and a test fails if the two drift apart). Existing accounts with a shorter password still sign in: the rule applies when they choose a new one. Supabase's leaked password check needs the Pro plan; turn it on in **Auth > Providers > Email** once the project is on Pro.
+
+| `[auth.rate_limit]` key | Management API field | Value | What it limits |
+| --- | --- | --- | --- |
+| `sign_in_sign_ups` | `rate_limit_otp` | 30 per 5 minutes, per IP | Sign-ups, reset requests, resent e-mails and password changes |
+| `token_verifications` | `rate_limit_verify` | 30 per 5 minutes, per IP | Confirmation and reset links opened (`/fr/auth/callback`) |
+| `token_refresh` | `rate_limit_token_refresh` | 150 per 5 minutes, per IP | Password sign-ins and session refreshes |
+| `email_sent` | `rate_limit_email_sent` | 30 per hour, whole project | Auth e-mails. Sent only with custom SMTP, which it needs |
+
+The forms and the middleware call Supabase from the Vercel servers, so the per IP limits count many visitors behind a few Vercel addresses. That is why they stay at the Supabase defaults: lower values would block real users first, and the captcha stops scripts. If people see "Trop de tentatives" at busy times, raise `token_refresh` or `sign_in_sign_ups`. SMS, anonymous and Web3 sign-ins are off, so their limits are not pushed.
+
+### Turnstile captcha
+
+Cloudflare Turnstile protects sign-up, sign-in and reset requests. The widget is on the three forms, and Supabase Auth checks the token: once the captcha is on, Supabase refuses `/signup`, `/recover` and password sign-in without a valid token. So the order matters. **Deploy the app with the site key first, then turn the captcha on in Supabase.** The other way round, nobody can sign up, sign in or reset a password until the app catches up.
+
+1. **Cloudflare**: **Turnstile > Add widget**. Name `KolabReport`, mode **Managed**, pre-clearance **No**. Hostnames: `kolabreport.mocktar.com` (it covers its subdomains, a staging domain under it included) and the production domain if it is another one. Copy the site key and the secret key.
+2. **Vercel**, **Settings > Environment Variables**: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` = the site key, for **Production**, not marked Sensitive (`vercel pull` cannot read Sensitive values, and the build inlines this one). For **Preview**, see the note below.
+3. **Deploy**: a variable change on Vercel needs a new build. Run **Deploy** again for staging, or tag a release for production: `deploy.yml` builds with the key (`vercel pull` brings it). Open `/fr/inscription` and check the "Vérification anti-robot" box shows and passes. Sign-up and sign-in keep working: Supabase ignores the token while its captcha is off.
+4. **GitHub**, on the environment you just deployed (`production` for Vercel's Production): add the secret `TURNSTILE_SECRET_KEY` = the secret key, then the variable `AUTH_CAPTCHA_ENABLED` = `true`.
+5. **Actions > Supabase Auth settings > Run workflow** for that environment. The log lists `security_captcha_enabled`, `security_captcha_provider` and `security_captcha_secret`. The script refuses to run when `AUTH_CAPTCHA_ENABLED` is `true` without the secret.
+6. Check: create an account with a new address, sign in, and request a reset link.
+
+To turn it off, for example if the widget fails for everyone, set `AUTH_CAPTCHA_ENABLED` to `false` and run the workflow again. Remove the site key from Vercel only after that.
+
+**Preview and staging.** Vercel builds PR previews and the staging deployment with the Preview variables. Turnstile does not accept wildcard hostnames, so the real site key fails on `*.vercel.app` preview URLs. Pick one:
+
+- Use Cloudflare's test keys on staging: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` = `1x00000000000000000000AA` for Preview on Vercel, and `TURNSTILE_SECRET_KEY` = `1x0000000000000000000000000000000AA` on the `staging` GitHub environment. The widget always passes, so previews keep working and staging runs the whole captcha path, without real protection.
+- Or leave Preview without a site key and `staging` without `AUTH_CAPTCHA_ENABLED`: no captcha on staging.
+
+Locally and in CI there is no site key and the local Supabase stack keeps its captcha off (`[auth.captcha]` is commented out in `supabase/config.toml`), so the e2e tests need no widget. The test helpers that sign in with the anon key would fail against a project with the captcha on: they only run against the local stack.
 
 ## Releasing
 

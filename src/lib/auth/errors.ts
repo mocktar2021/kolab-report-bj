@@ -6,6 +6,7 @@ export type AuthErrorKey =
   | "rateLimited"
   | "sessionExpired"
   | "emailNotConfirmed"
+  | "captchaRequired"
   | "unknown";
 
 /** Maps a Supabase Auth error to a key under Auth.errors in messages/fr.json. */
@@ -25,6 +26,9 @@ export function authErrorKey(error: AuthError): AuthErrorKey {
     case "session_expired":
     case "otp_expired":
       return "sessionExpired";
+    // Missing, expired, already used or refused Turnstile token.
+    case "captcha_failed":
+      return "captchaRequired";
     default:
       return error.status === 429 ? "rateLimited" : "unknown";
   }

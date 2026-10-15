@@ -12,6 +12,7 @@ describe("authErrorKey", () => {
     ["over_email_send_rate_limit", 429, "rateLimited"],
     ["over_request_rate_limit", 429, "rateLimited"],
     ["otp_expired", 403, "sessionExpired"],
+    ["captcha_failed", 400, "captchaRequired"],
   ] as const)("maps %s to %s", (code, status, key) => {
     expect(authErrorKey(apiError(status, code))).toBe(key);
   });
