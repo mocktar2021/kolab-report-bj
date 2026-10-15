@@ -111,7 +111,7 @@ export async function updateSectionAssignment(
 
 export type ReorderResult =
   | { ok: true }
-  | { ok: false; error: "forbidden" | "stale" | "reportFinal" | "invalidInput" | "generic" };
+  | { ok: false; error: "forbidden" | "stale" | "reportFinal" | "readOnly" | "invalidInput" | "generic" };
 
 const reorderSchema = z.object({
   reportId: uuidSchema,
@@ -141,6 +141,9 @@ export async function reorderSections(reportId: string, sectionIds: string[]): P
         return { ok: false, error: "stale" };
       case "KR020":
         return { ok: false, error: "reportFinal" };
+      // The workspace became read-only (KRB-178).
+      case "KR043":
+        return { ok: false, error: "readOnly" };
       default:
         log.error("reports: could not reorder sections", { error: error.message });
         return { ok: false, error: "generic" };

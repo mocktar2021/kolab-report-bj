@@ -26,6 +26,8 @@ type AppShellProps = {
   currentWorkspaceId: string | null;
   /** Unread notifications, for the bell. */
   unreadNotifications: number;
+  /** The plan of the current workspace, above the page (KRB-178). Outside main, so the skip link lands on the page. */
+  banner?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -47,6 +49,7 @@ export function AppShell({
   workspaces,
   currentWorkspaceId,
   unreadNotifications,
+  banner,
   children,
 }: AppShellProps) {
   const t = useTranslations("AppShell");
@@ -180,6 +183,7 @@ export function AppShell({
       </Sheet>
 
       <div className="transition-[padding] duration-300 ease-out-expo lg:pl-64 lg:sidebar-collapsed:pl-[4.5rem]">
+        {banner}
         <main id="contenu" tabIndex={-1} className="outline-none">
           {children}
         </main>

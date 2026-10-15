@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { FrozenReportNotice } from "@/components/frozen-report-notice";
 import { ReportStatusBadge } from "@/components/report-status-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
 import { getDraftPanel } from "@/lib/ai/server";
+import { getReadOnlyReason } from "@/lib/billing/banner";
 import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
 import { isReportFrozen } from "@/lib/reports/status";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
@@ -63,9 +65,13 @@ export default async function SectionPage({ params }: { params: Params }) {
   const access = await requireWorkspaceRole(workspaceId);
   if (!access) notFound();
 
-  // A final report is read-only for everyone, owners included (KRB-20).
+  // A final report is read-only for everyone, owners included (KRB-20), and
+  // so is a workspace whose plan ended (KRB-178). Deleting files still works
+  // in the second case.
   const frozen = isReportFrozen(section.report.status);
-  const canEdit = !frozen && canEditSection(access, section.assigned_to);
+  const readOnly = await getReadOnlyReason(workspaceId);
+  const editor = canEditSection(access, section.assigned_to);
+  const canEdit = !frozen && !readOnly && editor;
   const supabase = await createClient();
   const [{ data: files }, members, draft] = await Promise.all([
     supabase
@@ -102,8 +108,9 @@ export default async function SectionPage({ params }: { params: Params }) {
       parseState,
       parseError: file.parse_error,
       notStarted,
-      // Same rule as the delete policy: managers, or the uploader while the section is theirs.
-      canDelete: canEdit && (isManager(access.role) || file.uploaded_by === access.userId),
+      // Same rule as the delete policy: managers, or the uploader while the
+      // section is theirs. A read-only workspace still deletes.
+      canDelete: !frozen && editor && (isManager(access.role) || file.uploaded_by === access.userId),
       canRetry: canEdit && (parseState === "failed" || parseState === "stale" || notStarted),
     };
   });
@@ -150,6 +157,7 @@ export default async function SectionPage({ params }: { params: Params }) {
           <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{section.instructions}</p>
         ) : null}
         {frozen ? <FrozenReportNotice className="mt-4" /> : null}
+        {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-4" /> : null}
       </header>
 
       {canEdit ? (
@@ -175,7 +183,7 @@ export default async function SectionPage({ params }: { params: Params }) {
 
       {canEdit ? (
         <DeliverableUploader sectionId={section.id} />
-      ) : frozen ? null : (
+      ) : frozen || readOnly ? null : (
         <p className="mt-6 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           {access.role === "viewer" ? t("readOnlyViewer") : t("readOnlyExpert")}
         </p>

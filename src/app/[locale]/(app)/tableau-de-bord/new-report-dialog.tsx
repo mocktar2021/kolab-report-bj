@@ -38,11 +38,35 @@ function titleError(title: string): WorkspaceFieldErrorKey | null {
 export function NewReportDialog({
   workspaceId,
   workspaceName,
+  disabledReason,
 }: {
   workspaceId: string;
   workspaceName: string;
+  /** Set when the workspace is read-only (KRB-178): the button stays, disabled, with this reason. */
+  disabledReason?: string;
 }) {
   const t = useTranslations("Dashboard.reports.create");
+
+  if (disabledReason) {
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          shape="pill"
+          disabled
+          aria-describedby="new-report-disabled"
+        >
+          <Plus aria-hidden="true" />
+          {t("button")}
+        </Button>
+        <span id="new-report-disabled" className="text-xs text-muted-foreground">
+          {disabledReason}
+        </span>
+      </span>
+    );
+  }
 
   return (
     <Dialog>

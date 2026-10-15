@@ -274,3 +274,94 @@ Thresholds come from the compute table of the Supabase docs (https://supabase.co
 When an alert fires: the Supabase dashboard has the slow queries (**Observability > Query Performance**) and the connections. The usual fixes are an index, a smaller query, or the next compute size.
 
 The metrics are counters about the database server and hold no personal data. Grafana Cloud only holds the metrics key.
+
+## Billing
+
+What to watch once billing is on (`private.billing_settings.enforced`). What to do when something is wrong is in [`billing.md`](billing.md).
+
+### The daily job
+
+Vercel Cron calls `/api/cron/billing` at 05:17 UTC (`docs/deployment.md`). A run that fails answers 500 and shows as failed under **Settings > Cron Jobs > View Logs** in the Vercel dashboard. The answer holds counts only, per step: for `notices`, the reminders claimed by this run, `emailsSent` and `emailsFailed`; for `reconcile`, the pending purchases `checked`, `granted`, `expired` and `failed`, or `skipped` when FedaPay is not set up.
+
+Its log lines, all with the request id of the run:
+
+| Message | Level | Fields | Means |
+| --- | --- | --- | --- |
+| `billing: reminder sent` | info | entitlementId, organizationId, kind, recipients | Every recipient of the reminder got its e-mail |
+| `billing: reminder skipped` | warn | entitlementId, kind, reason (`no recipient` or `e-mail failed`), sent, failed | Nobody to write to, or some e-mails failed. The reminder is not sent again by the next run |
+| `billing: could not claim the reminders` | error | error | The database call failed: nothing was claimed, the next run tries again |
+| `billing: could not record a reminder` | error | entitlementId, kind, error | The e-mails went out but their count was not stored |
+| `billing: unexpected reminder` | error | entitlementId | A claimed row could not be read: nothing was sent for it |
+| `billing: cron step failed` | error | step, error | A step threw. The next steps still ran |
+| `billing: cron finished` | info | ok, and one key per step | End of the run |
+| `billing: CRON_SECRET is missing or too short, every call is refused` | error | | Set `CRON_SECRET` on Vercel |
+
+The lines hold ids and counts, never an address or a name.
+
+### Reminders that did not go out
+
+Every claimed reminder has a row in `private.billing_notices`. `emailed_at` stays null when the run stopped before sending, and `emails_failed` counts the e-mails the provider refused. In the SQL editor:
+
+```sql
+select n.entitlement_id, n.kind, n.claimed_at, n.emailed_at, n.emails_sent, n.emails_failed,
+       e.organization_id, e.plan, e.ends_at
+from private.billing_notices n
+join public.billing_entitlements e on e.id = n.entitlement_id
+where n.claimed_at > now() - interval '7 days'
+  and (n.emailed_at is null or n.emails_failed > 0)
+order by n.claimed_at desc;
+```
+
+### Workspaces that changed state
+
+The job writes an audit event when a period it reminds about enters its grace or read-only. The ten latest:
+
+```sql
+select organization_id, kind, details ->> 'plan' as plan, details ->> 'ends_at' as ends_at, created_at
+from private.billing_events
+where kind in ('entered_grace', 'entered_read_only')
+order by created_at desc
+limit 10;
+```
+
+The events follow the job, the state does not: a workspace is read-only from the end of its grace, whether the job ran or not.
+
+### Purchases
+
+FedaPay payments (KRB-176) log one line per step, with the purchase id and, once known, FedaPay's transaction id. Search the Vercel logs for a purchase id to see its whole story. How the webhook is checked: [`docs/security/fedapay-webhook.md`](../security/fedapay-webhook.md).
+
+| Message | Level | Means |
+| --- | --- | --- |
+| `billing: checkout started` | info | An owner left for FedaPay's payment page: purchaseId, organizationId, offer, quantity, amountXof |
+| `billing: purchase granted` | info | The payment became an entitlement or a pack, with its receipt number |
+| `billing: purchase needs review` | error | FedaPay says paid, but the amount, currency, merchant reference or environment does not match (`reason`). Nothing granted, alert sent |
+| `billing: refund seen` | warn | FedaPay says refunded. The purchase is `refunded`, nothing revoked, alert sent |
+| `billing: fedapay request failed` | error | A call to FedaPay's API failed: request, status, code |
+| `billing: could not apply a transaction` | error | The grant failed in the database. Also sent to Sentry with the purchase id as a tag |
+| `billing: purchase of another environment` | error | A sandbox purchase seen by production, or the reverse. Nothing applied |
+| `billing: reconcile finished` | info | checked, granted, expired, failed. `organizationId` is null for the daily job, set for the billing page |
+| `billing: could not list pending purchases` / `billing: could not check a pending purchase` | error | The reconciliation could not read or expire a purchase: the daily job answers 500 |
+| `billing: webhook rejected` | warn | reason: `size`, `json`, or the signature check (`missing`, `malformed`, `signature`, `stale`, `no_secret`) |
+| `billing: misconfigured` | error on production, warn elsewhere | The FedaPay variables break a rule of `src/lib/billing/settings.ts` (`problems`). Checkout and the webhook are off |
+| `billing: alert not sent, BILLING_ALERT_EMAIL is not set` / `billing: alert e-mail not sent` | warn / error | An alert below could not reach the operator |
+
+Alerts by e-mail to `BILLING_ALERT_EMAIL`, once per purchase and kind, with ids only:
+
+| Subject ends with | When |
+| --- | --- |
+| `paiement à vérifier` | A purchase went to `review`. It blocks the organization's next payment until it is closed ([`billing.md`](billing.md#a-purchase-in-review)) |
+| `remboursement constaté` | A refund was seen at FedaPay |
+| `paiement approuvé non accordé` | FedaPay approved a payment more than 15 minutes ago and the reconciliation cannot grant it |
+| `paiement reçu après expiration` | A payment arrived after its purchase expired. It was granted anyway |
+| `deux paiements pour la même offre` | The organization paid the same offer twice within 24 hours. Both periods follow each other |
+
+Purchases waiting for something, in the SQL editor (the same query as `docs/deployment.md`):
+
+```sql
+select id, offer, status, review_reason, amount_xof, fedapay_status, created_at, last_checked_at
+from public.billing_purchases
+where status in ('pending', 'review') and created_at < now() - interval '1 hour'
+order by created_at;
+```
+
+What to do with them: [`billing.md`](billing.md#stuck-purchases-and-refunds).

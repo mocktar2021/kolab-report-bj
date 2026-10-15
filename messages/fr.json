@@ -289,7 +289,7 @@
   },
   "Notifications": {
     "title": "Notifications",
-    "subtitle": "Les changements de statut des rapports auxquels vous participez.",
+    "subtitle": "Les changements de statut de vos rapports et les rappels d'abonnement.",
     "bell": "{count, plural, =0 {Notifications} one {Notifications, # non lue} other {Notifications, # non lues}}",
     "unread": "Non lue",
     "event": {
@@ -308,7 +308,7 @@
     },
     "empty": {
       "title": "Aucune notification",
-      "description": "Quand un rapport auquel vous participez change de statut, vous le voyez ici."
+      "description": "Quand un rapport auquel vous participez change de statut, ou quand votre offre arrive à son terme, vous le voyez ici."
     },
     "error": {
       "title": "Impossible de charger les notifications",
@@ -316,7 +316,13 @@
     },
     "olderUnread": "{count, plural, one {# notification plus ancienne n'est pas encore lue.} other {# notifications plus anciennes ne sont pas encore lues.}}",
     "markAllRead": "Tout marquer comme lu",
-    "markAllReadError": "Les notifications n'ont pas pu être marquées comme lues. Réessayez."
+    "markAllReadError": "Les notifications n'ont pas pu être marquées comme lues. Réessayez.",
+    "billing": {
+      "ending": "{scope, select, trial {L'essai gratuit de {organization}} mission {Le Pass Mission de l'espace {workspace}} missionUnnamed {Un Pass Mission de {organization}} other {L'offre {plan} de {organization}}} se termine le {date}",
+      "ended": "{scope, select, trial {L'essai gratuit de {organization}} mission {Le Pass Mission de l'espace {workspace}} missionUnnamed {Un Pass Mission de {organization}} other {L'offre {plan} de {organization}}} a pris fin le {date}. Lecture seule à partir du {graceEnd}",
+      "readOnly": "Lecture seule depuis le {date} pour {scope, select, mission {l'espace {workspace}} missionUnnamed {un espace de {organization}} other {les espaces de {organization}}}",
+      "unknownOrganization": "votre organisation"
+    }
   },
   "CommandPalette": {
     "title": "Palette de commandes",
@@ -525,7 +531,9 @@
       "readOnlyInvitee": "L'espace de travail qui vous invite est en lecture seule : l'offre de son organisation n'est plus active. Prévenez la personne qui vous a invité.",
       "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution.",
       "billingLimit": "Ce changement dépasse les limites de l'offre de l'organisation.",
-      "billingReadOnly": "Cet espace de travail est en lecture seule : l'offre de l'organisation n'est plus active."
+      "billingReadOnly": "Cet espace de travail est en lecture seule : l'offre de l'organisation n'est plus active.",
+      "readOnlyNoPlanMember": "Cette organisation n'a pas encore d'offre : ses espaces de travail sont en lecture seule. Demandez au propriétaire de l'organisation d'en choisir une.",
+      "readOnlyDisabled": "Indisponible : l'espace de travail est en lecture seule."
     },
     "settings": "Paramètres de l'espace",
     "organization": "Gérer l'organisation"
@@ -660,7 +668,8 @@
         "stale": "Les sections ont changé dans une autre session. La page affiche maintenant l'ordre à jour, refaites le déplacement si besoin.",
         "invalidInput": "Le nouvel ordre n'a pas pu être enregistré. Rechargez la page puis réessayez.",
         "generic": "Le nouvel ordre n'a pas pu être enregistré. Réessayez.",
-        "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier."
+        "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
+        "readOnly": "Cet espace de travail est en lecture seule : l'ordre des sections ne peut plus changer."
       }
     }
   },
@@ -808,7 +817,8 @@
       "activeContent": "Ce fichier SVG contient du code (script ou événement). Exportez-le sans script, ou en PNG.",
       "uploadFailed": "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
       "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
-      "generic": "Une erreur est survenue. Réessayez."
+      "generic": "Une erreur est survenue. Réessayez.",
+      "readOnly": "Cet espace de travail est en lecture seule : aucun fichier ne peut être déposé ni relu."
     },
     "statusLabel": "Statut de la section",
     "statusError": "Le statut n'a pas pu être enregistré. Réessayez.",
@@ -856,8 +866,10 @@
       "forbidden": "Vous ne pouvez pas faire cela sur ce fichier.",
       "busy": "Une analyse est déjà en cours.",
       "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
-      "generic": "Une erreur est survenue. Réessayez."
-    }
+      "generic": "Une erreur est survenue. Réessayez.",
+      "readOnly": "Cet espace de travail est en lecture seule : le fichier ne peut pas être relu. Vous pouvez encore le supprimer."
+    },
+    "statusReadOnly": "Cet espace de travail est en lecture seule : le statut ne peut plus changer."
   },
   "AiDraft": {
     "contentTitle": "Contenu de la section",
@@ -961,7 +973,8 @@
       "invalidInput": "Le texte doit compter entre 1 et 100 000 caractères, sans caractère invisible.",
       "conflict": "La section a changé depuis le chargement de la page. Rechargez pour voir son contenu actuel, puis décidez à nouveau.",
       "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
-      "generic": "La décision n'a pas pu être enregistrée. Réessayez."
+      "generic": "La décision n'a pas pu être enregistrée. Réessayez.",
+      "readOnly": "Cet espace de travail est en lecture seule : le brouillon ne peut pas être accepté."
     },
     "feedback": {
       "title": "Ce brouillon vous a-t-il été utile ?",
@@ -1020,7 +1033,8 @@
       "tooLong": "Le texte dépasse 100 000 caractères. Raccourcissez-le puis réessayez.",
       "invalidInput": "Le texte n'a pas pu être enregistré. Copiez-le, rechargez la page puis réessayez.",
       "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier. Copiez votre texte si vous voulez le garder.",
-      "generic": "Le texte n'a pas pu être enregistré. Réessayez."
+      "generic": "Le texte n'a pas pu être enregistré. Réessayez.",
+      "readOnly": "Cet espace de travail est en lecture seule : le texte n'a pas été enregistré. Copiez-le si vous voulez le garder."
     }
   },
   "Invitation": {
@@ -1530,6 +1544,51 @@
       "refunded": "Ce paiement a été remboursé.",
       "retry": "Réessayer",
       "back": "Retour à l'abonnement"
+    },
+    "email": {
+      "line": {
+        "trial": "L'essai gratuit de {organization}",
+        "subscription": "L'offre {plan} de {organization}",
+        "mission": "Le Pass Mission de l'espace de travail {workspace} ({organization})"
+      },
+      "d7": {
+        "subject": "Votre offre KolabReport se termine dans {days, plural, one {# jour} other {# jours}}",
+        "heading": "Votre offre se termine le {date}",
+        "body": "{line} se termine le {date}. Renouvelez avant cette date pour que votre équipe garde l'accès complet."
+      },
+      "d1": {
+        "subject": "Votre offre KolabReport se termine {days, plural, =0 {aujourd'hui} one {demain} other {dans # jours}}",
+        "heading": "Votre offre se termine le {date}",
+        "body": "{line} se termine le {date}. Sans renouvellement, l'espace passera en lecture seule le {graceEnd}."
+      },
+      "ended": {
+        "subject": "Votre offre KolabReport est terminée",
+        "heading": "Votre offre est terminée",
+        "body": "{line} a pris fin le {date}. Tout reste accessible jusqu'au {graceEnd}, puis l'espace passera en lecture seule. Renouvelez avant cette date pour continuer à rédiger."
+      },
+      "readOnly": {
+        "subject": "Votre espace KolabReport est en lecture seule",
+        "heading": "Lecture seule depuis le {date}",
+        "body": "{line} a pris fin sans renouvellement. Depuis le {date}, votre équipe peut consulter et exporter les rapports, mais plus les modifier. Renouvelez pour les modifier de nouveau."
+      },
+      "button": "Renouveler l'offre",
+      "linkLabel": "Renouveler l'offre",
+      "outro": "Vous recevez cet e-mail car vous êtes propriétaire de l'organisation {organization} ou de l'un de ses espaces de travail."
+    },
+    "banner": {
+      "label": "Abonnement",
+      "trial": "Essai gratuit : {days, plural, =0 {dernier jour} one {encore # jour} other {encore # jours}}. Choisissez une offre pour garder l'accès complet.",
+      "ending": "Votre offre {plan} se termine le {date}. Renouvelez-la pour éviter le passage en lecture seule.",
+      "grace": "Votre offre {plan} est terminée depuis le {date}. Tout reste accessible jusqu'au {graceEnd}, puis l'espace passera en lecture seule.",
+      "graceTrial": "Votre essai gratuit est terminé depuis le {date}. Tout reste accessible jusqu'au {graceEnd}, puis l'espace passera en lecture seule.",
+      "readOnly": "Lecture seule depuis le {date} : consultation et export uniquement. Renouvelez l'offre pour modifier vos rapports.",
+      "readOnlyMember": "Lecture seule depuis le {date} : consultation et export uniquement.",
+      "noPlan": "Cette organisation n'a pas encore d'offre. Choisissez-en une pour commencer à rédiger.",
+      "noPlanMember": "Cette organisation n'a pas encore d'offre : l'espace est en lecture seule.",
+      "renew": "Renouveler l'offre",
+      "choose": "Choisir une offre",
+      "askOwners": "Pour renouveler, adressez-vous à {names}.",
+      "askOwner": "Pour renouveler, adressez-vous au propriétaire de l'organisation."
     }
   },
   "WorkspaceSettings": {

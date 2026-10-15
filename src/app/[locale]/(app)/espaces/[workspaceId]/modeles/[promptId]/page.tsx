@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft, Copy } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getReadOnlyReason } from "@/lib/billing/banner";
 import { getActiveRollout, hasPreviousPublished } from "@/lib/prompts/rollouts";
 import { getPromptTemplate, type PromptVersionRow } from "@/lib/prompts/server";
 import { cn } from "@/lib/utils";
@@ -68,6 +70,7 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
   const { locale, workspaceId, promptId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Prompts");
+  const tErrors = await getTranslations("Workspaces.errors");
   const format = await getFormatter();
 
   // Global templates are readable by everyone, so membership is checked first.
@@ -85,10 +88,14 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
   const manager = isManager(access.role);
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
   const published = history.find((row) => row.status === "published") ?? null;
-  const [activeRollout, canRollback] = await Promise.all([
+  const [activeRollout, canRollback, readOnly] = await Promise.all([
     getActiveRollout(version.workspaceId, version.templateKey),
     manager && !global && version.status === "published" ? hasPreviousPublished(version) : false,
+    getReadOnlyReason(workspaceId),
   ]);
+  // In read-only (KRB-178), archiving a version and ending a rollout stay open:
+  // they tidy up. Everything that writes or publishes a version is disabled.
+  const readOnlyReason = readOnly ? tErrors("readOnlyDisabled") : undefined;
   // A global rollout limited to another workspace of the user doesn't reach this one.
   const rollout =
     activeRollout &&
@@ -169,15 +176,33 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
             currentVersionId={version.id}
             base={published ? refOf(published) : null}
             canManage={manager && !global}
+            readOnlyReason={readOnlyReason}
           />
         ) : null}
+        {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-5 max-w-3xl" /> : null}
 
         {global ? (
           <>
             <p className="mt-4 max-w-3xl text-sm text-muted-foreground">
               {manager ? t("globalNoteManager") : t("globalNote")}
             </p>
-            {manager ? (
+            {manager && readOnlyReason ? (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  shape="pill"
+                  disabled
+                  aria-describedby="customize-read-only"
+                >
+                  <Copy aria-hidden="true" />
+                  {t("actions.customize")}
+                </Button>
+                <p id="customize-read-only" className="mt-2 text-xs text-muted-foreground">
+                  {readOnlyReason}
+                </p>
+              </div>
+            ) : manager ? (
               <Button asChild variant="outline" shape="pill" className="mt-4">
                 <Link href={`${libraryHref}/nouveau?depuis=${version.id}`}>
                   <Copy aria-hidden="true" />
@@ -194,8 +219,10 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
               status={version.status}
               newVersionHref={`${libraryHref}/${version.id}/modifier`}
               canPublish={rolloutInfo?.candidate.id !== version.id}
+              readOnlyReason={readOnlyReason}
             />
-            {version.status === "published" && rollbackTarget ? (
+            {/* A rollback publishes a version and a rollout serves one: both wait for a plan. */}
+            {version.status === "published" && rollbackTarget && !readOnly ? (
               <RollbackPublish
                 workspaceId={workspaceId}
                 libraryHref={libraryHref}
@@ -204,7 +231,7 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
               />
             ) : null}
             {/* The candidate of an active rollout is managed from the banner. */}
-            {version.status === "draft" && rolloutInfo?.candidate.id !== version.id ? (
+            {version.status === "draft" && rolloutInfo?.candidate.id !== version.id && !readOnly ? (
               <StartRollout
                 workspaceId={workspaceId}
                 versionId={version.id}

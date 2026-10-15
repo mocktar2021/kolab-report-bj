@@ -11,7 +11,7 @@ export function SectionStatusControl({ sectionId, status }: { sectionId: string;
   const t = useTranslations("Deliverables");
   const tStatus = useTranslations("SectionStatus");
   const [optimistic, setOptimistic] = useOptimistic(status);
-  const [failed, setFailed] = useState<"generic" | "reportFinal" | null>(null);
+  const [failed, setFailed] = useState<"generic" | "reportFinal" | "readOnly" | null>(null);
   const [pending, startTransition] = useTransition();
 
   return (
@@ -50,7 +50,11 @@ export function SectionStatusControl({ sectionId, status }: { sectionId: string;
       </NativeSelect>
       {failed ? (
         <p id="section-status-error" role="alert" className="text-xs text-destructive">
-          {failed === "reportFinal" ? t("statusReportFinal") : t("statusError")}
+          {failed === "reportFinal"
+            ? t("statusReportFinal")
+            : failed === "readOnly"
+              ? t("statusReadOnly")
+              : t("statusError")}
         </p>
       ) : null}
     </div>

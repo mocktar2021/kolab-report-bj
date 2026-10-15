@@ -8,6 +8,7 @@ import { ReportList } from "@/components/dashboard/report-list";
 import { SectionTable, SectionsError } from "@/components/dashboard/section-table";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getReadOnlyReason } from "@/lib/billing/banner";
 import { getDashboardData, getWorkspaceReports } from "@/lib/dashboard";
 import { DELETED_KINDS, type DeletedKind } from "@/lib/deletions/server";
 import { sectionStatusSchema } from "@/lib/sections";
@@ -34,6 +35,7 @@ export default async function TableauDeBordPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Dashboard");
+  const tErrors = await getTranslations("Workspaces.errors");
 
   // Unknown or repeated ?statut= values are ignored: the page shows everything.
   const { statut, suppression } = await searchParams;
@@ -46,9 +48,14 @@ export default async function TableauDeBordPage({
   const tDeletion = await getTranslations("Deletion");
 
   const [profile, workspace] = await Promise.all([getCurrentProfile(), getCurrentWorkspace()]);
-  const [data, reports] = workspace
-    ? await Promise.all([getDashboardData(workspace.id, activeStatus), getWorkspaceReports(workspace.id)])
-    : [null, null];
+  // The layout already read the billing state of this workspace (cached).
+  const [data, reports, readOnly] = workspace
+    ? await Promise.all([
+        getDashboardData(workspace.id, activeStatus),
+        getWorkspaceReports(workspace.id),
+        getReadOnlyReason(workspace.id),
+      ])
+    : [null, null, null];
   // With no workspace, the organizations the user still owns, so they can reach them.
   const ownedOrganizations = workspace ? [] : await getOwnedOrganizations();
 
@@ -106,7 +113,11 @@ export default async function TableauDeBordPage({
             reports={reports}
             action={
               isManager(workspace.role) ? (
-                <NewReportDialog workspaceId={workspace.id} workspaceName={workspace.name} />
+                <NewReportDialog
+                  workspaceId={workspace.id}
+                  workspaceName={workspace.name}
+                  disabledReason={readOnly ? tErrors("readOnlyDisabled") : undefined}
+                />
               ) : null
             }
           />

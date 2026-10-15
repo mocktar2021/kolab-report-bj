@@ -714,37 +714,63 @@ export type Database = {
       };
       notifications: {
         Row: {
+          billing_notice: string | null;
           created_at: string;
-          event_id: string;
+          entitlement_id: string | null;
+          event_id: string | null;
           id: string;
+          kind: string;
+          organization_id: string | null;
           read_at: string | null;
           user_id: string;
-          workspace_id: string;
+          workspace_id: string | null;
         };
         ComputedFields: never;
         Insert: {
+          billing_notice?: string | null;
           created_at?: string;
-          event_id: string;
+          entitlement_id?: string | null;
+          event_id?: string | null;
           id?: string;
+          kind?: string;
+          organization_id?: string | null;
           read_at?: string | null;
           user_id: string;
-          workspace_id: string;
+          workspace_id?: string | null;
         };
         Update: {
+          billing_notice?: string | null;
           created_at?: string;
-          event_id?: string;
+          entitlement_id?: string | null;
+          event_id?: string | null;
           id?: string;
+          kind?: string;
+          organization_id?: string | null;
           read_at?: string | null;
           user_id?: string;
-          workspace_id?: string;
+          workspace_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "notifications_entitlement_id_fkey";
+            columns: ["entitlement_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_entitlements";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "notifications_event_id_workspace_id_fkey";
             columns: ["event_id", "workspace_id"];
             isOneToOne: false;
             referencedRelation: "report_status_events";
             referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
           },
           {
             foreignKeyName: "notifications_user_id_fkey";
@@ -1683,6 +1709,21 @@ export type Database = {
           reused: boolean;
         }[];
       };
+      billing_due_notices: {
+        Args: { p_at?: string };
+        Returns: {
+          ends_at: string;
+          entitlement_id: string;
+          grace_ends_at: string;
+          kind: string;
+          organization_id: string;
+          organization_name: string;
+          plan: string;
+          recipients: Json;
+          workspace_id: string;
+          workspace_name: string;
+        }[];
+      };
       billing_find_purchase: {
         Args: {
           p_environment: string;
@@ -1696,6 +1737,10 @@ export type Database = {
           purchase_id: string;
           status: string;
         }[];
+      };
+      billing_finish_notice: {
+        Args: { p_entitlement_id: string; p_failed: number; p_kind: string; p_sent: number };
+        Returns: boolean;
       };
       billing_overview: { Args: { p_organization_id: string }; Returns: Json };
       billing_pending_purchases: {

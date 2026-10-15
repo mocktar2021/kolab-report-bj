@@ -23,20 +23,34 @@ export function Invitations({
   workspaceId,
   grantable,
   pending,
+  disabledReason,
 }: {
   workspaceId: string;
   grantable: WorkspaceRole[];
   pending: PendingInvitationRow[];
+  /**
+   * Set when the workspace is read-only (KRB-178): nobody can be invited and
+   * no invitation sent again, with this reason. Revoking still works.
+   */
+  disabledReason?: string;
 }) {
   return (
     <>
-      <InviteForm workspaceId={workspaceId} grantable={grantable} />
-      <PendingInvitations pending={pending} />
+      <InviteForm workspaceId={workspaceId} grantable={grantable} disabledReason={disabledReason} />
+      <PendingInvitations pending={pending} readOnly={Boolean(disabledReason)} />
     </>
   );
 }
 
-function InviteForm({ workspaceId, grantable }: { workspaceId: string; grantable: WorkspaceRole[] }) {
+function InviteForm({
+  workspaceId,
+  grantable,
+  disabledReason,
+}: {
+  workspaceId: string;
+  grantable: WorkspaceRole[];
+  disabledReason?: string;
+}) {
   const t = useTranslations("Members");
   const tWorkspaces = useTranslations("Workspaces");
   const [state, formAction, pending] = useActionState<InvitationActionState, FormData>(inviteMember, {
@@ -78,11 +92,19 @@ function InviteForm({ workspaceId, grantable }: { workspaceId: string; grantable
             autoComplete="off"
             placeholder={t("inviteEmailPlaceholder")}
             required
+            disabled={Boolean(disabledReason)}
+            aria-describedby={disabledReason ? "invite-disabled" : undefined}
           />
         </div>
         <div className="space-y-2 sm:w-44">
           <Label htmlFor="invite-role">{t("inviteRole")}</Label>
-          <NativeSelect id="invite-role" name="role" defaultValue="expert" selectClassName="h-10">
+          <NativeSelect
+            id="invite-role"
+            name="role"
+            defaultValue="expert"
+            selectClassName="h-10"
+            disabled={Boolean(disabledReason)}
+          >
             {grantable.map((role) => (
               <option key={role} value={role}>
                 {tWorkspaces(`roles.${role}`)}
@@ -90,11 +112,22 @@ function InviteForm({ workspaceId, grantable }: { workspaceId: string; grantable
             ))}
           </NativeSelect>
         </div>
-        <Button type="submit" shape="pill" className="h-10 shrink-0" disabled={pending}>
+        <Button
+          type="submit"
+          shape="pill"
+          className="h-10 shrink-0"
+          disabled={pending || Boolean(disabledReason)}
+          aria-describedby={disabledReason ? "invite-disabled" : undefined}
+        >
           <Send aria-hidden="true" />
           {t("inviteSubmit")}
         </Button>
       </form>
+      {disabledReason ? (
+        <p id="invite-disabled" className="mt-3 text-xs text-muted-foreground">
+          {disabledReason}
+        </p>
+      ) : null}
 
       <div role="status" aria-live="polite" className="mt-3 text-sm">
         <InvitationResult state={state} />
@@ -151,7 +184,7 @@ function CopyLink({ link }: { link: string }) {
   );
 }
 
-function PendingInvitations({ pending }: { pending: PendingInvitationRow[] }) {
+function PendingInvitations({ pending, readOnly }: { pending: PendingInvitationRow[]; readOnly: boolean }) {
   const t = useTranslations("Members");
 
   return (
@@ -170,7 +203,7 @@ function PendingInvitations({ pending }: { pending: PendingInvitationRow[] }) {
       ) : (
         <ul className="divide-y">
           {pending.map((invitation) => (
-            <PendingRow key={invitation.id} invitation={invitation} />
+            <PendingRow key={invitation.id} invitation={invitation} readOnly={readOnly} />
           ))}
         </ul>
       )}
@@ -178,7 +211,7 @@ function PendingInvitations({ pending }: { pending: PendingInvitationRow[] }) {
   );
 }
 
-function PendingRow({ invitation }: { invitation: PendingInvitationRow }) {
+function PendingRow({ invitation, readOnly }: { invitation: PendingInvitationRow; readOnly: boolean }) {
   const t = useTranslations("Members");
   const tWorkspaces = useTranslations("Workspaces");
   const format = useFormatter();
@@ -216,7 +249,7 @@ function PendingRow({ invitation }: { invitation: PendingInvitationRow }) {
               type="submit"
               size="sm"
               variant="outline"
-              disabled={resendPending}
+              disabled={resendPending || readOnly}
               aria-label={t("resendLabel", { email: invitation.email })}
             >
               {t("resend")}

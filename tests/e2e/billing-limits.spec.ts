@@ -275,17 +275,28 @@ test("read-only: invitations, reports and drafts are refused, and the owner sees
     .eq("id", await trialOf(organizationId));
   if (error) throw error;
 
+  // The members page says since when and turns the invite form off
+  // (KRB-178). The database refuses an invitation anyway, viewers included.
   await signIn(page, owner);
   await page.goto(`/fr/espaces/${workspaceId}/membres`);
   const main = page.getByRole("main");
-  await main.getByLabel("Adresse e-mail").fill(`e2e-lecture-${Date.now()}@kolabreport.test`);
-  await main.getByLabel("Rôle", { exact: true }).selectOption("viewer");
-  await main.getByRole("button", { name: "Envoyer l'invitation", exact: true }).click();
   await expect(
     main.getByText(
       `Cet espace de travail est en lecture seule depuis le ${frenchDate(new Date(endsAt.getTime() + 7 * day))}. Vous pouvez consulter et exporter les rapports. Renouvelez l'offre pour les modifier.`,
     ),
   ).toBeVisible();
+  const invite = main.getByRole("button", { name: "Envoyer l'invitation", exact: true });
+  await expect(invite).toBeDisabled();
+  await expect(invite).toHaveAccessibleDescription(
+    "Indisponible : l'espace de travail est en lecture seule.",
+  );
+  const invitation = await api.from("workspace_invitations").insert({
+    workspace_id: workspaceId,
+    email: `e2e-lecture-${Date.now()}@kolabreport.test`,
+    role: "viewer",
+    token_hash: tokenHash(),
+  });
+  expect(invitation.error?.code).toBe("KR043");
 
   const report = await api
     .from("reports")

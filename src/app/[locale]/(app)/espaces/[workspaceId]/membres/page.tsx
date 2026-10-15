@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getReadOnlyReason } from "@/lib/billing/banner";
 import { getPendingInvitations } from "@/lib/invitations/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -28,6 +30,7 @@ export default async function MembersPage({
   const { locale, workspaceId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Members");
+  const tErrors = await getTranslations("Workspaces.errors");
 
   // Unknown ids and workspaces the user is not a member of both give a 404.
   if (!uuidSchema.safeParse(workspaceId).success) notFound();
@@ -50,10 +53,11 @@ export default async function MembersPage({
   }
 
   const supabase = await createClient();
-  const [{ data: workspace }, members, pending] = await Promise.all([
+  const [{ data: workspace }, members, pending, readOnly] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getWorkspaceMembers(workspaceId),
     getPendingInvitations(workspaceId),
+    getReadOnlyReason(workspaceId),
   ]);
   if (!workspace || !members) notFound();
 
@@ -78,9 +82,15 @@ export default async function MembersPage({
         <h1 className="text-h2 text-foreground">{t("title", { workspace: workspace.name })}</h1>
         <p className="mt-1 text-small text-muted-foreground">{t("subtitle")}</p>
       </header>
+      {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-6" /> : null}
 
       <MemberList workspaceId={workspaceId} members={rows} grantable={grantableRoles(access.role)} />
-      <Invitations workspaceId={workspaceId} grantable={grantableRoles(access.role)} pending={pending} />
+      <Invitations
+        workspaceId={workspaceId}
+        grantable={grantableRoles(access.role)}
+        pending={pending}
+        disabledReason={readOnly ? tErrors("readOnlyDisabled") : undefined}
+      />
 
       <p className="mt-4 text-xs text-muted-foreground">{t("roleHelp")}</p>
     </div>

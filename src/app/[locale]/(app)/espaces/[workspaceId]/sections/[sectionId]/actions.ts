@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { workspaceIsWritable } from "@/lib/billing/state";
 import { claimParse, runParse } from "@/lib/deliverables/parse-job";
 import type { ParseMeta } from "@/lib/deliverables/parse/types";
 import { removeObjects } from "@/lib/deliverables/server";
@@ -13,7 +14,7 @@ import { requireWorkspaceRole } from "@/lib/workspaces/server";
 
 export type DeliverableActionResult =
   | { ok: true }
-  | { ok: false; error: "forbidden" | "busy" | "reportFinal" | "generic" };
+  | { ok: false; error: "forbidden" | "busy" | "reportFinal" | "readOnly" | "generic" };
 
 /**
  * A deliverable the caller can edit through its section, read with their
@@ -41,6 +42,9 @@ export async function retryParse(id: string): Promise<DeliverableActionResult> {
   const found = await editableDeliverable(id);
   if (!found) return { ok: false, error: "forbidden" };
   if (found === "reportFinal") return { ok: false, error: found };
+  // The parse writes with the service role, which the read-only guards do
+  // not check (KRB-178): check here.
+  if (!(await workspaceIsWritable(found.deliverable.workspace_id))) return { ok: false, error: "readOnly" };
   const claim = await claimParse(found.deliverable.id, found.deliverable.workspace_id);
   if (!claim) return { ok: false, error: "busy" };
   after(() => runParse(claim));
@@ -70,7 +74,9 @@ export async function deleteDeliverable(id: string): Promise<DeliverableActionRe
   return { ok: true };
 }
 
-export type SectionStatusResult = { ok: true; status: SectionStatus } | { ok: false; error?: "reportFinal" };
+export type SectionStatusResult =
+  | { ok: true; status: SectionStatus }
+  | { ok: false; error?: "reportFinal" | "readOnly" };
 
 /** Status of a section, for its assigned expert or a manager (RLS and the guard trigger agree). */
 export async function updateSectionStatus(sectionId: string, status: string): Promise<SectionStatusResult> {
@@ -94,6 +100,7 @@ export async function updateSectionStatus(sectionId: string, status: string): Pr
     .select("status")
     .maybeSingle();
   if (error?.code === "KR020") return { ok: false, error: "reportFinal" };
+  if (error?.code === "KR043") return { ok: false, error: "readOnly" };
   if (error || !updated) return { ok: false };
   // Sends the page back with the answer, so the status select keeps the new value.
   revalidatePath("/[locale]/(app)/espaces/[workspaceId]/sections/[sectionId]", "page");

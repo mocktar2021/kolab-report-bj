@@ -72,6 +72,7 @@ export const POST = withRequestId(async (request: Request) => {
     .single();
   if (insertError || !row) {
     if (insertError?.code === "42501") return errorResponse(403, "forbidden");
+    if (insertError?.code === "KR043") return errorResponse(403, "readOnly");
     log.error("deliverables: could not register an upload", { error: insertError?.message });
     return errorResponse(500, "generic");
   }

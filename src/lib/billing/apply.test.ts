@@ -171,6 +171,22 @@ describe("applyPurchase", () => {
     );
     expect(result).toMatchObject({ ok: false, reason: "no_transaction" });
     expect(rpc).not.toHaveBeenCalled();
+    // Nothing was ever paid: no error in the logs.
+    expect(log.error).not.toHaveBeenCalled();
+  });
+
+  it("treats a 404 for a transaction the purchase already links as a FedaPay failure", async () => {
+    const { deps, rpc, getTransactionByMerchantReference } = setup({
+      transaction: fedapayError("not_found"),
+    });
+    const result = await applyPurchase(deps, purchase, { source: "reconcile" });
+    expect(result).toMatchObject({ ok: false, reason: "fedapay", error: { code: "not_found", status: 404 } });
+    expect(getTransactionByMerchantReference).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(log.error).toHaveBeenCalledWith(
+      "billing: fedapay request failed",
+      expect.objectContaining({ purchaseId: PURCHASE_ID, status: 404, code: "not_found" }),
+    );
   });
 
   it("never touches a purchase of another FedaPay environment", async () => {
