@@ -140,28 +140,7 @@ A `review` purchase was paid at FedaPay with an amount, currency, merchant refer
 
 ### Billing page and receipts (KRB-177)
 
-The billing page is `/fr/organisations/<organization id>/abonnement`, for the organization's owner and the owners and admins of its workspaces. Experts, viewers and everyone else get a 404. Owners pay and edit the billing details; admins only read. A pass or a payment names its workspace for the organization owner and for members of that workspace; other readers see "Espace Pass Mission". The history leaves out expired and canceled checkouts.
-
-The "Abonnement" link of the sidebar follows the same readers, the organization owner included whatever their workspace roles, and only shows once billing is enforced (`private.billing_settings.enforced`, KRB-179). Before the launch the page stays reachable by its address, for tests on staging.
-
-Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draws the PDF on each download from the stored receipt and its lines, read with the user's own client (RLS), and answers 404 to anyone who is not a billing reader of that organization. A receipt never changes once issued, so:
-
-- The seller on the receipts is `private.billing_settings.seller` at the time of the payment. To change it (new address, for example), update that row in the SQL editor of each Supabase project. Only the next receipts change.
-- The buyer is the organization's billing details at the time of the payment. A customer who wants another name on a receipt already issued needs a credit note (`AV-` numbers, not built yet, ADR 001 question A3).
-- Receipts paid on staging (FedaPay sandbox) and locally (mock) say "Reçu de test, sans valeur comptable".
-- The e-MECeF number goes in `external_invoice_number`, the only column besides `external_invoice_data` that may change. The PDF shows "non émise" until it is set.
-- The payment confirmation e-mail links to the receipts of the billing page (`/fr/organisations/<id>/abonnement#recus`), not to the PDF route as ADR 001, section 9 suggests: a reader who is signed out gets a bare 401 from the route, while the page sends them to the sign-in first.
-
-To read a customer's receipts as the operator, in the SQL editor:
-
-```sql
-select r.number, r.issued_at, r.total_xof, r.environment, r.buyer ->> 'legal_name' as buyer
-from public.billing_receipts r
-where r.organization_id = '<organization id>'
-order by r.issued_at desc;
-```
-
-This section moves to `docs/operations/billing.md` once that runbook exists (KRB-178).
+The billing page, the receipts and what the payment e-mail links to need no setup. Who sees what and how to read a customer's receipts: [`docs/operations/billing.md`](operations/billing.md#billing-page-and-receipts).
 
 ## Secrets rules
 

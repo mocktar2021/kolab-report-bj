@@ -1,6 +1,6 @@
 # Billing
 
-What to do when a reminder does not arrive, when a workspace stays read-only, when an organization needs a period by hand (KRB-178), and when a payment is stuck or refunded (KRB-176). The rules are in [ADR 001](../adr/001-billing-and-fedapay.md). The variables and the daily job are set up in [`docs/deployment.md`](../deployment.md#scheduled-jobs), and what to watch is in [`monitoring.md`](monitoring.md#billing).
+What to do when a reminder does not arrive, when a workspace stays read-only, when an organization needs a period by hand (KRB-178), and when a payment is stuck or refunded (KRB-176). Who sees the billing page and its receipts, and how to read a customer's receipts (KRB-177). The rules are in [ADR 001](../adr/001-billing-and-fedapay.md). The variables and the daily job are set up in [`docs/deployment.md`](../deployment.md#scheduled-jobs), and what to watch is in [`monitoring.md`](monitoring.md#billing).
 
 Every query below runs in the SQL editor of the Supabase dashboard, with the rights of the database owner. Read before you write: every `update`, `insert` or `delete` here says which environment it is for.
 
@@ -18,6 +18,38 @@ Nothing about access is stored. Each time the app or the database reads the stat
 While `private.billing_settings.enforced` is false, every workspace reads as active with no limit and no reminder is due.
 
 In read-only, the database refuses every insert and update made in a user's name on reports, sections, files, workspace templates and rollouts, plus new reports, invitations, new workspaces, viewers made experts and AI drafts (error `KR043`). It still allows reading, exports, deletes, leaving, removing members, revoking invitations, notifications, and rating or discarding an AI draft. Tidying up templates stays open too, like deleting (product owner, 2026-10-15): archiving a version, and ending a rollout without publishing its candidate. Publishing a version, rolling back, starting a rollout and changing its share are refused. Writes made with the service role are not checked by the database: the code that writes for a user checks first.
+
+## Billing page and receipts
+
+The billing page is `/fr/organisations/<organization id>/abonnement`, for the organization's owner and the owners and admins of its workspaces. Experts, viewers and everyone else get a 404. Owners pay and edit the billing details; admins only read. A pass or a payment names its workspace for the organization owner and for members of that workspace; other readers see "Espace Pass Mission". The history leaves out expired and canceled checkouts.
+
+The "Abonnement" link of the sidebar follows the same readers, the organization owner included whatever their workspace roles, and only shows once billing is enforced (`private.billing_settings.enforced`, KRB-179). Before the launch the page stays reachable by its address, for tests on staging.
+
+Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draws the PDF on each download from the stored receipt and its lines, read with the user's own client (RLS), and answers 404 to anyone who is not a billing reader of that organization. A receipt never changes once issued, so:
+
+- The seller on the receipts is `private.billing_settings.seller` at the time of the payment. To change it (new address, for example), update that row in the SQL editor of each Supabase project. Only the next receipts change.
+- The buyer is the organization's billing details at the time of the payment. A customer who wants another name on a receipt already issued needs a credit note (`AV-` numbers, not built yet, ADR 001 question A3).
+- Receipts paid on staging (FedaPay sandbox) and locally (mock) say "Reçu de test, sans valeur comptable".
+- The e-MECeF number goes in `external_invoice_number`, the only column besides `external_invoice_data` that may change. The PDF shows "non émise" until it is set.
+- The payment confirmation e-mail links to the receipts of the billing page (`/fr/organisations/<id>/abonnement#recus`), not to the PDF route as ADR 001, section 9 suggests: a reader who is signed out gets a bare 401 from the route, while the page sends them to the sign-in first.
+
+To read a customer's receipts as the operator, in the SQL editor:
+
+```sql
+select r.number, r.issued_at, r.total_xof, r.environment, r.buyer ->> 'legal_name' as buyer
+from public.billing_receipts r
+where r.organization_id = '<organization id>'
+order by r.issued_at desc;
+```
+
+When the organization was deleted (KRB-180), its receipts stay with `organization_id` set to null and only the service role reads them. Find them by the copy of the buyer:
+
+```sql
+select r.number, r.issued_at, r.total_xof, r.buyer ->> 'legal_name' as buyer
+from public.billing_receipts r
+where r.organization_id is null and r.buyer ->> 'organization_id' = '<organization id>'
+order by r.issued_at desc;
+```
 
 ## Move dates on staging to test
 
