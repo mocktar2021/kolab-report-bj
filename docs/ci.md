@@ -4,6 +4,17 @@ Every pull request and every push to `master` runs two workflows in GitHub Actio
 
 ## CI (`.github/workflows/ci.yml`)
 
+What runs where (KRB-190):
+
+| Job | Pull request | Push to `master` | Manual run |
+| --- | --- | --- | --- |
+| What changed | yes | yes | yes |
+| Lint, typecheck, unit tests, build | yes | yes | yes |
+| Database and end-to-end tests | unless docs only | unless docs only | yes |
+| Lighthouse | no | unless docs only | yes |
+
+**What changed** lists the files the PR or the push changes (`scripts/ci-changed-code.sh`). When all of them are under `docs/` or end in `.md`, the change is docs only and the two long jobs are skipped. A file moved out of `src/` into `docs/` counts at both paths, so it is not docs only. When the script cannot tell (a new branch, a push whose previous commit is gone) or fails, every job runs.
+
 **Lint, typecheck, unit tests, build** runs in about 4 minutes:
 
 1. `npm ci` with the npm cache from `actions/setup-node`.
@@ -24,7 +35,15 @@ The job takes 15 to 20 minutes: about 5 to start the stack and build, the rest f
 
 **Lighthouse** (KRB-153) starts the same local stack, writes the same `.env.local` and builds the same way, then runs `npx lhci autorun`: Lighthouse mobile, 3 runs on `/fr/connexion` and 3 on `/fr/tableau-de-bord` signed in as the seeded demo user. It fails when a median score is under the KRB-25 targets: performance 85, accessibility 95, best practices 95. The dashboard's performance floor is 65 until KRB-172 brings it to 85. The HTML and JSON reports are kept as the `lighthouse-reports` artifact for 14 days. It runs next to the end-to-end job, so it adds no wall-clock time to CI. Thresholds, budgets and how to run it locally: `docs/performance.md`.
 
-All three jobs run on every PR, not only on PRs that touch `supabase/`, so they can be required checks.
+Lighthouse does not run on PRs. On `master` it runs after each merge, and a score under target fails CI there, which stops the staging deploy. To check a PR that may change the scores (a heavy page, a new dependency, images), run CI by hand on its branch before the merge: **Actions > CI > Run workflow**, pick the branch. The results show on the PR's last commit.
+
+The jobs are skipped with an `if:` on the job, never with `paths` or `paths-ignore` on the workflow. A skipped job counts as passed for a required check, so a docs-only PR can still merge. A workflow that never starts leaves its required checks pending, and the PR cannot merge.
+
+### Actions minutes
+
+On a private repo the Actions minutes are limited by the plan and the spending limit (**Settings > Billing and plans**). Nearly all of them go to CI: about 22 minutes of end-to-end tests, 7 of Lighthouse and 4 of checks per run, on each push to a PR and again on `master` after the merge. The scheduled workflows (backups, advisors, nightly evals) take seconds to 3 minutes a day.
+
+When every job of a run fails within a few seconds and the log does not open, the jobs never got a runner: the minutes or the spending limit are used up. Re-running does nothing until that is fixed. While it lasts, nothing deploys, since the deploy waits for CI on `master`.
 
 ## CodeQL (`.github/workflows/codeql.yml`)
 
@@ -52,7 +71,7 @@ In **Settings > Rules > Rulesets > New branch ruleset**:
 - Require status checks to pass, with the branch up to date:
   - `Lint, typecheck, unit tests, build`
   - `Database and end-to-end tests`
-  - `Lighthouse`
+  - `Lighthouse` (skipped on PRs, which counts as passed)
 - Bypass list: add the repository admin role. GitHub does not let an author approve their own PR, so with a single maintainer the admin bypass is the only way to merge your own PRs.
 
 The same ruleset from the terminal:
