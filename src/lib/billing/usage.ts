@@ -70,7 +70,11 @@ export function meterPercent(used: number, max: number | null): number {
   return Math.min(100, Math.round((used / max) * 100));
 }
 
-/** How a purchase reads in the history: a pending one FedaPay declined or canceled did not go through. */
+/**
+ * How a purchase reads in the history: a pending one FedaPay declined did not
+ * go through. Expired and canceled checkouts never reach the history
+ * (private.billing_purchase_listed); a canceled one reads the same here.
+ */
 export function purchaseStatusKey(
   purchase: Pick<PurchaseSummary, "status" | "fedapayStatus">,
 ): "pending" | "notPaid" | "paid" | "expired" | "refunded" | "review" {

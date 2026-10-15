@@ -10,12 +10,13 @@
 --   own copy.
 -- * billing_overview, for billing readers only as before, also returns the
 --   AI drafts used by each line (counted like billing_reserve_draft), what
---   is left in each pack, the last purchases with their status and the last
---   receipts. A pass or a purchase names its workspace for the organization
---   owner, and for members of that workspace; other billing readers get a
---   null name, which the page shows as "Espace Pass Mission". The list of
---   workspaces a pass can be bought for follows the same rule. Still no name
---   or e-mail of a person.
+--   is left in each pack, the last purchases with their status (without the
+--   expired and canceled checkouts) and the last receipts. A pass or a
+--   purchase names its workspace for the organization owner, and for
+--   members of that workspace; other billing readers get a null name, which
+--   the page shows as "Espace Pass Mission". The list of workspaces a pass
+--   can be bought for follows the same rule. Still no name or e-mail of a
+--   person.
 -- * workspace_billing_usage feeds the hints of the members page, the
 --   "Nouveau rapport" dialog and the AI draft panel. Members who write
 --   (owner, admin, expert) read the AI drafts left; member and report counts
@@ -138,6 +139,18 @@ as $$
   );
 $$;
 
+-- Whether a purchase shows in the payment history: checkouts that were never
+-- paid and never will be (expired, or canceled by the buyer on FedaPay's
+-- page) stay out. Pending, declined, in review, paid and refunded ones show.
+create or replace function private.billing_purchase_listed(p_status text, p_fedapay_status text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select p_status <> 'expired' and not (p_status = 'pending' and p_fedapay_status is not distinct from 'canceled');
+$$;
+
 -- -----------------------------------------------------------------------------
 -- The billing page: the overview of KRB-175 with drafts, packs left,
 -- purchases and receipts
@@ -254,6 +267,7 @@ begin
     left join public.workspaces w on w.id = p.workspace_id
     left join public.billing_receipts r on r.purchase_id = p.id and r.kind = 'receipt'
     where p.organization_id = p_organization_id
+      and private.billing_purchase_listed(p.status, p.fedapay_status)
     order by p.created_at desc, p.id
     limit 50
   ) x;
@@ -290,7 +304,9 @@ begin
     'packs', v_packs,
     'purchases', v_purchases,
     'purchases_total', (
-      select count(*) from public.billing_purchases p where p.organization_id = p_organization_id),
+      select count(*) from public.billing_purchases p
+      where p.organization_id = p_organization_id
+        and private.billing_purchase_listed(p.status, p.fedapay_status)),
     'receipts', v_receipts,
     'receipts_total', (
       select count(*) from public.billing_receipts r where r.organization_id = p_organization_id),
@@ -401,6 +417,7 @@ revoke all on function private.billing_line_drafts(uuid, boolean, uuid, text, in
   from public, anon, authenticated;
 revoke all on function private.billing_pack_used(uuid) from public, anon, authenticated;
 revoke all on function private.billing_sees_workspace(uuid) from public, anon, authenticated;
+revoke all on function private.billing_purchase_listed(text, text) from public, anon, authenticated;
 
 revoke all on function public.billing_overview(uuid) from public, anon;
 grant execute on function public.billing_overview(uuid) to authenticated;

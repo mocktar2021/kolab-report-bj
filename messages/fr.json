@@ -1537,7 +1537,7 @@
       },
       "passUsage": "{members}, {reports}, {drafts}",
       "historyTitle": "Historique des paiements",
-      "historyDescription": "Les paiements de l'organisation, du plus récent au plus ancien.",
+      "historyDescription": "Les paiements de l'organisation, du plus récent au plus ancien. Les paiements annulés ou expirés n'y figurent pas.",
       "historyEmpty": "Aucun paiement pour le moment.",
       "historyMore": "Les {count} paiements les plus récents sont affichés, sur {total}.",
       "historyCaption": "Paiements de l'organisation",

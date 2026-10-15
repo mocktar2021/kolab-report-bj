@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(67);
+select plan(69);
 
 -- The billing page (KRB-177, ADR 001 sections 3.5 and 9): billing managers
 -- edit the buyer details of their organization, column by column; billing
@@ -273,6 +273,44 @@ select is(
   (select array_agg(number) from numbers where what = 'plan_b'), 'the owner of org_b reads only its own receipt');
 select is((public.billing_overview(pg_temp.id('org_b')) -> 'subscription' -> 'drafts' ->> 'used')::int, 2,
   'and only its own drafts');
+
+-- Checkouts never paid stay out of the history: an expired one and one the
+-- buyer canceled on FedaPay's page. A declined one still shows.
+select pg_temp.act_as_server();
+create or replace function pg_temp.unpaid(p_status text) returns uuid
+language plpgsql as $$
+declare
+  v_purchase  uuid;
+  v_reference text;
+  v_trx       bigint := nextval('transactions');
+begin
+  select c.purchase_id, c.merchant_reference into v_purchase, v_reference
+  from public.billing_create_purchase(pg_temp.id('org_a'), 'independant_1m', 'Indépendant, 1 mois', 1, 1,
+    pg_temp.terms('independant_1m'), 15000, 0, 'mock', pg_temp.id('owner'), null, false) c;
+  perform public.billing_set_transaction(v_purchase, v_trx, 'pending');
+  if p_status = 'expired' then
+    update public.billing_purchases set status = 'expired' where id = v_purchase;
+  else
+    perform public.billing_apply_transaction(v_purchase, 'return', v_trx, p_status, 15000, 'mock', 'XOF', v_reference);
+  end if;
+  return v_purchase;
+end;
+$$;
+create temp table unpaid (status text primary key, id uuid);
+grant all on unpaid to authenticated;
+insert into unpaid values
+  ('expired', pg_temp.unpaid('expired')),
+  ('canceled', pg_temp.unpaid('canceled')),
+  ('declined', pg_temp.unpaid('declined'));
+
+select pg_temp.act_as('owner');
+select is(
+  (select array_agg(u.status order by u.status)
+   from unpaid u, jsonb_array_elements(public.billing_overview(pg_temp.id('org_a')) -> 'purchases') p
+   where p ->> 'id' = u.id::text),
+  array['declined'], 'the history keeps a declined checkout and leaves out the expired and canceled ones');
+select is((public.billing_overview(pg_temp.id('org_a')) ->> 'purchases_total')::int, 4,
+  'and so does its total: three paid purchases and the declined one');
 
 -- Receipts through RLS: what the download route reads -----------------------------
 create or replace function pg_temp.receipt_rows(p_what text) returns integer
