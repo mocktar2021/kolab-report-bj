@@ -137,6 +137,7 @@ Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/rein
 - The end-to-end suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password. It also creates a workspace with the wizard, adds a second one to the same organization, creates a report from the dashboard, and checks the roles: assignment by the owner, admins kept away from owners, read-only experts and viewers.
 - Invitation e-mails go through `EMAIL_PROVIDER` (`brevo`, `resend`, or `mailpit` for the local stack, see `.env.example`). Without one, the members page shows the link to send by hand. The e2e suite reads them from Mailpit.
 - The workspace tests create users with the service-role key, so `.env.local` needs `SUPABASE_SERVICE_ROLE_KEY` (from `npx supabase status`). `playwright.config.ts` loads `.env.local`.
+- Playwright also starts a FedaPay mock (`tests/fedapay-mock/server.mjs`) on `127.0.0.1:4010`, so port 4010 must be free. With the `FEDAPAY_*` mock values of `.env.example` in `.env.local`, payments never reach FedaPay.
 
 ## Git hooks
 
