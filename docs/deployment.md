@@ -152,7 +152,7 @@ A `review` purchase was paid at FedaPay with an amount, currency, merchant refer
 | Path | Schedule (UTC) | What it does |
 | --- | --- | --- |
 | `/api/cron/storage-cleanup` | `0 3 * * *`, once a day | Deletes the exports made with the export buttons that are more than 90 days old, then removes from Storage the files of deleted deliverables, exports, reports and workspaces (KRB-166). The PDF stored when a report became final stays as long as the report. |
-| `/api/cron/billing` | `17 5 * * *`, once a day (06:17 in Cotonou) | Sends the renewal reminders: an e-mail and an in-app notification to the owners, 7 days before a trial or paid period ends, the day before, once it has ended and once the workspace is read-only (KRB-178). The steps of PR 176-2 (reconciliation of pending purchases) join this job. |
+| `/api/cron/billing` | `17 5 * * *`, once a day (06:17 in Cotonou) | Sends the renewal reminders: an e-mail and an in-app notification to the owners, 7 days before a trial or paid period ends, the day before, once it has ended and once the workspace is read-only (KRB-178). Then reads the pending FedaPay payments again and grants the ones paid, and expires the ones still pending after 48 hours (KRB-176). |
 
 How the storage cleanup works:
 
@@ -182,15 +182,16 @@ How the billing job works:
 - `public.billing_due_notices()` picks the reminders due now and claims each one in `private.billing_notices`, one row per entitlement and kind (`d7`, `d1`, `ended`, `read_only`), before any e-mail goes out. A second run, or two runs at the same time, find the claim and send nothing again. The same call writes the in-app notifications and the `entered_grace` and `entered_read_only` audit events.
 - When a day was missed, only the reminder that is still true goes out: a run after the end sends `ended`, not a late `d7`. A `read_only` reminder is not sent more than 7 days after the workspace turned read-only.
 - The reminders go to the organization owner and the owners of the workspaces the period covers. Nothing is due while `private.billing_settings.enforced` is false.
+- The second step, `reconcile`, reads again from FedaPay up to 25 pending purchases of this deployment's FedaPay environment, younger than 3 days and not checked in the last 10 minutes, oldest check first (`reconcilePendingPurchases`, ADR 001, 8.7). A paid one is granted, exactly as the webhook would. One still pending, or with no transaction at FedaPay, expires 48 hours after it was created. A payment approved more than 15 minutes ago that cannot be granted e-mails `BILLING_ALERT_EMAIL`. Without `FEDAPAY_ENVIRONMENT` the step is skipped; with FedaPay settings that break a rule of `src/lib/billing/settings.ts`, it fails.
 - The job runs its steps in order (`src/lib/billing/cron.ts`). A step that fails does not stop the next one, and the run answers 500.
 
-It needs `CRON_SECRET` like the storage cleanup, and an e-mail provider (`EMAIL_PROVIDER`). To run it by hand:
+It needs `CRON_SECRET` like the storage cleanup, an e-mail provider (`EMAIL_PROVIDER`), and the FedaPay variables above. To run it by hand:
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" https://<app-domain>/api/cron/billing
 ```
 
-It answers counts only, for example `{"ok":true,"steps":{"notices":{"ok":true,"notices":2,"emailsSent":3,"emailsFailed":0}}}`. A 500 means a database call or an e-mail failed: [docs/operations/billing.md](operations/billing.md) says what to do.
+It answers counts only, for example `{"ok":true,"steps":{"notices":{"ok":true,"notices":2,"emailsSent":3,"emailsFailed":0},"reconcile":{"ok":true,"checked":4,"granted":1,"expired":1,"failed":0}}}`. A 500 means a database call, an e-mail or a FedaPay read failed: [docs/operations/billing.md](operations/billing.md) says what to do.
 
 ## Backups and monitoring
 

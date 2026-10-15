@@ -3,12 +3,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { log } from "@/lib/log";
 import type { Database } from "@/lib/supabase/database.types";
 import { sendBillingNotices } from "./notices";
+import { reconcilePendingPurchases } from "./reconcile";
+import { applyDeps, stuckAlert } from "./server";
+import { getBillingSettings } from "./settings";
 
 // The daily billing job, called by /api/cron/billing (vercel.json). It runs
 // a list of steps in order. A step that fails or throws does not stop the
 // next ones, and makes the whole run fail, so the route answers 500 and the
 // run shows as failed in the Vercel cron logs. Each step reports counts
 // only, never a name, an address or an amount.
+
+/**
+ * Pending purchases the daily run reads again from FedaPay, oldest check
+ * first, so it stays well under the route's 60 seconds. The billing page and
+ * the return page check their own purchases too.
+ */
+export const RECONCILE_LIMIT = 25;
 
 export type AdminClient = SupabaseClient<Database>;
 
@@ -27,14 +37,30 @@ export const BILLING_CRON_STEPS: readonly CronStep[] = [
       return { ok, counts };
     },
   },
-  // Slot 1 of PR 176-2, wired at integration: { name: "reconcile", run } with
-  // reconcilePendingPurchases(deps, options) from src/lib/billing/reconcile.ts.
-  // It takes ApplyDeps (this admin client as `db`, plus the FedaPay client)
-  // and returns { checked, granted, expired, failed }: ok is failed === 0.
-  //
-  // Slot 2 of PR 176-2, wired at integration: { name: "expirePending", run },
-  // pending purchases older than 48 hours become expired (ADR 001, 8.7). If
-  // the reconciliation already expires them, this slot stays empty.
+  {
+    // Payments whose webhook was lost and whose buyer never came back
+    // (ADR 001, 8.7): each pending purchase is read again from FedaPay and
+    // applied. A purchase still pending 48 hours after it was created
+    // expires in the same pass (billing_check_pending), so no other step
+    // expires them.
+    name: "reconcile",
+    run: async () => {
+      const settings = getBillingSettings();
+      if (!settings.api) {
+        // No FEDAPAY_ENVIRONMENT: payments are off on purpose. Any other
+        // problem is a misconfiguration, logged by getBillingSettings, and
+        // fails the run.
+        const off = settings.problems.length === 1 && settings.problems[0] === "environment_missing";
+        return { ok: off, counts: { skipped: 1 } };
+      }
+      const deps = applyDeps(settings, settings.api);
+      const summary = await reconcilePendingPurchases(deps, {
+        limit: RECONCILE_LIMIT,
+        onStuck: stuckAlert(settings, deps),
+      });
+      return { ok: summary.failed === 0, counts: summary };
+    },
+  },
 ];
 
 /** Runs every step, even after one failed. */

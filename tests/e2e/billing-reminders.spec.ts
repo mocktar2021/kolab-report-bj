@@ -81,11 +81,19 @@ async function runCron(request: APIRequestContext) {
   const response = await request.get(CRON_PATH, {
     headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
   });
-  const body = await response.json();
-  expect(response.status(), JSON.stringify(body)).toBe(200);
+  const body = (await response.json()) as {
+    ok: boolean;
+    steps: { notices: { ok: boolean; notices: number; emailsSent: number }; reconcile: { ok: boolean } };
+  };
+  // The reminders step must pass. The reconciliation step reads every
+  // pending purchase of the database, other specs' included, so its result
+  // is not this spec's to judge: the route answers 500 when it fails.
+  expect(Object.keys(body.steps), JSON.stringify(body)).toEqual(["notices", "reconcile"]);
+  expect(body.steps.notices.ok, JSON.stringify(body)).toBe(true);
+  expect(response.status()).toBe(body.ok ? 200 : 500);
   // Counts only: no address, no name.
   expect(JSON.stringify(body)).not.toContain("@");
-  return body as { ok: boolean; steps: { notices: { notices: number; emailsSent: number } } };
+  return body;
 }
 
 /** How many e-mails `to` received with each subject. */
@@ -154,10 +162,15 @@ test("the owner sees the days left in the trial, with a link to choose an offer"
   await page.goto("/fr/tableau-de-bord");
 
   await expect(banner(page)).toContainText(/^Essai gratuit : encore 1[34] jours\./);
-  await expect(banner(page).getByRole("link", { name: "Choisir une offre" })).toHaveAttribute(
-    "href",
-    `/fr/organisations/${setup.organizationId}/abonnement`,
-  );
+  const choose = banner(page).getByRole("link", { name: "Choisir une offre" });
+  await expect(choose).toHaveAttribute("href", `/fr/organisations/${setup.organizationId}/abonnement`);
+
+  // The link opens the organization's billing page (KRB-176).
+  await choose.click();
+  await expect(page).toHaveURL(`/fr/organisations/${setup.organizationId}/abonnement`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Abonnement de Cabinet Rappels Lokossa" }),
+  ).toBeVisible();
 });
 
 test("experts get no trial banner: they cannot renew", async ({ page }) => {

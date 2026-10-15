@@ -281,7 +281,7 @@ What to watch once billing is on (`private.billing_settings.enforced`). What to 
 
 ### The daily job
 
-Vercel Cron calls `/api/cron/billing` at 05:17 UTC (`docs/deployment.md`). A run that fails answers 500 and shows as failed under **Settings > Cron Jobs > View Logs** in the Vercel dashboard. The answer holds counts only, per step: `notices` (reminders claimed by this run), `emailsSent`, `emailsFailed`.
+Vercel Cron calls `/api/cron/billing` at 05:17 UTC (`docs/deployment.md`). A run that fails answers 500 and shows as failed under **Settings > Cron Jobs > View Logs** in the Vercel dashboard. The answer holds counts only, per step: for `notices`, the reminders claimed by this run, `emailsSent` and `emailsFailed`; for `reconcile`, the pending purchases `checked`, `granted`, `expired` and `failed`, or `skipped` when FedaPay is not set up.
 
 Its log lines, all with the request id of the run:
 
@@ -328,4 +328,40 @@ The events follow the job, the state does not: a workspace is read-only from the
 
 ### Purchases
 
-To fill after PR 176-2 merges: the purchase log lines of ADR 001, section 12 (`billing: checkout started`, `billing: purchase granted`, `billing: purchase needs review`, `billing: reconcile finished` and the others), the alerts sent to `BILLING_ALERT_EMAIL`, and the query for stuck purchases of section 12.
+FedaPay payments (KRB-176) log one line per step, with the purchase id and, once known, FedaPay's transaction id. Search the Vercel logs for a purchase id to see its whole story. How the webhook is checked: [`docs/security/fedapay-webhook.md`](../security/fedapay-webhook.md).
+
+| Message | Level | Means |
+| --- | --- | --- |
+| `billing: checkout started` | info | An owner left for FedaPay's payment page: purchaseId, organizationId, offer, quantity, amountXof |
+| `billing: purchase granted` | info | The payment became an entitlement or a pack, with its receipt number |
+| `billing: purchase needs review` | error | FedaPay says paid, but the amount, currency, merchant reference or environment does not match (`reason`). Nothing granted, alert sent |
+| `billing: refund seen` | warn | FedaPay says refunded. The purchase is `refunded`, nothing revoked, alert sent |
+| `billing: fedapay request failed` | error | A call to FedaPay's API failed: request, status, code |
+| `billing: could not apply a transaction` | error | The grant failed in the database. Also sent to Sentry with the purchase id as a tag |
+| `billing: purchase of another environment` | error | A sandbox purchase seen by production, or the reverse. Nothing applied |
+| `billing: reconcile finished` | info | checked, granted, expired, failed. `organizationId` is null for the daily job, set for the billing page |
+| `billing: could not list pending purchases` / `billing: could not check a pending purchase` | error | The reconciliation could not read or expire a purchase: the daily job answers 500 |
+| `billing: webhook rejected` | warn | reason: `size`, `json`, or the signature check (`missing`, `malformed`, `signature`, `stale`, `no_secret`) |
+| `billing: misconfigured` | error on production, warn elsewhere | The FedaPay variables break a rule of `src/lib/billing/settings.ts` (`problems`). Checkout and the webhook are off |
+| `billing: alert not sent, BILLING_ALERT_EMAIL is not set` / `billing: alert e-mail not sent` | warn / error | An alert below could not reach the operator |
+
+Alerts by e-mail to `BILLING_ALERT_EMAIL`, once per purchase and kind, with ids only:
+
+| Subject ends with | When |
+| --- | --- |
+| `paiement à vérifier` | A purchase went to `review` |
+| `remboursement constaté` | A refund was seen at FedaPay |
+| `paiement approuvé non accordé` | FedaPay approved a payment more than 15 minutes ago and the reconciliation cannot grant it |
+| `paiement reçu après expiration` | A payment arrived after its purchase expired. It was granted anyway |
+| `deux paiements pour la même offre` | The organization paid the same offer twice within 24 hours. Both periods follow each other |
+
+Purchases waiting for something, in the SQL editor (the same query as `docs/deployment.md`):
+
+```sql
+select id, offer, status, review_reason, amount_xof, fedapay_status, created_at, last_checked_at
+from public.billing_purchases
+where status in ('pending', 'review') and created_at < now() - interval '1 hour'
+order by created_at;
+```
+
+What to do with them: [`billing.md`](billing.md#stuck-purchases-and-refunds).

@@ -1,6 +1,6 @@
 # Billing
 
-What to do when a reminder does not arrive, when a workspace stays read-only, or when an organization needs a period by hand (KRB-178). The rules are in [ADR 001](../adr/001-billing-and-fedapay.md). The variables and the daily job are set up in [`docs/deployment.md`](../deployment.md#scheduled-jobs), and what to watch is in [`monitoring.md`](monitoring.md#billing).
+What to do when a reminder does not arrive, when a workspace stays read-only, when an organization needs a period by hand (KRB-178), and when a payment is stuck or refunded (KRB-176). The rules are in [ADR 001](../adr/001-billing-and-fedapay.md). The variables and the daily job are set up in [`docs/deployment.md`](../deployment.md#scheduled-jobs), and what to watch is in [`monitoring.md`](monitoring.md#billing).
 
 Every query below runs in the SQL editor of the Supabase dashboard, with the rights of the database owner. Read before you write: every `update`, `insert` or `delete` here says which environment it is for.
 
@@ -160,4 +160,71 @@ Null means no limit. The reminders of the new period go out on their own: 7 days
 
 ## Stuck purchases and refunds
 
-> **To fill after PR 176-2 merges.** This section will cover a purchase paid at FedaPay but not granted, a purchase in `review` (amount or reference mismatch), a refund seen at FedaPay, two payments for the same thing, and the reconciliation step of the daily job. Until then, see ADR 001, sections 8.6 and 8.7.
+A purchase starts `pending` when an owner leaves for FedaPay's payment page (KRB-176). It becomes `paid` once granted, `review` when FedaPay's answer does not match it, `expired` when nothing came after 48 hours, and `refunded` when FedaPay reports a refund. The webhook, the return page, the billing page and the daily job all read the transaction again from FedaPay and apply it through `billing_apply_transaction`, which grants a purchase once at most. Why that is safe: [`docs/security/fedapay-webhook.md`](../security/fedapay-webhook.md). The log lines and the alerts are in [`monitoring.md`](monitoring.md#purchases).
+
+To see one purchase and what FedaPay said about it:
+
+```sql
+select id, organization_id, offer, status, review_reason, amount_xof, fedapay_transaction_id,
+       fedapay_status, created_at, paid_at, granted_at, last_checked_at
+from public.billing_purchases
+where id = '<purchase_id>';
+
+select source, event_name, fedapay_status, amount_xof, received_at
+from private.billing_payment_events
+where purchase_id = '<purchase_id>'
+order by received_at;
+```
+
+### Paid at FedaPay, still pending here
+
+1. Wait for the next check, or trigger one: the owner opens the billing page (once a minute per purchase), or you run the daily job by hand (`docs/deployment.md`). The job reads up to 25 pending purchases younger than 3 days, oldest check first.
+2. Still pending: search the logs for the purchase id.
+   - `billing: fedapay request failed` with status 401: the secret key of that environment is wrong. Check `FEDAPAY_SECRET_KEY` and `FEDAPAY_ENVIRONMENT`, then redeploy.
+   - `billing: could not apply a transaction`: the grant failed in the database. Sentry has the error, tagged with the purchase id.
+   - `billing: purchase of another environment`: a sandbox payment met production, or the reverse. It never grants. Refund it.
+   - After 15 minutes, the alert `paiement approuvé non accordé` says the same.
+3. A purchase older than 3 days is no longer read by the job, and an expired one never is. If the FedaPay dashboard shows its payment approved, open the transaction's webhook in FedaPay's logs and use **Re-déclencher**: a payment received always grants, after the expiry too, and only once.
+
+### A purchase in review
+
+FedaPay says paid, but `review_reason` names what does not match: `amount`, `currency`, `merchant_reference` or `environment`. Nothing was granted, and the organization cannot start another payment until the review is settled.
+
+1. Open the transaction in the FedaPay dashboard (`fedapay_transaction_id`) and compare it with the purchase.
+2. `currency` on every payment: FedaPay may report XOF with another id than the one in `src/lib/billing/apply.ts` (item 2 of the checklist in `docs/security/fedapay-webhook.md`). Fix the constant first.
+3. The customer paid the wrong amount or for something else: refund the payment in full (below).
+4. The customer paid what they meant to: grant the period by hand (Manual grant above), with the purchase id in the reason. The purchase stays in `review` and keeps blocking the organization's next payment until KRB-179 ships the operator functions: tell the product owner.
+
+### Refunds
+
+The rules, decided by the product owner (ADR 001, Q10): no refund of a started period, since the trial lets customers try first; a payment made by mistake (twice, or the wrong amount) is refunded in full. The terms of sale say the same (`/fr/cgv#remboursement`).
+
+1. Refund in the FedaPay dashboard. FedaPay refunds only MTN Mobile Money payments; any other one is refunded outside FedaPay, by transfer.
+2. FedaPay's webhook marks the purchase `refunded`, writes a `refund_seen` audit event and sends the alert `remboursement constaté`. Nothing is revoked on its own.
+3. If the refund cancels the period, revoke its entitlement. Until KRB-179 ships `billing_admin_revoke`, this follows the same rule as a manual grant:
+
+   ```sql
+   begin;
+
+   update public.billing_entitlements
+   set revoked_at = now(), revoked_reason = '<reason>'
+   where purchase_id = '<purchase_id>' and revoked_at is null
+   returning id, organization_id, plan, starts_at, ends_at;
+
+   insert into private.billing_events (organization_id, kind, actor, reason, details)
+   values ('<organization_id>', 'manual_revoke', '<your name>', '<reason>',
+           jsonb_build_object('purchase_id', '<purchase_id>', 'entitlement_id', '<id returned above>'));
+
+   commit;
+   ```
+
+   A refunded Pack IA: `update public.billing_ai_packs set revoked_at = now() where purchase_id = '<purchase_id>';`, with the same audit event.
+4. The receipt stays as it is: receipts never change. Credit notes wait for the accountant (ADR 001, A3).
+
+### Two payments for the same offer
+
+The alert `deux paiements pour la même offre` means the organization paid the same offer twice within 24 hours. Both were granted and the second period follows the first. Ask the customer: if the second was a mistake, refund it and revoke its entitlement as above.
+
+### A payment after the purchase expired
+
+The alert `paiement reçu après expiration` means FedaPay approved a payment after its purchase expired. It was granted anyway: money received always grants. Check that the customer did not pay again in the meantime, which would make it a double payment.

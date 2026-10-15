@@ -7,8 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // Vercel Cron calls this once a day (vercel.json, 06:17 in Cotonou) with
 // "Authorization: Bearer $CRON_SECRET", like the storage cleanup (KRB-166).
 // It runs the billing steps of src/lib/billing/cron.ts: the renewal
-// reminders for now (KRB-178). The answer holds counts only. Anything that
-// failed makes it a 500, so the run shows as failed in the Vercel cron logs.
+// reminders (KRB-178), then the reconciliation of pending payments
+// (KRB-176). The answer holds counts only. Anything that failed makes it a
+// 500, so the run shows as failed in the Vercel cron logs.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
