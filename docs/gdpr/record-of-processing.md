@@ -7,7 +7,7 @@ This is the Article 30 record for KolabReport. It lists each processing activity
 | Organization keeping the record | Mocktar Technologies, établissement, C 1357 Houeyiho, 07BP91 Cotonou, République du Bénin. RCCM COTONOU N° RB/COT/26 A 119654, IFU 1200900488800. Same details as `src/content/legal/publisher.ts`. |
 | Contact for data protection | support@mocktar.com |
 | EU representative, DPO | **To confirm** whether either is needed |
-| Last updated | 2026-10-14 |
+| Last updated | 2026-10-15 |
 | Database, Auth and Storage | Supabase, region EU West Paris (`eu-west-3`), per `docs/deployment.md` |
 | App server | Vercel, functions in `cdg1` (Paris), per `vercel.json` |
 
@@ -24,8 +24,8 @@ Processors are described in [`processors.md`](processors.md) and retention in [`
 | Data categories | `auth.users`: e-mail, password hash (Supabase Auth uses bcrypt, see `src/lib/auth/schemas.ts`), confirmation and recovery tokens with their timestamps, last sign-in, `raw_user_meta_data.full_name` from the sign-up form. `auth.sessions`: IP address, user agent, created and refreshed times. `auth.identities`, refresh and one-time tokens. `auth.audit_log_entries`: account events (sign-in, sign-up) with user id, name, e-mail and IP address. `public.profiles`: e-mail, full name, `avatar_url` and `job_title` (no screen fills these two yet), locale. In the browser: Supabase session cookies, the `kr-espace` cookie (id of the current workspace, one year), and `localStorage` keys for the sidebar and theme. |
 | Recipients | Supabase (Auth and database), Vercel (the middleware refreshes the session cookie on each request), the e-mail provider for Auth e-mails (Supabase Auth SMTP, templates in `supabase/templates/`). Members of a shared workspace see each other's name and e-mail (RLS policy `profiles: read self and co-members`). |
 | Transfers outside the EU | See Supabase, Vercel and the e-mail provider in [`processors.md`](processors.md) |
-| Retention | Until the account is deleted. No rule yet for accounts never confirmed or inactive. See [`retention.md`](retention.md). |
-| Security measures | Passwords of 8 to 72 characters, e-mail confirmation (`enable_confirmations = true` in `supabase/config.toml`, to confirm on the hosted projects), refresh token rotation, the sign-up form answers the same whether or not the e-mail already has an account, RLS on `profiles`, HTTPS with HSTS. The offline caches of the PWA are cleared on sign-out (`src/lib/pwa/clear-offline-caches.ts`). |
+| Retention | Until the account is deleted, by the person on `/fr/compte` or by an operator. No rule yet for accounts never confirmed or inactive. A hash of the e-mail stays in `private.billing_trial_claims` after the deletion, so the same address gets no second trial. See [`retention.md`](retention.md). |
+| Security measures | Passwords of 8 to 72 characters, e-mail confirmation (`enable_confirmations = true` in `supabase/config.toml`, to confirm on the hosted projects), refresh token rotation, the sign-up form answers the same whether or not the e-mail already has an account, RLS on `profiles`, HTTPS with HSTS. The offline caches of the PWA are cleared on sign-out (`src/lib/pwa/clear-offline-caches.ts`). Deleting the account asks for the current password and allows 5 tries in 15 minutes ([`docs/security/account-deletion.md`](../security/account-deletion.md)). |
 
 ## 2. Workspace membership and invitations
 
@@ -38,7 +38,7 @@ Processors are described in [`processors.md`](processors.md) and retention in [`
 | Data categories | `organizations`: name, slug, `owner_id`. `workspaces`: name, description, `created_by`. `workspace_members`: user, role, `invited_by`, date joined. `workspace_invitations`: invitee e-mail, role, SHA-256 hash of the link token (the token itself is never stored), `invited_by`, expiry, accepted and revoked dates, `accepted_by`. |
 | Recipients | Supabase, Vercel, the e-mail provider (invitation e-mail, activity 5). Owners and admins of the workspace see its invitations. Anyone holding an invitation link sees, through `invitation_preview`, the invitee e-mail, the inviter's name, the workspace and organization names, the role and the expiry. |
 | Transfers outside the EU | See [`processors.md`](processors.md) |
-| Retention | A membership lasts until the person leaves or is removed, or the workspace is deleted. An invitation link is valid 7 days and works once, but the row stays until the workspace or the inviter's account is deleted. See [`retention.md`](retention.md). |
+| Retention | A membership lasts until the person leaves or is removed, or the workspace is deleted. An invitation link is valid 7 days and works once, but the row stays until the workspace or the inviter's account is deleted, or the invitee's account for the invitations sent to them. See [`retention.md`](retention.md). |
 | Security measures | Token stored as a hash only, single use, accepted only by the confirmed e-mail it was sent to. Admins cannot invite or manage owners. A workspace always keeps one owner (`guard_last_owner`, migration `20261013150000_workspace_rbac.sql`). RLS on every table. |
 
 ## 3. Report content and uploaded deliverables
