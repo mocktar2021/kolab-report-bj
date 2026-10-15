@@ -24,6 +24,7 @@ export function Invitations({
   grantable,
   pending,
   disabledReason,
+  seatHint = null,
 }: {
   workspaceId: string;
   grantable: WorkspaceRole[];
@@ -33,10 +34,17 @@ export function Invitations({
    * no invitation sent again, with this reason. Revoking still works.
    */
   disabledReason?: string;
+  /** Members of the plan against its limit, written by the page (Billing.meter.membersHint). */
+  seatHint?: string | null;
 }) {
   return (
     <>
-      <InviteForm workspaceId={workspaceId} grantable={grantable} disabledReason={disabledReason} />
+      <InviteForm
+        workspaceId={workspaceId}
+        grantable={grantable}
+        disabledReason={disabledReason}
+        seatHint={seatHint}
+      />
       <PendingInvitations pending={pending} readOnly={Boolean(disabledReason)} />
     </>
   );
@@ -46,10 +54,12 @@ function InviteForm({
   workspaceId,
   grantable,
   disabledReason,
+  seatHint,
 }: {
   workspaceId: string;
   grantable: WorkspaceRole[];
   disabledReason?: string;
+  seatHint: string | null;
 }) {
   const t = useTranslations("Members");
   const tWorkspaces = useTranslations("Workspaces");
@@ -75,6 +85,7 @@ function InviteForm({
         {t("inviteTitle")}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">{t("inviteDescription")}</p>
+      {seatHint ? <p className="mt-2 text-sm font-medium tabular-nums text-foreground">{seatHint}</p> : null}
 
       <form
         ref={formRef}

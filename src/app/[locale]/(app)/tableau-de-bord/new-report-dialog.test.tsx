@@ -1,12 +1,17 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../messages/fr.json";
-import { createReport } from "./actions";
+import { createReport, reportUsageHint } from "./actions";
 import { NewReportDialog } from "./new-report-dialog";
 
-vi.mock("./actions", () => ({ createReport: vi.fn() }));
+vi.mock("./actions", () => ({ createReport: vi.fn(), reportUsageHint: vi.fn() }));
+
+beforeEach(() => {
+  // No plan limit unless a test says otherwise.
+  vi.mocked(reportUsageHint).mockResolvedValue(null);
+});
 
 const WORKSPACE_ID = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
 
@@ -64,6 +69,23 @@ describe("NewReportDialog", () => {
     );
     expect(createReport).toHaveBeenCalledWith(WORKSPACE_ID, "Rapport de fin de mission");
     expect(screen.getByLabelText("Titre du rapport")).toHaveValue("Rapport de fin de mission");
+  });
+
+  it("shows the plan's active reports once the dialog is open", async () => {
+    vi.mocked(reportUsageHint).mockResolvedValue(
+      "Offre Indépendant : 2 rapports actifs sur 3. Un rapport final ne compte plus.",
+    );
+    renderDialog();
+    expect(reportUsageHint).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Nouveau rapport" }));
+    const dialog = await screen.findByRole("dialog", { name: "Nouveau rapport" });
+    expect(
+      await within(dialog).findByText(
+        "Offre Indépendant : 2 rapports actifs sur 3. Un rapport final ne compte plus.",
+      ),
+    ).toBeVisible();
+    expect(reportUsageHint).toHaveBeenCalledWith(WORKSPACE_ID);
   });
 
   it("gives the focus back to the button on cancel, and starts empty the next time", async () => {

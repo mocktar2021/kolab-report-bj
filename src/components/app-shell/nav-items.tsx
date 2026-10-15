@@ -2,15 +2,35 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookText, Gauge, LayoutDashboard } from "lucide-react";
+import { BookText, CreditCard, Gauge, LayoutDashboard } from "lucide-react";
 import { LazyMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
 import { SECTION_STATUSES, isSectionStatus } from "@/lib/section-statuses";
 import { cn } from "@/lib/utils";
+import { isManager } from "@/lib/workspaces/roles";
+import type { MyWorkspace } from "@/lib/workspaces/types";
 
 const DASHBOARD_PATH = "/tableau-de-bord";
+
+/**
+ * The organization of the current workspace when the user reads its billing
+ * (ADR 001, 3.5): they own or administer one of its workspaces. Same rule as
+ * private.can_read_org_billing, from the memberships the shell already has.
+ */
+export function billingOrganizationOf(
+  workspaces: readonly MyWorkspace[],
+  currentWorkspaceId: string | null,
+): string | null {
+  const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
+  if (!current) return null;
+  return workspaces.some(
+    (workspace) => workspace.organizationId === current.organizationId && isManager(workspace.role),
+  )
+    ? current.organizationId
+    : null;
+}
 
 // The sliding highlight needs motion's layout features (about 30 kB
 // compressed). They load in their own chunk once the shell has hydrated, so
@@ -32,6 +52,8 @@ type NavItemsProps = {
   workspaceId: string | null;
   /** Owners and admins of that workspace, who also get its manager-only pages. */
   manager?: boolean;
+  /** The organization whose billing page the user reads (billingOrganizationOf). */
+  billingOrganizationId?: string | null;
   onNavigate?: () => void;
 };
 
@@ -44,7 +66,13 @@ export function NavItems(props: NavItemsProps) {
   );
 }
 
-function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavItemsProps) {
+function NavItemList({
+  variant,
+  workspaceId,
+  manager = false,
+  billingOrganizationId = null,
+  onNavigate,
+}: NavItemsProps) {
   const t = useTranslations("AppShell");
   const tFilters = useTranslations("Dashboard.filters");
   const pathname = usePathname();
@@ -54,6 +82,7 @@ function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavI
   const onDashboard = pathname === DASHBOARD_PATH;
   const promptsPath = workspaceId ? `/espaces/${workspaceId}/modeles` : null;
   const aiPath = workspaceId && manager ? `/espaces/${workspaceId}/ia` : null;
+  const billingPath = billingOrganizationId ? `/organisations/${billingOrganizationId}/abonnement` : null;
   const collapsible = variant === "sidebar";
 
   return (
@@ -85,6 +114,16 @@ function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavI
             variant={variant}
             onNavigate={onNavigate}
             icon={<Gauge className="size-4" aria-hidden="true" />}
+          />
+        ) : null}
+        {billingPath ? (
+          <NavItem
+            href={billingPath}
+            label={t("billing")}
+            active={pathname === billingPath || pathname.startsWith(`${billingPath}/`)}
+            variant={variant}
+            onNavigate={onNavigate}
+            icon={<CreditCard className="size-4" aria-hidden="true" />}
           />
         ) : null}
       </ul>

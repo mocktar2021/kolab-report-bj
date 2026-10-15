@@ -10,7 +10,7 @@ import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
-import { NavItems } from "./nav-items";
+import { billingOrganizationOf, NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
 import { useSidebarCollapsed } from "./sidebar-state";
@@ -83,6 +83,7 @@ export function Sidebar({
           variant="sidebar"
           workspaceId={currentWorkspaceId}
           manager={current ? isManager(current.role) : false}
+          billingOrganizationId={billingOrganizationOf(workspaces, currentWorkspaceId)}
         />
       </nav>
 

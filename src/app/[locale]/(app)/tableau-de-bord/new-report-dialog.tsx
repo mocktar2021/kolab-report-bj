@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { WorkspaceFieldErrorKey } from "@/lib/workspaces/schemas";
-import { createReport, type CreateReportState } from "./actions";
+import { createReport, reportUsageHint, type CreateReportState } from "./actions";
 
 const TITLE_ID = "new-report-title";
 const TITLE_ERROR_ID = "new-report-title-error";
@@ -98,7 +98,24 @@ function NewReportForm({ workspaceId }: { workspaceId: string }) {
   // Controlled, so the title stays in the field when the server refuses it.
   const [title, setTitle] = useState("");
   const [localError, setLocalError] = useState<WorkspaceFieldErrorKey | null>(null);
+  // "Offre Indépendant : 2 rapports actifs sur 3", read when the dialog opens.
+  const [usageHint, setUsageHint] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let current = true;
+    reportUsageHint(workspaceId).then(
+      (hint) => {
+        if (current) setUsageHint(hint);
+      },
+      () => {
+        // No hint: the server still checks the limit on creation.
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [workspaceId]);
 
   const serverError = state.status === "error" ? state.fieldErrors?.title : undefined;
   const fieldError = localError ?? serverError;
@@ -150,6 +167,8 @@ function NewReportForm({ workspaceId }: { workspaceId: string }) {
         />
         <FieldError id={TITLE_ERROR_ID} message={fieldError && tWorkspaces(`fieldErrors.${fieldError}`)} />
       </div>
+
+      {usageHint ? <p className="mt-4 text-sm tabular-nums text-muted-foreground">{usageHint}</p> : null}
 
       {formError ? (
         <p role="alert" className="mt-4 text-sm text-destructive">

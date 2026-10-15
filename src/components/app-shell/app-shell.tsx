@@ -13,7 +13,7 @@ import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
-import { NavItems } from "./nav-items";
+import { billingOrganizationOf, NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
 import { ACCOUNT_PATH, Sidebar } from "./sidebar";
@@ -145,6 +145,7 @@ export function AppShell({
                 variant="sheet"
                 workspaceId={currentWorkspaceId}
                 manager={current ? isManager(current.role) : false}
+                billingOrganizationId={billingOrganizationOf(workspaces, currentWorkspaceId)}
                 onNavigate={() => setMenuOpen(false)}
               />
             </Suspense>
