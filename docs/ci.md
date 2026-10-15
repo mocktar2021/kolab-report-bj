@@ -19,7 +19,7 @@ What runs where (KRB-190):
 
 1. `npm ci` with the npm cache from `actions/setup-node`.
 2. Writing check on the PR: commit messages and changed files go through `write-like-mocktar` (skipped for Dependabot).
-3. `format:check`, `lint`, `typecheck` and `npm test`.
+3. `format:check`, `lint`, `typecheck` and `npm test`. Vitest runs the test files side by side, except `src/lib/deliverables/parse-job.test.ts`, which runs alone after them (the `alone` project in `vitest.config.mts`): it runs a parse worker out of memory on purpose, and that slowed quick tests next to it past their 5 s timeout (KRB-191). A new test that loads the whole machine goes in that list.
 4. `scripts/check-public-env.mjs` fails on `NEXT_PUBLIC_` variables named like secrets, since those ship to the browser.
 5. `node scripts/audit-production.mjs` runs `npm audit --omit=dev` and fails on any high or critical advisory, unless `.github/accepted-advisories.json` accepts it. An accepted entry gives the GHSA id, the direct dependencies it may come through, the reason it does not apply and an expiry date. The job fails again once that date passes, or when the advisory comes through another dependency. What is accepted and why: `docs/security/dependencies.md`.
 6. `next build` with placeholder Supabase variables and the `.next/cache` restored. `npm run build` then runs `scripts/check-pdf-fonts.mjs`, which fails when a route that draws a PDF does not ship pdfkit's standard fonts. Vercel deploys only the files the build traces, and pdfkit loads these fonts in a way the trace misses (KRB-189).
