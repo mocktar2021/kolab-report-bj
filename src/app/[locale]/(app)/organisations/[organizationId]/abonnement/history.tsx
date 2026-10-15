@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Download } from "lucide-react";
 import { formatBillingDate, formatXof } from "@/lib/billing/format";
+import { RECEIPTS_ANCHOR } from "@/lib/billing/navigation";
 import type { BillingOverview, ReceiptSummary } from "@/lib/billing/state";
 import { purchaseStatusKey } from "@/lib/billing/usage";
 import { cn } from "@/lib/utils";
@@ -133,10 +134,12 @@ export async function ReceiptList({ overview }: { overview: BillingOverview }) {
   const t = await getTranslations("Billing.page");
   const { receipts } = overview;
 
+  // The payment e-mail links here (#recus); scroll-mt keeps the title clear of the sticky top bar.
   return (
     <section
+      id={RECEIPTS_ANCHOR}
       aria-labelledby="receipts-title"
-      className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm"
+      className="surface-card mt-8 scroll-mt-20 overflow-hidden rounded-2xl border shadow-sm"
     >
       <div className="border-b px-5 py-4">
         <h2 id="receipts-title" className="font-medium text-foreground">

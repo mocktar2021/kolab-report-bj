@@ -17,7 +17,7 @@ export type PaymentReceivedEmailInput = {
   /** AI drafts of a Pack IA, null otherwise. */
   drafts: number | null;
   receiptNumber: string | null;
-  /** The organization's billing page. */
+  /** The organization's billing page, at its receipts when there is a receipt. */
   link: string;
 };
 
@@ -73,15 +73,16 @@ export function paymentReceivedEmail(input: PaymentReceivedEmailInput): Email {
   }
   if (input.receiptNumber) {
     lines.push(
-      `Votre reçu porte le numéro ${input.receiptNumber}. Il est disponible depuis la page Abonnement.`,
+      `Votre reçu porte le numéro ${input.receiptNumber}. Téléchargez-le en PDF depuis la liste des reçus de la page Abonnement.`,
     );
   }
   const subject = input.receiptNumber ? `Paiement reçu, reçu ${input.receiptNumber}` : "Paiement reçu";
-  const text = `${lines.join("\n\n")}\n\nVoir l'abonnement : ${input.link}\n`;
+  const label = input.receiptNumber ? "Voir les reçus" : "Voir l'abonnement";
+  const text = `${lines.join("\n\n")}\n\n${label} : ${input.link}\n`;
   return {
     to: input.to,
     subject,
-    html: layout("Paiement reçu", lines, { label: "Voir l'abonnement", link: input.link }),
+    html: layout("Paiement reçu", lines, { label, link: input.link }),
     text,
   };
 }

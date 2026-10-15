@@ -148,6 +148,7 @@ Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draw
 - The buyer is the organization's billing details at the time of the payment. A customer who wants another name on a receipt already issued needs a credit note (`AV-` numbers, not built yet, ADR 001 question A3).
 - Receipts paid on staging (FedaPay sandbox) and locally (mock) say "Reçu de test, sans valeur comptable".
 - The e-MECeF number goes in `external_invoice_number`, the only column besides `external_invoice_data` that may change. The PDF shows "non émise" until it is set.
+- The payment confirmation e-mail links to the receipts of the billing page (`/fr/organisations/<id>/abonnement#recus`), not to the PDF route as ADR 001, section 9 suggests: a reader who is signed out gets a bare 401 from the route, while the page sends them to the sign-in first.
 
 To read a customer's receipts as the operator, in the SQL editor:
 

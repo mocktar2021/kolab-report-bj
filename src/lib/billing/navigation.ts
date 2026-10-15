@@ -1,7 +1,16 @@
 import type { MyWorkspace } from "@/lib/workspaces/types";
 
-// The "Abonnement" link of the app navigation (KRB-177). No server-only
-// import: the sidebar, a Client Component, uses it.
+// The "Abonnement" link of the app navigation and the links to the billing
+// page (KRB-177). No server-only import: the sidebar, a Client Component,
+// uses it.
+
+/** Id of the receipts section of the billing page, linked from the payment e-mail. */
+export const RECEIPTS_ANCHOR = "recus";
+
+/** The billing page of an organization, without the locale prefix. */
+export function billingPagePath(organizationId: string): string {
+  return `/organisations/${organizationId}/abonnement`;
+}
 
 /**
  * The organization of the current workspace when the user reads its billing
