@@ -144,7 +144,7 @@ Goal: prospects see the offers, the operator can sell Institution deals, and bil
 
 ### PR 179-3: launch
 
-- Migration `<ts>_billing_launch.sql`: the steps of ADR 10 (`enforced = true`, launch periods, trial claims, audit events). It runs on staging when merged and on production with the release tag, which is the launch moment.
+- Migration `20261016100000_billing_launch.sql`: the steps of ADR 10 (`enforced = true`, launch periods, trial claims, audit events). It runs on staging when merged and on production with the release tag, which is the launch moment.
 - Before tagging: FedaPay live account verified, live keys and webhook secret on Vercel Production, live webhook created with auto-disable unticked, Vercel plan checked (Q16), terms of sale online (Q10), the launch e-mail to existing owners written by the product owner, sandbox checklist passed on staging.
 - After the release: grant the owner's own organizations Institution with `scripts/billing/grant.mjs`; one live payment of the smallest offer, refunded through the FedaPay dashboard, to check the whole path in production.
 

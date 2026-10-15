@@ -15,9 +15,44 @@ Nothing about access is stored. Each time the app or the database reads the stat
 | `grace` | Nothing covers now, and the last one ended less than `grace_days` (7) ago |
 | `read_only` | Anything else, including an organization that never had an entitlement |
 
-While `private.billing_settings.enforced` is false, every workspace reads as active with no limit and no reminder is due.
+While `private.billing_settings.enforced` is false, every workspace reads as active with no limit and no reminder is due. The launch turns it on, once (next section).
 
 In read-only, the database refuses every insert and update made in a user's name on reports, sections, files, workspace templates and rollouts, plus new reports, invitations, new workspaces, viewers made experts and AI drafts (error `KR043`). It still allows reading, exports, deletes, leaving, removing members, revoking invitations, notifications, and rating or discarding an AI draft. Tidying up templates stays open too, like deleting (product owner, 2026-10-15): archiving a version, and ending a rollout without publishing its candidate. Publishing a version, rolling back, starting a rollout and changing its share are refused. Writes made with the service role are not checked by the database: the code that writes for a user checks first.
+
+## The launch
+
+The migration `20261016100000_billing_launch.sql` (KRB-179) turns billing on. It runs on staging when its PR merges, through the deploy's `supabase db push`, and on production with the release tag, which is the launch moment. In one transaction it:
+
+1. Sets `enforced = true` and `launched_at` in `private.billing_settings`.
+2. Gives every organization with no paid or manual period running a 30-day launch period with the Cabinet limits (`source = 'launch'`, worth 0 FCFA, note "Période de lancement"). A running trial ends where it starts. When a period is planned later, the launch period stops where that one starts.
+3. Counts every organization owner as having had a trial (`private.billing_trial_claims`), so a second organization of theirs gets none.
+4. Writes one `launch_period` event per organization, with the line before and after.
+
+It refuses to run a second time (error `55000`). Production has no organization yet, so there it only turns the switch on. On a local database with 1 426 organizations left by the end-to-end tests, it took half a second.
+
+Check on staging after the deploy:
+
+```sql
+select enforced, launched_at from private.billing_settings;
+
+select source, count(*) from public.billing_entitlements
+where scope = 'subscription' and revoked_at is null and ends_at > now()
+group by source;
+
+select count(*) from private.billing_events where kind = 'launch_period';
+```
+
+Before the release tag, for production:
+
+- FedaPay live account verified, every box of **Préférences > Frais** unticked (next section), live keys and webhook secret on Vercel Production only, live webhook created with auto-disable unticked ([`docs/deployment.md`](../deployment.md#4-fedapay-krb-176)).
+- Vercel Pro and Supabase Pro (ADR 001, Q16), terms of sale online at `/fr/cgv`.
+- The sandbox checklist of ADR 001, section 13, passed on staging.
+- The launch e-mail to existing owners, written by the product owner, when production has any.
+
+After the release:
+
+- Put the owner's own organizations on Institution with `grant.mjs`, reason "usage interne" ([A period without a payment](#a-period-without-a-payment)).
+- Pay the smallest offer once with a real mobile money account, check the receipt, then refund it ([Refunds](#refunds)). Compare the fee FedaPay kept with the 1.8% of ADR 001, Q18, and correct the ADR and the next section if it differs.
 
 ## Billing page and receipts
 
