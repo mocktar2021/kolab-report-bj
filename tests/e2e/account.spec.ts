@@ -281,7 +281,10 @@ test("an owner transfers the organization, then deletes the account and is signe
     .selectOption({ label: "Fifa Repreneuse" });
   await main.getByRole("button", { name: "Transférer", exact: true }).click();
   const confirm = page.getByRole("dialog", { name: `Transférer Cabinet Cession ${RUN} ?` });
-  await expect(confirm).toContainText("Fifa Repreneuse devient propriétaire de l'organisation.");
+  // The new owner may delete the organization and its workspaces (KRB-180): the dialog says so.
+  await expect(confirm).toContainText(
+    "Fifa Repreneuse devient propriétaire de l'organisation et pourra la supprimer, avec n'importe lequel de ses espaces de travail.",
+  );
   await confirm.getByRole("button", { name: "Transférer l'organisation" }).click();
   await expect(page).toHaveURL(/\/fr\/compte\?transfert=effectue$/);
   await expect(
