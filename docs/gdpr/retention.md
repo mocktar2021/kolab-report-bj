@@ -30,7 +30,7 @@ Two facts shape most of the table:
 | Payments and receipts (KRB-176) | `billing_purchases`, `billing_receipts`, their lines and payment events | Kept when the organization is deleted, with `organization_id` set to null: the receipt holds a copy of the buyer. Only the service role reads them after that. | 10 years under OHADA, **to confirm** with the accountant (ADR 001, A5) |
 | Trial claims | `private.billing_trial_claims` (user id, SHA-256 hash of the e-mail address, organization, date). No address and no name. | Kept with no time limit, after the account is deleted too, so a person gets one free trial (ADR 001, KRB-186) | Same: no time limit, decided by the product owner on 2026-10-15 |
 | Account deletion tries | `private.account_deletion_attempts` (user id, start and end) | Deleted with the account. A try older than a day goes at the person's next try. | Same |
-| Record of deleted accounts | E-mails to `ACCOUNT_DELETION_LOG_EMAIL` (account id, date, environment), outside the database so a restore can't roll it back | Kept in that mailbox, and in the e-mail provider's logs for the provider's period | **To decide**: delete each e-mail once no backup taken before it remains, today 14 days ([below](#backups)) |
+| Record of deleted accounts | E-mails to `ACCOUNT_DELETION_LOG_EMAIL` (account id, date, environment), outside the database so a restore can't roll it back | 35 days in that mailbox, then a rule of the mailbox deletes them: they only need to outlive the oldest backups, 14 days for the database and about 32 days for files ([below](#backups)). The e-mail provider keeps its logs for its own period. | Same |
 
 ## Storage files
 

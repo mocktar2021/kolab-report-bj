@@ -282,6 +282,8 @@ A restore brings back every account deleted after the backup was taken, and it r
 - each deletion made in the app sends an e-mail to `ACCOUNT_DELETION_LOG_EMAIL` with the account id, the date and the environment, never the e-mail address or the name (`src/lib/account/deletion-record.ts`);
 - each deletion made by hand is in the request log ([Before you start](#before-you-start)).
 
+The mailbox keeps these e-mails 35 days ([`retention.md`](retention.md)), longer than any backup.
+
 After restoring a backup taken at time T, on the restored environment:
 
 1. List the ids e-mailed to `ACCOUNT_DELETION_LOG_EMAIL` after T, subject `[KolabReport <environment>] Compte supprimé <id>`, and the deletions of the request log after T.
