@@ -22,6 +22,7 @@ const ids = {
   lost: "00000000-0000-4000-8000-000000000003",
   broken: "00000000-0000-4000-8000-000000000004",
   stuck: "00000000-0000-4000-8000-000000000005",
+  abandoned: "00000000-0000-4000-8000-000000000006",
 };
 
 function pendingRow(id: string, transactionId: number | null) {
@@ -178,6 +179,45 @@ describe("reconcilePendingPurchases", () => {
     });
     // Approved a moment ago: not stuck yet.
     expect(onStuck).not.toHaveBeenCalled();
+  });
+
+  it("does not count a checkout FedaPay never got a transaction for as a failure", async () => {
+    // Both were looked up by merchant reference and FedaPay has nothing:
+    // nothing was paid. The older one is past 48 hours and expires.
+    const { deps, rpc, getTransaction } = setup({
+      pending: [pendingRow(ids.lost, null), pendingRow(ids.abandoned, null)],
+      transactions: {},
+      outcomes: {},
+      checked: { [ids.lost]: "pending", [ids.abandoned]: "expired" },
+    });
+    expect(await reconcilePendingPurchases(deps)).toEqual({ checked: 2, granted: 0, expired: 1, failed: 0 });
+    expect(getTransaction).not.toHaveBeenCalled();
+    expect(
+      rpc.mock.calls
+        .filter(([name]) => name === "billing_check_pending")
+        .map(([, args]) => args.p_purchase_id),
+    ).toEqual([ids.lost, ids.abandoned]);
+    expect(log.error).not.toHaveBeenCalled();
+  });
+
+  it("counts a 404 for a transaction the purchase already links as a failure", async () => {
+    // FedaPay created that transaction: losing it should never happen.
+    const { deps, rpc } = setup({
+      pending: [pendingRow(ids.broken, 41)],
+      transactions: {
+        41: {
+          ok: false,
+          error: { code: "not_found", status: 404, request: "GET", transient: false, message: "x" },
+        },
+      },
+      outcomes: {},
+    });
+    expect(await reconcilePendingPurchases(deps)).toEqual({ checked: 0, granted: 0, expired: 0, failed: 1 });
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual(["billing_pending_purchases"]);
+    expect(log.error).toHaveBeenCalledWith(
+      "billing: fedapay request failed",
+      expect.objectContaining({ purchaseId: ids.broken, status: 404, code: "not_found" }),
+    );
   });
 
   it("alerts when a payment approved more than 15 minutes ago still cannot be granted", async () => {

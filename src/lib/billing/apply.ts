@@ -198,6 +198,10 @@ export async function applyPurchase(
       ? await fedapay.getTransaction(deps.api, purchase.fedapayTransactionId)
       : await fedapay.getTransactionByMerchantReference(deps.api, purchase.merchantReference);
   if (!read.ok) {
+    // Found by merchant reference, and FedaPay has none: no payment was ever
+    // started there (a checkout left early, a create that failed). Not an
+    // error, and the purchase expires after 48 hours. A 404 for a transaction
+    // id the purchase stored is one: FedaPay created that transaction.
     if (read.error.code === "not_found" && purchase.fedapayTransactionId === null) {
       return { ok: false, reason: "no_transaction", error: read.error };
     }

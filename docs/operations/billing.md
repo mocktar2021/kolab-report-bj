@@ -183,6 +183,7 @@ order by received_at;
 1. Wait for the next check, or trigger one: the owner opens the billing page (once a minute per purchase), or you run the daily job by hand (`docs/deployment.md`). The job reads up to 25 pending purchases younger than 3 days, oldest check first.
 2. Still pending: search the logs for the purchase id.
    - `billing: fedapay request failed` with status 401: the secret key of that environment is wrong. Check `FEDAPAY_SECRET_KEY` and `FEDAPAY_ENVIRONMENT`, then redeploy.
+   - The same line with status 404 on `GET /v1/transactions/<id>`: FedaPay does not know a transaction it created for this purchase, so the secret key may belong to another FedaPay account. Look for the transaction in the FedaPay dashboard. This one fails the daily job; a purchase that never got a transaction does not.
    - `billing: could not apply a transaction`: the grant failed in the database. Sentry has the error, tagged with the purchase id.
    - `billing: purchase of another environment`: a sandbox payment met production, or the reverse. It never grants. Refund it.
    - After 15 minutes, the alert `paiement approuvé non accordé` says the same.
