@@ -3,9 +3,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { contextBudget, planContext } from "@/lib/ai/context";
+import { contextBudget, estimateTokens, planContext } from "@/lib/ai/context";
 import { readAiSettings } from "@/lib/ai/models";
+import { draftToMarkdown, parseDraftOutput, type DraftOutput, type SourceRefs } from "@/lib/ai/schemas";
 import { PARSE_LIMITS } from "@/lib/deliverables/parse/types";
+import type { OutputSchema } from "@/lib/prompts/catalog";
 import {
   CaseError,
   CATEGORIES,
@@ -14,11 +16,12 @@ import {
   loadCase,
   loadCases,
   TEMPLATE_KEYS,
+  type LoadedCase,
 } from "../lib/case";
 import { runChecks } from "../lib/checks";
 import { generateContent } from "../lib/generate";
 import { loadGlobalTemplates } from "../lib/templates";
-import { containsTerm, normalize } from "../lib/text";
+import { containsTerm, countWords, normalize } from "../lib/text";
 
 const cases = loadCases();
 const templates = loadGlobalTemplates();
@@ -184,5 +187,110 @@ describe("long cases", () => {
       return plan.decisions.some((decision) => decision.action === "cut" || decision.action === "dropped");
     });
     expect(shared).toBe(true);
+  });
+});
+
+// The longest answer the golden cases of a template accept
+// (reference.words.max), written as the JSON the model returns, must fit the
+// template's max_output_tokens with a margin. Drafts run without thinking
+// (noThinking), so the whole cap goes to the answer. The words come from the
+// template's own reference sections, so the text has the characters per word
+// of the French an expert writes, and estimateTokens counts it on the high side.
+// The margin covers a model that writes past the bounds, indents its JSON or
+// cuts numbers into more tokens.
+describe("output caps", () => {
+  const MARGIN = 1.5;
+
+  /** The words of some reference sections, without Markdown marks. */
+  function corpus(list: readonly LoadedCase[]): string[] {
+    return list
+      .flatMap((value) => value.reference.markdown.replace(/[#*_|>`]/g, " ").split(/\s+/))
+      .filter((word) => /[\p{L}\p{N}]/u.test(word));
+  }
+
+  /** A valid output for `schema` shaped like a long answer, with `body` words in its free text. */
+  function longOutput(schema: OutputSchema, refs: SourceRefs, words: string[], body: number): DraftOutput {
+    let next = 0;
+    const take = (count: number) =>
+      Array.from({ length: Math.max(1, Math.ceil(count)) }, () => words[next++ % words.length]).join(" ");
+    const sources = refs.map((ref) => ({ deliverable: ref, detail: take(15) }));
+    const values: Record<OutputSchema, () => unknown> = {
+      section_draft: () => ({
+        title: take(8),
+        summary: take(60),
+        key_findings: Array.from({ length: 6 }, () => take(20)),
+        body_markdown: Array.from({ length: 4 }, () => `### ${take(5)}\n\n${take(body / 4)}`).join("\n\n"),
+        recommendations: Array.from({ length: 4 }, () => take(25)),
+        sources,
+      }),
+      executive_summary: () => ({
+        summary: `${take(body / 2)}\n\n${take(body / 2)}`,
+        key_points: Array.from({ length: 5 }, () => take(20)),
+        sources,
+      }),
+      recommendations: () => ({
+        introduction: take(35),
+        recommendations: Array.from({ length: 8 }, (_, index) => ({
+          title: take(7),
+          rationale: take(body / 8),
+          priority: index < 3 ? "haute" : "moyenne",
+          priority_reason: take(20),
+          sources: refs.slice(0, 2),
+        })),
+        sources,
+      }),
+      data_analysis: () => ({
+        summary: take(60),
+        observations: Array.from({ length: 10 }, () => ({
+          label: take(5),
+          detail: take(body / 10),
+          sources: refs.slice(0, 1),
+        })),
+        limits: Array.from({ length: 4 }, () => take(18)),
+        sources,
+      }),
+    };
+    const output = parseDraftOutput(schema, refs, values[schema]());
+    if (!output) throw new Error(`the ${schema} sample does not fit its schema`);
+    return output;
+  }
+
+  for (const key of TEMPLATE_KEYS) {
+    it(`${key}: leaves room for its longest accepted answer`, () => {
+      const template = templates.get(key);
+      if (!template) throw new Error(`no template ${key}`);
+      const own = cases.filter((value) => value.template === key);
+      const longest = own.reduce((a, b) => (b.reference.words.max > a.reference.words.max ? b : a));
+      const target = longest.reference.words.max;
+      const names = expectedRefs(longest);
+      const refs = [...names.keys()].slice(0, 3) as unknown as SourceRefs;
+      const words = corpus(own);
+
+      // Grow the free text until the Markdown a reader gets has the target length.
+      let body = 0;
+      let output = longOutput(template.outputSchema, refs, words, body);
+      let count = countWords(draftToMarkdown(output, names));
+      while (count < target) {
+        body += Math.max(1, Math.floor((target - count) / 2));
+        output = longOutput(template.outputSchema, refs, words, body);
+        count = countWords(draftToMarkdown(output, names));
+      }
+      const tokens = estimateTokens(JSON.stringify(output.value));
+      expect(template.maxOutputTokens).toBeGreaterThanOrEqual(Math.ceil(tokens * MARGIN));
+    });
+  }
+
+  it("keeps the default input ceiling whatever the cap", () => {
+    for (const template of templates.values()) {
+      const budget = contextBudget({
+        contextWindowTokens: settings.contextWindowTokens,
+        maxOutputTokens: template.maxOutputTokens,
+        maxInputTokens: settings.maxInputTokens,
+      });
+      expect(budget.maxInputTokens, template.key).toBe(settings.maxInputTokens);
+      expect(budget.maxInputTokens + template.maxOutputTokens, template.key).toBeLessThan(
+        settings.contextWindowTokens,
+      );
+    }
   });
 });

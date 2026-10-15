@@ -152,7 +152,7 @@ Repository settings it reads:
 | `AI_MAX_INPUT_TOKENS`, `AI_CONTEXT_WINDOW_TOKENS`, `AI_REDACT_PII` | Variable | Same as production. |
 | `AI_PRICE_INPUT_PER_MTOK`, `AI_PRICE_OUTPUT_PER_MTOK`, `AI_PRICE_FAST_INPUT_PER_MTOK`, `AI_PRICE_FAST_OUTPUT_PER_MTOK` | Variable | Cost estimates and the USD cap. Without them the cap is in tokens only. |
 | `EVAL_PR_BUDGET_USD` | Variable | USD cap of a PR run. Default 2. |
-| `EVAL_PR_BUDGET_TOKENS` | Variable | Token cap of a PR run. Default 500000, more than twice the upfront estimate of the `pr` subset with the judge (about 210,000 tokens). |
+| `EVAL_PR_BUDGET_TOKENS` | Variable | Token cap of a PR run. Default 500000, more than twice the upfront estimate of the `pr` subset with the judge (about 220,000 tokens). |
 | `EVAL_NIGHTLY_BUDGET_USD`, `EVAL_NIGHTLY_BUDGET_TOKENS` | Variable | Optional caps of the nightly run. Empty means no cap. |
 
 ### Regression limits

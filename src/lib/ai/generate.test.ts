@@ -1,7 +1,15 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { describe, expect, it, vi } from "vitest";
-import { describeValidationError, generateDraft, repairReserve, type DraftCall } from "./generate";
+import { PROMPT_LIMITS } from "@/lib/prompts/catalog";
+import { CHARS_PER_TOKEN } from "./context/tokens";
+import {
+  describeValidationError,
+  generateDraft,
+  repairPrompt,
+  repairReserve,
+  type DraftCall,
+} from "./generate";
 import { mockModel, sampleOutput } from "./mock";
 
 const REFS = ["L1", "L2"] as const;
@@ -123,6 +131,15 @@ describe("describeValidationError", () => {
 describe("repairReserve", () => {
   it("holds the prompt again, the quoted answer and the output", () => {
     expect(repairReserve(10_000, 4096)).toBe(10_000 + Math.ceil(40_000 / 3) + 4096);
+  });
+
+  it("quotes back and reserves a whole answer cut at the largest output cap", () => {
+    // French runs about 4 characters per token (context/tokens.ts).
+    const max = PROMPT_LIMITS.maxOutputTokensMax;
+    const cut = `{"summary": "${"é".repeat(max * 4 - 13)}`;
+    expect(repairPrompt("Consigne", cut, "- (racine) : JSON coupé")).toContain(`${cut}\n`);
+    const quoteReserve = repairReserve(0, max) - max;
+    expect(quoteReserve).toBeGreaterThanOrEqual(Math.ceil(cut.length / CHARS_PER_TOKEN));
   });
 });
 
