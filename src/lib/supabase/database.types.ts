@@ -223,6 +223,13 @@ export type Database = {
             referencedRelation: "organizations";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "billing_ai_packs_purchase_fkey";
+            columns: ["purchase_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_purchases";
+            referencedColumns: ["id"];
+          },
         ];
       };
       billing_draft_usage: {
@@ -371,11 +378,261 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "billing_entitlements_purchase_fkey";
+            columns: ["purchase_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_purchases";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "billing_entitlements_workspace_fkey";
             columns: ["workspace_id", "organization_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
             referencedColumns: ["id", "organization_id"];
+          },
+        ];
+      };
+      billing_purchases: {
+        Row: {
+          amount_ht_xof: number;
+          amount_xof: number;
+          catalog_version: number;
+          confirmation_sent_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          currency: string;
+          environment: string;
+          fedapay_fees_xof: number | null;
+          fedapay_mode: string | null;
+          fedapay_reference: string | null;
+          fedapay_status: string | null;
+          fedapay_transaction_id: number | null;
+          granted_at: string | null;
+          id: string;
+          last_checked_at: string | null;
+          merchant_reference: string;
+          method: string;
+          offer: string;
+          offer_label: string;
+          organization_id: string | null;
+          paid_at: string | null;
+          quantity: number;
+          review_reason: string | null;
+          status: string;
+          tax_xof: number;
+          terms: NonNullable<Json>;
+          updated_at: string;
+          workspace_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_ht_xof: number;
+          amount_xof: number;
+          catalog_version: number;
+          confirmation_sent_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          environment: string;
+          fedapay_fees_xof?: number | null;
+          fedapay_mode?: string | null;
+          fedapay_reference?: string | null;
+          fedapay_status?: string | null;
+          fedapay_transaction_id?: number | null;
+          granted_at?: string | null;
+          id?: string;
+          last_checked_at?: string | null;
+          merchant_reference: string;
+          method?: string;
+          offer: string;
+          offer_label: string;
+          organization_id?: string | null;
+          paid_at?: string | null;
+          quantity?: number;
+          review_reason?: string | null;
+          status?: string;
+          tax_xof?: number;
+          terms: NonNullable<Json>;
+          updated_at?: string;
+          workspace_id?: string | null;
+        };
+        Update: {
+          amount_ht_xof?: number;
+          amount_xof?: number;
+          catalog_version?: number;
+          confirmation_sent_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          currency?: string;
+          environment?: string;
+          fedapay_fees_xof?: number | null;
+          fedapay_mode?: string | null;
+          fedapay_reference?: string | null;
+          fedapay_status?: string | null;
+          fedapay_transaction_id?: number | null;
+          granted_at?: string | null;
+          id?: string;
+          last_checked_at?: string | null;
+          merchant_reference?: string;
+          method?: string;
+          offer?: string;
+          offer_label?: string;
+          organization_id?: string | null;
+          paid_at?: string | null;
+          quantity?: number;
+          review_reason?: string | null;
+          status?: string;
+          tax_xof?: number;
+          terms?: NonNullable<Json>;
+          updated_at?: string;
+          workspace_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_purchases_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_purchases_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_purchases_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      billing_receipt_lines: {
+        Row: {
+          amount_ht_xof: number;
+          label: string;
+          period_end: string | null;
+          period_start: string | null;
+          position: number;
+          quantity: number;
+          receipt_id: string;
+          tax_code: string | null;
+          tax_rate: number | null;
+          tax_xof: number;
+          unit_price_ht_xof: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_ht_xof: number;
+          label: string;
+          period_end?: string | null;
+          period_start?: string | null;
+          position: number;
+          quantity: number;
+          receipt_id: string;
+          tax_code?: string | null;
+          tax_rate?: number | null;
+          tax_xof?: number;
+          unit_price_ht_xof: number;
+        };
+        Update: {
+          amount_ht_xof?: number;
+          label?: string;
+          period_end?: string | null;
+          period_start?: string | null;
+          position?: number;
+          quantity?: number;
+          receipt_id?: string;
+          tax_code?: string | null;
+          tax_rate?: number | null;
+          tax_xof?: number;
+          unit_price_ht_xof?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_receipt_lines_receipt_id_fkey";
+            columns: ["receipt_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_receipts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      billing_receipts: {
+        Row: {
+          buyer: NonNullable<Json>;
+          currency: string;
+          environment: string;
+          external_invoice_data: Json | null;
+          external_invoice_number: string | null;
+          id: string;
+          issued_at: string;
+          kind: string;
+          number: string;
+          organization_id: string | null;
+          payment: NonNullable<Json>;
+          purchase_id: string;
+          seller: NonNullable<Json>;
+          total_ht_xof: number;
+          total_tax_xof: number;
+          total_xof: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          buyer: NonNullable<Json>;
+          currency?: string;
+          environment: string;
+          external_invoice_data?: Json | null;
+          external_invoice_number?: string | null;
+          id?: string;
+          issued_at?: string;
+          kind?: string;
+          number: string;
+          organization_id?: string | null;
+          payment: NonNullable<Json>;
+          purchase_id: string;
+          seller: NonNullable<Json>;
+          total_ht_xof: number;
+          total_tax_xof?: number;
+          total_xof: number;
+        };
+        Update: {
+          buyer?: NonNullable<Json>;
+          currency?: string;
+          environment?: string;
+          external_invoice_data?: Json | null;
+          external_invoice_number?: string | null;
+          id?: string;
+          issued_at?: string;
+          kind?: string;
+          number?: string;
+          organization_id?: string | null;
+          payment?: NonNullable<Json>;
+          purchase_id?: string;
+          seller?: NonNullable<Json>;
+          total_ht_xof?: number;
+          total_tax_xof?: number;
+          total_xof?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "billing_receipts_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "billing_receipts_purchase_id_fkey";
+            columns: ["purchase_id"];
+            isOneToOne: false;
+            referencedRelation: "billing_purchases";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -1355,7 +1612,108 @@ export type Database = {
           version: number;
         }[];
       };
+      billing_apply_transaction: {
+        Args: {
+          p_amount_xof: number;
+          p_approved_at?: string;
+          p_currency?: string;
+          p_environment: string;
+          p_event_id?: string;
+          p_event_name?: string;
+          p_fees_xof?: number;
+          p_merchant_reference?: string;
+          p_mode?: string;
+          p_purchase_id: string;
+          p_reference?: string;
+          p_source: string;
+          p_status: string;
+          p_transaction_id: number;
+        };
+        Returns: {
+          ends_at: string;
+          entitlement_id: string;
+          notice: string;
+          outcome: string;
+          pack_id: string;
+          receipt_number: string;
+        }[];
+      };
+      billing_check_pending: { Args: { p_purchase_id: string }; Returns: string };
+      billing_claim_notice: { Args: { p_kind: string; p_purchase_id: string }; Returns: boolean };
+      billing_confirmation_details: {
+        Args: { p_purchase_id: string };
+        Returns: {
+          amount_xof: number;
+          billing_email: string;
+          buyer_email: string;
+          drafts: number;
+          ends_at: string;
+          offer: string;
+          offer_label: string;
+          organization_id: string;
+          organization_name: string;
+          plan: string;
+          quantity: number;
+          receipt_number: string;
+        }[];
+      };
+      billing_create_purchase: {
+        Args: {
+          p_amount_ht_xof: number;
+          p_catalog_version: number;
+          p_created_by: string;
+          p_environment: string;
+          p_offer: string;
+          p_offer_label: string;
+          p_organization_id: string;
+          p_quantity: number;
+          p_reuse?: boolean;
+          p_tax_xof: number;
+          p_terms: Json;
+          p_workspace_id?: string;
+        };
+        Returns: {
+          fedapay_transaction_id: number;
+          merchant_reference: string;
+          purchase_id: string;
+          refusal: string;
+          reused: boolean;
+        }[];
+      };
+      billing_find_purchase: {
+        Args: {
+          p_environment: string;
+          p_event_id?: string;
+          p_merchant_reference?: string;
+          p_transaction_id: number;
+        };
+        Returns: {
+          event_seen: boolean;
+          organization_id: string;
+          purchase_id: string;
+          status: string;
+        }[];
+      };
       billing_overview: { Args: { p_organization_id: string }; Returns: Json };
+      billing_pending_purchases: {
+        Args: {
+          p_environment: string;
+          p_limit: number;
+          p_organization_id?: string;
+          p_recheck_after?: string;
+        };
+        Returns: {
+          created_at: string;
+          fedapay_transaction_id: number;
+          merchant_reference: string;
+          organization_id: string;
+          purchase_id: string;
+        }[];
+      };
+      billing_set_transaction: {
+        Args: { p_purchase_id: string; p_status?: string; p_transaction_id: number };
+        Returns: undefined;
+      };
       claim_ai_cost_alert: { Args: { p_threshold: number }; Returns: number };
       claim_report_export: {
         Args: {
