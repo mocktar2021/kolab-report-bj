@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
+import { describeWorkspaceError } from "@/lib/billing/errors";
 import { createClient } from "@/lib/supabase/server";
-import { workspaceErrorKey, type WorkspaceErrorKey } from "@/lib/workspaces/errors";
+import type { WorkspaceErrorKey, WorkspaceErrorValues } from "@/lib/workspaces/errors";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
 import {
   createReportSchema,
@@ -19,6 +20,8 @@ export type CreateReportState =
       status: "error";
       fieldErrors?: Partial<Record<"title", WorkspaceFieldErrorKey>>;
       formError?: WorkspaceErrorKey;
+      /** Numbers of the billing messages (report limit, read-only). */
+      formErrorValues?: WorkspaceErrorValues;
     };
 
 /**
@@ -47,7 +50,9 @@ export async function createReport(workspaceId: string, title: string): Promise<
     .select("id")
     .single();
   if (error || !data) {
-    return { status: "error", formError: workspaceErrorKey(error) };
+    // The plan may refuse it: report limit (KR042) or read-only (KR043).
+    const described = await describeWorkspaceError(error, { workspaceId: parsed.data.workspaceId });
+    return { status: "error", formError: described.error, formErrorValues: described.values };
   }
 
   revalidatePath("/", "layout");

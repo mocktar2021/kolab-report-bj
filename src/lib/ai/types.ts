@@ -22,10 +22,25 @@ export type DraftErrorKey =
   | "aborted"
   | "timeout"
   | "providerError"
+  // The organization's plan (ADR 001): AI drafts used up for the month, the
+  // trial or the pass; a read-only workspace; a custom template on a plan
+  // without them.
+  | "quotaExceeded"
+  | "quotaExceededTrial"
+  | "quotaExceededMission"
+  | "quotaUsed"
+  | "readOnly"
+  | "templateNotIncluded"
   | "generic";
 
-/** Body of a refused request (any status but 200). 429 answers also carry a Retry-After header. */
-export type DraftErrorBody = { error: DraftErrorKey; retryAfter?: number };
+/** What the quota messages show: {max} drafts, and the {date} the month's allowance comes back. */
+export type DraftErrorValues = { max?: number; date?: string };
+
+/**
+ * Body of a refused request (any status but 200). 429 answers also carry a
+ * Retry-After header, as does a 402 for the month's drafts.
+ */
+export type DraftErrorBody = { error: DraftErrorKey; retryAfter?: number; values?: DraftErrorValues };
 
 /** What the request body of POST /api/ai/sections/[id]/draft holds. */
 export type DraftRequest = { promptVersionId: string };

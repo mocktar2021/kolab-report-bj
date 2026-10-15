@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { describeWorkspaceError } from "@/lib/billing/errors";
 import { log } from "@/lib/log";
 import { createFinalSnapshot, type SnapshotResult } from "@/lib/reports/snapshot";
 import { REPORT_TRANSITIONS, reportActionSchema, type ReportStatus } from "@/lib/reports/status";
 import { sendStatusEmails, statusChangeEmails } from "@/lib/reports/workflow";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/user";
+import { isBillingError, type WorkspaceErrorKey, type WorkspaceErrorValues } from "@/lib/workspaces/errors";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
@@ -23,7 +25,16 @@ export type ReportStatusErrorKey = "forbidden" | "stale" | "notFound" | "invalid
 export type ReportStatusState =
   | { status: "idle" }
   | { status: "success"; to: ReportStatus; snapshot: SnapshotResult | null }
-  | { status: "error"; error: ReportStatusErrorKey };
+  | {
+      status: "error";
+      error: ReportStatusErrorKey;
+      /**
+       * Set when the organization's plan refused the change: reopening past
+       * the report limit, or a read-only workspace. Its message is under
+       * Workspaces.errors, and replaces the one of `error`.
+       */
+      billing?: { error: WorkspaceErrorKey; values?: WorkspaceErrorValues };
+    };
 
 function statusErrorKey(error: { code?: string | null } | null): ReportStatusErrorKey {
   switch (error?.code) {
@@ -71,6 +82,13 @@ export async function changeReportStatus(
     .single();
   if (error || !change) {
     if (!error) log.error("report-status: the change returned nothing");
+    if (isBillingError(error)) {
+      const billing = await describeWorkspaceError(error, {
+        workspaceId: report.workspace_id,
+        reopen: from === "final",
+      });
+      return { status: "error", error: "generic", billing };
+    }
     return { status: "error", error: statusErrorKey(error) };
   }
 

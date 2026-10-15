@@ -22,7 +22,15 @@ import { requireWorkspaceRole } from "@/lib/workspaces/server";
 // the column privileges and the triggers on prompt_library, which have the
 // final say: they number, check and sign each version.
 
-export type PromptActionError = "forbidden" | "notFound" | "conflict" | "invalidInput" | "generic";
+export type PromptActionError =
+  | "forbidden"
+  | "notFound"
+  | "conflict"
+  | "invalidInput"
+  // The organization's plan has no custom templates (KR044), or the workspace is read-only (KR043).
+  | "templatesNotIncluded"
+  | "readOnly"
+  | "generic";
 
 export type SavePromptResult =
   | { ok: true; id: string }
@@ -64,6 +72,10 @@ function errorKey(error: { code?: string | null }): PromptActionError {
     case "22P05":
     case "23514":
       return "invalidInput";
+    case "KR043":
+      return "readOnly";
+    case "KR044":
+      return "templatesNotIncluded";
     default:
       return "generic";
   }

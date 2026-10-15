@@ -16,7 +16,16 @@ import type { GenerationContextMeta } from "./types";
 /** Longest raw answer kept, same bound as the column check. */
 const RAW_OUTPUT_CHARS = 200_000;
 
-export type StartRefusal = "rateLimited" | "budgetExceeded" | "busy" | "templateUnavailable";
+export type StartRefusal =
+  | "rateLimited"
+  | "budgetExceeded"
+  | "busy"
+  | "templateUnavailable"
+  // From the organization's plan (ADR 001): no draft left, a read-only
+  // workspace, or a custom template on a plan without them.
+  | "quotaExceeded"
+  | "readOnly"
+  | "templateNotIncluded";
 
 export type StartResult =
   | { ok: true; id: string }
@@ -39,11 +48,20 @@ export type StartRequest = {
   monthlyTokenBudget: number;
 };
 
-const REFUSALS = new Set<string>(["rateLimited", "budgetExceeded", "busy", "templateUnavailable"]);
+const REFUSALS = new Set<string>([
+  "rateLimited",
+  "budgetExceeded",
+  "busy",
+  "templateUnavailable",
+  "quotaExceeded",
+  "readOnly",
+  "templateNotIncluded",
+]);
 
 /**
- * Counts the request against the user's hourly limit and the workspace's
- * monthly budget, and records it as running, in one locked step.
+ * Counts the request against the user's hourly limit, the workspace's
+ * monthly budget and the AI drafts of the organization's plan, and records
+ * it as running, in one locked step.
  */
 export async function startGeneration(request: StartRequest): Promise<StartResult> {
   const { data, error } = await createAdminClient()

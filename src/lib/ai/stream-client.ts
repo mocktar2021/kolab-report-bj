@@ -1,4 +1,4 @@
-import type { DraftErrorBody, DraftErrorKey, DraftStreamEvent } from "./types";
+import type { DraftErrorBody, DraftErrorKey, DraftErrorValues, DraftStreamEvent } from "./types";
 
 // Browser side of POST /api/ai/sections/[id]/draft. A refusal is a JSON
 // DraftErrorBody, a success is NDJSON: one DraftStreamEvent per line.
@@ -18,6 +18,12 @@ const ERROR_KEYS = {
   aborted: true,
   timeout: true,
   providerError: true,
+  quotaExceeded: true,
+  quotaExceededTrial: true,
+  quotaExceededMission: true,
+  quotaUsed: true,
+  readOnly: true,
+  templateNotIncluded: true,
   generic: true,
 } satisfies Record<DraftErrorKey, true>;
 
@@ -110,6 +116,22 @@ function retryAfterHeader(value: string | null): number | undefined {
   return Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
+/** The numbers of a quota message, keeping only what has the expected type. */
+function errorValues(value: unknown): DraftErrorValues | undefined {
+  if (!isRecord(value)) return undefined;
+  const values: DraftErrorValues = {};
+  if (typeof value.max === "number" && Number.isInteger(value.max) && value.max >= 0) values.max = value.max;
+  if (typeof value.date === "string" && value.date.length <= 40) values.date = value.date;
+  return Object.keys(values).length > 0 ? values : undefined;
+}
+
+/** Quota messages need these values; without them the plain one is shown. */
+const NEEDED_VALUES: Partial<Record<DraftErrorKey, (keyof DraftErrorValues)[]>> = {
+  quotaExceeded: ["max", "date"],
+  quotaExceededTrial: ["max"],
+  quotaExceededMission: ["max"],
+};
+
 /**
  * What a refused request says (any status but 200). Falls back to "generic"
  * when the body isn't the expected JSON. `retryAfter` comes from the body,
@@ -123,11 +145,17 @@ export async function draftRequestError(response: Response): Promise<DraftErrorB
     body = null;
   }
   const record = isRecord(body) ? body : {};
-  const error = isDraftErrorKey(record.error) ? record.error : "generic";
+  let error = isDraftErrorKey(record.error) ? record.error : "generic";
+  const values = errorValues(record.values);
+  if (NEEDED_VALUES[error]?.some((name) => values?.[name] === undefined)) error = "quotaUsed";
   const fromBody =
     typeof record.retryAfter === "number" && Number.isFinite(record.retryAfter) && record.retryAfter >= 0
       ? Math.ceil(record.retryAfter)
       : undefined;
   const retryAfter = fromBody ?? retryAfterHeader(response.headers.get("Retry-After"));
-  return retryAfter === undefined ? { error } : { error, retryAfter };
+  return {
+    error,
+    ...(retryAfter === undefined ? {} : { retryAfter }),
+    ...(values && error !== "quotaUsed" ? { values } : {}),
+  };
 }

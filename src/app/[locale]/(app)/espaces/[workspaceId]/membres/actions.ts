@@ -5,22 +5,35 @@ import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { emailSchema } from "@/lib/auth/schemas";
+import { describeWorkspaceError, type BillingErrorContext } from "@/lib/billing/errors";
 import { INVITATION_TTL_MS, invitationLink, sendInvitationEmail } from "@/lib/invitations/server";
 import { createInvitationToken } from "@/lib/invitations/token";
 import { createClient } from "@/lib/supabase/server";
-import { workspaceErrorKey, type WorkspaceErrorKey } from "@/lib/workspaces/errors";
+import {
+  workspaceErrorKey,
+  type WorkspaceErrorKey,
+  type WorkspaceErrorValues,
+} from "@/lib/workspaces/errors";
 import { MANAGER_ROLES, canManageMember, grantableRoles, type WorkspaceRole } from "@/lib/workspaces/roles";
 import { uuidSchema, workspaceRoleSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole, type WorkspaceAccess } from "@/lib/workspaces/server";
 
-export type MemberActionState =
-  | { status: "idle" }
-  | { status: "success" }
-  | { status: "error"; error: WorkspaceErrorKey };
+/** A refused change. `values` fill in the billing messages ({plan}, {max}, {date}). */
+type ActionError = { status: "error"; error: WorkspaceErrorKey; values?: WorkspaceErrorValues };
+
+export type MemberActionState = { status: "idle" } | { status: "success" } | ActionError;
 
 const FORBIDDEN: MemberActionState = { status: "error", error: "forbidden" };
 
 const memberSchema = z.object({ workspaceId: uuidSchema, userId: uuidSchema });
+
+/** The error state for a write Supabase refused, with the plan's numbers when billing refused it. */
+async function refused(
+  error: { code?: string | null } | null,
+  context: BillingErrorContext,
+): Promise<ActionError> {
+  return { status: "error", ...(await describeWorkspaceError(error, context)) };
+}
 
 /**
  * Checks the caller manages the workspace and may act on the target member.
@@ -71,7 +84,8 @@ export async function updateMemberRole(
     .eq("workspace_id", workspaceId)
     .eq("user_id", userId)
     .select("user_id");
-  if (error) return { status: "error", error: workspaceErrorKey(error) };
+  // A viewer who gets another role takes a seat of the plan.
+  if (error) return refused(error, { workspaceId, roleChange: true });
   // No row back: RLS hid it.
   if (!data || data.length === 0) return FORBIDDEN;
 
@@ -117,7 +131,7 @@ export type InvitationActionState =
       /** Set when the e-mail could not go out: the inviter shares the link by hand. */
       link: string | null;
     }
-  | { status: "error"; error: WorkspaceErrorKey };
+  | ActionError;
 
 /**
  * Invites someone by e-mail with a role. Admins cannot invite owners (RLS
@@ -148,7 +162,7 @@ export async function inviteMember(
     .insert({ workspace_id: workspaceId, email, role, token_hash: tokenHash })
     .select("expires_at")
     .single();
-  if (error || !data) return { status: "error", error: workspaceErrorKey(error) };
+  if (error || !data) return refused(error, { workspaceId });
 
   const sent = await sendInvitationEmail({
     workspaceId,
@@ -191,7 +205,7 @@ export async function resendInvitation(
     .is("accepted_at", null)
     .is("revoked_at", null)
     .select("id");
-  if (error) return { status: "error", error: workspaceErrorKey(error) };
+  if (error) return refused(error, { workspaceId: invitation.workspace_id });
   if (!data || data.length === 0) return { status: "error", error: "forbidden" };
 
   const sent = await sendInvitationEmail({

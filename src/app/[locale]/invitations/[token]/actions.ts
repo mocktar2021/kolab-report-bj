@@ -21,6 +21,9 @@ export async function acceptInvitation(_prev: AcceptState, formData: FormData): 
   const { data: workspaceId, error } = await supabase.rpc("accept_workspace_invitation", {
     token: token.data,
   });
+  // The organization's plan may refuse: member limit (KR041) or read-only
+  // (KR043). The invitee is not a member, so the messages have no numbers.
+  if (error?.code === "KR043") return { error: "readOnlyInvitee" };
   if (error || !workspaceId) return { error: workspaceErrorKey(error) };
 
   await setCurrentWorkspaceCookie(workspaceId);

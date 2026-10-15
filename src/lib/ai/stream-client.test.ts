@@ -184,4 +184,34 @@ describe("draftRequestError", () => {
     const response = Response.json({ error: "rateLimited", retryAfter: "60" }, { status: 429 });
     expect(await draftRequestError(response)).toEqual({ error: "rateLimited" });
   });
+
+  it("reads the numbers of a quota refusal", async () => {
+    const response = Response.json(
+      { error: "quotaExceeded", retryAfter: 1_339_200, values: { max: 60, date: "1 novembre 2026" } },
+      { status: 402, headers: { "Retry-After": "1339200" } },
+    );
+    expect(await draftRequestError(response)).toEqual({
+      error: "quotaExceeded",
+      retryAfter: 1_339_200,
+      values: { max: 60, date: "1 novembre 2026" },
+    });
+    const trial = Response.json({ error: "quotaExceededTrial", values: { max: 20 } }, { status: 402 });
+    expect(await draftRequestError(trial)).toEqual({ error: "quotaExceededTrial", values: { max: 20 } });
+  });
+
+  it("shows the quota message without numbers when they are missing or malformed", async () => {
+    const missing = Response.json({ error: "quotaExceeded", values: { max: 60 } }, { status: 402 });
+    expect(await draftRequestError(missing)).toEqual({ error: "quotaUsed" });
+    const malformed = Response.json(
+      { error: "quotaExceededMission", values: { max: "80" } },
+      { status: 402 },
+    );
+    expect(await draftRequestError(malformed)).toEqual({ error: "quotaUsed" });
+  });
+
+  it("knows the other refusals of the plan", async () => {
+    for (const error of ["readOnly", "templateNotIncluded"]) {
+      expect(await draftRequestError(Response.json({ error }, { status: 403 }))).toEqual({ error });
+    }
+  });
 });

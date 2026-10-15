@@ -509,7 +509,20 @@
       "invitationOtherEmail": "Cette invitation est destinée à une autre adresse e-mail.",
       "alreadyMember": "Cette personne est déjà membre de l'espace de travail.",
       "invitationPending": "Une invitation est déjà en attente pour cette adresse. Renvoyez-la depuis la liste.",
-      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier."
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
+      "seatLimit": "Limite de membres atteinte : l'offre {plan} compte {max, plural, one {# membre} other {# membres}}, invitations en attente comprises. Annulez une invitation, retirez un membre ou invitez cette personne comme lecteur, les lecteurs sont gratuits.",
+      "seatLimitRole": "Limite de membres atteinte : l'offre {plan} compte {max, plural, one {# membre} other {# membres}}. Cette personne peut rester lecteur, ou libérez une place.",
+      "seatLimitInvitee": "L'organisation qui vous invite a atteint la limite de membres de son offre. Prévenez la personne qui vous a invité, puis rouvrez ce lien.",
+      "reportLimit": "Limite de rapports actifs atteinte : l'offre {plan} en compte {max}. Passez un rapport en final ou supprimez-le, ou changez d'offre.",
+      "reportLimitReopen": "Rouvrir ce rapport dépasserait la limite de {max, plural, one {# rapport actif} other {# rapports actifs}} de l'offre {plan}. Passez d'abord un autre rapport en final.",
+      "missionReport": "Un Pass Mission couvre un seul rapport. Créez un nouvel espace de travail pour une autre mission.",
+      "readOnly": "Cet espace de travail est en lecture seule depuis le {date}. Vous pouvez consulter et exporter les rapports. Renouvelez l'offre pour les modifier.",
+      "readOnlyMember": "Cet espace de travail est en lecture seule depuis le {date}. Demandez au propriétaire de l'organisation de renouveler l'offre.",
+      "readOnlyNoPlan": "Cette organisation n'a pas encore d'offre : ses espaces de travail sont en lecture seule. Choisissez une offre pour commencer à rédiger.",
+      "readOnlyInvitee": "L'espace de travail qui vous invite est en lecture seule : l'offre de son organisation n'est plus active. Prévenez la personne qui vous a invité.",
+      "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution.",
+      "billingLimit": "Ce changement dépasse les limites de l'offre de l'organisation.",
+      "billingReadOnly": "Cet espace de travail est en lecture seule : l'offre de l'organisation n'est plus active."
     }
   },
   "WorkspaceWizard": {
@@ -897,7 +910,13 @@
       "aborted": "La génération a été interrompue. Aucun brouillon n'a été enregistré.",
       "timeout": "L'IA a mis trop de temps à répondre. Réessayez dans un instant.",
       "providerError": "Le service d'IA n'a pas répondu correctement. Réessayez dans un instant.",
-      "generic": "Une erreur est survenue. Réessayez."
+      "generic": "Une erreur est survenue. Réessayez.",
+      "quotaExceeded": "Les {max} brouillons IA du mois sont utilisés. Ajoutez un Pack IA ou attendez le {date}.",
+      "quotaExceededTrial": "Les {max} brouillons IA de l'essai sont utilisés. Choisissez une offre pour continuer.",
+      "quotaExceededMission": "Les {max} brouillons IA de ce Pass Mission sont utilisés. Ajoutez un Pack IA pour continuer.",
+      "quotaUsed": "Les brouillons IA inclus dans l'offre sont utilisés. Ajoutez un Pack IA pour continuer.",
+      "readOnly": "Cet espace de travail est en lecture seule : aucun brouillon ne peut être généré.",
+      "templateNotIncluded": "Ce modèle est un modèle personnalisé, inclus dans les offres Cabinet et Institution. Choisissez un modèle standard."
     },
     "network": "La connexion a été coupée. Vérifiez votre réseau et réessayez.",
     "unchanged": "Le contenu de la section n'a pas changé.",
@@ -1218,7 +1237,9 @@
       "notFound": "Cette version n'existe plus ou n'appartient pas à cet espace de travail.",
       "conflict": "Ce modèle a changé entre-temps. Rechargez la page puis réessayez.",
       "invalidInput": "Certaines informations ne sont pas valides. Vérifiez les champs signalés.",
-      "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant."
+      "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant.",
+      "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution.",
+      "readOnly": "Cet espace de travail est en lecture seule : renouvelez l'offre de l'organisation pour modifier ses modèles."
     },
     "rollout": {
       "listBadge": "Déploiement en cours : v{version} à {percent}",
@@ -1264,7 +1285,9 @@
         "noPrevious": "Aucune version n'a été publiée avant celle-ci : il n'y a pas de version à remettre en service.",
         "conflict": "Un autre déploiement de ce modèle est déjà en cours. Rechargez la page pour le voir.",
         "invalidInput": "La part doit être un nombre entier entre 1 et 99.",
-        "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant."
+        "generic": "Le changement n'a pas pu être enregistré. Réessayez dans un instant.",
+        "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution : le déploiement n'est pas possible avec l'offre actuelle.",
+        "readOnly": "Cet espace de travail est en lecture seule : renouvelez l'offre de l'organisation pour déployer ses modèles."
       }
     }
   },
