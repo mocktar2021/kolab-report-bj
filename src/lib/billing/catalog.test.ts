@@ -28,12 +28,19 @@ const MIGRATION = readFileSync(
 );
 
 /** Body of a SQL function of the migration, between its $$ quotes. */
-function functionBody(name: string): string {
-  const start = MIGRATION.indexOf(`create or replace function ${name}(`);
+function functionBody(name: string, migration = MIGRATION): string {
+  const start = migration.indexOf(`create or replace function ${name}(`);
   expect(start, `${name} is in the migration`).toBeGreaterThanOrEqual(0);
-  const open = MIGRATION.indexOf("$$", start);
-  const close = MIGRATION.indexOf("$$", open + 2);
-  return MIGRATION.slice(open + 2, close);
+  const open = migration.indexOf("$$", start);
+  const close = migration.indexOf("$$", open + 2);
+  return migration.slice(open + 2, close);
+}
+
+/** The `<value> as <name>` lines of a SQL function, by name. */
+function terms(body: string): Record<string, string> {
+  return Object.fromEntries(
+    [...body.matchAll(/^\s*(\S+) as (\w+)[,;]?$/gm)].map(([, value, name]) => [name, value]),
+  );
 }
 
 /** First group of `pattern` in the migration. Fails the test when it is not there. */
@@ -45,12 +52,7 @@ function captured(pattern: RegExp): string {
 
 describe("private.billing_trial_terms()", () => {
   it("matches the trial of the catalogue", () => {
-    const terms = Object.fromEntries(
-      [...functionBody("private.billing_trial_terms").matchAll(/^\s*(\S+) as (\w+)[,;]?$/gm)].map(
-        ([, value, name]) => [name, value],
-      ),
-    );
-    expect(terms).toEqual({
+    expect(terms(functionBody("private.billing_trial_terms"))).toEqual({
       days: String(TRIAL.days),
       max_members: String(TRIAL.limits.maxMembers),
       max_reports: String(TRIAL.limits.maxReports),
@@ -59,6 +61,26 @@ describe("private.billing_trial_terms()", () => {
     });
     // The trial has one allowance for its whole length, never a monthly one.
     expect(TRIAL.limits.draftsPerMonth).toBeNull();
+  });
+});
+
+describe("private.billing_launch_terms()", () => {
+  it("gives existing organizations the Cabinet plan of the catalogue for 30 days (ADR 001, section 10)", () => {
+    const launch = readFileSync(
+      new URL("../../../supabase/migrations/20261016100000_billing_launch.sql", import.meta.url),
+      "utf8",
+    );
+    const sql = (value: number | boolean | null) => (value === null ? "null::integer" : String(value));
+    const { limits } = PLANS.cabinet;
+    expect(terms(functionBody("private.billing_launch_terms", launch))).toEqual({
+      plan: "'cabinet'",
+      days: "30",
+      max_members: sql(limits.maxMembers),
+      max_reports: sql(limits.maxReports),
+      drafts_per_month: sql(limits.draftsPerMonth),
+      drafts_total: sql(limits.draftsTotal),
+      custom_templates: sql(limits.customTemplates),
+    });
   });
 });
 

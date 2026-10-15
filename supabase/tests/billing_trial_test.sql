@@ -95,12 +95,18 @@ select is(
    where b.created_at > o.created_at
      and exists (select 1 from public.billing_entitlements e where e.organization_id = o.id and e.source = 'trial')),
   0, 'organizations from before billing got no trial: the launch gives them their period');
+-- The launch (20261016100000_billing_launch.sql) counted their owners as
+-- having had a trial.
 select is(
   (select count(*)::int from public.organizations o
    join public.organization_billing b on b.organization_id = o.id
+   join auth.users u on u.id = o.owner_id
    where b.created_at > o.created_at
-     and exists (select 1 from private.billing_trial_claims c where c.organization_id = o.id)),
-  0, 'and their owners no trial claim');
+     and not exists (
+       select 1 from private.billing_trial_claims c
+       where c.user_id = o.owner_id
+          or c.email_hash = encode(sha256(convert_to(lower(btrim(u.email)), 'UTF8')), 'hex'))),
+  0, 'and their owners count as having had a trial, from the launch');
 
 -- Nothing changes while billing is not enforced ---------------------------------------
 update private.billing_settings set enforced = false;

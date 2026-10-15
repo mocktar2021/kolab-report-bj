@@ -637,8 +637,8 @@ The launch migration (last PR of KRB-179):
 
 1. `update private.billing_settings set enforced = true, launched_at = now()`.
 2. End running trials at `now()`.
-3. Insert a `launch` entitlement (Cabinet limits, `amount_ht_xof = 0`, 30 days) for every organization with no running paid or manual entitlement.
-4. Insert trial claims for their owners, with the e-mail hash.
+3. Insert a `launch` entitlement (Cabinet limits, `amount_ht_xof = 0`, 30 days) for every organization with no running paid or manual entitlement. When a period is planned later, the launch period stops where it starts, so the two never overlap.
+4. Insert trial claims for the owners of every organization, with the e-mail hash.
 5. Write a `launch_period` audit event per organization.
 
 The owner's own organizations (Mocktar Technologies' internal use, demos) get an Institution entitlement by hand after the launch with `scripts/billing/grant.mjs` (no payment, reason "usage interne"), not in the migration, because their ids differ between environments.
