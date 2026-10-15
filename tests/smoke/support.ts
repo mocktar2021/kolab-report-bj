@@ -47,6 +47,9 @@ export const SMOKE_SECTION_TITLE = "Section smoke";
 /** Prefix of every file the suite uploads. The cleanup deletes files with this prefix only. */
 export const FILE_PREFIX = "smoke-";
 
+/** Prefix of the report each run creates and deletes. The cleanup deletes reports with this prefix only. */
+export const REPORT_PREFIX = "smoke-rapport-";
+
 /** Short tag that makes a run's names unique, for example 20261014-210133-k3f9. */
 export function runTag(): string {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
