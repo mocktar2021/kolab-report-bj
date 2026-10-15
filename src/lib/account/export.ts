@@ -9,6 +9,9 @@
 
 type Row = Record<string, unknown>;
 
+/** Not a column: the loader adds the numbers of a purchase's receipts under this key. */
+export const RECEIPT_NUMBERS = "receipt_numbers";
+
 /** The rows read for the signed-in user, one list per kind. */
 export type AccountExportSources = {
   /** From Supabase Auth (getUser), not from a table. */
@@ -29,6 +32,8 @@ export type AccountExportSources = {
   notifications: Row[];
   promptVersionsWritten: Row[];
   promptRolloutsStarted: Row[];
+  /** billing_purchases rows the person made, each with `receipt_numbers` added by the loader. */
+  billingPurchases: Row[];
 };
 
 export type AccountExport = {
@@ -49,6 +54,7 @@ export type AccountExport = {
   notifications: Row[];
   prompt_versions_written: Row[];
   prompt_rollouts_started: Row[];
+  billing_purchases: Row[];
 };
 
 /**
@@ -131,11 +137,34 @@ export const EXPORT_COLUMNS = {
     created_at: "created_at",
   },
   promptRolloutsStarted: { id: "id", template_key: "template_key", created_at: "created_at" },
+  // What the purchase row says about the order and its amounts. The FedaPay
+  // transaction, its status and fees stay out: they say nothing more about
+  // the person.
+  billingPurchases: {
+    id: "id",
+    organization_id: "organization_id",
+    workspace_id: "workspace_id",
+    offer: "offer",
+    offer_label: "offer_label",
+    quantity: "quantity",
+    amount_ht_xof: "amount_ht_xof",
+    tax_xof: "tax_xof",
+    amount_xof: "amount_xof",
+    currency: "currency",
+    method: "method",
+    status: "status",
+    merchant_reference: "merchant_reference",
+    created_at: "created_at",
+    paid_at: "paid_at",
+    receipt_numbers: RECEIPT_NUMBERS,
+  },
 } as const satisfies Record<keyof AccountExportSources, Record<string, string>>;
 
 /** The select list of a kind: the columns the file needs, and nothing else. */
 export function exportSelect(kind: Exclude<keyof AccountExportSources, "account" | "memberships">): string {
-  return Object.values(EXPORT_COLUMNS[kind]).join(", ");
+  return Object.values(EXPORT_COLUMNS[kind] as Record<string, string>)
+    .filter((column) => column !== RECEIPT_NUMBERS)
+    .join(", ");
 }
 
 /** A joined row (`workspace: { name }`) becomes its name. */
@@ -180,6 +209,10 @@ export function buildAccountExport(sources: AccountExportSources, exportedAt: Da
     notifications: pickAll(sources.notifications, c.notifications),
     prompt_versions_written: pickAll(sources.promptVersionsWritten, c.promptVersionsWritten),
     prompt_rollouts_started: pickAll(sources.promptRolloutsStarted, c.promptRolloutsStarted),
+    billing_purchases: pickAll(sources.billingPurchases, c.billingPurchases).map((purchase) => ({
+      ...purchase,
+      receipt_numbers: Array.isArray(purchase.receipt_numbers) ? purchase.receipt_numbers : [],
+    })),
   };
 }
 

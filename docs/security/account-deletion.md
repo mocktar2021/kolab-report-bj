@@ -23,7 +23,7 @@ Security notes for `/fr/compte` (KRB-186), where a signed-in person downloads th
 
 The service role is used for one person at a time, by user id instead of `workspace_id`, because an account spans workspaces:
 
-- the export reads invitations sent to the session's address or by its user, and the reports, deliverables, AI generations, exports, status changes and prompt versions created by its user, including those in workspaces the person left;
+- the export reads invitations sent to the session's address or by its user, the reports, deliverables, AI generations, exports, status changes and prompt versions created by its user, including those in workspaces the person left, and the purchases its user made with the numbers of their receipts;
 - the deletion calls `prepare_account_deletion` and `auth.admin.deleteUser` with the session's user id.
 
 ## To check on the hosted projects

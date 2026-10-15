@@ -1069,7 +1069,7 @@
     },
     "data": {
       "title": "Mes données",
-      "description": "Téléchargez dans un fichier JSON ce que KolabReport garde sur vous : votre compte, vos sessions, vos espaces de travail et vos rôles, vos invitations, et la liste des rapports, fichiers, brouillons IA et exports qui portent votre nom.",
+      "description": "Téléchargez dans un fichier JSON ce que KolabReport garde sur vous : votre compte, vos sessions, vos espaces de travail et vos rôles, vos invitations, et la liste des rapports, fichiers, brouillons IA, exports et achats qui portent votre nom.",
       "content": "Le texte des rapports et le contenu des fichiers appartiennent à l'organisation qui les a déposés. Ses propriétaires et administrateurs les exportent depuis chaque rapport.",
       "download": "Télécharger mes données"
     },

@@ -2,7 +2,13 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { buildAccountExport, exportSelect, type AccountExport, type AccountExportSources } from "./export";
+import {
+  buildAccountExport,
+  exportSelect,
+  RECEIPT_NUMBERS,
+  type AccountExport,
+  type AccountExportSources,
+} from "./export";
 
 // Reads the rows of the data export for the signed-in user. `user` comes from
 // getUser() on the session, never from the request, and every query below is
@@ -18,6 +24,9 @@ import { buildAccountExport, exportSelect, type AccountExport, type AccountExpor
 
 /** PostgREST returns at most this many rows per request (max_rows in supabase/config.toml). */
 const PAGE_SIZE = 1000;
+
+/** Purchase ids per receipts query, to keep the URL short. */
+const RECEIPT_BATCH = 100;
 
 type Row = Record<string, unknown>;
 type Page = PromiseLike<{ data: unknown; error: { message: string } | null }>;
@@ -66,6 +75,7 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
     notifications,
     promptVersionsWritten,
     promptRolloutsStarted,
+    purchases,
   ] = await Promise.all([
     profile,
     allRows("sessions", (from, to) => supabase.rpc("my_account_sessions").range(from, to)),
@@ -188,7 +198,41 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
         .order("id")
         .range(from, to),
     ),
+    // Billing readers read purchases through RLS, but the person may no
+    // longer be one, or the organization may be gone (organization_id null).
+    allRows("purchases", (from, to) =>
+      admin
+        .from("billing_purchases")
+        .select(exportSelect("billingPurchases"))
+        .eq("created_by", userId)
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    ),
   ]);
+
+  // The receipt numbers of those purchases only.
+  const receipts = new Map<string, string[]>();
+  const purchaseIds = purchases.map((purchase) => String(purchase.id));
+  for (let start = 0; start < purchaseIds.length; start += RECEIPT_BATCH) {
+    const ids = purchaseIds.slice(start, start + RECEIPT_BATCH);
+    const rows = await allRows("receipts", (from, to) =>
+      admin
+        .from("billing_receipts")
+        .select("purchase_id, number")
+        .in("purchase_id", ids)
+        .order("number")
+        .range(from, to),
+    );
+    for (const row of rows) {
+      const id = String(row.purchase_id);
+      receipts.set(id, [...(receipts.get(id) ?? []), String(row.number)]);
+    }
+  }
+  const billingPurchases = purchases.map((purchase) => ({
+    ...purchase,
+    [RECEIPT_NUMBERS]: receipts.get(String(purchase.id)) ?? [],
+  }));
 
   const sources: AccountExportSources = {
     account: {
@@ -214,6 +258,7 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
     notifications,
     promptVersionsWritten,
     promptRolloutsStarted,
+    billingPurchases,
   };
   return buildAccountExport(sources, exportedAt);
 }

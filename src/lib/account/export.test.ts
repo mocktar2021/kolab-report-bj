@@ -30,6 +30,7 @@ function emptySources(): AccountExportSources {
     notifications: [],
     promptVersionsWritten: [],
     promptRolloutsStarted: [],
+    billingPurchases: [],
   };
 }
 
@@ -54,6 +55,7 @@ describe("buildAccountExport", () => {
       "notifications",
       "prompt_versions_written",
       "prompt_rollouts_started",
+      "billing_purchases",
     ]);
     expect(file.exported_at).toBe("2026-10-15T09:30:00.000Z");
   });
@@ -164,6 +166,64 @@ describe("buildAccountExport", () => {
     expect(file.sections_assigned).toEqual([
       { id: "s1", report_id: "r1", title: "Contexte", status: "in_progress" },
     ]);
+  });
+});
+
+describe("billing purchases", () => {
+  it("lists the order, its amounts and the receipt numbers, not the FedaPay details", () => {
+    const sources = emptySources();
+    sources.billingPurchases = [
+      {
+        id: "p1",
+        organization_id: null,
+        workspace_id: null,
+        offer: "cabinet_month",
+        offer_label: "Cabinet, 1 mois",
+        quantity: 1,
+        amount_ht_xof: 45000,
+        tax_xof: 0,
+        amount_xof: 45000,
+        currency: "XOF",
+        method: "fedapay",
+        status: "paid",
+        merchant_reference: "KR-p1",
+        created_at: "2026-10-07T10:00:00Z",
+        paid_at: "2026-10-07T10:02:00Z",
+        receipt_numbers: ["KR-2026-000004"],
+        fedapay_transaction_id: 104582,
+        fedapay_mode: "mtn_open",
+        fedapay_fees_xof: 900,
+        terms: { accepted: true },
+      },
+      { id: "p2", status: "pending", created_at: "2026-10-08T10:00:00Z" },
+    ];
+    const [paid, pending] = buildAccountExport(sources, EXPORTED_AT).billing_purchases;
+    expect(paid).toEqual({
+      id: "p1",
+      organization_id: null,
+      workspace_id: null,
+      offer: "cabinet_month",
+      offer_label: "Cabinet, 1 mois",
+      quantity: 1,
+      amount_ht_xof: 45000,
+      tax_xof: 0,
+      amount_xof: 45000,
+      currency: "XOF",
+      method: "fedapay",
+      status: "paid",
+      merchant_reference: "KR-p1",
+      created_at: "2026-10-07T10:00:00Z",
+      paid_at: "2026-10-07T10:02:00Z",
+      receipt_numbers: ["KR-2026-000004"],
+    });
+    expect(pending).toMatchObject({ id: "p2", status: "pending", paid_at: null, receipt_numbers: [] });
+  });
+
+  it("reads the purchase columns, not the receipt numbers it adds itself", () => {
+    const select = exportSelect("billingPurchases");
+    expect(select).toContain("merchant_reference");
+    expect(select).not.toContain("receipt_numbers");
+    expect(select).not.toContain("fedapay");
   });
 });
 

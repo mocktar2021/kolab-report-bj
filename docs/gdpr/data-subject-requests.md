@@ -46,7 +46,7 @@ where m.workspace_id = '<workspace-id>' and m.role = 'owner';
 
 A person who can sign in gets this file themselves: "Télécharger mes données" on `/fr/compte` returns the same JSON, built by `src/lib/account/export.ts`. Use the query when they can't.
 
-This query returns one JSON document with the account and everything that links to the person: profile, sessions, memberships, invitations, and the records they created or that point at them. It leaves out the text of sections and AI drafts, which is the firm's content: add it only with the firm's agreement, or let the firm export its reports from the app.
+This query returns one JSON document with the account and everything that links to the person: profile, sessions, memberships, invitations, and the records they created or that point at them. It also lists the purchases the person made, with their receipt numbers and without the FedaPay details. It leaves out the text of sections and AI drafts, which is the firm's content: add it only with the firm's agreement, or let the firm export its reports from the app.
 
 ```sql
 with target as (
@@ -109,7 +109,16 @@ select jsonb_pretty(jsonb_build_object(
     from public.prompt_library pl join target t on t.id = pl.created_by),
   'prompt_rollouts_started', (select coalesce(jsonb_agg(jsonb_build_object(
       'id', ro.id, 'template_key', ro.template_key, 'created_at', ro.created_at)), '[]')
-    from public.prompt_rollouts ro join target t on t.id = ro.created_by)
+    from public.prompt_rollouts ro join target t on t.id = ro.created_by),
+  'billing_purchases', (select coalesce(jsonb_agg(jsonb_build_object(
+      'id', bp.id, 'organization_id', bp.organization_id, 'workspace_id', bp.workspace_id,
+      'offer', bp.offer, 'offer_label', bp.offer_label, 'quantity', bp.quantity,
+      'amount_ht_xof', bp.amount_ht_xof, 'tax_xof', bp.tax_xof, 'amount_xof', bp.amount_xof,
+      'currency', bp.currency, 'method', bp.method, 'status', bp.status,
+      'merchant_reference', bp.merchant_reference, 'created_at', bp.created_at, 'paid_at', bp.paid_at,
+      'receipt_numbers', (select coalesce(jsonb_agg(br.number order by br.number), '[]')
+        from public.billing_receipts br where br.purchase_id = bp.id))), '[]')
+    from public.billing_purchases bp join target t on t.id = bp.created_by)
 )) as export;
 ```
 
@@ -349,7 +358,7 @@ Files that are not read (PDF, PowerPoint, images, diagrams) have no extracted te
 `/fr/compte` (KRB-186), linked as "Mon compte" under the user's name in the app menu. Every action works on the user of the session (`getUser()`), never on an id from the form or the URL.
 
 - **Change my name**: writes `profiles.full_name` with the user's client, then the `full_name` of the Auth metadata.
-- **Download my data**: `GET /api/account/export` answers with the JSON of [Access and export](#access-and-export), as an attachment that is never cached (`Cache-Control: private, no-store`). The user's client reads what RLS lets them read: profile, sessions (through `my_account_sessions()`), owned organizations, memberships, assigned sections and notifications. The service role reads the rows that name the person but that RLS may hide, such as a report they created in a workspace they left, or an invitation sent to their address. Each of those queries is filtered on the session's user id or e-mail. The file never holds the text of reports, sections, files or drafts.
+- **Download my data**: `GET /api/account/export` answers with the JSON of [Access and export](#access-and-export), as an attachment that is never cached (`Cache-Control: private, no-store`). The user's client reads what RLS lets them read: profile, sessions (through `my_account_sessions()`), owned organizations, memberships, assigned sections and notifications. The service role reads the rows that name the person but that RLS may hide, such as a report they created in a workspace they left, an invitation sent to their address, or a purchase they made (`billing_purchases.created_by`, with the numbers of its receipts and none of the FedaPay details). Each of those queries is filtered on the session's user id or e-mail. The file never holds the text of reports, sections, files or drafts.
 - **Transfer an organization**: shown for each organization the user owns. `transfer_organization(org, new_owner)` accepts only the current owner as caller and an owner of one of the organization's workspaces as the new owner (`KR061` otherwise). It writes `owner_transferred` to `private.billing_events` and `organization_transferred` to the audit log of KRB-180, `private.audit_events`. The new owner can then delete the organization or any of its workspaces (KRB-180), and the dialog says so before the transfer. The billing functions read `owner_id` when they run, so the new owner gets the organization's billing rights at once. The billing details (`organization_billing`) and the trial claim don't change.
 - **Delete my account**: the invitations the person sent stay with their workspace, with no inviter. `my_account_deletion_blockers()` lists what blocks it, with links to the transfer above, to the members page of the workspace, and to the deletion of a workspace or an organization (KRB-180). When nothing blocks, the person types the account's e-mail address and their current password. The server checks the password with a sign-in of its own, then runs step 3 (`prepare_account_deletion`) and step 4 (`auth.admin.deleteUser`) with the service role, signs the browser out and shows `/fr/compte-supprime`.
 - **One deletion at a time**: `claim_account_deletion()` refuses a second deletion while one runs (2 minutes at most), and more than 5 tries in 15 minutes. A double click runs the deletion once, and the password check can't be used to guess passwords. A try that stops (wrong password, a blocker) releases the lock but still counts.

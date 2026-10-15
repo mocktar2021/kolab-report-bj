@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { expectNoAxeViolations } from "./a11y";
@@ -45,6 +45,31 @@ test("the account page downloads the user's data and nothing from another worksp
     .from("reports")
     .insert({ workspace_id: shared.workspace_id, title: `Rapport de Bio ${RUN}`, created_by: bio.id });
   expect(error).toBeNull();
+  // A purchase each, as an operator records a manual payment (KRB-176).
+  const purchaseFor = async (user: TestUser, organizationId: string) => {
+    const id = randomUUID();
+    const { error: purchaseError } = await adminClient()
+      .from("billing_purchases")
+      .insert({
+        id,
+        organization_id: organizationId,
+        offer: "cabinet_1m",
+        offer_label: "Cabinet, 1 mois",
+        catalog_version: 1,
+        terms: {},
+        amount_ht_xof: 45000,
+        amount_xof: 45000,
+        method: "manual",
+        environment: "manual",
+        status: "expired",
+        merchant_reference: `KR-${id}`,
+        created_by: user.id,
+      });
+    expect(purchaseError).toBeNull();
+    return id;
+  };
+  const awaPurchase = await purchaseFor(awa, mine.organization_id);
+  const bioPurchase = await purchaseFor(bio, theirs.organization_id);
 
   await signIn(page, awa);
   await page.getByRole("banner").getByRole("link", { name: "Mon compte" }).click();
@@ -80,6 +105,16 @@ test("the account page downloads the user's data and nothing from another worksp
     ].sort(),
   );
   expect(data.reports_created.map((r: { id: string }) => r.id)).toEqual([mine.report_id]);
+  expect(data.billing_purchases).toEqual([
+    expect.objectContaining({
+      id: awaPurchase,
+      offer_label: "Cabinet, 1 mois",
+      amount_xof: 45000,
+      status: "expired",
+      receipt_numbers: [],
+    }),
+  ]);
+  expect(text).not.toContain(bioPurchase);
   // Nothing about Bio: not his workspace, not his report, not his address.
   expect(text).not.toContain(theirs.workspace_id);
   expect(text).not.toContain(theirs.organization_id);
