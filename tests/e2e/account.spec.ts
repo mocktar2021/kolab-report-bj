@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { expectNoAxeViolations } from "./a11y";
-import { waitForMessage } from "./mailpit";
+import { waitForText } from "./mailpit";
 import { adminClient, createTestUser, createWorkspaceFor, signedInClient, type TestUser } from "./supabase";
 
 // KRB-186: the account page. Download my data, transfer an organization,
@@ -103,7 +103,9 @@ test("the account page downloads the user's data and nothing from another worksp
   await visitor.close();
 });
 
-test("a blocked deletion shows its reasons and the ways out", async ({ page }) => {
+test("a blocked deletion shows its reasons, and its ways out lead to the deletion pages", async ({
+  page,
+}) => {
   const [cyr, dede] = await Promise.all([createTestUser("Cyr Bloque"), createTestUser("Dede Lecteur")]);
   const { organization_id: organizationId, workspace_id: workspaceId } = await createWorkspaceFor(
     cyr,
@@ -151,6 +153,40 @@ test("a blocked deletion shows its reasons and the ways out", async ({ page }) =
     "href",
     `/fr/espaces/${workspaceId}/membres`,
   );
+
+  // Each way out opens its page.
+  await reasons.getByRole("link", { name: "Nommer un autre propriétaire" }).click();
+  await expect(page).toHaveURL(new RegExp(`/fr/espaces/${workspaceId}/membres$`));
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Membres de Bloque ${RUN}`);
+  await page.goto("/fr/compte");
+  await reasons.getByRole("link", { name: "Supprimer l'espace de travail" }).click();
+  await expect(page).toHaveURL(new RegExp(`/fr/espaces/${workspaceId}/parametres$`));
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Paramètres de Bloque ${RUN}`);
+  await page.goto("/fr/compte");
+  await reasons.getByRole("link", { name: "Supprimer l'organisation" }).click();
+  await expect(page).toHaveURL(new RegExp(`/fr/organisations/${organizationId}$`));
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Cabinet Bloque ${RUN}`);
+
+  // Deleting the organization takes its workspace along (KRB-180), and then
+  // nothing blocks the account.
+  await page.getByRole("button", { name: "Supprimer l'organisation" }).click();
+  const orgDialog = page.getByRole("dialog", { name: "Supprimer l'organisation ?" });
+  await orgDialog
+    .getByLabel(`Saisissez « Cabinet Bloque ${RUN} » pour confirmer`)
+    .fill(`Cabinet Bloque ${RUN}`);
+  await orgDialog.getByRole("button", { name: "Supprimer l'organisation" }).click();
+  await expect(page).toHaveURL(/\/fr\/espaces\/nouveau$/);
+
+  await page.goto("/fr/compte");
+  await expect(page.getByRole("region", { name: "Transférer une organisation" })).toHaveCount(0);
+  await expect(reasons).toHaveCount(0);
+  await section.getByRole("button", { name: "Supprimer mon compte" }).click();
+  const dialog = page.getByRole("dialog", { name: "Supprimer votre compte ?" });
+  await dialog.getByLabel("Adresse e-mail du compte").fill(cyr.email);
+  await dialog.getByLabel("Mot de passe actuel", { exact: true }).fill(cyr.password);
+  await dialog.getByRole("button", { name: "Supprimer définitivement" }).click();
+  await expect(page).toHaveURL(/\/fr\/compte-supprime$/);
+  expect((await adminClient().auth.admin.getUserById(cyr.id)).data.user).toBeNull();
 });
 
 test("an owner transfers the organization, then deletes the account and is signed out", async ({ page }) => {
@@ -281,10 +317,11 @@ test("an owner transfers the organization, then deletes the account and is signe
   // and no name. Only when the stack sets the mailbox (CI does).
   const recordBox = process.env.ACCOUNT_DELETION_LOG_EMAIL;
   if (recordBox) {
-    const record = await waitForMessage(recordBox, edem.id);
-    expect(record.text).toContain(`Identifiant : ${edem.id}`);
-    expect(record.text).not.toContain(edem.email);
-    expect(record.text).not.toContain("Edem");
+    const environment = process.env.APP_ENV ?? process.env.VERCEL_ENV ?? "development";
+    const record = await waitForText(recordBox, `[KolabReport ${environment}] Compte supprimé ${edem.id}`);
+    expect(record).toContain(`Identifiant : ${edem.id}`);
+    expect(record).not.toContain(edem.email);
+    expect(record).not.toContain("Edem");
   }
 
   // The invitation Edem sent belongs to the workspace and keeps working.

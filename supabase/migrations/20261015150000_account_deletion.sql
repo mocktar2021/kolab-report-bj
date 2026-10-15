@@ -22,9 +22,10 @@
 --    The server calls it with the service role just before
 --    auth.admin.deleteUser.
 -- 4. transfer_organization() hands an organization to an owner of one of its
---    workspaces. The billing functions read organizations.owner_id each time
---    they run, so they follow the new owner. The change is written to
---    private.billing_events.
+--    workspaces. The billing functions and the delete functions of KRB-180
+--    read organizations.owner_id each time they run, so they follow the new
+--    owner. The change is written to private.billing_events and to the audit
+--    log of KRB-180, private.audit_events.
 -- 5. One deletion at a time per person, and at most 5 tries in 15 minutes:
 --    a double click runs it once, and the password check cannot be used to
 --    guess a password.
@@ -236,7 +237,8 @@ $$;
 -- 4. Organization transfer
 -- -----------------------------------------------------------------------------
 -- The billing records of a transfer. Keep the kinds of
--- 20261015100000_billing_entitlements.sql and add this one.
+-- 20261015100000_billing_entitlements.sql and add this one. The purchases of
+-- KRB-176 write kinds of that list only.
 alter table private.billing_events drop constraint if exists billing_events_kind_check;
 alter table private.billing_events
   add constraint billing_events_kind_check check (kind in (
@@ -264,12 +266,22 @@ as $$
   order by p.full_name, p.email;
 $$;
 
+-- The audit log of KRB-180 records transfers too. Keep its three actions and
+-- add this one.
+alter table private.audit_events drop constraint if exists audit_events_action_check;
+alter table private.audit_events
+  add constraint audit_events_action_check check (action in (
+    'report_deleted', 'workspace_deleted', 'organization_deleted', 'organization_transferred'));
+
 -- The current owner hands the organization to an owner of one of its
 -- workspaces. can_read_org_billing, can_manage_org_billing,
--- can_add_workspace and the organizations policies read owner_id when they
--- run: the new owner has the organization's rights at once, and the
--- previous one keeps only what their workspace roles give. The trial claim
--- stays with the person who started the trial.
+-- can_add_workspace, owns_organization (KRB-180) and the organizations
+-- policies read owner_id when they run: the new owner has the
+-- organization's rights at once, deleting it or any of its workspaces
+-- included, and the previous one keeps only what their workspace roles
+-- give. A deletion of the organization waiting on its row sees the new
+-- owner and refuses the previous one. The trial claim stays with the person
+-- who started the trial.
 create or replace function public.transfer_organization(p_organization_id uuid, p_new_owner_id uuid)
 returns void
 language plpgsql
@@ -314,6 +326,11 @@ begin
   insert into private.billing_events (organization_id, kind, details)
   values (
     p_organization_id, 'owner_transferred',
+    jsonb_build_object('previous_owner_id', v_previous, 'new_owner_id', p_new_owner_id)
+  );
+  insert into private.audit_events (action, actor_id, organization_id, details)
+  values (
+    'organization_transferred', v_user, p_organization_id,
     jsonb_build_object('previous_owner_id', v_previous, 'new_owner_id', p_new_owner_id)
   );
 end;

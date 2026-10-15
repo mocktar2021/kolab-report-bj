@@ -259,7 +259,7 @@ export const confidentialite: LegalDocument = {
               ],
               ["Fichiers supprimés", "Retirés du stockage par une tâche quotidienne."],
               [
-                "Journal des suppressions : qui a supprimé un rapport, un espace de travail ou une organisation, et quand",
+                "Journal des suppressions et des transferts : qui a supprimé un rapport, un espace de travail ou une organisation, ou transféré une organisation, et quand",
                 "12 mois, puis il est effacé. Il ne garde ni titre, ni nom, ni contenu.",
               ],
               [

@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(73);
+select plan(79);
 
 -- Deleting one's own account (KRB-186). What blocks it, the organization
 -- transfer, what the cleanup removes before the delete, and what stays with
@@ -133,6 +133,11 @@ select results_eq(
     from private.billing_events where organization_id = pg_temp.id('org_a') and kind = 'owner_transferred'$$,
   $$values (pg_temp.id('owner')::text, pg_temp.id('admin')::text, null::text)$$,
   'the billing audit log records who handed it to whom');
+select results_eq(
+  $$select actor_id, details ->> 'previous_owner_id', details ->> 'new_owner_id'
+    from private.audit_events where organization_id = pg_temp.id('org_a') and action = 'organization_transferred'$$,
+  $$values (pg_temp.id('owner'), pg_temp.id('owner')::text, pg_temp.id('admin')::text)$$,
+  'and so does the audit log of KRB-180');
 
 select pg_temp.act_as('owner');
 select throws_ok($$select public.transfer_organization(pg_temp.id('org_a'), pg_temp.id('owner'))$$,
@@ -304,6 +309,19 @@ select results_eq($$select assigned_to from public.report_sections where id = pg
   'their section is unassigned');
 select is((select count(*)::int from private.account_deletion_attempts where user_id = pg_temp.id('expert')), 0,
   'their deletion tries go with the account');
+
+-- An organization deleted with KRB-180's delete_organization takes its
+-- workspaces along, and with them what blocked its owner and the only
+-- owner of one of them.
+select pg_temp.act_as('outsider');
+select lives_ok($$select public.delete_organization(pg_temp.id('org_b'), 'Cabinet B')$$,
+  'outsider deletes org_b and its workspaces');
+select is_empty('select * from public.my_account_deletion_blockers()', 'nothing blocks outsider any more');
+select pg_temp.act_as_server();
+select is_empty($$select * from private.account_deletion_blockers(pg_temp.id('stranger'))$$,
+  'nor stranger, whose workspace went with org_b');
+select lives_ok($$select public.prepare_account_deletion(pg_temp.id('outsider'))$$, 'the cleanup runs for outsider');
+select lives_ok($$delete from auth.users where id = pg_temp.id('outsider')$$, 'and their account goes');
 
 select * from finish();
 rollback;

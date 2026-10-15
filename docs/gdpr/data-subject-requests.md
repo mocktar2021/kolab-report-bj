@@ -203,7 +203,7 @@ For each workspace in step 1, ask the firm who takes over (`<successor-id>`, a m
    where workspace_id = '<workspace-id>' and user_id = '<successor-id>';
    ```
 
-2. If they own the organization, hand it to an owner of one of its workspaces. In the app, the owner does it on `/fr/compte`, which also writes the billing log. By hand, write both. If the firm wants the organization and all its workspaces gone, its owner deletes it in the app instead, from `/fr/organisations/<organization-id>`. Never delete an organization only to free the account: it deletes all its workspaces.
+2. If they own the organization, hand it to an owner of one of its workspaces. In the app, the owner does it on `/fr/compte`, which also writes the billing log and the audit log. By hand, write all three. If the firm wants the organization and all its workspaces gone, its owner deletes it in the app instead, from `/fr/organisations/<organization-id>`. Never delete an organization only to free the account: it deletes all its workspaces.
 
    ```sql
    update public.organizations set owner_id = '<successor-id>'
@@ -212,6 +212,10 @@ For each workspace in step 1, ask the firm who takes over (`<successor-id>`, a m
    insert into private.billing_events (organization_id, kind, actor, details)
    values ('<organization-id>', 'owner_transferred', '<your name>',
      jsonb_build_object('previous_owner_id', '<user-id>', 'new_owner_id', '<successor-id>'));
+
+   insert into private.audit_events (action, organization_id, details)
+   values ('organization_transferred', '<organization-id>',
+     jsonb_build_object('previous_owner_id', '<user-id>', 'new_owner_id', '<successor-id>', 'by', 'operator'));
    ```
 
 Run the step 1 query again. It must return no row.
@@ -346,7 +350,7 @@ Files that are not read (PDF, PowerPoint, images, diagrams) have no extracted te
 
 - **Change my name**: writes `profiles.full_name` with the user's client, then the `full_name` of the Auth metadata.
 - **Download my data**: `GET /api/account/export` answers with the JSON of [Access and export](#access-and-export), as an attachment that is never cached (`Cache-Control: private, no-store`). The user's client reads what RLS lets them read: profile, sessions (through `my_account_sessions()`), owned organizations, memberships, assigned sections and notifications. The service role reads the rows that name the person but that RLS may hide, such as a report they created in a workspace they left, or an invitation sent to their address. Each of those queries is filtered on the session's user id or e-mail. The file never holds the text of reports, sections, files or drafts.
-- **Transfer an organization**: shown for each organization the user owns. `transfer_organization(org, new_owner)` accepts only the current owner as caller and an owner of one of the organization's workspaces as the new owner (`KR061` otherwise). It writes `owner_transferred` to `private.billing_events`. The billing functions read `owner_id` when they run, so the new owner gets the organization's billing rights at once. The billing details (`organization_billing`) and the trial claim don't change.
+- **Transfer an organization**: shown for each organization the user owns. `transfer_organization(org, new_owner)` accepts only the current owner as caller and an owner of one of the organization's workspaces as the new owner (`KR061` otherwise). It writes `owner_transferred` to `private.billing_events` and `organization_transferred` to the audit log of KRB-180, `private.audit_events`. The new owner can then delete the organization or any of its workspaces (KRB-180), and the dialog says so before the transfer. The billing functions read `owner_id` when they run, so the new owner gets the organization's billing rights at once. The billing details (`organization_billing`) and the trial claim don't change.
 - **Delete my account**: the invitations the person sent stay with their workspace, with no inviter. `my_account_deletion_blockers()` lists what blocks it, with links to the transfer above, to the members page of the workspace, and to the deletion of a workspace or an organization (KRB-180). When nothing blocks, the person types the account's e-mail address and their current password. The server checks the password with a sign-in of its own, then runs step 3 (`prepare_account_deletion`) and step 4 (`auth.admin.deleteUser`) with the service role, signs the browser out and shows `/fr/compte-supprime`.
 - **One deletion at a time**: `claim_account_deletion()` refuses a second deletion while one runs (2 minutes at most), and more than 5 tries in 15 minutes. A double click runs the deletion once, and the password check can't be used to guess passwords. A try that stops (wrong password, a blocker) releases the lock but still counts.
 - **Logs**: `account: deleted`, `account: deletion refused, ...`, `account: organization transferred` and `account: data exported`, with the user id and counts. Never the e-mail address or the password.
