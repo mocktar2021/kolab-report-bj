@@ -7,6 +7,7 @@ import {
   type WorkspaceErrorValues,
 } from "@/lib/workspaces/errors";
 import { PLANS, type PlanCode, type PlanLimits } from "./catalog";
+import { formatBillingDate } from "./format";
 import { getBillingOverview, getWorkspaceBillingState, type BillingMode } from "./state";
 
 // The messages of ADR 001, 7.4 for a change the database refused because of
@@ -14,15 +15,7 @@ import { getBillingOverview, getWorkspaceBillingState, type BillingMode } from "
 // short; the app reads the plan, its limits and its dates with the user's
 // rights to say which limit was hit.
 
-/** Billing dates are shown in Benin time, like the rest of the app. */
-export const BILLING_TIME_ZONE = "Africa/Porto-Novo";
-
-const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: BILLING_TIME_ZONE });
-
-/** "1 novembre 2026", in Porto-Novo time. */
-export function formatBillingDate(date: Date | string): string {
-  return DATE_FORMAT.format(typeof date === "string" ? new Date(date) : date);
-}
+export { BILLING_TIME_ZONE, formatBillingDate } from "./format";
 
 /** The billing line a message talks about. */
 export type BillingLineFacts = {

@@ -70,6 +70,13 @@ export type FedapayTransaction = {
   feesXof: number | null;
   /** Payment method, for example "mtn_open" or "momo_test". */
   mode: string | null;
+  /**
+   * ISO code when FedaPay sends a currency object or code, null otherwise.
+   * The API reference only lists currency_id on a transaction.
+   */
+  currencyIso: string | null;
+  /** FedaPay's id of the currency, null when absent. */
+  currencyId: number | null;
   merchantReference: string | null;
   customMetadata: Record<string, unknown> | null;
   approvedAt: string | null;
@@ -211,6 +218,12 @@ const optionalText = z
   .nullish()
   .transform((value) => value ?? null);
 
+/** "XOF" from { iso: "XOF" } or "xof", null from anything else. */
+function currencyIso(value: unknown): string | null {
+  const iso = isRecord(value) ? value.iso : value;
+  return typeof iso === "string" && /^[A-Za-z]{3}$/.test(iso) ? iso.toUpperCase() : null;
+}
+
 const transactionSchema = z
   .object({
     id: z.number().int().positive(),
@@ -223,6 +236,9 @@ const transactionSchema = z
     // An empty map can come back as [] from a PHP API: read it as no metadata.
     custom_metadata: z.unknown().optional(),
     approved_at: optionalText,
+    // An object such as { iso: "XOF" } when FedaPay includes it, or a code.
+    currency: z.unknown().optional(),
+    currency_id: z.number().int().nullish(),
   })
   .transform(
     (raw): FedapayTransaction => ({
@@ -235,6 +251,8 @@ const transactionSchema = z
       merchantReference: raw.merchant_reference,
       customMetadata: isRecord(raw.custom_metadata) ? raw.custom_metadata : null,
       approvedAt: raw.approved_at,
+      currencyIso: currencyIso(raw.currency),
+      currencyId: raw.currency_id ?? null,
     }),
   );
 
