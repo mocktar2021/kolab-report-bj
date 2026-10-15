@@ -132,7 +132,7 @@ Each case's `description` says what it checks. The long cases are filled at load
 4. Write the reference section an expert would accept, naming the file of each ref in `mustCite`.
 5. Add the key points. Each `anyOf` group needs one of its terms in the draft. Matching ignores case and accents, reads `1 250 000` as `1250000`, `12,5` as `12.5` and `17 %` as `17%`, and works on whole words; end a term with `*` to match a prefix (`recommand*`).
 6. List `forbidden` strings: invented figures, off-topic content, and for an injection case the canaries planted in the deliverables. Keep `<livrable` and `{{` in every case.
-7. Set `words` bounds wide enough for the template's usual output.
+7. Set `words` bounds wide enough for the template's usual output. The template's `max_output_tokens` must hold the longest answer they accept, JSON and sources included: `cases.test.ts` checks it with a 1.5 margin. When it fails, raise the cap with a migration that publishes a new version of the template.
 8. Run `npx vitest run evals` (the reference must cover all its key points within its bounds), then `npm run eval -- --mock --cases <id>`, then `python3 .claude/skills/write-like-mocktar/scripts/check_prose.py` on the new files.
 
 For a long case, use `generated` with `{ "type": "narrative", "topic", "seed", "sections" }` or `{ "type": "table", "topic", "seed", "sheets": [{ "name", "rows" }] }`, after any hand-written `markdown` or `markdownFile` that holds the facts.
