@@ -138,6 +138,10 @@ order by created_at;
 
 A `review` purchase was paid at FedaPay with an amount, currency, merchant reference or environment that does not match. Check the transaction in the FedaPay dashboard, then close the review as paid or as refunded ([`docs/operations/billing.md`](operations/billing.md#a-purchase-in-review)). Until it is closed, the organization cannot start another payment.
 
+### Billing page and receipts (KRB-177)
+
+The billing page, the receipts and what the payment e-mail links to need no setup. Who sees what and how to read a customer's receipts: [`docs/operations/billing.md`](operations/billing.md#billing-page-and-receipts).
+
 ## Secrets rules
 
 - Secrets live in Vercel environment variables (marked Sensitive) and GitHub environment secrets, one value per environment. Never in the repository, never in `.env.example`.

@@ -54,10 +54,12 @@ type DraftPanelProps = {
   data: DraftPanelData;
   /** Owners and admins, who publish templates. */
   manager: boolean;
+  /** AI drafts left in the plan, written by the page (Billing.meter), or null when unlimited. */
+  usageHint?: string | null;
 };
 
 /** Draft generation and review, for the people who edit the section. */
-export function DraftPanel({ workspaceId, sectionId, data, manager }: DraftPanelProps) {
+export function DraftPanel({ workspaceId, sectionId, data, manager, usageHint = null }: DraftPanelProps) {
   const t = useTranslations("AiDraft");
   const tSchemas = useTranslations("Prompts.outputSchemas");
   const router = useRouter();
@@ -346,6 +348,7 @@ export function DraftPanel({ workspaceId, sectionId, data, manager }: DraftPanel
                 {t("replaceHint")}
               </p>
             ) : null}
+            {usageHint ? <p className="text-xs tabular-nums text-muted-foreground">{usageHint}</p> : null}
           </>
         )}
 

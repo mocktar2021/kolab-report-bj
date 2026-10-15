@@ -6,6 +6,8 @@ import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { getReadOnlyReason } from "@/lib/billing/banner";
+import { membersHintText } from "@/lib/billing/hints";
+import { getWorkspaceUsage } from "@/lib/billing/state";
 import { getPendingInvitations } from "@/lib/invitations/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -53,13 +55,17 @@ export default async function MembersPage({
   }
 
   const supabase = await createClient();
-  const [{ data: workspace }, members, pending, readOnly] = await Promise.all([
+  const [{ data: workspace }, members, pending, readOnly, usage] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getWorkspaceMembers(workspaceId),
     getPendingInvitations(workspaceId),
     getReadOnlyReason(workspaceId),
+    getWorkspaceUsage(workspaceId),
   ]);
   if (!workspace || !members) notFound();
+  // "Offre Indépendant : 3 membres sur 3", once billing is enforced. Not in
+  // read-only, where nobody can be invited anyway.
+  const seatHint = readOnly ? null : await membersHintText(usage);
 
   const rows = members.map((member) => ({
     ...member,
@@ -90,6 +96,7 @@ export default async function MembersPage({
         grantable={grantableRoles(access.role)}
         pending={pending}
         disabledReason={readOnly ? tErrors("readOnlyDisabled") : undefined}
+        seatHint={seatHint}
       />
 
       <p className="mt-4 text-xs text-muted-foreground">{t("roleHelp")}</p>

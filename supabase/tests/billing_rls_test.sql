@@ -96,12 +96,13 @@ select results_eq('select organization_id from public.billing_entitlements', arr
 select results_eq('select organization_id from public.organization_billing', array[pg_temp.id('org_b')],
   'and the billing details of org_b only');
 
--- Nobody signed in writes, the organization owner included ---------------------
+-- Nobody signed in writes, the organization owner included, except the
+-- buyer columns of organization_billing (KRB-177, billing_page_test.sql) -------
 select pg_temp.act_as('owner');
 select throws_ok($$insert into public.organization_billing (organization_id) values (pg_temp.id('org_b'))$$,
   '42501', null, 'the owner cannot insert billing details');
-select throws_ok($$update public.organization_billing set legal_name = 'Cabinet A SARL' where organization_id = pg_temp.id('org_a')$$,
-  '42501', null, 'nor update them');
+select throws_ok($$update public.organization_billing set organization_id = pg_temp.id('org_b') where organization_id = pg_temp.id('org_a')$$,
+  '42501', null, 'nor move them to another organization');
 select throws_ok($$delete from public.organization_billing where organization_id = pg_temp.id('org_a')$$,
   '42501', null, 'nor delete them');
 select throws_ok(
@@ -152,7 +153,8 @@ select is(
    from unnest(array['public.organization_billing', 'public.billing_entitlements', 'public.billing_ai_packs']) t,
         unnest(array['insert', 'update']) p
    where has_any_column_privilege('authenticated', t, p)),
-  '{}'::text[], 'and no insert or update on any of their columns');
+  array['public.organization_billing update'],
+  'and no insert or update on their columns, except the buyer columns of organization_billing');
 select is(
   (select coalesce(array_agg(t || ' ' || p order by t, p), '{}')
    from unnest(array['public.organization_billing', 'public.billing_entitlements', 'public.billing_ai_packs']) t,
@@ -247,8 +249,8 @@ select is(
 select is((select body -> 'packs' -> 0 ->> 'drafts' from overview where who = 'owner'), '100',
   'and the running pack');
 select ok(
-  (select body::text !~ '(@|Owner|Admin|Expert|Viewer|Etude|Cabinet)' from overview where who = 'owner'),
-  'it holds no e-mail and no name');
+  (select body::text !~ '(@|Owner|Admin|Expert|Viewer|Cabinet)' from overview where who = 'owner'),
+  'it holds no e-mail, no person''s name and no organization name (workspace names come for the pass picker)');
 
 select pg_temp.act_as('admin');
 select is((public.billing_overview(pg_temp.id('org_a')) ->> 'can_manage')::boolean, false,

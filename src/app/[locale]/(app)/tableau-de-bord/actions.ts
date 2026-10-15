@@ -4,11 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { describeWorkspaceError } from "@/lib/billing/errors";
+import { reportsHintText } from "@/lib/billing/hints";
+import { getWorkspaceUsage } from "@/lib/billing/state";
 import { createClient } from "@/lib/supabase/server";
 import type { WorkspaceErrorKey, WorkspaceErrorValues } from "@/lib/workspaces/errors";
 import { MANAGER_ROLES } from "@/lib/workspaces/roles";
 import {
   createReportSchema,
+  uuidSchema,
   workspaceFieldErrors,
   type WorkspaceFieldErrorKey,
 } from "@/lib/workspaces/schemas";
@@ -58,4 +61,16 @@ export async function createReport(workspaceId: string, title: string): Promise<
   revalidatePath("/", "layout");
   const locale = await getLocale();
   return redirect({ href: `/rapports/${data.id}`, locale });
+}
+
+/**
+ * The active reports of the plan against its limit, for the "Nouveau
+ * rapport" dialog. Read when the dialog opens rather than with the
+ * dashboard, which reloads every time a section changes. Null while billing
+ * is not enforced, when reports are unlimited, or for someone who does not
+ * read the organization's billing.
+ */
+export async function reportUsageHint(workspaceId: string): Promise<string | null> {
+  if (!uuidSchema.safeParse(workspaceId).success) return null;
+  return reportsHintText(await getWorkspaceUsage(workspaceId));
 }

@@ -9,6 +9,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { Link } from "@/i18n/navigation";
 import { getDraftPanel } from "@/lib/ai/server";
 import { getReadOnlyReason } from "@/lib/billing/banner";
+import { draftsHintText } from "@/lib/billing/hints";
+import { getWorkspaceUsage } from "@/lib/billing/state";
 import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
 import { isReportFrozen } from "@/lib/reports/status";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
@@ -73,7 +75,7 @@ export default async function SectionPage({ params }: { params: Params }) {
   const editor = canEditSection(access, section.assigned_to);
   const canEdit = !frozen && !readOnly && editor;
   const supabase = await createClient();
-  const [{ data: files }, members, draft] = await Promise.all([
+  const [{ data: files }, members, draft, usage] = await Promise.all([
     supabase
       .from("deliverables")
       .select(
@@ -85,7 +87,10 @@ export default async function SectionPage({ params }: { params: Params }) {
     getWorkspaceMembers(workspaceId),
     // Templates and the draft waiting for a decision, for the people who can act on them.
     canEdit ? getDraftPanel(workspaceId, section.id, access.userId) : null,
+    // The AI drafts left, for the same people, in the same round trip.
+    canEdit ? getWorkspaceUsage(workspaceId) : null,
   ]);
+  const draftsHint = draft?.availability === "enabled" ? await draftsHintText(usage) : null;
 
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
   const mine = section.assigned_to === access.userId;
@@ -178,6 +183,7 @@ export default async function SectionPage({ params }: { params: Params }) {
           sectionId={section.id}
           data={draft}
           manager={isManager(access.role)}
+          usageHint={draftsHint}
         />
       ) : null}
 

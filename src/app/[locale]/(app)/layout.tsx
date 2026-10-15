@@ -10,6 +10,7 @@ import { ClientMessages } from "@/i18n/client-messages-provider";
 import { redirect } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getBillingBanner, getRenewerNames, readWorkspaceBillingState } from "@/lib/billing/banner";
+import { getMyBillingOrganizations } from "@/lib/billing/state";
 import { countUnreadNotifications } from "@/lib/notifications";
 import { getCurrentProfile } from "@/lib/supabase/user";
 import { CURRENT_WORKSPACE_COOKIE, getCurrentWorkspace, getMyWorkspaces } from "@/lib/workspaces/server";
@@ -39,12 +40,14 @@ export default async function AppLayout({
 
   // The billing state of the workspace in the switcher cookie is read with
   // the rest, so the banner costs no extra round trip. Only when the cookie
-  // is missing or stale is the current workspace's state read after.
+  // is missing or stale is the current workspace's state read after. The
+  // organizations whose billing the user reads decide the "Abonnement" link.
   const cookieWorkspaceId = (await cookies()).get(CURRENT_WORKSPACE_COOKIE)?.value;
-  const [workspaces, current, unreadNotifications] = await Promise.all([
+  const [workspaces, current, unreadNotifications, billingOrganizationIds] = await Promise.all([
     getMyWorkspaces(),
     getCurrentWorkspace(),
     countUnreadNotifications(),
+    getMyBillingOrganizations(),
     cookieWorkspaceId ? readWorkspaceBillingState(cookieWorkspaceId) : null,
   ]);
   const banner = current ? await getBillingBanner(current.id) : null;
@@ -62,6 +65,7 @@ export default async function AppLayout({
           currentWorkspaceId={current?.id ?? null}
           unreadNotifications={unreadNotifications}
           banner={banner ? <BillingBanner banner={banner} renewers={renewers} /> : null}
+          billingOrganizationIds={billingOrganizationIds}
         >
           {children}
         </AppShell>

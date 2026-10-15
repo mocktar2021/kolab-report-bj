@@ -100,8 +100,10 @@ describe("sendPurchaseNotices", () => {
       to: "awa@cabinet.test",
       subject: "Paiement reçu, reçu KR-2026-000001",
     });
+    // The receipts of the billing page, not the PDF route: signed out, the
+    // route only answers 401.
     expect(send.mock.calls[0]?.[0].text).toContain(
-      `https://kolabreport.test/fr/organisations/${ORGANIZATION_ID}/abonnement`,
+      `https://kolabreport.test/fr/organisations/${ORGANIZATION_ID}/abonnement#recus`,
     );
   });
 

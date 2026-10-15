@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookText, Gauge, LayoutDashboard } from "lucide-react";
+import { BookText, CreditCard, Gauge, LayoutDashboard } from "lucide-react";
 import { LazyMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
@@ -32,6 +32,8 @@ type NavItemsProps = {
   workspaceId: string | null;
   /** Owners and admins of that workspace, who also get its manager-only pages. */
   manager?: boolean;
+  /** The organization whose billing page the user reads, once billing is enforced (billingOrganizationOf). */
+  billingOrganizationId?: string | null;
   onNavigate?: () => void;
 };
 
@@ -44,7 +46,13 @@ export function NavItems(props: NavItemsProps) {
   );
 }
 
-function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavItemsProps) {
+function NavItemList({
+  variant,
+  workspaceId,
+  manager = false,
+  billingOrganizationId = null,
+  onNavigate,
+}: NavItemsProps) {
   const t = useTranslations("AppShell");
   const tFilters = useTranslations("Dashboard.filters");
   const pathname = usePathname();
@@ -54,6 +62,7 @@ function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavI
   const onDashboard = pathname === DASHBOARD_PATH;
   const promptsPath = workspaceId ? `/espaces/${workspaceId}/modeles` : null;
   const aiPath = workspaceId && manager ? `/espaces/${workspaceId}/ia` : null;
+  const billingPath = billingOrganizationId ? `/organisations/${billingOrganizationId}/abonnement` : null;
   const collapsible = variant === "sidebar";
 
   return (
@@ -85,6 +94,16 @@ function NavItemList({ variant, workspaceId, manager = false, onNavigate }: NavI
             variant={variant}
             onNavigate={onNavigate}
             icon={<Gauge className="size-4" aria-hidden="true" />}
+          />
+        ) : null}
+        {billingPath ? (
+          <NavItem
+            href={billingPath}
+            label={t("billing")}
+            active={pathname === billingPath || pathname.startsWith(`${billingPath}/`)}
+            variant={variant}
+            onNavigate={onNavigate}
+            icon={<CreditCard className="size-4" aria-hidden="true" />}
           />
         ) : null}
       </ul>

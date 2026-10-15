@@ -43,8 +43,8 @@ export const CLIENT_MESSAGE_SCOPES = {
   prompts: ["Prompts"],
   section: ["AiDraft", "Deliverables", "Prompts.outputSchemas", "SectionEditor", "SectionStatus"],
   report: ["Report", "ReportExport", "ReportStatus", "SectionStatus", "Workspaces"],
-  /** The organization's billing page and the payment return page. */
-  billing: ["Billing.checkout", "Billing.offers", "Billing.return"],
+  /** The organization's billing page, its billing details form and the payment return page. */
+  billing: ["Billing.checkout", "Billing.offers", "Billing.page.details", "Billing.return"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type ClientMessageScope = keyof typeof CLIENT_MESSAGE_SCOPES;

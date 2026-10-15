@@ -28,7 +28,9 @@ Two facts shape most of the table:
 | AI cost alerts | `ai_cost_alerts` | One row per day, kept. No personal data. | Same |
 | Deletion log | `private.audit_events`: who deleted a report, a workspace or an organization (user id), when, the ids and counts of what went. Since KRB-186, also who handed an organization to whom (user ids). No title, name or content. | 12 months. The daily cleanup job (`/api/cron/storage-cleanup`) calls `expire_audit_events(12)`, which deletes older events. No foreign key, so an event outlives the account and what it is about until then. | Same |
 | Billing of a deleted organization | `organization_billing`, `billing_entitlements`, `billing_ai_packs`, `billing_draft_usage` | Deleted with the organization. `private.billing_events` and `private.billing_trial_claims` stay: no foreign key, so a new organization of the same person gets no second trial. Deleting a workspace keeps the draft ledger of its organization. | Same |
-| Payments and receipts (KRB-176) | `billing_purchases`, `billing_receipts`, their lines and payment events | Kept when the organization is deleted, with `organization_id` set to null: the receipt holds a copy of the buyer. Only the service role reads them after that. | 10 years under OHADA, **to confirm** with the accountant (ADR 001, A5) |
+| Purchases | `billing_purchases` (offer, amounts, status, FedaPay transaction id, reference, payment method and fees, the buyer's user id) | Nothing deletes them. They stay when the organization or the pass's workspace is deleted (the link becomes null) and when the buyer's account is deleted (`created_by` becomes null). | 10 years, as accounting records, **to confirm** with the accountant (ADR 001, question A5) |
+| Receipts | `billing_receipts`, `billing_receipt_lines` (number, seller and buyer frozen at issue, lines, totals, payment method and FedaPay references) | Never changed or deleted once issued, by anyone, the service role included (trigger). They stay when the organization is deleted, with `organization_id` set to null. | 10 years, **to confirm** (A5) |
+| Payment events | `private.billing_payment_events` (purchase, path, FedaPay event id and name, status, amount, date, no payload) | Deleted with their purchase, so in practice kept as long as it | 10 years, with the purchase |
 | Trial claims | `private.billing_trial_claims` (user id, SHA-256 hash of the e-mail address, organization, date). No address and no name. | Kept with no time limit, after the account is deleted too, so a person gets one free trial (ADR 001, KRB-186) | Same: no time limit, decided by the product owner on 2026-10-15 |
 | Account deletion tries | `private.account_deletion_attempts` (user id, start and end) | Deleted with the account. A try older than a day goes at the person's next try. | Same |
 | Record of deleted accounts | E-mails to `ACCOUNT_DELETION_LOG_EMAIL` (account id, date, environment), outside the database so a restore can't roll it back | 35 days in that mailbox, then a rule of the mailbox deletes them: they only need to outlive the oldest backups, 14 days for the database and about 32 days for files ([below](#backups)). The e-mail provider keeps its logs for its own period. | Same |
@@ -66,6 +68,15 @@ Policy since KRB-166:
 - A manual export (`kind = 'manual'`, from the export buttons) is kept 90 days, then the daily job deletes its row and its file.
 - The final snapshot (`kind = 'final'`, the PDF stored when a report becomes final) is kept as long as the report.
 - When an export or deliverable row is deleted, by the app or by a cascade, the daily job removes its file.
+
+## Billing records
+
+Purchases, receipts and payment events are accounting records (ADR 001, section 9). Since KRB-177:
+
+- A receipt is never stored as a file. `GET /api/billing/receipts/[id]` draws the PDF each time from the receipt rows, so there is nothing to clean up in Storage. Whether a PDF drawn again from frozen rows is enough, or the original file must be kept, is question A5 for the accountant.
+- The receipt keeps the buyer's details as they were on the day it was issued: legal name (or the organization's name), address, IFU and billing e-mail. Changing the billing details on the billing page only changes the next receipts.
+- When an organization is deleted, its purchases and receipts stay with `organization_id` set to null. From then on only the service role reads them, for the accountant or a tax check. An erasure request does not remove them while the legal retention runs (Article 17(3)(b)); the answer to the person says so ([`data-subject-requests.md`](data-subject-requests.md)).
+- No job deletes billing records after 10 years yet. The receipt trigger refuses every delete, so that job needs its own migration once the period is confirmed.
 
 ## Logs
 

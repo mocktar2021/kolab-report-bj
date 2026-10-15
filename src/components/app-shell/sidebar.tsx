@@ -30,6 +30,8 @@ type SidebarProps = {
   workspaces: MyWorkspace[];
   currentWorkspaceId: string | null;
   unreadNotifications: number;
+  /** The organization whose billing page the "Abonnement" link opens, if any. */
+  billingOrganizationId: string | null;
   onOpenPalette: () => void;
 };
 
@@ -43,6 +45,7 @@ export function Sidebar({
   workspaces,
   currentWorkspaceId,
   unreadNotifications,
+  billingOrganizationId,
   onOpenPalette,
 }: SidebarProps) {
   const t = useTranslations("AppShell");
@@ -83,6 +86,7 @@ export function Sidebar({
           variant="sidebar"
           workspaceId={currentWorkspaceId}
           manager={current ? isManager(current.role) : false}
+          billingOrganizationId={billingOrganizationId}
         />
       </nav>
 

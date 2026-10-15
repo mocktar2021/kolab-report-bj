@@ -1843,6 +1843,12 @@ export type Database = {
           user_agent: string;
         }[];
       };
+      my_billing_organizations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          organization_id: string;
+        }[];
+      };
       my_manageable_organizations: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1924,6 +1930,24 @@ export type Database = {
           organization_id: string;
           plan: string;
           source: string;
+          state: string;
+        }[];
+      };
+      workspace_billing_usage: {
+        Args: { p_workspace_id: string };
+        Returns: {
+          billing_mode: string;
+          drafts_allowance: number;
+          drafts_period: string;
+          drafts_used: number;
+          enforced: boolean;
+          invitations: number;
+          max_members: number;
+          max_reports: number;
+          members: number;
+          pack_drafts_left: number;
+          plan: string;
+          reports: number;
           state: string;
         }[];
       };

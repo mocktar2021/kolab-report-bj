@@ -12,7 +12,7 @@ const base = {
   endsAt: "2026-11-15T23:30:00Z",
   drafts: null,
   receiptNumber: "KR-2026-000012",
-  link: "https://kolabreport.test/fr/organisations/o1/abonnement",
+  link: "https://kolabreport.test/fr/organisations/o1/abonnement#recus",
 };
 
 describe("paymentReceivedEmail", () => {
@@ -23,7 +23,8 @@ describe("paymentReceivedEmail", () => {
     expect(email.text).toContain("Votre offre Cabinet est active jusqu'au 16 novembre 2026.");
     expect(email.text).toContain("pour l'offre Cabinet, 1 mois de l'organisation Cabinet <Dossou>");
     expect(email.text).toContain("Votre reçu porte le numéro KR-2026-000012.");
-    expect(email.text).toContain(base.link);
+    expect(email.text).toContain(`Voir les reçus : ${base.link}`);
+    expect(email.html).toContain(">Voir les reçus</a>");
     expect(email.html).toContain("Cabinet &lt;Dossou&gt;");
     expect(email.html).not.toContain("<Dossou>");
   });

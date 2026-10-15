@@ -3,6 +3,7 @@ import { billingAlertEmail, paymentReceivedEmail, type BillingAlertKind } from "
 import { sendEmail } from "@/lib/email/send";
 import { log } from "@/lib/log";
 import type { AppliedEvent, BillingDb } from "./apply";
+import { billingPagePath, RECEIPTS_ANCHOR } from "./navigation";
 
 // E-mails about a purchase, sent once the grant has committed (ADR 001, 8.5
 // and 12). Each one is claimed in the database before it goes
@@ -91,7 +92,11 @@ export async function sendPaymentConfirmation(
   const recipients = [
     ...new Set([row.buyer_email, row.billing_email].flatMap((email) => (email ? [email.toLowerCase()] : []))),
   ];
-  const link = `${options.appUrl.replace(/\/+$/, "")}/fr/organisations/${row.organization_id}/abonnement`;
+  // The receipts of the billing page rather than the PDF route (ADR 001,
+  // section 9 suggests the PDF): signed out, the route only answers 401,
+  // while the page sends the reader to the sign-in first.
+  const page = `${options.appUrl.replace(/\/+$/, "")}/fr${billingPagePath(row.organization_id)}`;
+  const link = row.receipt_number ? `${page}#${RECEIPTS_ANCHOR}` : page;
   let sent = 0;
   for (const to of recipients) {
     const ok = await (options.send ?? sendEmail)(
