@@ -1760,6 +1760,7 @@ export type Database = {
       delete_workspace: { Args: { p_confirmation: string; p_workspace_id: string }; Returns: Json };
       discard_ai_generation: { Args: { p_generation_id: string }; Returns: undefined };
       end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
+      expire_audit_events: { Args: { p_months: number }; Returns: number };
       expire_report_exports: { Args: { p_days: number }; Returns: number };
       finish_storage_cleanup: { Args: { p_error?: string; p_ids: number[] }; Returns: number };
       health_check: { Args: Record<PropertyKey, never>; Returns: boolean };

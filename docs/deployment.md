@@ -158,6 +158,7 @@ How the storage cleanup works:
 - The job takes the queue in batches of 100 and removes the objects with the service role. It stops after 45 seconds and the next run carries on.
 - The file of a deliverable waits until 2 hours 15 minutes after it was registered: until then its signed upload URL can still put a file at that path.
 - A failed removal stays in the queue with its error and is tried again the next day.
+- The same run deletes the events of the deletion log (`private.audit_events`, KRB-180) older than 12 months.
 
 Setup: set `CRON_SECRET` on the Vercel project (table above). Vercel sends it as `Authorization: Bearer <CRON_SECRET>`. Without it, or with fewer than 16 characters, the route answers 401 to every call and logs why. On the Hobby plan a daily job runs at some point within the scheduled hour.
 
@@ -167,7 +168,7 @@ To run it by hand, for example on staging:
 curl -H "Authorization: Bearer $CRON_SECRET" https://<app-domain>/api/cron/storage-cleanup
 ```
 
-It answers counts only, for example `{"expiredExports":0,"removed":12,"failed":0,"timedOut":false,"ok":true}`. `timedOut: true` means the queue was not empty after 45 seconds. A 500 means a database call or a removal failed: check the function logs. Failed removals stay queued for the next run. To see what is waiting, in the SQL editor:
+It answers counts only, for example `{"expiredExports":0,"expiredAuditEvents":0,"removed":12,"failed":0,"timedOut":false,"ok":true}`. `timedOut: true` means the queue was not empty after 45 seconds. A 500 means a database call or a removal failed: check the function logs. Failed removals stay queued for the next run. To see what is waiting, in the SQL editor:
 
 ```sql
 select bucket, count(*), max(attempts), max(last_error) from private.storage_cleanup_queue group by bucket;

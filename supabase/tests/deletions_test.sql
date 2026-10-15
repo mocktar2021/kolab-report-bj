@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(105);
+select plan(110);
 
 -- KRB-180: deleting a report, a workspace or an organization goes through
 -- delete_report, delete_workspace and delete_organization only. Each checks
@@ -144,7 +144,7 @@ select is(
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
      and p.proname in ('delete_report', 'delete_workspace', 'delete_organization', 'report_deletion_preview',
-                       'workspace_deletion_preview', 'organization_deletion_preview')
+                       'workspace_deletion_preview', 'organization_deletion_preview', 'expire_audit_events')
      and not (p.prosecdef and p.proconfig @> array['search_path=""'])),
   '{}'::text[], 'every function is security definer with an empty search_path');
 select is(
@@ -153,6 +153,11 @@ select is(
         unnest(array['select', 'insert', 'update', 'delete']) p
    where has_table_privilege(r, 'private.audit_events', p)),
   '{}'::text[], 'nobody but the functions touches the audit log');
+select is(
+  (select coalesce(array_agg(r order by r), '{}')
+   from unnest(array['anon', 'authenticated', 'service_role']) r
+   where has_function_privilege(r, 'public.expire_audit_events(integer)', 'execute')),
+  array['service_role'], 'only the service role expires the audit log');
 
 -- Deleting a report ------------------------------------------------------------------------
 -- r1 gets a sent file, a stored export, an export file that no row records
@@ -604,6 +609,30 @@ select throws_ok($$select public.delete_organization(pg_temp.id('org_b'), 'Cabin
   'deleting it again finds nothing');
 select throws_ok($$select public.delete_workspace(pg_temp.id('w2'), 'Etude B')$$, 'P0002', null,
   'nor does deleting w2 again');
+
+-- Retention of the audit log ----------------------------------------------------------------
+-- Kept 12 months: the daily cleanup job deletes older events. Other work on
+-- this database may have old events too, so the count is read first.
+reset role;
+insert into private.audit_events (action, actor_id, organization_id, created_at, details)
+values ('organization_deleted', pg_temp.id('owner'), '00000000-0000-4000-a000-0000000000a1',
+        now() - interval '13 months', '{"krb180": "old"}'),
+       ('organization_deleted', pg_temp.id('owner'), '00000000-0000-4000-a000-0000000000a2',
+        now() - interval '11 months', '{"krb180": "recent"}');
+create temp table old_events as
+select count(*)::integer as n from private.audit_events where created_at < now() - interval '12 months';
+grant select on old_events to service_role;
+select pg_temp.act_as_server();
+select throws_ok($$select public.expire_audit_events(0)$$, '22023', null, 'it keeps at least one month');
+select is(public.expire_audit_events(12), (select n from old_events),
+  'the job deletes every event older than 12 months');
+reset role;
+select results_eq(
+  $$select details ->> 'krb180' from private.audit_events where details ? 'krb180'$$,
+  $$values ('recent')$$,
+  'an event of 11 months stays');
+select is((select count(*)::integer from private.audit_events where created_at < now() - interval '12 months'), 0,
+  'nothing older is left');
 
 -- Signed out --------------------------------------------------------------------------------
 select pg_temp.act_as_server();

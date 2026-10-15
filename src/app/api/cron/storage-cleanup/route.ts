@@ -6,7 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 // Vercel Cron calls this once a day (vercel.json) with
 // "Authorization: Bearer $CRON_SECRET" (KRB-166). It deletes the manual
-// exports past their retention and removes the stored files of deleted rows.
+// exports past their retention and the deletion log events older than 12
+// months (KRB-180), and removes the stored files of deleted rows.
 // The answer holds counts only, never a path. Anything that failed makes it
 // a 500, so the run shows as failed in the Vercel cron logs.
 

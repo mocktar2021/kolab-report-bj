@@ -45,6 +45,8 @@
 --   the feedback and the file names it used. A workspace or an organization
 --   takes its generations with it, so nothing is left to clear there.
 -- * The previews list what a deletion takes, for the confirmation dialogs.
+-- * The audit log is kept 12 months: the daily cleanup job calls
+--   expire_audit_events, which deletes older events.
 --
 -- Error codes:
 --   42501  signed out, or not allowed to delete it
@@ -78,6 +80,30 @@ comment on table private.audit_events is
 create index if not exists audit_events_org_idx on private.audit_events (organization_id, created_at desc);
 create index if not exists audit_events_workspace_idx on private.audit_events (workspace_id, created_at desc);
 create index if not exists audit_events_actor_idx on private.audit_events (actor_id, created_at desc);
+create index if not exists audit_events_created_idx on private.audit_events (created_at);
+
+-- Deletes the events older than p_months months. The log is kept 12 months
+-- (docs/gdpr/retention.md): /api/cron/storage-cleanup calls this once a day
+-- with 12, through the service role. Returns how many it deleted.
+create or replace function public.expire_audit_events(p_months integer)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_expired integer;
+begin
+  if p_months is null or p_months < 1 then
+    raise exception 'p_months must be at least 1' using errcode = '22023';
+  end if;
+
+  delete from private.audit_events a
+  where a.created_at < now() - make_interval(months => p_months);
+  get diagnostics v_expired = row_count;
+  return v_expired;
+end;
+$$;
 
 alter table private.audit_events enable row level security;
 revoke all on private.audit_events from public, anon, authenticated, service_role;
@@ -782,6 +808,8 @@ revoke all on function private.queue_scope_files(uuid, uuid) from public, anon, 
 revoke all on function private.lock_workspace_drafts(uuid) from public, anon, authenticated;
 revoke all on function private.owns_organization(uuid) from public, anon, authenticated;
 revoke all on function private.payments_in_progress(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.expire_audit_events(integer) from public, anon, authenticated;
+grant execute on function public.expire_audit_events(integer) to service_role;
 revoke all on function private.clear_generation_without_section() from public, anon, authenticated;
 
 revoke all on function public.report_deletion_preview(uuid) from public, anon;
