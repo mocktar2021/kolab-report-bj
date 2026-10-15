@@ -40,6 +40,12 @@ The block ends on its own or with the operator:
 
 The dialogs warn when time is lost: a running Pass Mission for a workspace; for an organization, the plan and the end of its last period (trial aside), the passes and the Pack IA drafts left. A period, a pass or a pack already started is not refunded (`/fr/cgv#remboursement`). When the organization has receipts, its dialog says they stay for the accounts but cannot be read in the app afterwards, and links to its "Abonnement" page to download them first (the receipt list there comes with KRB-177).
 
+## No undo period
+
+A deletion is immediate, as decided for KRB-180: no waiting period, no trash and no undo. The rows go in the transaction of the function, and the stored files at the next daily cleanup run. The dialogs say "Cette action est définitive", and a final report, a workspace and an organization ask for their exact title or name first.
+
+The app cannot bring back what went. A database backup can, but a restore replaces the whole database and only covers its own window ([`retention.md`](../gdpr/retention.md#backups)), so it is for incidents, not for undoing one deletion.
+
 ## How a deletion runs
 
 In one transaction:
