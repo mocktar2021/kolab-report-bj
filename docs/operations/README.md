@@ -4,7 +4,7 @@ Runbooks for running KolabReport in production: what watches it, what backs it u
 
 | File | What it holds |
 | --- | --- |
-| [`billing.md`](billing.md) | How access follows the plan, moving dates on staging, a reminder not sent, a workspace stuck in read-only, a manual grant, stuck purchases and refunds |
+| [`billing.md`](billing.md) | How access follows the plan, moving dates on staging, a reminder not sent, a workspace stuck in read-only, a manual grant, stuck purchases, purchases in review and refunds |
 | [`backups.md`](backups.md) | What Supabase backs up per plan, our RPO and RTO, the nightly database dump and Storage copy, the restore drill and its log |
 | [`monitoring.md`](monitoring.md) | Logs, Sentry, the uptime check on `/api/health` and its alert routing, the Supabase advisors, the database metrics and the billing job |
 | [`smoke-tests.md`](smoke-tests.md) | The smoke tests after each deploy: what they check, the smoke account and workspace to set up, what a run leaves behind, what to do when they fail |

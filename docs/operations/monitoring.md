@@ -349,7 +349,7 @@ Alerts by e-mail to `BILLING_ALERT_EMAIL`, once per purchase and kind, with ids 
 
 | Subject ends with | When |
 | --- | --- |
-| `paiement à vérifier` | A purchase went to `review` |
+| `paiement à vérifier` | A purchase went to `review`. It blocks the organization's next payment until it is closed ([`billing.md`](billing.md#a-purchase-in-review)) |
 | `remboursement constaté` | A refund was seen at FedaPay |
 | `paiement approuvé non accordé` | FedaPay approved a payment more than 15 minutes ago and the reconciliation cannot grant it |
 | `paiement reçu après expiration` | A payment arrived after its purchase expired. It was granted anyway |

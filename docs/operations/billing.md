@@ -191,19 +191,92 @@ order by received_at;
 
 ### A purchase in review
 
-FedaPay says paid, but `review_reason` names what does not match: `amount`, `currency`, `merchant_reference` or `environment`. Nothing was granted, and the organization cannot start another payment until the review is settled.
+FedaPay says paid, but `review_reason` names what does not match: `amount`, `currency`, `merchant_reference`, `environment`, `organization_deleted` or `workspace_deleted`. Nothing was granted, and the organization cannot start another payment while one of its purchases is in `review`. Every review ends by closing it, as paid or as refunded.
 
-1. Open the transaction in the FedaPay dashboard (`fedapay_transaction_id`) and compare it with the purchase.
+1. Open the transaction in the FedaPay dashboard (`fedapay_transaction_id`) and compare it with the purchase. Note when it was approved: closing asks for it.
 2. `currency` on every payment: FedaPay may report XOF with another id than the one in `src/lib/billing/apply.ts` (item 2 of the checklist in `docs/security/fedapay-webhook.md`). Fix the constant first.
-3. The customer paid the wrong amount or for something else: refund the payment in full (below).
-4. The customer paid what they meant to: grant the period by hand (Manual grant above), with the purchase id in the reason. The purchase stays in `review` and keeps blocking the organization's next payment until KRB-179 ships the operator functions: tell the product owner.
+3. The customer paid the full price of the offer to this FedaPay account: close the review as paid (below).
+4. Anything else (the wrong amount, another merchant reference, another environment, an organization or workspace deleted since): refund the payment in full (Refunds, below). A refund through FedaPay closes the review on its own: the webhook marks the purchase `refunded`. A refund by transfer does not: once the money is back with the customer, close the review as refunded.
+
+### Close a review
+
+Until KRB-179 ships the operator functions, closing a review is SQL under the rule of the manual grant: it runs on production only with the product owner's written OK, kept with the reason, and a second person reads it before it runs. Each block stops when the purchase is not in the status it expects. It records the operator, the reason and the cause of the review in `private.billing_events`, next to the `review` event written when the purchase went to review. If a block stops with an error, nothing changed: run `rollback;`.
+
+**As paid.** The purchase gets what a payment gives, through the function the webhook calls (`private.billing_grant`): the period rules of ADR 001, 6.3, its own entitlement or pack, a numbered receipt and the `granted` event. It ends `paid`, and any later answer from FedaPay for it gives `already_granted`. No e-mail goes out: tell the customer.
+
+```sql
+begin;
+
+do $$
+declare
+  v public.billing_purchases%rowtype;
+begin
+  select * into v from public.billing_purchases p where p.id = '<purchase_id>' for update;
+  if v.status is distinct from 'review' then
+    raise exception 'Not in review: %', v.status;
+  end if;
+  if v.review_reason in ('environment', 'organization_deleted', 'workspace_deleted') then
+    raise exception 'A % review never grants: refund it', v.review_reason;
+  end if;
+  -- The lock every grant takes, then the purchase's own grant, as the webhook does it.
+  perform private.billing_lock_org(v.organization_id);
+  update public.billing_purchases p set status = 'pending', review_reason = null where p.id = v.id;
+  perform private.billing_grant(v.id, least('<approved_at>'::timestamptz, now()));
+  insert into private.billing_events (organization_id, kind, actor, reason, details)
+  values (v.organization_id, 'manual_grant', '<your name>', '<reason>', jsonb_build_object(
+    'purchase_id', v.id,
+    'review_reason', v.review_reason,
+    'fedapay_transaction_id', v.fedapay_transaction_id));
+end;
+$$;
+
+-- Run up to here, read this, then run the commit: paid, granted, its period or pack, its receipt.
+select p.status, p.paid_at, p.granted_at, e.plan, e.starts_at, e.ends_at, k.drafts, r.number as receipt
+from public.billing_purchases p
+left join public.billing_entitlements e on e.purchase_id = p.id
+left join public.billing_ai_packs k on k.purchase_id = p.id
+left join public.billing_receipts r on r.purchase_id = p.id and r.kind = 'receipt'
+where p.id = '<purchase_id>';
+
+commit;
+```
+
+**As refunded.** The purchase ends `refunded`, with a `refund_seen` event like the one FedaPay's webhook writes. The block also takes a `paid` purchase refunded by transfer: revoke its entitlement after (Refunds, step 3).
+
+```sql
+begin;
+
+do $$
+declare
+  v public.billing_purchases%rowtype;
+begin
+  select * into v from public.billing_purchases p where p.id = '<purchase_id>' for update;
+  if v.status not in ('review', 'paid') then
+    raise exception 'Not in review or paid: %', v.status;
+  end if;
+  update public.billing_purchases p
+  set status = 'refunded', review_reason = null,
+      paid_at = coalesce(p.paid_at, least('<approved_at>'::timestamptz, now()))
+  where p.id = v.id;
+  insert into private.billing_events (organization_id, kind, actor, reason, details)
+  values (v.organization_id, 'refund_seen', '<your name>', '<reason>', jsonb_build_object(
+    'purchase_id', v.id,
+    'fedapay_transaction_id', v.fedapay_transaction_id,
+    'was', v.status,
+    'review_reason', v.review_reason,
+    'method', 'transfer'));
+end;
+$$;
+
+commit;
+```
 
 ### Refunds
 
 The rules, decided by the product owner (ADR 001, Q10): no refund of a started period, since the trial lets customers try first; a payment made by mistake (twice, or the wrong amount) is refunded in full. The terms of sale say the same (`/fr/cgv#remboursement`).
 
 1. Refund in the FedaPay dashboard. FedaPay refunds only MTN Mobile Money payments; any other one is refunded outside FedaPay, by transfer.
-2. FedaPay's webhook marks the purchase `refunded`, writes a `refund_seen` audit event and sends the alert `remboursement constaté`. Nothing is revoked on its own.
+2. FedaPay's webhook marks the purchase `refunded`, from `paid` or `review`, writes a `refund_seen` audit event and sends the alert `remboursement constaté`. Nothing is revoked on its own. A refund by transfer changes nothing here: mark the purchase refunded by hand (Close a review, as refunded).
 3. If the refund cancels the period, revoke its entitlement. Until KRB-179 ships `billing_admin_revoke`, this follows the same rule as a manual grant:
 
    ```sql

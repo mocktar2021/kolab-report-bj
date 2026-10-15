@@ -136,7 +136,7 @@ where status in ('pending', 'review') and created_at < now() - interval '1 hour'
 order by created_at;
 ```
 
-A `review` purchase was paid at FedaPay with an amount, currency, merchant reference or environment that does not match. Check the transaction in the FedaPay dashboard, then grant by hand (KRB-179) or refund it.
+A `review` purchase was paid at FedaPay with an amount, currency, merchant reference or environment that does not match. Check the transaction in the FedaPay dashboard, then close the review as paid or as refunded ([`docs/operations/billing.md`](operations/billing.md#a-purchase-in-review)). Until it is closed, the organization cannot start another payment.
 
 ## Secrets rules
 
