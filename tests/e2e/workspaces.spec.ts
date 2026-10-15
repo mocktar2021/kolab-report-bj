@@ -1,5 +1,12 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { adminClient, createTestUser, createWorkspaceFor, signedInClient, type TestUser } from "./supabase";
+import {
+  adminClient,
+  createTestUser,
+  createWorkspaceFor,
+  setPlan,
+  signedInClient,
+  type TestUser,
+} from "./supabase";
 
 // KRB-11: workspace creation, roles and section assignment. KRB-175: a new
 // workspace in an organization the user manages, and "Nouveau rapport".
@@ -165,6 +172,9 @@ test("an owner adds a second workspace to their organization, an expert only cre
 }) => {
   const [owner, expert] = await Promise.all([createTestUser("Rose Parakou"), createTestUser("Ines Experte")]);
   const first = await createWorkspaceFor(owner, "Audit Parakou");
+  // The new workspace comes with its own report, and the trial allows one
+  // active report (KRB-175): the organization is on Cabinet.
+  await setPlan(first.organization_id, "cabinet");
   const { error: memberError } = await adminClient()
     .from("workspace_members")
     .insert({ workspace_id: first.workspace_id, user_id: expert.id, role: "expert" });
@@ -225,7 +235,13 @@ test("owners create a report from the dashboard, experts do not get the button",
   browser,
 }) => {
   const [owner, expert] = await Promise.all([createTestUser("Paul Bohicon"), createTestUser("Lea Experte")]);
-  const { workspace_id: workspaceId } = await createWorkspaceFor(owner, "Audit Bohicon");
+  const { workspace_id: workspaceId, organization_id: organizationId } = await createWorkspaceFor(
+    owner,
+    "Audit Bohicon",
+  );
+  // The trial allows one active report (KRB-175): the organization is on
+  // Cabinet so a second one fits.
+  await setPlan(organizationId, "cabinet");
   const { error: memberError } = await adminClient()
     .from("workspace_members")
     .insert({ workspace_id: workspaceId, user_id: expert.id, role: "expert" });

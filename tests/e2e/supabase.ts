@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { PLANS } from "../../src/lib/billing/catalog";
 import type { Database } from "../../src/lib/supabase/database.types";
 
 // Local stack values, read from .env.local by playwright.config.ts.
@@ -60,6 +61,45 @@ export async function createWorkspaceFor(user: TestUser, workspaceName: string) 
     .single();
   if (error || !data) throw error ?? new Error("create_workspace_with_owner returned nothing");
   return { api, ...data };
+}
+
+/**
+ * Puts an organization on a plan from now on, in place of its trial, like the
+ * demo organization of the seed. Billing is enforced locally and in CI, and a
+ * new user's first organization only gets the trial: 1 active report and 5
+ * members. Returns the new entitlement's id.
+ */
+export async function setPlan(organizationId: string, plan: "independant" | "cabinet") {
+  const admin = adminClient();
+  const now = Date.now();
+  const { error: revokeError } = await admin
+    .from("billing_entitlements")
+    .update({ revoked_at: new Date(now).toISOString(), revoked_reason: "Test de bout en bout" })
+    .eq("organization_id", organizationId)
+    .eq("scope", "subscription")
+    .is("revoked_at", null);
+  if (revokeError) throw revokeError;
+  const { limits } = PLANS[plan];
+  const { data, error } = await admin
+    .from("billing_entitlements")
+    .insert({
+      organization_id: organizationId,
+      scope: "subscription",
+      plan,
+      source: "manual",
+      starts_at: new Date(now - 60_000).toISOString(),
+      ends_at: new Date(now + 30 * 86_400_000).toISOString(),
+      max_members: limits.maxMembers,
+      max_reports: limits.maxReports,
+      drafts_per_month: limits.draftsPerMonth,
+      drafts_total: limits.draftsTotal,
+      custom_templates: limits.customTemplates,
+      note: "Test de bout en bout",
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw error ?? new Error(`Could not put ${organizationId} on ${plan}`);
+  return data.id;
 }
 
 /**
