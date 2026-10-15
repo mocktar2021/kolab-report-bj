@@ -425,6 +425,7 @@ export type Database = {
           status: string;
           tax_xof: number;
           terms: NonNullable<Json>;
+          transfer_reference: string | null;
           updated_at: string;
           workspace_id: string | null;
         };
@@ -457,6 +458,7 @@ export type Database = {
           status?: string;
           tax_xof?: number;
           terms: NonNullable<Json>;
+          transfer_reference?: string | null;
           updated_at?: string;
           workspace_id?: string | null;
         };
@@ -488,6 +490,7 @@ export type Database = {
           status?: string;
           tax_xof?: number;
           terms?: NonNullable<Json>;
+          transfer_reference?: string | null;
           updated_at?: string;
           workspace_id?: string | null;
         };
@@ -1639,6 +1642,53 @@ export type Database = {
           title: string;
           total_tokens: number;
           version: number;
+        }[];
+      };
+      billing_admin_grant: {
+        Args: {
+          p_actor: string;
+          p_length: string;
+          p_limits: Json;
+          p_organization_id: string;
+          p_plan: string;
+          p_reason: string;
+          p_starts_at?: string;
+        };
+        Returns: {
+          ends_at: string;
+          entitlement_id: string;
+          starts_at: string;
+        }[];
+      };
+      billing_admin_record_payment: {
+        Args: {
+          p_actor: string;
+          p_amount_ht_xof: number;
+          p_catalog_version?: number;
+          p_label?: string;
+          p_limits: Json;
+          p_months: number;
+          p_organization_id: string;
+          p_paid_at: string;
+          p_reason: string;
+          p_test?: boolean;
+          p_transfer_reference: string;
+        };
+        Returns: {
+          ends_at: string;
+          entitlement_id: string;
+          purchase_id: string;
+          receipt_number: string;
+          starts_at: string;
+        }[];
+      };
+      billing_admin_revoke: {
+        Args: { p_actor: string; p_entitlement_id: string; p_reason: string };
+        Returns: {
+          entitlement_id: string;
+          organization_id: string;
+          plan: string;
+          revoked_at: string;
         }[];
       };
       billing_apply_transaction: {

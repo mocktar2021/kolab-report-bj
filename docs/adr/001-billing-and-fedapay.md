@@ -641,7 +641,7 @@ The launch migration (last PR of KRB-179):
 4. Insert trial claims for their owners, with the e-mail hash.
 5. Write a `launch_period` audit event per organization.
 
-The owner's own organizations (Mocktar Technologies' internal use, demos) get an Institution entitlement by hand after the launch with `scripts/billing/record-payment.mjs --manual` (amount 0, reason "usage interne"), not in the migration, because their ids differ between environments.
+The owner's own organizations (Mocktar Technologies' internal use, demos) get an Institution entitlement by hand after the launch with `scripts/billing/grant.mjs` (no payment, reason "usage interne"), not in the migration, because their ids differ between environments.
 
 The seed (`supabase/seed.sql`, local and CI only) sets `enforced = true` and gives the demo organization a manual Cabinet entitlement until 2100, so the existing end-to-end tests keep running with enforcement on.
 

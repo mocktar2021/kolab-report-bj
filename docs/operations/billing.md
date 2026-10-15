@@ -1,6 +1,6 @@
 # Billing
 
-What to do when a reminder does not arrive, when a workspace stays read-only, when an organization needs a period by hand (KRB-178), and when a payment is stuck or refunded (KRB-176). Who sees the billing page and its receipts, and how to read a customer's receipts (KRB-177). The rules are in [ADR 001](../adr/001-billing-and-fedapay.md). The variables and the daily job are set up in [`docs/deployment.md`](../deployment.md#scheduled-jobs), and what to watch is in [`monitoring.md`](monitoring.md#billing).
+What to do when a reminder does not arrive, when a workspace stays read-only, when an Institution deal is paid or an organization needs a period by hand (KRB-179), and when a payment is stuck or refunded (KRB-176). Who sees the billing page and its receipts, and how to read a customer's receipts (KRB-177). The rules are in [ADR 001](../adr/001-billing-and-fedapay.md). The variables and the daily job are set up in [`docs/deployment.md`](../deployment.md#scheduled-jobs), and what to watch is in [`monitoring.md`](monitoring.md#billing).
 
 Every query below runs in the SQL editor of the Supabase dashboard, with the rights of the database owner. Read before you write: every `update`, `insert` or `delete` here says which environment it is for.
 
@@ -160,35 +160,60 @@ Staging only. On production, dates change through a purchase or the operator fun
 
 3. The banner and the disabled buttons follow the state when the page loads. Ask the person to reload the page after the fix.
 
-## Manual grant
+## Institution and manual changes
 
-A manual grant gives an organization a period without a payment: an Institution deal paid by bank transfer, a goodwill extension, or a fix after an incident.
+Three scripts in `scripts/billing/` change an organization's periods by hand (KRB-179). They call `billing_admin_record_payment`, `billing_admin_grant` and `billing_admin_revoke`, which only the service role may run. Each one asks for `--actor` (your name) and `--reason`, and writes the periods before and after in `private.billing_events`, so the audit log says who changed what, when and why.
 
-Once KRB-179 ships, use `billing_admin_grant` through `scripts/billing/grant.mjs`. It asks for an actor and a reason and writes the state before and after in `private.billing_events`.
+Every run is a dry run first: it prints the project, the organization, its periods and the call, and writes nothing. Read it, then run the same command with `--apply`. The scripts read the target from the environment, so set it in the shell you run them from, never in a file of the repository:
 
-Until then, the transaction below is the emergency way. It runs on production only with the product owner's written OK: keep their message with the reason. A second person reads it before it runs.
-
-```sql
-begin;
-
--- Cabinet for 30 days from now. Limits from src/lib/billing/catalog.ts.
--- If a subscription period is still running, start at its end instead of
--- now(), or the insert fails with 23P01.
-insert into public.billing_entitlements (
-  organization_id, scope, plan, source, starts_at, ends_at,
-  max_members, max_reports, drafts_per_month, custom_templates, note
-) values (
-  '<organization_id>', 'subscription', 'cabinet', 'manual', now(), now() + interval '30 days',
-  10, null, 250, true, '<reason>'
-)
-returning id;
-
-insert into private.billing_events (organization_id, kind, actor, reason, details)
-values ('<organization_id>', 'manual_grant', '<your name>', '<reason>',
-        jsonb_build_object('entitlement_id', '<id returned above>', 'plan', 'cabinet', 'ends_at', now() + interval '30 days'));
-
-commit;
+```sh
+export SUPABASE_URL=https://<project ref>.supabase.co
+export SUPABASE_SERVICE_ROLE_KEY=<service_role key>   # Supabase dashboard, Project Settings, API
 ```
+
+Check the `Project:` line of the dry run before `--apply`: staging and production have different URLs. On production, a second person reads the dry run first.
+
+The organization id is in the URL of its billing page (`/fr/organisations/<id>/abonnement`), or in `public.organizations`.
+
+### An Institution deal
+
+1. The quote is signed and the bank transfer is on the account. Note the bank's reference of the transfer, the date it arrived and the amount HT.
+2. Record it:
+
+   ```sh
+   node scripts/billing/record-payment.mjs --organization <id> --amount 1800000 --months 12 \
+     --reference VIR-2026-0147 --paid-on 2026-10-13 \
+     --actor "Mocktar Tairou" --reason "Devis D-2026-001 signé"
+   ```
+
+   The limits are Institution's (`src/lib/billing/catalog.ts`): no member or report limit, 1 000 AI drafts a month, custom templates. A contract that says otherwise adds `--members N`, `--reports N`, `--drafts-per-month N` or `--templates no` (`none` means no limit). `--label` changes the line printed on the receipt, "Institution, 12 mois" by default.
+3. Run it again with `--apply`. It creates a paid purchase by bank transfer and the period, by the same rules as an online payment: a running trial ends and its days left are added, a Cabinet period still running is converted into extra days, and a renewal starts when the current period ends. It answers the receipt number.
+4. The customer's owners download the receipt from their billing page. It shows "Virement bancaire" and the transfer reference. Send them a word that it is there.
+
+The same transfer reference is refused a second time for the same organization, so running the command twice by mistake grants nothing twice. Renewal is the same command with the next transfer. On staging, add `--test`: the receipt then says it is a test receipt.
+
+### A period without a payment
+
+A goodwill extension, a fix after an incident, or the owner's own organizations:
+
+```sh
+node scripts/billing/grant.mjs --organization <id> --plan institution --months 12 \
+  --actor "Mocktar Tairou" --reason "Organisation du propriétaire"
+```
+
+`--days N` instead of `--months N`. The plan is `independant`, `cabinet` or `institution`, with its catalogue limits unless you give others. The period starts after the paid and manual periods already planned, or now; a running trial ends where it starts. `--start 2026-11-01` sets the day, and is refused when another period covers it. No purchase and no receipt.
+
+### End a period early
+
+To correct a grant, or after refunding a payment:
+
+```sh
+node scripts/billing/revoke.mjs --entitlement <entitlement id> --actor "Mocktar Tairou" --reason "Erreur de saisie"
+```
+
+The entitlement ids are in the dry run of the two other scripts. Revoking refunds nothing: refunds go through FedaPay or the bank (below).
+
+### Limits per plan
 
 | Plan | `max_members` | `max_reports` | `drafts_per_month` | `drafts_total` | `custom_templates` |
 | --- | --- | --- | --- | --- | --- |
@@ -196,7 +221,7 @@ commit;
 | `cabinet` | 10 | null | 250 | null | true |
 | `institution` | null | null | 1000, or the contract | null | true |
 
-Null means no limit. The reminders of the new period go out on their own: 7 days before its end, the day before, and so on.
+Null means no limit. The reminders of a new period go out on their own: 7 days before its end, the day before, and so on.
 
 ## Stuck purchases and refunds
 
@@ -238,7 +263,7 @@ FedaPay says paid, but `review_reason` names what does not match: `amount`, `cur
 
 ### Close a review
 
-Until KRB-179 ships the operator functions, closing a review is SQL under the rule of the manual grant: it runs on production only with the product owner's written OK, kept with the reason, and a second person reads it before it runs. Each block stops when the purchase is not in the status it expects. It records the operator, the reason and the cause of the review in `private.billing_events`, next to the `review` event written when the purchase went to review. If a block stops with an error, nothing changed: run `rollback;`.
+Closing a review has no script: it is SQL, and it runs on production only with the product owner's written OK, kept with the reason, and a second person reads it before it runs. Each block stops when the purchase is not in the status it expects. It records the operator, the reason and the cause of the review in `private.billing_events`, next to the `review` event written when the purchase went to review. If a block stops with an error, nothing changed: run `rollback;`.
 
 **As paid.** The purchase gets what a payment gives, through the function the webhook calls (`private.billing_grant`): the period rules of ADR 001, 6.3, its own entitlement or pack, a numbered receipt and the `granted` event. It ends `paid`, and any later answer from FedaPay for it gives `already_granted`. No e-mail goes out: tell the customer.
 
@@ -315,24 +340,14 @@ The rules, decided by the product owner (ADR 001, Q10): no refund of a started p
 
 1. Refund in the FedaPay dashboard. FedaPay refunds only MTN Mobile Money payments; any other one is refunded outside FedaPay, by transfer.
 2. FedaPay's webhook marks the purchase `refunded`, from `paid` or `review`, writes a `refund_seen` audit event and sends the alert `remboursement constaté`. Nothing is revoked on its own. A refund by transfer changes nothing here: mark the purchase refunded by hand (Close a review, as refunded).
-3. If the refund cancels the period, revoke its entitlement. Until KRB-179 ships `billing_admin_revoke`, this follows the same rule as a manual grant:
+3. If the refund cancels the period, revoke its entitlement with `scripts/billing/revoke.mjs` (Institution and manual changes, above). Its id:
 
    ```sql
-   begin;
-
-   update public.billing_entitlements
-   set revoked_at = now(), revoked_reason = '<reason>'
-   where purchase_id = '<purchase_id>' and revoked_at is null
-   returning id, organization_id, plan, starts_at, ends_at;
-
-   insert into private.billing_events (organization_id, kind, actor, reason, details)
-   values ('<organization_id>', 'manual_revoke', '<your name>', '<reason>',
-           jsonb_build_object('purchase_id', '<purchase_id>', 'entitlement_id', '<id returned above>'));
-
-   commit;
+   select id, plan, starts_at, ends_at from public.billing_entitlements
+   where purchase_id = '<purchase_id>' and revoked_at is null;
    ```
 
-   A refunded Pack IA: `update public.billing_ai_packs set revoked_at = now() where purchase_id = '<purchase_id>';`, with the same audit event.
+   A refunded Pack IA has no script: `update public.billing_ai_packs set revoked_at = now() where purchase_id = '<purchase_id>';`, then a `manual_revoke` event in `private.billing_events` with your name, the reason and the purchase id.
 4. The receipt stays as it is: receipts never change. Credit notes wait for the accountant (ADR 001, A3).
 
 ### Two payments for the same offer
