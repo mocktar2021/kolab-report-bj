@@ -127,7 +127,17 @@ export const EXPORT_COLUMNS = {
     created_at: "created_at",
   },
   statusChanges: { report_id: "report_id", from: "from_status", to: "to_status", changed_at: "changed_at" },
-  notifications: { event_id: "event_id", created_at: "created_at", read_at: "read_at" },
+  // A report status change (event_id), or a renewal reminder of an
+  // organization they can renew (KRB-178): which one, and for which period.
+  notifications: {
+    kind: "kind",
+    event_id: "event_id",
+    organization_id: "organization_id",
+    entitlement_id: "entitlement_id",
+    billing_notice: "billing_notice",
+    created_at: "created_at",
+    read_at: "read_at",
+  },
   promptVersionsWritten: {
     id: "id",
     workspace_id: "workspace_id",

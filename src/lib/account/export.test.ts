@@ -169,6 +169,45 @@ describe("buildAccountExport", () => {
   });
 });
 
+describe("notifications", () => {
+  it("says which kind each one is, with the renewal reminder of a billing one", () => {
+    const sources = emptySources();
+    sources.notifications = [
+      { kind: "report_status", event_id: 12, created_at: "2026-10-09T10:00:00Z", read_at: null },
+      {
+        kind: "billing",
+        event_id: null,
+        organization_id: "o1",
+        entitlement_id: "e1",
+        billing_notice: "d7",
+        created_at: "2026-10-10T05:17:00Z",
+        read_at: "2026-10-10T08:00:00Z",
+        user_id: USER_ID,
+      },
+    ];
+    expect(buildAccountExport(sources, EXPORTED_AT).notifications).toEqual([
+      {
+        kind: "report_status",
+        event_id: 12,
+        organization_id: null,
+        entitlement_id: null,
+        billing_notice: null,
+        created_at: "2026-10-09T10:00:00Z",
+        read_at: null,
+      },
+      {
+        kind: "billing",
+        event_id: null,
+        organization_id: "o1",
+        entitlement_id: "e1",
+        billing_notice: "d7",
+        created_at: "2026-10-10T05:17:00Z",
+        read_at: "2026-10-10T08:00:00Z",
+      },
+    ]);
+  });
+});
+
 describe("billing purchases", () => {
   it("lists the order, its amounts and the receipt numbers, not the FedaPay details", () => {
     const sources = emptySources();

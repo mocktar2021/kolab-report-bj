@@ -101,7 +101,9 @@ select jsonb_pretty(jsonb_build_object(
       'report_id', ev.report_id, 'from', ev.from_status, 'to', ev.to_status, 'changed_at', ev.changed_at)), '[]')
     from public.report_status_events ev join target t on t.id = ev.changed_by),
   'notifications', (select coalesce(jsonb_agg(jsonb_build_object(
-      'event_id', n.event_id, 'created_at', n.created_at, 'read_at', n.read_at)), '[]')
+      'kind', n.kind, 'event_id', n.event_id, 'organization_id', n.organization_id,
+      'entitlement_id', n.entitlement_id, 'billing_notice', n.billing_notice,
+      'created_at', n.created_at, 'read_at', n.read_at)), '[]')
     from public.notifications n join target t on t.id = n.user_id),
   'prompt_versions_written', (select coalesce(jsonb_agg(jsonb_build_object(
       'id', pl.id, 'workspace_id', pl.workspace_id, 'template_key', pl.template_key,
