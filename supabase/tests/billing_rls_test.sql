@@ -249,8 +249,8 @@ select is(
 select is((select body -> 'packs' -> 0 ->> 'drafts' from overview where who = 'owner'), '100',
   'and the running pack');
 select ok(
-  (select body::text !~ '(@|Owner|Admin|Expert|Viewer|Etude|Cabinet)' from overview where who = 'owner'),
-  'it holds no e-mail and no name');
+  (select body::text !~ '(@|Owner|Admin|Expert|Viewer|Cabinet)' from overview where who = 'owner'),
+  'it holds no e-mail, no person''s name and no organization name (workspace names come for the pass picker)');
 
 select pg_temp.act_as('admin');
 select is((public.billing_overview(pg_temp.id('org_a')) ->> 'can_manage')::boolean, false,
