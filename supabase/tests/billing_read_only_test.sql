@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(82);
+select plan(83);
 
 -- Read-only workspaces and renewal reminders (ADR 001, sections 6.1, 7.3
 -- and 12; KRB-178). org_a runs on Cabinet, then its period is moved back
@@ -207,8 +207,18 @@ select is(pg_temp.affected($$delete from public.workspace_members
   1, 'a member is removed');
 select is((select assigned_to from public.report_sections where id = pg_temp.id('s2')), null,
   'and their section is unassigned: writes made by another trigger are not checked');
-select is(pg_temp.affected($$delete from public.reports where id = pg_temp.id('r1')$$),
-  1, 'and the whole report is deleted');
+-- Updates made by a foreign key action (on delete set null) run inside the
+-- action's trigger, so they are not checked either. Deleting reports,
+-- workspaces and organizations goes through the functions of KRB-180, whose
+-- tests run them in read-only workspaces. Here, an account deleted in the
+-- owner's name, as a definer function would: its sections lose their expert.
+select pg_temp.act_as_server();
+select set_config('request.jwt.claims',
+  json_build_object('sub', pg_temp.id('owner'), 'role', 'authenticated')::text, true);
+select is(pg_temp.affected($$delete from public.profiles where id = pg_temp.id('expert')$$),
+  1, 'an account is deleted in a user''s name');
+select is((select assigned_to from public.report_sections where id = pg_temp.id('s1')), null,
+  'and its sections are unassigned by the foreign key, read-only or not');
 
 -- Reminders ------------------------------------------------------------------------------
 -- org_b (owned by outsider): E, Indépendant until 20 March 2030 at 14:00 UTC

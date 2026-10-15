@@ -26,8 +26,11 @@
 -- * Like 175-3, only writes in a user's name are checked (auth.uid() set),
 --   the definer functions they call included (save_section_content,
 --   accept_ai_generation, reorder_report_sections). Writes of the service
---   role are not, and neither are writes made by another trigger: removing
---   a member still unassigns their sections.
+--   role are not, and neither are writes made by another trigger or by a
+--   foreign key action (on delete set null), which run one trigger level
+--   down: removing a member still unassigns their sections, and deleting a
+--   report, a workspace or an account still clears the rows that pointed
+--   to it.
 -- * Reminders: public.billing_due_notices(at) finds the entitlements that
 --   end their line and owe a notice at `at` (d7, d1, ended, read_only),
 --   claims each one in private.billing_notices, writes the in-app
@@ -85,8 +88,9 @@ security definer
 set search_path = ''
 as $$
 begin
-  -- The service role, migrations, and writes made by another trigger (a
-  -- member removed unassigns their sections) are not checked.
+  -- The service role, migrations, and writes made one level down by another
+  -- trigger (a member removed unassigns their sections) or by a foreign key
+  -- action (on delete set null) are not checked.
   if (select auth.uid()) is null or pg_trigger_depth() > 1 then
     return new;
   end if;
