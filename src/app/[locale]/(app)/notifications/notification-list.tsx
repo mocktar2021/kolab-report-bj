@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { BellOff } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import type { NotificationItem } from "@/lib/notifications";
+import { PLANS } from "@/lib/billing/catalog";
+import { BILLING_TIME_ZONE } from "@/lib/billing/dates";
+import type { BillingNotification, NotificationItem } from "@/lib/notifications";
 import {
   REPORT_ACTIONS,
   REPORT_TRANSITIONS,
@@ -31,7 +33,11 @@ type NotificationListProps = {
   now: string;
 };
 
-/** The status changes the user was told about, newest first, each one linking to its report. */
+/**
+ * What the user was told about, newest first: status changes, each linking
+ * to its report, and renewal reminders, linking to the organization's
+ * billing page.
+ */
 export function NotificationList({ notifications, now }: NotificationListProps) {
   const t = useTranslations("Notifications");
   const format = useFormatter();
@@ -53,14 +59,63 @@ export function NotificationList({ notifications, now }: NotificationListProps) 
 
   const nowDate = new Date(now);
 
+  function billingDate(date: string | null) {
+    return date
+      ? format.dateTime(new Date(date), {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: BILLING_TIME_ZONE,
+        })
+      : "";
+  }
+
+  /** A renewal reminder in one sentence, for a pass or for the organization's plan. */
+  function billingSentence(notification: BillingNotification) {
+    // The organization owner may not belong to the workspace of a pass, so
+    // its name can be out of reach.
+    const scope = !notification.workspaceId
+      ? "subscription"
+      : notification.workspaceName
+        ? "mission"
+        : "missionUnnamed";
+    const values = {
+      scope,
+      plan: notification.plan ? PLANS[notification.plan].label : "",
+      organization: notification.organizationName ?? t("billing.unknownOrganization"),
+      workspace: notification.workspaceName ?? "",
+    };
+    switch (notification.notice) {
+      case "d7":
+      case "d1":
+        return t("billing.ending", { ...values, date: billingDate(notification.endsAt) });
+      case "ended":
+        return t("billing.ended", {
+          ...values,
+          date: billingDate(notification.endsAt),
+          graceEnd: billingDate(notification.graceEndsAt),
+        });
+      case "read_only":
+        return t("billing.readOnly", { ...values, date: billingDate(notification.graceEndsAt) });
+    }
+  }
+
   return (
     <ul className="surface-card mt-8 divide-y overflow-hidden rounded-2xl border shadow-sm">
       {notifications.map((notification) => {
         const unread = !notification.read || unreadOnOpen.has(notification.id);
-        const action = actionOf(notification.from, notification.to) ?? "other";
-        const sentence = notification.actorName
-          ? t(`event.${action}`, { actor: notification.actorName, title: notification.reportTitle })
-          : t(`eventNoActor.${action}`, { title: notification.reportTitle });
+        let sentence: string;
+        let href: string;
+        if (notification.kind === "billing") {
+          sentence = billingSentence(notification);
+          href = `/organisations/${notification.organizationId}/abonnement`;
+        } else {
+          const action = actionOf(notification.from, notification.to) ?? "other";
+          sentence = notification.actorName
+            ? t(`event.${action}`, { actor: notification.actorName, title: notification.reportTitle })
+            : t(`eventNoActor.${action}`, { title: notification.reportTitle });
+          href = `/rapports/${notification.reportId}`;
+        }
         // A clock a little ahead of the database would say "dans 2 secondes".
         const createdAt = new Date(Math.min(new Date(notification.createdAt).getTime(), nowDate.getTime()));
         const when =
@@ -71,7 +126,7 @@ export function NotificationList({ notifications, now }: NotificationListProps) 
         return (
           <li key={notification.id}>
             <Link
-              href={`/rapports/${notification.reportId}`}
+              href={href}
               className={cn(
                 "flex gap-3 px-5 py-4 outline-none transition-colors hover:bg-accent/60 focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                 unread && "bg-highlight/[0.04]",
