@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type APIResponse, type Page } from "@playwright/test";
 import { OFFERS, offerTerms } from "../../src/lib/billing/catalog";
+import { receiptFileSchema, receiptPdfBytes } from "../../src/lib/billing/receipt-file";
 import { pdfText, squash } from "../../src/lib/export/test-pdf-text";
 import { expectNoAxeViolations } from "./a11y";
 import {
@@ -36,6 +37,15 @@ async function signIn(page: Page, user: TestUser) {
 
 function navigation(page: Page) {
   return page.getByRole("navigation", { name: "Navigation de l'application" });
+}
+
+/** The receipt route's answer (KRB-189): JSON, never cached, with the file name and the PDF in base64. */
+async function receiptFile(response: APIResponse) {
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toMatch(/^application\/json/);
+  expect(response.headers()["cache-control"]).toBe("private, no-store");
+  const file = receiptFileSchema.parse(await response.json());
+  return { fileName: file.fileName, pdf: Buffer.from(receiptPdfBytes(file)) };
 }
 
 /**
@@ -176,7 +186,7 @@ test("the owner sees the plan and the meter, pays, and downloads the receipt", a
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    receipts.getByRole("link", { name: `Télécharger le reçu ${number} en PDF` }).click(),
+    receipts.getByRole("button", { name: `Télécharger le reçu ${number} en PDF` }).click(),
   ]);
   expect(download.suggestedFilename()).toBe(`recu-${number}.pdf`);
   const pdf = await readFile((await download.path())!);
@@ -200,16 +210,17 @@ test("the owner sees the plan and the meter, pays, and downloads the receipt", a
     expect(text).toContain(squash(part));
   }
 
-  // The same link answers a PDF that is never cached.
-  const response = await page.request.get(
-    (await receipts
-      .getByRole("link", { name: `Télécharger le reçu ${number} en PDF` })
-      .getAttribute("href"))!,
-  );
-  expect(response.status()).toBe(200);
-  expect(response.headers()["content-type"]).toBe("application/pdf");
-  expect(response.headers()["content-disposition"]).toBe(`attachment; filename="recu-${number}.pdf"`);
-  expect(response.headers()["cache-control"]).toBe("private, no-store");
+  // The route the button reads answers the same PDF, never cached.
+  const { data: stored, error: storedError } = await adminClient()
+    .from("billing_receipts")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("number", number)
+    .single();
+  if (storedError || !stored) throw storedError ?? new Error("no receipt");
+  const file = await receiptFile(await page.request.get(`/api/billing/receipts/${stored.id}`));
+  expect(file.fileName).toBe(`recu-${number}.pdf`);
+  expect(file.pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
 
   await expectNoAxeViolations(page, "billing page of an owner, with a payment", { soft: false });
 });
@@ -252,9 +263,9 @@ test("an admin reads the page and downloads receipts, without buying or editing"
 
   const receipts = page.getByRole("region", { name: "Reçus" });
   await expect(receipts.getByRole("rowheader", { name: new RegExp(`^${receipt.number}`) })).toBeVisible();
-  const response = await page.request.get(`/api/billing/receipts/${receipt.id}`);
-  expect(response.status()).toBe(200);
-  expect(response.headers()["content-type"]).toBe("application/pdf");
+  const file = await receiptFile(await page.request.get(`/api/billing/receipts/${receipt.id}`));
+  expect(file.fileName).toBe(`recu-${receipt.number}.pdf`);
+  expect(file.pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
 
   // The pass of a workspace the admin is not a member of goes unnamed.
   const passes = page.getByRole("region", { name: "Pass Mission par espace de travail" });

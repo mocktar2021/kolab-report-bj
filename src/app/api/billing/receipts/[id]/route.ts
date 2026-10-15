@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseReceipt, RECEIPT_COLUMNS, RECEIPT_LINE_COLUMNS, receiptFileName } from "@/lib/billing/receipt";
+import type { ReceiptFile } from "@/lib/billing/receipt-file";
 import { buildReceiptPdf } from "@/lib/billing/receipt-pdf";
 import { log, withRequestId } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +12,8 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 // the organization's owner and the owners and admins of its workspaces read
 // it, anyone else gets a 404, like a receipt that does not exist. No
 // service role here. The PDF is drawn from the stored rows on every
-// download and never cached.
+// download and never cached. It goes out as base64 in JSON, and the page
+// builds the file (src/lib/billing/receipt-file.ts, KRB-189).
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,14 +53,9 @@ export const GET = withRequestId(async (_request: Request, { params }: { params:
   }
 
   const pdf = await buildReceiptPdf(receipt);
-  return new NextResponse(new Uint8Array(pdf), {
-    status: 200,
-    headers: {
-      ...NO_STORE,
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${receiptFileName(receipt.number)}"`,
-      "Content-Length": String(pdf.length),
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  const file: ReceiptFile = {
+    fileName: receiptFileName(receipt.number),
+    pdf: Buffer.from(pdf).toString("base64"),
+  };
+  return NextResponse.json(file, { headers: NO_STORE });
 });

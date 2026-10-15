@@ -25,7 +25,7 @@ The billing page is `/fr/organisations/<organization id>/abonnement`, for the or
 
 The "Abonnement" link of the sidebar follows the same readers, the organization owner included whatever their workspace roles, and only shows once billing is enforced (`private.billing_settings.enforced`, KRB-179). Before the launch the page stays reachable by its address, for tests on staging.
 
-Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draws the PDF on each download from the stored receipt and its lines, read with the user's own client (RLS), and answers 404 to anyone who is not a billing reader of that organization. A receipt never changes once issued, so:
+Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draws the PDF on each download from the stored receipt and its lines, read with the user's own client (RLS), and answers 404 to anyone who is not a billing reader of that organization. It answers JSON with the file name and the PDF in base64, and the "Télécharger" button builds the file in the browser (KRB-189): a PDF sent as raw bytes by a Vercel function reached the browser changed, and Chrome refused it with `ERR_INVALID_RESPONSE`. Opening the route's address shows that JSON, not a PDF. A receipt never changes once issued, so:
 
 - The seller on the receipts is `private.billing_settings.seller` at the time of the payment. To change it (new address, for example), update that row in the SQL editor of each Supabase project. Only the next receipts change.
 - The buyer is the organization's billing details at the time of the payment. A customer who wants another name on a receipt already issued needs a credit note (`AV-` numbers, not built yet, ADR 001 question A3).
