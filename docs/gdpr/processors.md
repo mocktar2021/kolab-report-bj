@@ -13,7 +13,7 @@ These are the services that receive personal data from KolabReport. For report c
 | Sentry | Error monitoring, only with `NEXT_PUBLIC_SENTRY_DSN` set | EU data storage location (`de.sentry.io`), US company | To sign / to confirm, before the DSN is set on production |
 | Cloudflare R2 | Off-site copy of the Storage files, only once the `backup-storage.yml` secrets are set | EU jurisdiction bucket | To sign / to confirm, before the job runs on production |
 | GitHub | Runs the nightly backup jobs and keeps the encrypted database dump 14 days, only once their secrets are set | Not chosen, US company | To confirm for this account's plan |
-| FedaPay | Payment of the offers by mobile money and card, only once billing (KRB-173) ships | To confirm | To confirm, see [FedaPay](#fedapay) |
+| FedaPay | Payment of the offers by mobile money and card, once billing is launched (KRB-179); the sandbox account on staging before that | To confirm | To confirm, see [FedaPay](#fedapay) |
 
 ## Supabase
 
@@ -110,9 +110,10 @@ Two nightly GitHub Actions jobs copy production data out of Supabase (KRB-141, K
 
 ## FedaPay
 
-- **When**: once billing (Jira epic KRB-173) ships. Nothing in the code calls FedaPay yet. The privacy policy and the CGV (KRB-159) already name it, because the business model sells the offers through it.
-- **Receives**: what the payer types on the FedaPay payment page (card or mobile money details, name, e-mail or phone number), and from KolabReport the amount and the order reference.
-- **Sends back**: the result of the payment. The privacy policy says reference, amount, date, status and payment method. Check this list against the integration when it is built.
+- **When**: the integration is in the code since KRB-176 (`src/lib/billing/fedapay.ts`, `src/lib/billing/checkout.ts`). Staging calls the sandbox account, which holds test payments only. Production calls the live account once billing is launched (KRB-179). The privacy policy and the CGV (KRB-159) already name it.
+- **Receives from KolabReport**, when an owner starts a payment (`POST /v1/transactions`): the amount and currency, a description with the offer and the organization's name ("KolabReport, offre Cabinet, 1 mois, <organisation>"), the merchant reference (`KR-` and the purchase id), the purchase id as metadata, the address to send the buyer back to, and the buyer's e-mail address and first and last name from their profile. No phone number: the payer types it on FedaPay's page.
+- **Receives from the payer**, on the FedaPay payment page: card or mobile money details, name, e-mail or phone number. KolabReport never sees them.
+- **Sends back**: on the API and in webhooks, the transaction: id, reference, status, amount, currency, payment method, fees, dates and the merchant reference. Webhook bodies also carry the customer's e-mail and phone number. KolabReport keeps the ids, statuses, amounts, payment method and fees on the purchase (`public.billing_purchases`) and a status history without any payload (`private.billing_payment_events`). It never stores or logs a webhook body.
 - **Role**: **to confirm**. A payment provider usually acts as a controller for the payment data it needs for its own obligations. The privacy policy lists it with the subprocessors and says it also processes payment data for its own account.
 - **Region and terms**: **to confirm** on https://www.fedapay.com.
 

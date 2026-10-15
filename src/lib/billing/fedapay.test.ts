@@ -96,6 +96,8 @@ describe("createTransaction", () => {
         merchantReference: REFERENCE,
         customMetadata: { purchase_id: PURCHASE_ID },
         approvedAt: null,
+        currencyIso: null,
+        currencyId: null,
       },
     });
     const { url, init, headers } = sent(fetchMock);
@@ -283,6 +285,22 @@ describe("getTransaction", () => {
     expect(url).toBe("https://sandbox-api.fedapay.com/v1/transactions/104");
     expect(init.method).toBe("GET");
     expect(init.body).toBeUndefined();
+  });
+
+  it("reads the currency as an object, a code or an id", async () => {
+    const cases = [
+      [{ currency: { iso: "XOF", name: "FCFA" }, currency_id: 1 }, "XOF", 1],
+      [{ currency: "xof" }, "XOF", null],
+      [{ currency_id: 1 }, null, 1],
+      [{ currency: { iso: 12 } }, null, null],
+    ] as const;
+    for (const [fields, currencyIso, currencyId] of cases) {
+      stubFetch(json({ ...transaction, ...fields }));
+      expect(await getTransaction(config, 104)).toMatchObject({
+        ok: true,
+        value: { currencyIso, currencyId },
+      });
+    }
   });
 
   it("keeps statuses FedaPay adds later", async () => {

@@ -242,3 +242,84 @@ export function offerAmountHtXof(code: OfferCode, quantity = 1): number {
   }
   return offer.priceHtXof * quantity;
 }
+
+/** Limits as the database stores them in an entitlement. */
+export type StoredLimits = {
+  max_members: number | null;
+  max_reports: number | null;
+  drafts_per_month: number | null;
+  drafts_total: number | null;
+  custom_templates: boolean;
+};
+
+/**
+ * What a purchase gives, frozen into it when it is created and read by the
+ * grant (billing_apply_transaction). The database checks the shape
+ * (private.billing_terms_valid in
+ * supabase/migrations/20261015130000_billing_purchases.sql).
+ */
+export type OfferTerms =
+  | {
+      kind: "subscription";
+      plan: "independant" | "cabinet";
+      months: number;
+      /** For the conversion of unused days on an upgrade (ADR 001, 6.3). */
+      monthly_price_ht_xof: number;
+      limits: StoredLimits;
+    }
+  | { kind: "mission"; plan: "mission"; days: number; limits: StoredLimits }
+  | { kind: "ai_pack"; drafts: number; valid_months: number; max_quantity: number };
+
+function storedLimits(limits: PlanLimits): StoredLimits {
+  return {
+    max_members: limits.maxMembers,
+    max_reports: limits.maxReports,
+    drafts_per_month: limits.draftsPerMonth,
+    drafts_total: limits.draftsTotal,
+    custom_templates: limits.customTemplates,
+  };
+}
+
+export function offerTerms(code: OfferCode): OfferTerms {
+  const offer: Offer = OFFERS[code];
+  switch (offer.kind) {
+    case "subscription": {
+      const plan = PLANS[offer.plan];
+      return {
+        kind: "subscription",
+        plan: offer.plan,
+        months: offer.months,
+        monthly_price_ht_xof: plan.monthlyPriceHtXof,
+        limits: storedLimits(plan.limits),
+      };
+    }
+    case "mission":
+      return {
+        kind: "mission",
+        plan: "mission",
+        days: offer.days,
+        limits: storedLimits(PLANS.mission.limits),
+      };
+    case "ai_pack":
+      return {
+        kind: "ai_pack",
+        drafts: offer.drafts,
+        valid_months: offer.validMonths,
+        max_quantity: offer.maxQuantity,
+      };
+  }
+}
+
+export type TaxLine = { code: string; ratePercent: number; amountXof: number };
+
+/**
+ * Taxes on an order. None until the accountant answers (ADR 001, section 9,
+ * questions A1 and A2). When they are known, this returns the lines, the
+ * purchase total includes them, FedaPay is asked for the total and receipts
+ * fill their tax columns, with no schema change.
+ */
+export function taxLines(code: OfferCode, amountHtXof: number): TaxLine[] {
+  void code;
+  void amountHtXof;
+  return [];
+}

@@ -10,8 +10,10 @@ import {
   OFFER_CODES,
   OFFERS,
   offerAmountHtXof,
+  offerTerms,
   PLAN_CODES,
   PLANS,
+  taxLines,
   TRIAL,
   YEAR_PAID_MONTHS,
 } from "./catalog";
@@ -185,5 +187,65 @@ describe("offers", () => {
     expect(isOfferCode("cabinet_3m")).toBe(true);
     expect(isOfferCode("institution")).toBe(false);
     expect(isOfferCode(15_000)).toBe(false);
+  });
+});
+
+describe("offerTerms", () => {
+  it("freezes the plan, the length and the limits into a purchase", () => {
+    expect(offerTerms("cabinet_3m")).toEqual({
+      kind: "subscription",
+      plan: "cabinet",
+      months: 3,
+      monthly_price_ht_xof: 49_000,
+      limits: {
+        max_members: 10,
+        max_reports: null,
+        drafts_per_month: 250,
+        drafts_total: null,
+        custom_templates: true,
+      },
+    });
+    expect(offerTerms("mission_pass")).toEqual({
+      kind: "mission",
+      plan: "mission",
+      days: 90,
+      limits: {
+        max_members: 10,
+        max_reports: 1,
+        drafts_per_month: null,
+        drafts_total: 80,
+        custom_templates: false,
+      },
+    });
+    expect(offerTerms("ai_pack_100")).toEqual({
+      kind: "ai_pack",
+      drafts: 100,
+      valid_months: 12,
+      max_quantity: 10,
+    });
+  });
+
+  it("gives every offer the terms of its kind", () => {
+    for (const code of OFFER_CODES) {
+      expect(offerTerms(code).kind).toBe(OFFERS[code].kind);
+    }
+  });
+
+  it("adds no tax until the accountant answers", () => {
+    for (const code of OFFER_CODES) expect(taxLines(code, offerAmountHtXof(code))).toEqual([]);
+  });
+});
+
+describe("public.billing_purchases", () => {
+  it("takes every offer of the catalogue", () => {
+    const purchases = readFileSync(
+      new URL("../../../supabase/migrations/20261015130000_billing_purchases.sql", import.meta.url),
+      "utf8",
+    );
+    const offers = purchases
+      .match(/offer\s+text not null check \(offer in \(([^)]*)\)\)/)?.[1]
+      ?.split(",")
+      .map((code) => code.trim().replace(/^'|'$/g, ""));
+    expect(offers).toEqual([...OFFER_CODES, "institution", "manual"]);
   });
 });

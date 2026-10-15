@@ -1376,5 +1376,63 @@
       "traceLabel": "Voir la trace de la génération du {date} (nouvel onglet)",
       "tracingOff": "Les liens « Voir la trace » apparaissent une fois le traçage des générations configuré sur le serveur."
     }
+  },
+  "Billing": {
+    "page": {
+      "metaTitle": "Abonnement",
+      "title": "Abonnement de {organization}",
+      "subtitle": "L'offre couvre l'organisation (cabinet) et tous ses espaces de travail, sauf ceux couverts par un Pass Mission. Prix hors taxes, en FCFA.",
+      "current": "Offre en cours : {plan}, jusqu'au {date}.",
+      "currentTrial": "Essai gratuit jusqu'au {date}.",
+      "next": "Une période déjà payée suit, jusqu'au {date}.",
+      "none": "Aucune offre en cours pour cette organisation.",
+      "managersOnly": "Seuls le propriétaire de l'organisation et les propriétaires de ses espaces de travail peuvent payer.",
+      "redirect": "Le paiement se fait sur la page de FedaPay, par mobile money ou carte bancaire. Vous revenez ensuite sur KolabReport.",
+      "terms": "En payant, vous acceptez les <link>conditions générales de vente</link>, dont les règles de remboursement.",
+      "back": "Retour au tableau de bord"
+    },
+    "offers": {
+      "subscriptionTitle": "Abonnement de l'organisation",
+      "independant": "3 membres, 3 rapports actifs et 60 brouillons IA par mois.",
+      "cabinet": "10 membres, rapports illimités, 250 brouillons IA par mois et modèles de prompt personnalisés.",
+      "duration": "{months, plural, =1 {1 mois} =12 {12 mois, dont 2 offerts} other {# mois}}",
+      "price": "{price} FCFA HT",
+      "pay": "Payer",
+      "payLabel": "Payer {offer}, {price} FCFA",
+      "missionTitle": "Pass Mission",
+      "missionDescription": "Un espace de travail et un rapport pendant 90 jours, avec 10 membres et 80 brouillons IA.",
+      "missionWorkspace": "Espace de travail",
+      "missionNone": "Aucun espace de travail de cette organisation ne vous est accessible.",
+      "packTitle": "Pack IA",
+      "packDescription": "100 brouillons IA par pack, valables 12 mois, en plus de l'offre. 10 packs au plus en même temps.",
+      "packQuantity": "Nombre de packs",
+      "pending": "Redirection vers FedaPay…"
+    },
+    "checkout": {
+      "errors": {
+        "invalidOffer": "Cette offre n'existe pas. Rechargez la page, puis réessayez.",
+        "forbidden": "Seuls le propriétaire de l'organisation et les propriétaires de ses espaces de travail peuvent payer.",
+        "review": "Un paiement de cette organisation est en cours de vérification. Écrivez au support avant d'en lancer un autre.",
+        "missionWorkspace": "Un Pass Mission couvre un espace de travail de l'organisation qui contient un rapport au plus. Choisissez un autre espace.",
+        "packNeedsPlan": "Le Pack IA s'ajoute à une offre payante ou à un Pass Mission en cours. Choisissez d'abord une offre.",
+        "packLimit": "Une organisation peut avoir 10 Packs IA en cours au plus.",
+        "unavailable": "Le paiement en ligne n'est pas disponible pour le moment. Réessayez plus tard."
+      }
+    },
+    "return": {
+      "metaTitle": "Paiement",
+      "title": "Paiement",
+      "summary": "{offer}, {amount} FCFA",
+      "pending": "Paiement en attente de confirmation. Cette page se met à jour dès que FedaPay confirme le paiement.",
+      "stillPending": "FedaPay n'a pas encore confirmé le paiement. Rechargez cette page dans quelques minutes.",
+      "paid": "Paiement reçu. Votre offre {plan} est active jusqu'au {date}. Le reçu {number} est dans la liste des reçus.",
+      "paidPack": "Paiement reçu. Les {drafts} brouillons IA du pack sont disponibles jusqu'au {date}. Le reçu {number} est dans la liste des reçus.",
+      "notPaid": "Le paiement n'a pas abouti. Vous pouvez réessayer, avec le même moyen de paiement ou un autre.",
+      "expired": "Ce paiement a expiré. Lancez un nouveau paiement depuis la page Abonnement.",
+      "review": "Ce paiement est en cours de vérification par notre équipe. L'offre sera activée une fois la vérification faite.",
+      "refunded": "Ce paiement a été remboursé.",
+      "retry": "Réessayer",
+      "back": "Retour à l'abonnement"
+    }
   }
 }

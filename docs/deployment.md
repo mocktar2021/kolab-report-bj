@@ -49,6 +49,11 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `EMAIL_FROM` | no | Sender on a domain verified with the provider, for example `KolabReport <noreply@email.kolabreport.mocktar.com>` with Resend |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
 | `CRON_SECRET` | **yes**, mark Sensitive | Random string of at least 16 characters, one per environment (`openssl rand -hex 32`). Vercel Cron sends it to the scheduled jobs, see [Scheduled jobs](#scheduled-jobs) |
+| `FEDAPAY_ENVIRONMENT` | no | `sandbox` for Preview, `live` for Production. Anything else turns payments off, see [FedaPay](#4-fedapay-krb-176) |
+| `FEDAPAY_SECRET_KEY` | **yes**, mark Sensitive | Secret API key of the FedaPay account: the sandbox one for Preview, the live one for Production |
+| `FEDAPAY_WEBHOOK_SECRET` | **yes**, mark Sensitive | Secret of the webhook endpoint created in that FedaPay account |
+| `FEDAPAY_API_BASE_URL` | no | Leave it unset on Vercel. Only the mock uses it, locally and in CI. Production refuses any value |
+| `BILLING_ALERT_EMAIL` | no | Operator address for payment alerts: a payment in review, a refund, a payment that cannot be granted. Without it the alerts are only logged |
 
 5. Note the **Team ID** (Settings > General, or your account ID on a personal plan) and the **Project ID** (project Settings > General). Create a token in Account Settings > Tokens.
 6. Optional: add the staging domain in **Settings > Domains**, connected to **Preview** and the branch `master`, then add the CNAME record Vercel shows at your DNS provider. `deploy.yml` points it at each staging deployment. The production domain comes with KRB-134. HTTPS is automatic.
@@ -95,6 +100,42 @@ For the backups and the advisors check (KRB-141, KRB-142, KRB-144), on `producti
 Every deploy ends with the smoke tests (KRB-161). Their settings go on the same two environments: `SMOKE_BASE_URL`, the smoke account (`SMOKE_EMAIL`, `SMOKE_PASSWORD`) and the optional ones, listed in [`docs/operations/smoke-tests.md`](operations/smoke-tests.md#setup-once-per-environment) with the one-time setup of the account and its workspace. Without `SMOKE_BASE_URL` the smoke run is skipped with a warning; without the account, only the public checks run.
 
 `supabase-advisors.yml` reuses `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` from the first table. The repository variable **`ADVISORS_ENVIRONMENTS`** (optional, a JSON list such as `["staging"]`) picks the environments it checks. Without it, it checks `staging` and `production`.
+
+### 4. FedaPay (KRB-176)
+
+Owners pay the offers through FedaPay: the app sends them to FedaPay's payment page, FedaPay calls a webhook when the payment changes, and the app grants the offer after reading the transaction back from FedaPay's API. How it is protected: [`docs/security/fedapay-webhook.md`](security/fedapay-webhook.md). Design: [ADR 001](adr/001-billing-and-fedapay.md), section 8.
+
+FedaPay has two separate accounts in one dashboard: test (sandbox) and live. Staging and PR previews use the sandbox, production uses live. Do the steps below once in each.
+
+1. **API keys**: on the API keys page of the FedaPay dashboard, copy the secret key into `FEDAPAY_SECRET_KEY` on Vercel (Preview for the sandbox key, Production for the live key), marked Sensitive. Set `FEDAPAY_ENVIRONMENT` to `sandbox` for Preview and `live` for Production. The app needs no public key.
+2. **Webhook**: on the Webhooks page of the dashboard, create one:
+   - URL on staging (sandbox account): `https://kolabreport.mocktar.com/api/billing/fedapay/webhook`
+   - URL on production (live account): `https://<production domain>/api/billing/fedapay/webhook`, once the production domain is set up (KRB-134)
+   - Events: every `transaction.*` event.
+   - Untick **"Désactiver le webhook lorsque l'application génère des erreurs"**. Otherwise ten failed deliveries during an outage switch the webhook off for good.
+   - Copy the endpoint's secret into `FEDAPAY_WEBHOOK_SECRET` on Vercel, in the same environment as the key, marked Sensitive.
+3. **Staging behind Vercel Authentication**: Deployment Protection (step 7 of the Vercel project) answers 401 to FedaPay on the staging domain. Either turn it off for the staging domain, or create a secret in **Vercel > Settings > Deployment Protection > Protection Bypass for Automation**, and add it to the sandbox webhook as the custom header `x-vercel-protection-bypass: <secret>`. Production has no such protection.
+4. **Redeploy** the environment: the app reads these variables when it starts.
+5. **Check** with the sandbox checklist of ADR 001, section 13, items 1 to 9. The test mobile money method is `momo_test`, with 66000001 for a payment that succeeds and any other number for one that fails.
+
+How the environments meet:
+
+- PR previews share the staging database and the sandbox account. `NEXT_PUBLIC_APP_URL` of Preview is the staging domain, so FedaPay sends the buyer back to staging, and the webhook only calls staging. Both write to the same database, so a payment started on a preview is granted there.
+- A deployment only applies purchases of its own FedaPay environment, and production refuses anything but `live`. A sandbox payment can never grant on production.
+- Locally and in CI, `FEDAPAY_ENVIRONMENT=mock` points the app at `tests/fedapay-mock/server.mjs`, which Playwright starts on port 4010 (`scripts/ci-env-local.sh` writes the values).
+
+If a key or the webhook secret leaks: regenerate it in the FedaPay dashboard, update Vercel, redeploy. A webhook signed with the old secret then gets 401.
+
+To find purchases that are stuck, in the SQL editor:
+
+```sql
+select id, offer, status, review_reason, amount_xof, fedapay_status, created_at, last_checked_at
+from public.billing_purchases
+where status in ('pending', 'review') and created_at < now() - interval '1 hour'
+order by created_at;
+```
+
+A `review` purchase was paid at FedaPay with an amount, currency, merchant reference or environment that does not match. Check the transaction in the FedaPay dashboard, then grant by hand (KRB-179) or refund it.
 
 ## Secrets rules
 
