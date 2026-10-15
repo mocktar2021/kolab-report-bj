@@ -41,6 +41,8 @@ insert into public.organizations (id, name, slug, owner_id)
 insert into public.workspace_members (workspace_id, user_id, role) values
   (pg_temp.id('w2'), pg_temp.id('admin'), 'admin'),
   (pg_temp.id('w2'), pg_temp.id('expert2'), 'owner');
+-- The seed and earlier runs may hold other organizations: compare with this count.
+create temp table organizations_before as select count(*)::int as n from public.organizations;
 
 -- my_manageable_organizations
 select pg_temp.act_as('owner');
@@ -127,7 +129,7 @@ select throws_ok($$select public.create_workspace_in_organization(pg_temp.id('or
 
 reset role;
 select is((select count(*)::int from public.workspaces where name = 'Etude refusee'), 0, 'refused calls leave no workspace');
-select is((select count(*)::int from public.organizations), 3, 'adding workspaces creates no organization');
+select is((select count(*)::int from public.organizations), (select n from organizations_before), 'adding workspaces creates no organization');
 
 -- The members of w1 do not join the workspaces added next to it.
 select pg_temp.act_as('expert');
