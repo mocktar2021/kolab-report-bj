@@ -17,4 +17,10 @@ npx supabase status -o env \
   echo "AI_RATE_LIMIT_PER_HOUR=5"
   # The storage cleanup test calls the cron route with it.
   echo "CRON_SECRET=$(openssl rand -hex 32)"
+  # FedaPay mock (tests/fedapay-mock/server.mjs), started by Playwright. It
+  # reads the same key and webhook secret from this file.
+  echo "FEDAPAY_ENVIRONMENT=mock"
+  echo "FEDAPAY_API_BASE_URL=http://127.0.0.1:4010"
+  echo "FEDAPAY_SECRET_KEY=sk_mock_$(openssl rand -hex 16)"
+  echo "FEDAPAY_WEBHOOK_SECRET=wh_mock_$(openssl rand -hex 16)"
 } >> .env.local
