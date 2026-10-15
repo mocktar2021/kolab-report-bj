@@ -39,6 +39,11 @@
 --   state, except the previews, which show what time is lost. A payment in
 --   progress does: an organization, or a workspace with a pass being bought,
 --   waits while one of its purchases is pending or in review (KR071).
+-- * AI drafts: a generation outlives its section for its usage (tokens,
+--   cost, dates, the draft ledger), but not its text. When the section goes,
+--   with its report or alone, a trigger clears the draft, the raw answer,
+--   the feedback and the file names it used. A workspace or an organization
+--   takes its generations with it, so nothing is left to clear there.
 -- * The previews list what a deletion takes, for the confirmation dialogs.
 --
 -- Error codes:
@@ -694,6 +699,79 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- AI drafts of a deleted section
+-- -----------------------------------------------------------------------------
+-- A generation stays when its section goes (20261013230000), so its tokens
+-- and its draft still count. Its text goes: output, raw_output,
+-- feedback_comment, and the file names and truncation log of context_meta.
+-- The usage columns stay, and so do the rating, the decision and the edit
+-- distance, which the AI dashboard reads. content_cleared_at says when.
+alter table public.ai_generations add column if not exists content_cleared_at timestamptz;
+
+comment on column public.ai_generations.content_cleared_at is
+  'When the text of the draft was cleared because its section was deleted (KRB-180). Usage columns stay.';
+
+-- A succeeded generation keeps its output, unless its text was cleared.
+do $$
+declare
+  v_name text;
+begin
+  for v_name in
+    select c.conname from pg_constraint c
+    where c.conrelid = 'public.ai_generations'::regclass and c.contype = 'c'
+      and c.conname <> 'ai_generations_output_check'
+      and pg_get_constraintdef(c.oid) like '%status <> ''succeeded''::%OR (output IS NOT NULL)))'
+  loop
+    execute format('alter table public.ai_generations drop constraint %I', v_name);
+  end loop;
+end;
+$$;
+alter table public.ai_generations drop constraint if exists ai_generations_output_check;
+alter table public.ai_generations add constraint ai_generations_output_check
+  check (status <> 'succeeded' or output is not null or content_cleared_at is not null);
+
+-- A generation with no section has no text: on the update that sets
+-- section_id to null when the section goes, and on any later one, such as
+-- the app recording the end of a draft that was still running. context_meta
+-- keeps counts only. Calls no other function, so it runs the same for the
+-- requester rating a draft (RLS) and for the service role.
+create or replace function private.clear_generation_without_section()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.section_id is null then
+    new.output := null;
+    new.raw_output := null;
+    new.feedback_comment := null;
+    if not new.context_meta ? 'cleared' then
+      new.context_meta := jsonb_strip_nulls(jsonb_build_object(
+        'version', new.context_meta -> 'version',
+        'cleared', true,
+        'deliverableCount', case when jsonb_typeof(new.context_meta -> 'deliverables') = 'array'
+                                 then jsonb_array_length(new.context_meta -> 'deliverables') end,
+        'estimatedInputTokens', new.context_meta -> 'estimatedInputTokens',
+        'usageEstimated', new.context_meta -> 'usageEstimated'
+      ));
+    end if;
+    new.content_cleared_at := coalesce(new.content_cleared_at, now());
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists clear_without_section on public.ai_generations;
+create trigger clear_without_section
+  before insert or update on public.ai_generations
+  for each row execute function private.clear_generation_without_section();
+
+-- Generations whose section went before this migration.
+update public.ai_generations g
+set content_cleared_at = now()
+where g.section_id is null and g.content_cleared_at is null;
+
+-- -----------------------------------------------------------------------------
 -- Function privileges
 -- -----------------------------------------------------------------------------
 revoke all on function private.confirmation_matches(text, text) from public, anon, authenticated;
@@ -704,6 +782,7 @@ revoke all on function private.queue_scope_files(uuid, uuid) from public, anon, 
 revoke all on function private.lock_workspace_drafts(uuid) from public, anon, authenticated;
 revoke all on function private.owns_organization(uuid) from public, anon, authenticated;
 revoke all on function private.payments_in_progress(uuid, uuid) from public, anon, authenticated;
+revoke all on function private.clear_generation_without_section() from public, anon, authenticated;
 
 revoke all on function public.report_deletion_preview(uuid) from public, anon;
 revoke all on function public.workspace_deletion_preview(uuid) from public, anon;

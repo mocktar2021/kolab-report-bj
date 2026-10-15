@@ -251,7 +251,7 @@ export const confidentialite: LegalDocument = {
               ],
               [
                 "Rapports, sections, livrables, brouillons IA, historique des statuts, notifications",
-                "Tant que l'organisation les garde. Depuis l'application, les propriétaires et administrateurs suppriment un rapport, les propriétaires un espace de travail, et le propriétaire de l'organisation l'organisation entière. Au plus tard, jusqu'à la suppression de l'espace de travail à la fin du contrat (voir l'[accord de traitement des données](/accord-traitement-donnees#fin-du-contrat)).",
+                "Tant que l'organisation les garde. Depuis l'application, les propriétaires et administrateurs suppriment un rapport, les propriétaires un espace de travail, et le propriétaire de l'organisation l'organisation entière. Au plus tard, jusqu'à la suppression de l'espace de travail à la fin du contrat (voir l'[accord de traitement des données](/accord-traitement-donnees#fin-du-contrat)). Quand une section disparaît, seule ou avec son rapport, le texte de ses brouillons IA est effacé : il ne reste que l'usage (jetons, coût, dates), pour les limites et la facturation.",
               ],
               [
                 "Exports de rapports",

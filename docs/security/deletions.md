@@ -34,7 +34,7 @@ The block ends on its own or with the operator:
 
 | Deleted | Goes with it | Stays |
 | --- | --- | --- |
-| Report | Sections, deliverable rows, exports and final snapshots, status history, notifications. Files are queued for removal | AI generations of its sections, with `section_id` set to null, so their tokens and drafts still count |
+| Report | Sections, deliverable rows, exports and final snapshots, status history, notifications. Files are queued for removal. The text of its AI generations: draft, raw answer, feedback and file names | AI generations of its sections, with `section_id` set to null and their usage only (tokens, cost, dates), so their tokens and drafts still count |
 | Workspace | Members, invitations, reports and all they hold, prompt templates and rollouts, AI generations, notifications, the Pass Mission entitlements of a mission workspace | The organization and its subscription. The organization's draft ledger (`workspace_id` set to null), so deleting a workspace never gives drafts back. Member accounts |
 | Organization | Every workspace and all it holds, the buyer row, entitlements, Pack IA credits, the draft ledger | Payments and receipts (KRB-176), with `organization_id` set to null and a copy of the buyer in the receipt. `private.billing_events` and `private.billing_trial_claims`, which have no foreign key: a new organization of the same person gets no new trial. Member accounts |
 

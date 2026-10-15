@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(100);
+select plan(105);
 
 -- KRB-180: deleting a report, a workspace or an organization goes through
 -- delete_report, delete_workspace and delete_organization only. Each checks
@@ -156,7 +156,9 @@ select is(
 
 -- Deleting a report ------------------------------------------------------------------------
 -- r1 gets a sent file, a stored export, an export file that no row records
--- (its request died), and a finished AI draft of s1 counted in the ledger.
+-- (its request died), a finished AI draft of s1 counted in the ledger, with
+-- its text, the file names it used and a feedback, and a draft of s2 still
+-- running.
 select pg_temp.act_as_server();
 insert into public.deliverables (workspace_id, section_id, uploaded_by, storage_path, file_name, mime_type, size_bytes, uploaded_at, created_at)
 values (pg_temp.id('w1'), pg_temp.id('s2'), pg_temp.id('expert2'),
@@ -169,15 +171,29 @@ insert into storage.objects (bucket_id, name)
 values ('exports', pg_temp.id('w1') || '/' || pg_temp.id('r1') || '/perdu.pdf');
 with g as (
   insert into public.ai_generations (workspace_id, section_id, requested_by, output_schema, schema_version,
-    provider, model, estimated_tokens, status, output, completed_at)
+    provider, model, estimated_tokens, status, output, raw_output, context_meta, input_tokens, output_tokens,
+    cost_estimate, latency_ms, user_rating, feedback_comment, completed_at)
   values (pg_temp.id('w1'), pg_temp.id('s1'), pg_temp.id('expert'), 'section_draft', 1, 'mock', 'mock', 100,
-    'succeeded', '{"title": "Brouillon"}', now())
+    'succeeded', '{"title": "Brouillon"}', '{"title": "Brouillon"}',
+    '{"version": 1, "deliverables": [{"ref": "L1", "fileName": "plan.docx"}, {"ref": "L2", "fileName": "mesures.csv"}],
+      "decisions": [{"fileName": "mesures.csv", "cut": "rows"}], "estimatedInputTokens": 900, "usageEstimated": false}',
+    800, 200, 0.012, 4200, 1, 'Trop long', now())
   returning id
 )
 insert into kept select 'generation', id from g;
 insert into public.billing_draft_usage (generation_id, organization_id, workspace_id, pool, usage_month, status, settled_at)
 values (pg_temp.kept_id('generation'), pg_temp.id('org_a'), pg_temp.id('w1'), 'trial',
         date_trunc('month', now() at time zone 'utc')::date, 'counted', now());
+with g as (
+  insert into public.ai_generations (workspace_id, section_id, requested_by, output_schema, schema_version,
+    provider, model, estimated_tokens)
+  values (pg_temp.id('w1'), pg_temp.id('s2'), pg_temp.id('expert'), 'section_draft', 1, 'mock', 'mock', 100)
+  returning id
+)
+insert into kept select 'running_generation', id from g;
+insert into public.billing_draft_usage (generation_id, organization_id, workspace_id, pool, usage_month)
+values (pg_temp.kept_id('running_generation'), pg_temp.id('org_a'), pg_temp.id('w1'), 'trial',
+        date_trunc('month', now() at time zone 'utc')::date);
 
 select pg_temp.act_as_anon();
 select throws_ok($$select public.delete_report(pg_temp.id('r1'))$$, '42501', null, 'a visitor cannot delete a report');
@@ -232,6 +248,31 @@ select results_eq(
   'the AI draft stays without its section, so its tokens still count');
 select is((select status from public.billing_draft_usage where generation_id = pg_temp.kept_id('generation')),
   'counted', 'and so does the draft in the ledger');
+select results_eq(
+  $$select output, raw_output, feedback_comment, content_cleared_at is not null
+    from public.ai_generations where id = pg_temp.kept_id('generation')$$,
+  $$values (null::jsonb, null::text, null::text, true)$$,
+  'its text goes: the draft, the raw answer and the feedback');
+select is((select context_meta from public.ai_generations where id = pg_temp.kept_id('generation')),
+  '{"version": 1, "cleared": true, "deliverableCount": 2, "estimatedInputTokens": 900, "usageEstimated": false}'::jsonb,
+  'and the file names it used: context_meta keeps counts only');
+select results_eq(
+  $$select status::text, input_tokens, output_tokens, total_tokens, cost_estimate, latency_ms, user_rating,
+      requested_by, completed_at is not null
+    from public.ai_generations where id = pg_temp.kept_id('generation')$$,
+  $$values ('succeeded', 800, 200, 1000, 0.012::numeric(12, 6), 4200, 1::smallint, pg_temp.id('expert'), true)$$,
+  'its usage stays: tokens, cost, latency, rating, requester and dates');
+select lives_ok(
+  $$update public.ai_generations
+    set status = 'succeeded', output = '{"title": "Tard"}', raw_output = 'Tard', completed_at = now()
+    where id = pg_temp.kept_id('running_generation')$$,
+  'a draft that was still running finishes after its section went');
+select results_eq(
+  $$select g.status::text, g.output, g.raw_output, d.status
+    from public.ai_generations g join public.billing_draft_usage d on d.generation_id = g.id
+    where g.id = pg_temp.kept_id('running_generation')$$,
+  $$values ('succeeded', null::jsonb, null::text, 'counted')$$,
+  'without its text, and it counts in the ledger');
 select results_eq(
   $$select action, actor_id, organization_id, workspace_id, report_id, details ->> 'status', details ->> 'actor_role'
     from private.audit_events where report_id = pg_temp.id('r1')$$,

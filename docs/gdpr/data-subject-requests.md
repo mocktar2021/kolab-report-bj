@@ -348,7 +348,7 @@ where d.workspace_id = '<workspace-id>'
   and (d.parsed_content ilike '%' || 'Name' || '%' or d.file_name ilike '%' || 'Name' || '%');
 ```
 
-Files that are not read (PDF, PowerPoint, images, diagrams) have no extracted text, so this search can't see inside them. The firm edits or deletes the content in the app. AI generations of a section keep their draft text after the section changes or goes ([`retention.md`](retention.md)): if the firm asks, clear `output` and `raw_output` on the generations of that section.
+Files that are not read (PDF, PowerPoint, images, diagrams) have no extracted text, so this search can't see inside them. The firm edits or deletes the content in the app. AI generations of a section keep their draft text after the section changes, and lose it when the section goes ([`retention.md`](retention.md)). If the firm asks about a section that still exists, clear `output` and `raw_output` on its generations.
 
 ## Follow-up: self-service export and deletion
 

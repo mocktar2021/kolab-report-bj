@@ -29,6 +29,7 @@ export type Database = {
         Row: {
           accepted: boolean | null;
           completed_at: string | null;
+          content_cleared_at: string | null;
           context_meta: NonNullable<Json>;
           cost_estimate: number | null;
           created_at: string;
@@ -68,6 +69,7 @@ export type Database = {
         Insert: {
           accepted?: boolean | null;
           completed_at?: string | null;
+          content_cleared_at?: string | null;
           context_meta?: NonNullable<Json>;
           cost_estimate?: number | null;
           created_at?: string;
@@ -106,6 +108,7 @@ export type Database = {
         Update: {
           accepted?: boolean | null;
           completed_at?: string | null;
+          content_cleared_at?: string | null;
           context_meta?: NonNullable<Json>;
           cost_estimate?: number | null;
           created_at?: string;
