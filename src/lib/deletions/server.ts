@@ -1,9 +1,11 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { log } from "@/lib/log";
 import {
+  CURRENT_WORKSPACE_COOKIE,
   clearCurrentWorkspaceCookie,
   getMyWorkspaces,
   setCurrentWorkspaceCookie,
@@ -52,4 +54,24 @@ export async function leaveDeletedWorkspaces(
   revalidatePath("/", "layout");
   const locale = await getLocale();
   return redirect({ href: next ? `/tableau-de-bord?suppression=${kind}` : "/espaces/nouveau", locale });
+}
+
+/**
+ * After the organization owner deleted one workspace from the organization
+ * page: the switcher cookie moves only when it named that workspace, and the
+ * user goes back to the organization page, which says so.
+ */
+export async function leaveWorkspaceDeletedFromOrganization(
+  workspaceId: string,
+  organizationId: string,
+): Promise<never> {
+  const cookieStore = await cookies();
+  if (cookieStore.get(CURRENT_WORKSPACE_COOKIE)?.value === workspaceId) {
+    const next = workspaceAfterDeletion(await getMyWorkspaces(), organizationId);
+    if (next) await setCurrentWorkspaceCookie(next);
+    else await clearCurrentWorkspaceCookie();
+  }
+  revalidatePath("/", "layout");
+  const locale = await getLocale();
+  return redirect({ href: `/organisations/${organizationId}?suppression=espace`, locale });
 }

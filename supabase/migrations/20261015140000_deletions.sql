@@ -13,7 +13,9 @@
 -- * Rights:
 --     report, not final  owners and admins of its workspace
 --     report, final      owners of its workspace, who type its title
---     workspace          owners of the workspace, who type its name
+--     workspace          owners of the workspace, and the owner of its
+--                        organization even when not a member, who type its
+--                        name
 --     organization       its owner (organizations.owner_id), who types its
 --                        name. Every workspace of the organization goes,
 --                        including the ones the owner is not a member of.
@@ -277,6 +279,20 @@ begin
 end;
 $$;
 
+-- The signed-in user is organizations.owner_id of p_organization_id.
+create or replace function private.owns_organization(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.organizations o
+    where o.id = p_organization_id and o.owner_id = (select auth.uid())
+  );
+$$;
+
 -- The draft lock of start_ai_generation for one workspace.
 create or replace function private.lock_workspace_drafts(p_workspace_id uuid)
 returns void
@@ -316,8 +332,8 @@ begin
 end;
 $$;
 
--- What deleting a workspace takes, and the passes it loses, for its owners.
--- Null for anyone else.
+-- What deleting a workspace takes, and the passes it loses, for its owners
+-- and the owner of its organization. Null for anyone else.
 create or replace function public.workspace_deletion_preview(p_workspace_id uuid)
 returns jsonb
 language plpgsql
@@ -330,7 +346,9 @@ declare
   v_org public.organizations;
 begin
   select w.* into v_workspace from public.workspaces w where w.id = p_workspace_id;
-  if not found or not private.has_workspace_role(v_workspace.id, array['owner']::public.workspace_role[]) then
+  if not found
+     or not (private.has_workspace_role(v_workspace.id, array['owner']::public.workspace_role[])
+             or private.owns_organization(v_workspace.organization_id)) then
     return null;
   end if;
   select o.* into v_org from public.organizations o where o.id = v_workspace.organization_id;
@@ -477,7 +495,8 @@ $$;
 -- -----------------------------------------------------------------------------
 -- Deleting a workspace
 -- -----------------------------------------------------------------------------
--- Owners of the workspace, with its name in p_confirmation. Returns what went.
+-- Owners of the workspace, and the owner of its organization even when not a
+-- member, with its name in p_confirmation. Returns what went.
 create or replace function public.delete_workspace(p_workspace_id uuid, p_confirmation text)
 returns jsonb
 language plpgsql
@@ -487,13 +506,16 @@ as $$
 declare
   v_actor      uuid := (select auth.uid());
   v_workspace  public.workspaces;
+  v_role       text;
   v_details    jsonb;
 begin
   if v_actor is null then
     raise exception 'Connexion requise' using errcode = '42501';
   end if;
+  -- A workspace the caller cannot see answers like a missing one.
   select w.* into v_workspace from public.workspaces w where w.id = p_workspace_id;
-  if not found or not private.is_workspace_member(v_workspace.id) then
+  if not found
+     or not (private.is_workspace_member(v_workspace.id) or private.owns_organization(v_workspace.organization_id)) then
     raise exception 'Espace de travail introuvable' using errcode = 'P0002';
   end if;
 
@@ -506,14 +528,23 @@ begin
     raise exception 'Espace de travail introuvable' using errcode = 'P0002';
   end if;
 
-  if not private.has_workspace_role(v_workspace.id, array['owner']::public.workspace_role[]) then
-    raise exception 'Seuls les propriétaires de l''espace de travail peuvent le supprimer' using errcode = '42501';
+  select m.role::text into v_role
+  from public.workspace_members m
+  where m.workspace_id = v_workspace.id and m.user_id = v_actor;
+  if v_role is distinct from 'owner' then
+    if private.owns_organization(v_workspace.organization_id) then
+      v_role := coalesce(v_role, 'organization_owner');
+    else
+      raise exception 'Seuls les propriétaires de l''espace de travail et le propriétaire de l''organisation peuvent le supprimer'
+        using errcode = '42501';
+    end if;
   end if;
   if not private.confirmation_matches(p_confirmation, v_workspace.name) then
     raise exception 'Saisissez le nom exact de l''espace de travail pour confirmer' using errcode = 'KR070';
   end if;
 
   v_details := jsonb_build_object(
+    'actor_role', v_role,
     'billing_mode', v_workspace.billing_mode,
     'passes', private.billing_time_left(v_workspace.organization_id, v_workspace.id) -> 'passes'
   ) || private.workspace_contents(v_workspace.id);
@@ -636,6 +667,7 @@ revoke all on function private.workspace_contents(uuid) from public, anon, authe
 revoke all on function private.billing_time_left(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.queue_scope_files(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.lock_workspace_drafts(uuid) from public, anon, authenticated;
+revoke all on function private.owns_organization(uuid) from public, anon, authenticated;
 
 revoke all on function public.report_deletion_preview(uuid) from public, anon;
 revoke all on function public.workspace_deletion_preview(uuid) from public, anon;

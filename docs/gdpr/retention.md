@@ -4,7 +4,7 @@ How long KolabReport keeps each kind of personal data. The "Today" column is wha
 
 Two facts shape most of the table:
 
-- Since KRB-180 the app deletes a report (owners and admins, owners only for a final one), a workspace (its owners) and an organization with all its workspaces (its owner). Who can delete what: [`docs/security/deletions.md`](../security/deletions.md). A deliverable can be deleted from its section page, and a member can leave or be removed. The app has no screen to delete an account or a section: an operator deletes them on request ([`data-subject-requests.md`](data-subject-requests.md)).
+- Since KRB-180 the app deletes a report (owners and admins, owners only for a final one), a workspace (its owners, or the organization owner) and an organization with all its workspaces (its owner). Who can delete what: [`docs/security/deletions.md`](../security/deletions.md). A deliverable can be deleted from its section page, and a member can leave or be removed. The app has no screen to delete an account or a section: an operator deletes them on request ([`data-subject-requests.md`](data-subject-requests.md)).
 - Deleting a deliverable or an export row, directly or by a cascade (a deleted section, report, workspace or organization), queues its file. The delete functions of KRB-180 also queue every file stored under the folder of what goes, including one no row records. A daily job (KRB-166, `/api/cron/storage-cleanup`) removes the queued files. A deliverable's file waits at least 2 hours 15 minutes after its upload started, because a signed upload link stays valid 2 hours.
 
 ## Database

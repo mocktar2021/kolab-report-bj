@@ -20,6 +20,8 @@ import type { DeletionState } from "@/lib/deletions/errors";
 /** Text of the dialog, translated by the page, so this component needs no message scope. */
 export type DeleteDialogLabels = {
   trigger: string;
+  /** Accessible name of the trigger when its text alone does not say what goes. */
+  triggerLabel?: string;
   title: string;
   description: string;
   confirm: string;
@@ -31,7 +33,7 @@ export type DeleteDialogLabels = {
   mismatch?: string;
 };
 
-type DeleteDialogProps = {
+export type DeleteDialogProps = {
   /** Server action that deletes, then redirects. It reads "id" and "confirmation". */
   action: (state: DeletionState, formData: FormData) => Promise<DeletionState>;
   /** Id of what goes. */
@@ -39,6 +41,8 @@ type DeleteDialogProps = {
   /** Title or name to type before the deletion, for the ones that ask for it. */
   expected?: string;
   labels: DeleteDialogLabels;
+  /** "sm" for a button in a list. */
+  size?: "default" | "sm";
   /** What goes with it and what is lost, rendered by the page. */
   children?: React.ReactNode;
 };
@@ -49,11 +53,18 @@ type DeleteDialogProps = {
  * when `expected` is set, and calls the deletion. The database checks the
  * rights and the typed text again.
  */
-export function DeleteDialog({ action, id, expected, labels, children }: DeleteDialogProps) {
+export function DeleteDialog({
+  action,
+  id,
+  expected,
+  labels,
+  size = "default",
+  children,
+}: DeleteDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant="destructive" shape="pill">
+        <Button type="button" variant="destructive" shape="pill" size={size} aria-label={labels.triggerLabel}>
           <Trash2 aria-hidden="true" />
           {labels.trigger}
         </Button>
@@ -69,7 +80,7 @@ export function DeleteDialog({ action, id, expected, labels, children }: DeleteD
   );
 }
 
-function DeleteForm({ action, id, expected, labels }: Omit<DeleteDialogProps, "children">) {
+function DeleteForm({ action, id, expected, labels }: Omit<DeleteDialogProps, "children" | "size">) {
   const [state, formAction, pending] = useActionState<DeletionState, FormData>(action, { status: "idle" });
   const [typed, setTyped] = useState("");
   const [mismatch, setMismatch] = useState(false);

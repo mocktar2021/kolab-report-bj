@@ -291,7 +291,7 @@ Every column must be 0.
 
 Since KRB-180 the firm does it in the app; who can delete what is in [`docs/security/deletions.md`](../security/deletions.md).
 
-- A workspace: an owner opens **Paramètres de l'espace** in the workspace menu (`/fr/espaces/<workspace-id>/parametres`), then **Supprimer l'espace de travail**, and types its name.
+- A workspace: an owner opens **Paramètres de l'espace** in the workspace menu (`/fr/espaces/<workspace-id>/parametres`), then **Supprimer l'espace de travail**, and types its name. The organization owner can also delete it from the organization page, with **Supprimer** next to it, even without being a member.
 - An organization with all its workspaces: its owner (`organizations.owner_id`) opens **Gérer l'organisation** in the workspace menu (`/fr/organisations/<organization-id>`), then **Supprimer l'organisation**, and types its name. The dialog lists every workspace that goes and the plan, passes and Pack IA credits that are lost.
 - A report: an owner or admin opens it, then **Supprimer le rapport** at the bottom. A final report needs an owner and its title.
 

@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(86);
+select plan(91);
 
 -- KRB-180: deleting a report, a workspace or an organization goes through
 -- delete_report, delete_workspace and delete_organization only. Each checks
@@ -296,8 +296,8 @@ select is(
   'the owner sees what the workspace holds');
 select is(
   public.delete_workspace(pg_temp.id('w2'), 'Etude B') - 'passes' - 'billing_mode',
-  '{"reports": 1, "final_reports": 0, "sections": 1, "files": 1, "exports": 1, "members": 2,
-    "invitations": 1, "templates": 1, "files_queued": 2}'::jsonb,
+  '{"actor_role": "owner", "reports": 1, "final_reports": 0, "sections": 1, "files": 1, "exports": 1,
+    "members": 2, "invitations": 1, "templates": 1, "files_queued": 2}'::jsonb,
   'the owner deletes the read-only workspace');
 
 select pg_temp.act_as_server();
@@ -351,7 +351,8 @@ select is(
 -- org_a: w1, and w3 made by the admin, where the organization owner is not a
 -- member. A Cabinet month bought and paid, and a Pack IA with drafts left.
 insert into public.workspaces (id, organization_id, name, created_by)
-values ('00000000-0000-4000-c000-000000000003', pg_temp.id('org_a'), 'Etude C', pg_temp.id('admin'));
+values ('00000000-0000-4000-c000-000000000003', pg_temp.id('org_a'), 'Etude C', pg_temp.id('admin')),
+       ('00000000-0000-4000-c000-000000000004', pg_temp.id('org_a'), 'Etude D', pg_temp.id('admin'));
 insert into public.reports (id, workspace_id, title, created_by)
 values ('00000000-0000-4000-d000-000000000004', pg_temp.id('w1'), 'Rapport D', pg_temp.id('owner'));
 insert into public.report_sections (id, workspace_id, report_id, title)
@@ -368,6 +369,21 @@ insert into public.billing_draft_usage (generation_id, organization_id, workspac
 select gen_random_uuid(), pg_temp.id('org_a'), pg_temp.id('w1'), 'pack', '00000000-0000-4000-8000-000000000041',
   date_trunc('month', now() at time zone 'utc')::date, 'counted', now()
 from generate_series(1, 30);
+
+-- The organization owner deletes one workspace they are not a member of.
+select pg_temp.act_as('outsider');
+select throws_ok($$select public.delete_workspace('00000000-0000-4000-c000-000000000004', 'Etude D')$$, 'P0002', null,
+  'the owner of another organization cannot delete a workspace of org_a');
+select pg_temp.act_as('owner');
+select is(public.workspace_deletion_preview('00000000-0000-4000-c000-000000000004') ->> 'name', 'Etude D',
+  'the organization owner sees what a workspace they are not in holds');
+select throws_ok($$select public.delete_workspace('00000000-0000-4000-c000-000000000004', 'Etude')$$, 'KR070', null,
+  'and types its exact name to delete it');
+select is(public.delete_workspace('00000000-0000-4000-c000-000000000004', 'Etude D') ->> 'actor_role',
+  'organization_owner', 'the organization owner deletes it, and the log says how they could');
+select pg_temp.act_as_server();
+select is((select count(*)::integer from public.workspaces where id = '00000000-0000-4000-c000-000000000004'), 0,
+  'that workspace is gone, the organization stays');
 
 select pg_temp.act_as('admin');
 select is(public.organization_deletion_preview(pg_temp.id('org_a')), null,
@@ -452,7 +468,7 @@ select results_eq(
     where action = 'organization_deleted' and organization_id = pg_temp.id('org_a')$$,
   $$values (jsonb_build_array(pg_temp.kept_id('cabinet_purchase')), '1')$$,
   'and the purchases that lost their link to it');
-select is((select count(*)::integer from private.audit_events), (select audit_events::integer from before) + 5,
+select is((select count(*)::integer from private.audit_events), (select audit_events::integer from before) + 6,
   'one audit event per deletion so far');
 select lives_ok($$delete from auth.users where id = pg_temp.id('owner')$$,
   'the account of the former owner is no longer held by its organization');

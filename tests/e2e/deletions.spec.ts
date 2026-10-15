@@ -352,6 +352,16 @@ test("the organization owner deletes it with every workspace, warned about the p
     })
     .single();
   if (error || !partnerWorkspace) throw error ?? new Error("Could not create the partner workspace");
+  // And one more, which the organization owner deletes alone from the organization page.
+  const { data: singleWorkspace, error: singleError } = await partnerApi
+    .rpc("create_workspace_in_organization", {
+      p_organization_id: organizationId,
+      p_workspace_name: "Mission Djougou",
+      p_report_title: "Rapport Djougou",
+    })
+    .single();
+  if (singleError || !singleWorkspace)
+    throw singleError ?? new Error("Could not create the second partner workspace");
   const { error: packError } = await adminClient()
     .from("billing_ai_packs")
     .insert({
@@ -380,6 +390,22 @@ test("the organization owner deletes it with every workspace, warned about the p
   const workspaces = page.getByRole("region", { name: "Espaces de travail" });
   await expect(workspaces.getByText("Mission Kandi", { exact: true })).toBeVisible();
   await expect(workspaces.getByText("Mission Malanville", { exact: true })).toBeVisible();
+
+  // One workspace the owner is not a member of, deleted alone with its typed name.
+  await workspaces.getByRole("button", { name: "Supprimer l'espace de travail « Mission Djougou »" }).click();
+  const single = page.getByRole("dialog", { name: "Supprimer l'espace de travail ?" });
+  await expect(single).toHaveAccessibleDescription(
+    "L'espace « Mission Djougou » sera supprimé pour son seul membre. Cette action est définitive.",
+  );
+  await single.getByLabel("Saisissez « Mission Djougou » pour confirmer").fill("Mission Djougou");
+  await single.getByRole("button", { name: "Supprimer l'espace de travail" }).click();
+  await expect(page).toHaveURL(new RegExp(`/fr/organisations/${organizationId}\\?suppression=espace$`));
+  await expect(
+    page.getByRole("status").filter({ hasText: "L'espace de travail a été supprimé." }),
+  ).toBeVisible();
+  await expect(workspaces.getByText("Mission Djougou", { exact: true })).toHaveCount(0);
+  expect(await count("workspaces", singleWorkspace.workspace_id)).toBe(0);
+  expect(await count("organizations", organizationId)).toBe(1);
 
   await page.getByRole("button", { name: "Supprimer l'organisation" }).click();
   const dialog = page.getByRole("dialog", { name: "Supprimer l'organisation ?" });

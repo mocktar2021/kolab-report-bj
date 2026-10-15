@@ -1454,7 +1454,7 @@
   "OrganizationSettings": {
     "metaTitle": "Organisation",
     "eyebrow": "Organisation",
-    "subtitle": "Réservé au propriétaire de l'organisation.",
+    "subtitle": "Réservé au propriétaire de l'organisation. Vous pouvez supprimer chacun de ses espaces de travail, même ceux dont vous n'êtes pas membre.",
     "backToDashboard": "Tableau de bord",
     "workspacesTitle": "Espaces de travail",
     "workspacesEmpty": "Aucun espace de travail dans cette organisation pour le moment.",
@@ -1501,6 +1501,8 @@
       "zoneTitle": "Supprimer l'espace de travail",
       "zoneDescription": "L'espace disparaît pour tous ses membres, avec ses rapports, ses fichiers, ses exports, ses invitations et ses modèles de prompt. L'organisation et son abonnement restent. Cette action est définitive.",
       "button": "Supprimer l'espace de travail",
+      "buttonShort": "Supprimer",
+      "buttonLabel": "Supprimer l'espace de travail « {name} »",
       "title": "Supprimer l'espace de travail ?",
       "description": "L'espace « {name} » sera supprimé pour {members, plural, one {son seul membre} other {ses # membres}}. Cette action est définitive.",
       "contentsTitle": "Seront supprimés avec lui :",

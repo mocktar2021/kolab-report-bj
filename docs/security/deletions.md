@@ -8,14 +8,14 @@ Who can delete a report, a workspace or an organization in KolabReport, and what
 | --- | --- | --- | --- |
 | Report, not final | Owners and admins of its workspace | Dialog that names what goes | "Supprimer le rapport" at the bottom of the report page |
 | Report, final | Owners of its workspace | Dialog, and the exact title typed | Same. Admins see why they cannot |
-| Workspace | Owners of the workspace | Dialog, and the exact name typed | `/fr/espaces/<id>/parametres`, "Paramètres de l'espace" in the workspace menu (owners only) |
+| Workspace | Owners of the workspace, and the organization owner even when not a member of it | Dialog, and the exact name typed | `/fr/espaces/<id>/parametres`, "Paramètres de l'espace" in the workspace menu (owners only), or "Supprimer" next to the workspace on the organization page |
 | Organization | Its owner (`organizations.owner_id`) only | Dialog listing every workspace and the billing time lost, and the exact name typed | `/fr/organisations/<id>`, "Gérer l'organisation" in the workspace menu (organization owner only), or the dashboard once no workspace is left |
 
 Everyone else is refused. Experts, viewers, admins of a workspace for its deletion, and owners of a workspace for its organization get `42501`. Someone outside the workspace or the organization gets `P0002`, the same answer as for an id that does not exist. The functions need a signed-in user: the service role gets `42501`, and operators delete with SQL only when no owner can do it ([`data-subject-requests.md`](../gdpr/data-subject-requests.md#deleting-a-workspace-or-an-organization)).
 
 The typed title or name is checked again in the database (`KR070`): the same text once the spaces around it are trimmed, accents compared in one Unicode form, case included.
 
-The organization owner deletes every workspace of the organization, including the ones they are not a member of. Workspace owners cannot delete their organization, and the organization owner cannot delete one workspace alone unless they own it.
+The organization owner deletes every workspace of the organization, alone or with the organization, including the ones they are not a member of. Workspace owners cannot delete their organization. When the organization owner deletes a workspace they are not a member of, the audit event records `actor_role` = `organization_owner`.
 
 A read-only workspace (billing, KRB-178) can still be deleted: none of the functions reads the billing state.
 
