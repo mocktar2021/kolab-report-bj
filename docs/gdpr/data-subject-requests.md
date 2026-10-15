@@ -206,7 +206,7 @@ If every count is 0, go to step 3.
 
 ### Step 2: hand over each workspace
 
-For each workspace in the list from [Find the person](#find-the-person), ask the firm who takes over (`<successor-id>`, a member of that workspace). If the firm wants the workspace gone instead, follow [Deleting a workspace](#deleting-a-workspace) and skip this step for it.
+For each workspace in the list from [Find the person](#find-the-person), ask the firm who takes over (`<successor-id>`, a member of that workspace). If the firm wants the workspace gone instead, an owner deletes it in the app ([Deleting a workspace or an organization](#deleting-a-workspace-or-an-organization)); skip this step for it.
 
 1. Make the successor an owner. In the app, an owner does it on the workspace's members page. If the leaving person is the only owner and can't do it, run:
 
@@ -232,7 +232,7 @@ For each workspace in the list from [Find the person](#find-the-person), ask the
    where owner_id = '<user-id>' and name like '<workspace-id>' || '/%';
    ```
 
-3. If they own the organization, move it too. Don't delete an organization to get rid of it: deleting an organization deletes all its workspaces.
+3. If they own the organization, move it too. If the firm wants the organization and all its workspaces gone, its owner deletes it in the app instead, from `/fr/organisations/<organization-id>`. Never delete an organization only to free the account: it deletes all its workspaces.
 
    ```sql
    update public.organizations set owner_id = '<successor-id>'
@@ -287,12 +287,23 @@ Every column must be 0.
 - **Backups**: they expire on their own schedule. Keep the request in the log so the erasure can be applied again after a restore.
 - Answer the person, at the address they used, once it is done.
 
-## Deleting a workspace
+## Deleting a workspace or an organization
 
-When a firm leaves, or asks for its data to go, the customer DPA should say whether KolabReport deletes or returns the data (**to confirm**). The app has no screen for this.
+Since KRB-180 the firm does it in the app; who can delete what is in [`docs/security/deletions.md`](../security/deletions.md).
 
-1. Get the request in writing from an owner of the workspace. Offer the export first: owners and admins can export each report as `.docx` or PDF from the app, and download the files from each section.
-2. List the stored files before deleting anything. Both buckets start their paths with the workspace id:
+- A workspace: an owner opens **Paramètres de l'espace** in the workspace menu (`/fr/espaces/<workspace-id>/parametres`), then **Supprimer l'espace de travail**, and types its name.
+- An organization with all its workspaces: its owner (`organizations.owner_id`) opens **Gérer l'organisation** in the workspace menu (`/fr/organisations/<organization-id>`), then **Supprimer l'organisation**, and types its name. The dialog lists every workspace that goes and the plan, passes and Pack IA credits that are lost.
+- A report: an owner or admin opens it, then **Supprimer le rapport** at the bottom. A final report needs an owner and its title.
+
+Each deletion queues the stored files of what goes in the cleanup queue, and the daily job (KRB-166) removes them. It is recorded in `private.audit_events`. Payments and receipts stay, detached from the organization ([`retention.md`](retention.md)). Member accounts stay too: each person decides about their own account.
+
+When the firm asks KolabReport instead (the customer DPA says whether KolabReport deletes or returns the data, **to confirm**), first ask an owner to do it in the app, after exporting what they want to keep. Owners and admins export each report as `.docx` or PDF, and download the files from each section.
+
+### When no owner can do it
+
+Only when the workspace has no owner who can sign in, or the organization owner's account is gone, an operator deletes on the firm's written request:
+
+1. List the stored files before deleting anything. Both buckets start their paths with the workspace id:
 
    ```sql
    select bucket_id, name, created_at
@@ -301,14 +312,14 @@ When a firm leaves, or asks for its data to go, the customer DPA should say whet
      and name like '<workspace-id>' || '/%';
    ```
 
-3. Delete the workspace. The cascade removes its members, invitations, reports, sections, deliverable rows, AI generations, exports rows, status history, notifications, prompt templates and rollouts.
+2. Delete the workspace as `postgres`, which still may. The cascade removes its members, invitations, reports, sections, deliverable rows, AI generations, exports rows, status history, notifications, prompt templates and rollouts, and queues the files of the deliverable and export rows. The draft ledger of the organization stays.
 
    ```sql
    delete from public.workspaces where id = '<workspace-id>';
    ```
 
-4. Delete the files from step 2: in the Supabase dashboard, open **Storage**, then each bucket, select the folder named after the workspace id and delete it. The Storage API with the service role works too. Don't delete rows from `storage.objects` with SQL: that removes the record and leaves the file in the underlying store. Deleting the workspace also queued these files, and the daily cleanup job (KRB-166) removes them on its next run, so this step only makes it immediate.
-5. Delete the organization if it has no workspace left:
+3. Delete the files from step 1 that no row recorded: in the Supabase dashboard, open **Storage**, then each bucket, select the folder named after the workspace id and delete it. The Storage API with the service role works too. Don't delete rows from `storage.objects` with SQL: that removes the record and leaves the file in the underlying store.
+4. Delete the organization if it has no workspace left. Payments and receipts keep their rows with `organization_id` set to null.
 
    ```sql
    delete from public.organizations o
@@ -316,7 +327,7 @@ When a firm leaves, or asks for its data to go, the customer DPA should say whet
      and not exists (select 1 from public.workspaces w where w.organization_id = o.id);
    ```
 
-6. Member accounts stay. Each person decides about their own account: tell them they can ask for its deletion.
+5. Log it in the request log: these SQL deletions write no event to `private.audit_events`.
 
 ## Requests about report content
 

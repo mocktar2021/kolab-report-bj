@@ -8,7 +8,7 @@ const CONTROLLER = "Responsable de traitement";
 const PROCESSOR = "Sous-traitant de l'organisation cliente";
 
 export const confidentialite: LegalDocument = {
-  updatedAt: "2026-10-14",
+  updatedAt: "2026-10-15",
   intro: [
     "Cette politique explique quelles données personnelles KolabReport traite, pourquoi, avec qui elles sont partagées, combien de temps elles sont gardées et comment exercer vos droits. Elle s'applique au site, à l'application KolabReport et aux e-mails qu'ils envoient.",
   ],
@@ -251,13 +251,17 @@ export const confidentialite: LegalDocument = {
               ],
               [
                 "Rapports, sections, livrables, brouillons IA, historique des statuts, notifications",
-                "Tant que l'organisation les garde, et au plus tard jusqu'à la suppression de l'espace de travail à la fin du contrat (voir l'[accord de traitement des données](/accord-traitement-donnees#fin-du-contrat)).",
+                "Tant que l'organisation les garde. Depuis l'application, les propriétaires et administrateurs suppriment un rapport, les propriétaires un espace de travail, et le propriétaire de l'organisation l'organisation entière. Au plus tard, jusqu'à la suppression de l'espace de travail à la fin du contrat (voir l'[accord de traitement des données](/accord-traitement-donnees#fin-du-contrat)).",
               ],
               [
                 "Exports de rapports",
                 "90 jours pour un export fait à la demande. Le PDF créé quand un rapport devient final est gardé aussi longtemps que le rapport.",
               ],
               ["Fichiers supprimés", "Retirés du stockage par une tâche quotidienne."],
+              [
+                "Journal des suppressions : qui a supprimé un rapport, un espace de travail ou une organisation, et quand",
+                "Le temps nécessaire à la sécurité du service et au traitement d'une contestation. Il ne garde ni titre, ni nom, ni contenu.",
+              ],
               [
                 "Facturation : factures, reçus, paiements",
                 "La durée imposée par les obligations comptables et fiscales applicables.",
