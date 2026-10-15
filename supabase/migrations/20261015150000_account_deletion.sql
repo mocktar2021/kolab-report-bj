@@ -8,6 +8,9 @@
 -- 1. Rows a person created stay with the workspace when the account goes.
 --    workspaces.created_by, reports.created_by and deliverables.uploaded_by
 --    become nullable and are set to null. Before, they blocked the delete.
+--    workspace_invitations.invited_by too: invitations belong to the
+--    workspace, so an open one sent by a deleted person keeps working, with
+--    no inviter. Before, they went with the account.
 -- 2. What blocks a deletion: owning an organization (the foreign key already
 --    refuses it), and being the only owner of a workspace, whether it has
 --    other members or none. private.account_deletion_blockers() lists them
@@ -57,10 +60,19 @@ alter table public.deliverables
   add constraint deliverables_uploaded_by_fkey
     foreign key (uploaded_by) references public.profiles (id) on delete set null;
 
+-- New invitations still name their sender: the insert policy wants
+-- invited_by = auth.uid().
+alter table public.workspace_invitations alter column invited_by drop not null;
+alter table public.workspace_invitations
+  drop constraint if exists workspace_invitations_invited_by_fkey,
+  add constraint workspace_invitations_invited_by_fkey
+    foreign key (invited_by) references public.profiles (id) on delete set null;
+
 -- The set null of a deleted profile finds its rows through these.
 create index if not exists workspaces_created_by_idx on public.workspaces (created_by);
 create index if not exists reports_created_by_idx on public.reports (created_by);
 create index if not exists deliverables_uploaded_by_idx on public.deliverables (uploaded_by);
+create index if not exists workspace_invitations_invited_by_idx on public.workspace_invitations (invited_by);
 
 -- -----------------------------------------------------------------------------
 -- 2. What blocks a deletion

@@ -12,7 +12,8 @@ export type InvitationEmailInput = {
   link: string;
   workspaceName: string;
   organizationName: string | null;
-  inviterName: string;
+  /** Null when nobody can be named, for example when the sender's account is gone: the e-mail names the workspace only. */
+  inviterName: string | null;
   role: keyof typeof ROLE_LABELS;
   expiresAt: Date;
 };
@@ -36,8 +37,12 @@ export function invitationEmail(input: InvitationEmailInput): Email {
   const workspace = input.organizationName
     ? `${input.workspaceName} (${input.organizationName})`
     : input.workspaceName;
-  const subject = `${input.inviterName} vous invite sur KolabReport`;
-  const intro = `${input.inviterName} vous invite à rejoindre l'espace de travail ${workspace} en tant que ${role}.`;
+  const subject = input.inviterName
+    ? `${input.inviterName} vous invite sur KolabReport`
+    : `Invitation à rejoindre ${input.workspaceName} sur KolabReport`;
+  const intro = input.inviterName
+    ? `${input.inviterName} vous invite à rejoindre l'espace de travail ${workspace} en tant que ${role}.`
+    : `Vous êtes invité à rejoindre l'espace de travail ${workspace} en tant que ${role}.`;
   const outro = `Le lien reste valable jusqu'au ${expires}. Si vous n'attendiez pas cette invitation, ignorez cet e-mail.`;
 
   const html = `<!doctype html>

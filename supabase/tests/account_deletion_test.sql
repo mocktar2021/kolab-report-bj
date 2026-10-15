@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(69);
+select plan(73);
 
 -- Deleting one's own account (KRB-186). What blocks it, the organization
 -- transfer, what the cleanup removes before the delete, and what stays with
@@ -8,6 +8,16 @@ select plan(69);
 
 create or replace function pg_temp.hash(email text) returns text
 language sql immutable as $$ select encode(sha256(convert_to(lower(email), 'UTF8')), 'hex') $$;
+
+-- Signed in as a user created in this file, outside the fixtures.
+create or replace function pg_temp.act_as_id(user_id uuid) returns void
+language plpgsql as $$
+begin
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', user_id, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+end;
+$$;
 grant execute on all functions in schema pg_temp to authenticated, anon;
 
 -- Schema --------------------------------------------------------------------------
@@ -16,11 +26,12 @@ select results_eq(
     from pg_constraint con
     join pg_class c on c.oid = con.conrelid
     join pg_attribute a on a.attrelid = con.conrelid and a.attnum = con.conkey[1]
-    where con.conname in ('workspaces_created_by_fkey', 'reports_created_by_fkey', 'deliverables_uploaded_by_fkey')
+    where con.conname in ('workspaces_created_by_fkey', 'reports_created_by_fkey', 'deliverables_uploaded_by_fkey',
+                          'workspace_invitations_invited_by_fkey')
     order by 1$$,
   $$values ('deliverables', 'uploaded_by', false, 'n'), ('reports', 'created_by', false, 'n'),
-           ('workspaces', 'created_by', false, 'n')$$,
-  'creators and uploaders are nullable and set to null when their profile goes');
+           ('workspace_invitations', 'invited_by', false, 'n'), ('workspaces', 'created_by', false, 'n')$$,
+  'creators, uploaders and inviters are nullable and set to null when their profile goes');
 select results_eq(
   $$select con.conrelid::regclass::text, con.conname::text collate "default"
     from pg_constraint con
@@ -175,7 +186,9 @@ insert into public.notifications (workspace_id, user_id, event_id) values
   (pg_temp.id('w1'), pg_temp.id('expert2'), '00000000-0000-4000-8000-0000000000e1');
 insert into public.workspace_invitations (workspace_id, email, role, token_hash, invited_by) values
   (pg_temp.id('w2'), 'owner@kolabreport.test', 'viewer', encode(sha256('tok-owner'::bytea), 'hex'), pg_temp.id('outsider')),
-  (pg_temp.id('w2'), 'expert2@kolabreport.test', 'viewer', encode(sha256('tok-expert2'::bytea), 'hex'), pg_temp.id('outsider'));
+  (pg_temp.id('w2'), 'expert2@kolabreport.test', 'viewer', encode(sha256('tok-expert2'::bytea), 'hex'), pg_temp.id('outsider')),
+  -- An invitation owner sends, still open when they go.
+  (pg_temp.id('w1'), 'newcomer@kolabreport.test', 'viewer', private.invitation_token_hash('tok-newcomer'), pg_temp.id('owner'));
 insert into public.ai_generations (id, workspace_id, section_id, requested_by, output_schema, schema_version,
   provider, model, estimated_tokens, user_rating, feedback_comment) values
   ('00000000-0000-4000-8000-0000000000f1', pg_temp.id('w1'), pg_temp.id('s3'), pg_temp.id('owner'),
@@ -246,6 +259,23 @@ select results_eq(
 select results_eq(
   $$select user_id, role::text from public.workspace_members where workspace_id = pg_temp.id('w1') and role = 'owner'$$,
   $$values (pg_temp.id('admin'), 'owner')$$, 'w1 keeps an owner');
+
+-- Invitations belong to the workspace: the one owner sent keeps working.
+select results_eq(
+  $$select invited_by, accepted_at, revoked_at from public.workspace_invitations where email = 'newcomer@kolabreport.test'$$,
+  $$values (null::uuid, null::timestamptz, null::timestamptz)$$, 'the open invitation owner sent stays, with no inviter');
+select results_eq(
+  $$select status, workspace_name, invited_by_name from public.invitation_preview('tok-newcomer')$$,
+  $$values ('pending', 'Etude A', null::text)$$, 'its link still shows the invitation, without a name');
+insert into auth.users (id, email, email_confirmed_at)
+values ('00000000-0000-4000-a000-0000000000c1', 'newcomer@kolabreport.test', now());
+select pg_temp.act_as_id('00000000-0000-4000-a000-0000000000c1');
+select is(public.accept_workspace_invitation('tok-newcomer'), pg_temp.id('w1'), 'and the invitee joins w1 with it');
+select pg_temp.act_as_server();
+select results_eq(
+  $$select role::text, invited_by from public.workspace_members
+    where workspace_id = pg_temp.id('w1') and user_id = '00000000-0000-4000-a000-0000000000c1'$$,
+  $$values ('viewer', null::uuid)$$, 'as a viewer, with no inviter on the membership');
 
 -- Billing stays with the organization, and the trial claim with the e-mail hash.
 select is((select count(*)::int from private.billing_trial_claims

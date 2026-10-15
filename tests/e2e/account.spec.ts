@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { expectNoAxeViolations } from "./a11y";
@@ -175,6 +175,18 @@ test("an owner transfers the organization, then deletes the account and is signe
     invited_by: gildas.id,
   });
   expect(inviteError).toBeNull();
+  // An invitation Edem sends, still open when the account goes. Same hash as
+  // src/lib/invitations/token.ts, which only loads on the server.
+  const token = randomBytes(32).toString("base64url");
+  const guestEmail = `e2e-invite-${RUN}@kolabreport.test`;
+  const { error: sentError } = await admin.from("workspace_invitations").insert({
+    workspace_id: workspaceId,
+    email: guestEmail,
+    role: "viewer",
+    token_hash: createHash("sha256").update(token, "utf8").digest("hex"),
+    invited_by: edem.id,
+  });
+  expect(sentError).toBeNull();
 
   await signIn(page, edem);
   await page.goto("/fr/compte");
@@ -263,6 +275,18 @@ test("an owner transfers the organization, then deletes the account and is signe
     .select("id", { count: "exact", head: true })
     .eq("email", edem.email);
   expect(invitations).toBe(0);
+
+  // The invitation Edem sent belongs to the workspace and keeps working.
+  const { data: sent } = await admin
+    .from("workspace_invitations")
+    .select("invited_by, revoked_at")
+    .eq("email", guestEmail)
+    .single();
+  expect(sent).toEqual({ invited_by: null, revoked_at: null });
+  await page.goto(`/fr/invitations/${token}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Rejoindre Cession ${RUN}`);
+  await expect(page.getByText("Vous êtes invité en tant que lecteur.")).toBeVisible();
+  await expect(page.getByText(`Cette invitation est destinée à ${guestEmail}.`)).toBeVisible();
 
   // Signing up again with the same address gives no new trial.
   const password = "Retour-compte-2026";

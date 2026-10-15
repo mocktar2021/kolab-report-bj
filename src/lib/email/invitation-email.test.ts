@@ -22,6 +22,16 @@ describe("invitationEmail", () => {
     expect(email.html).toContain(`href="${base.link}"`);
   });
 
+  it("names only the workspace when there is no inviter to name", () => {
+    const email = invitationEmail({ ...base, inviterName: null });
+    expect(email.subject).toBe("Invitation à rejoindre Audit 2026 sur KolabReport");
+    expect(email.text).toContain(
+      "Vous êtes invité à rejoindre l'espace de travail Audit 2026 (Cabinet Dossou) en tant que expert.",
+    );
+    expect(email.text).not.toContain("null");
+    expect(email.html).not.toContain("null");
+  });
+
   it("escapes names typed by users", () => {
     const email = invitationEmail({ ...base, workspaceName: '<script>alert("x")</script>' });
     expect(email.html).not.toContain("<script>");

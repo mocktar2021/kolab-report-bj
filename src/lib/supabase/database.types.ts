@@ -1322,7 +1322,7 @@ export type Database = {
           email: string;
           expires_at: string;
           id: string;
-          invited_by: string;
+          invited_by: string | null;
           revoked_at: string | null;
           role: Database["public"]["Enums"]["workspace_role"];
           token_hash: string;
@@ -1337,7 +1337,7 @@ export type Database = {
           email: string;
           expires_at?: string;
           id?: string;
-          invited_by?: string;
+          invited_by?: string | null;
           revoked_at?: string | null;
           role?: Database["public"]["Enums"]["workspace_role"];
           token_hash: string;
@@ -1351,7 +1351,7 @@ export type Database = {
           email?: string;
           expires_at?: string;
           id?: string;
-          invited_by?: string;
+          invited_by?: string | null;
           revoked_at?: string | null;
           role?: Database["public"]["Enums"]["workspace_role"];
           token_hash?: string;
