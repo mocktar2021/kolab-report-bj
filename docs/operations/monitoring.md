@@ -154,7 +154,7 @@ Goal (KRB-139, story KRB-23): when production is unavailable for more than 2 min
 
 ### What to check
 
-`GET https://<production domain>/api/health`. The route is public, never cached (`Cache-Control: no-store`) and skipped by the middleware. It calls `public.health_check()` through the Supabase API with the anon key:
+`GET https://kolabreport.com/api/health`. The route is public, never cached (`Cache-Control: no-store`) and skipped by the middleware. It calls `public.health_check()` through the Supabase API with the anon key:
 
 | Situation | Status | Body |
 | --- | --- | --- |
@@ -195,7 +195,7 @@ Pick:
 
 1. Grafana Cloud stack in an EU region (the same one as for the metrics).
 2. In Grafana Cloud, open Synthetic Monitoring and add an **HTTP** check:
-   - Job name `kolabreport-production-health`, target `https://<production domain>/api/health`.
+   - Job name `kolabreport-production-health`, target `https://kolabreport.com/api/health`.
    - Probe locations: two in Europe.
    - Frequency: 1 minute. Timeout: 10 seconds.
    - Validation: status code `200`, and the body must match the regular expression `"status":"ok"`.
