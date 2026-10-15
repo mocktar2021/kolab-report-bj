@@ -4,8 +4,16 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { OFFER_CODES } from "@/lib/billing/catalog";
 import { startPurchase, type CheckoutError } from "@/lib/billing/checkout";
+import {
+  billingDetailsErrors,
+  billingDetailsSchema,
+  type BillingDetailsErrorKey,
+  type BillingDetailsField,
+} from "@/lib/billing/details";
 import { checkoutDeps } from "@/lib/billing/server";
 import { getBillingSettings } from "@/lib/billing/settings";
+import { log } from "@/lib/log";
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/user";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 
@@ -49,4 +57,56 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   if (!result.ok) return { status: "error", error: result.error };
   // FedaPay's payment page, or the return page when the order was paid already.
   redirect(result.url);
+}
+
+export type BillingDetailsState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | {
+      status: "error";
+      fieldErrors?: Partial<Record<BillingDetailsField, BillingDetailsErrorKey>>;
+      formError?: BillingDetailsErrorKey;
+    };
+
+/**
+ * Saves the buyer details of an organization, copied into its next receipts.
+ * With the user's client: the update policy lets the organization owner and
+ * the owners of its workspaces through, on the four buyer columns only. For
+ * anyone else no row changes, and the form says who may edit.
+ */
+export async function saveBillingDetails(
+  _prev: BillingDetailsState,
+  formData: FormData,
+): Promise<BillingDetailsState> {
+  const organizationId = uuidSchema.safeParse(formData.get("organizationId"));
+  if (!organizationId.success) return { status: "error", formError: "failed" };
+  const parsed = billingDetailsSchema.safeParse({
+    legalName: formData.get("legalName"),
+    address: formData.get("address"),
+    taxId: formData.get("taxId"),
+    billingEmail: formData.get("billingEmail"),
+  });
+  if (!parsed.success) return { status: "error", fieldErrors: billingDetailsErrors(parsed.error) };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organization_billing")
+    .update({
+      legal_name: parsed.data.legalName,
+      address: parsed.data.address,
+      tax_id: parsed.data.taxId,
+      billing_email: parsed.data.billingEmail,
+    })
+    .eq("organization_id", organizationId.data.toLowerCase())
+    .select("organization_id");
+  if (error) {
+    log.error("billing: could not save the billing details", {
+      organizationId: organizationId.data,
+      code: error.code,
+      error: error.message,
+    });
+    return { status: "error", formError: "failed" };
+  }
+  if (!data || data.length === 0) return { status: "error", formError: "forbidden" };
+  return { status: "saved" };
 }

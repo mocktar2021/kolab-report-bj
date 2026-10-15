@@ -208,9 +208,14 @@ describe("describeWorkspaceError", () => {
         graceEndsAt: "2026-10-22T09:30:00+00:00",
         limits: PLANS.trial.limits,
         usage: { members: 2, invitations: 0, activeReports: 1, workspaces: 1 },
+        drafts: { used: 3, allowance: 20, period: "total" },
       },
       passes: [],
       packs: [],
+      purchases: [],
+      purchasesTotal: 0,
+      receipts: [],
+      receiptsTotal: 0,
     });
     expect(await describeWorkspaceError({ code: "KR042" }, { organizationId: ORGANIZATION_ID })).toEqual({
       error: "reportLimit",
