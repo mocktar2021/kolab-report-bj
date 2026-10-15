@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { workspaceIsWritable } from "@/lib/billing/state";
 import { claimParse, runParse } from "@/lib/deliverables/parse-job";
 import {
   checkStoredFile,
@@ -53,6 +54,12 @@ export const POST = withRequestId(async (_request: Request, { params }: { params
   if (upload.section?.report?.status === "final") {
     await discardUpload(upload);
     return errorResponse(403, "reportFinal");
+  }
+  // Nor once the workspace is read-only (KRB-178): the file is kept with the
+  // service role below, which the database guards do not check.
+  if (!(await workspaceIsWritable(upload.workspace_id))) {
+    await discardUpload(upload);
+    return errorResponse(403, "readOnly");
   }
 
   const check = await checkStoredFile(upload);

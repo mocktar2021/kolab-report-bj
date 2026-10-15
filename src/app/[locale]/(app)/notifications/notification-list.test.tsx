@@ -190,6 +190,14 @@ describe("NotificationList", () => {
     );
   });
 
+  it("words a trial reminder as such", () => {
+    renderList([reminder({ notice: "ended", plan: "trial" })]);
+
+    expect(screen.getByRole("link")).toHaveTextContent(
+      "L'essai gratuit de Cabinet Dossou a pris fin le 21 octobre 2026. Lecture seule à partir du 28 octobre 2026",
+    );
+  });
+
   it("says when there is nothing yet", () => {
     renderList([]);
 

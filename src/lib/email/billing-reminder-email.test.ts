@@ -74,6 +74,12 @@ describe("billingReminderEmail", () => {
     );
   });
 
+  it("words the trial as such", () => {
+    const email = billingReminderEmail({ ...base, plan: "trial" });
+
+    expect(email.text).toContain("L'essai gratuit de Cabinet Dossou se termine le 21 octobre 2026.");
+  });
+
   it("escapes names in the HTML", () => {
     const email = billingReminderEmail({ ...base, organizationName: '<img src=x onerror="alert(1)">' });
 

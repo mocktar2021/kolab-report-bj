@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft, Users } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { FrozenReportNotice } from "@/components/frozen-report-notice";
 import { ReportStatusBadge } from "@/components/report-status-badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getReadOnlyReason } from "@/lib/billing/banner";
 import { getReportDeletionPreview } from "@/lib/deletions/preview";
 import { EXPORTS_PER_HOUR, listReportExports } from "@/lib/reports/exports";
 import { allowedReportActions, isReportFrozen } from "@/lib/reports/status";
@@ -61,6 +63,7 @@ export default async function ReportPage({ params }: { params: Params }) {
   const { locale, reportId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Report");
+  const tErrors = await getTranslations("Workspaces.errors");
   const format = await getFormatter();
 
   // RLS hides reports of other workspaces, so they look like missing ones.
@@ -72,22 +75,26 @@ export default async function ReportPage({ params }: { params: Params }) {
   const frozen = isReportFrozen(report.status);
 
   const supabase = await createClient();
-  const [{ data: sections }, members, { data: progress }, exports, workflow, deletion] = await Promise.all([
-    supabase
-      .from("report_sections")
-      .select("id, title, status, weight, assigned_to, content")
-      .eq("report_id", report.id)
-      .order("position", { ascending: true })
-      .order("created_at", { ascending: true }),
-    getWorkspaceMembers(report.workspace_id),
-    supabase.from("report_progress").select("completion_percent").eq("report_id", report.id).maybeSingle(),
-    // RLS only lets owners and admins read the exports.
-    manager ? listReportExports(report.id) : [],
-    getReportWorkflow(report, manager),
-    // What deleting it takes (KRB-180), for owners and admins.
-    manager ? getReportDeletionPreview(report.id) : null,
-  ]);
+  const [{ data: sections }, members, { data: progress }, exports, workflow, deletion, readOnly] =
+    await Promise.all([
+      supabase
+        .from("report_sections")
+        .select("id, title, status, weight, assigned_to, content")
+        .eq("report_id", report.id)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true }),
+      getWorkspaceMembers(report.workspace_id),
+      supabase.from("report_progress").select("completion_percent").eq("report_id", report.id).maybeSingle(),
+      // RLS only lets owners and admins read the exports.
+      manager ? listReportExports(report.id) : [],
+      getReportWorkflow(report, manager),
+      // What deleting it takes (KRB-180), for owners and admins.
+      manager ? getReportDeletionPreview(report.id) : null,
+      // A read-only workspace (KRB-178) is read and exported like a final report.
+      getReadOnlyReason(report.workspace_id),
+    ]);
   if (!sections || !members) notFound();
+  const locked = frozen || readOnly !== null;
 
   const names = new Map(members.map((member) => [member.userId, member.name]));
   const rows: ReportSection[] = sections.map((section) => ({
@@ -141,9 +148,10 @@ export default async function ReportPage({ params }: { params: Params }) {
         ) : null}
       </header>
 
+      {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-6" /> : null}
       {frozen ? (
         <FrozenReportNotice className="mt-6" />
-      ) : manager ? null : (
+      ) : manager || readOnly ? null : (
         <p className="mt-6 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           {access.role === "expert" ? t("expertNote") : t("viewerNote")}
         </p>
@@ -155,6 +163,7 @@ export default async function ReportPage({ params }: { params: Params }) {
           status={report.status}
           actions={allowedReportActions(report.status, access.role)}
           snapshot={workflow.snapshot}
+          disabledReason={readOnly ? tErrors("readOnlyDisabled") : undefined}
         />
       ) : null}
 
@@ -164,8 +173,8 @@ export default async function ReportPage({ params }: { params: Params }) {
         sections={rows}
         assignees={assignees}
         canManage={manager}
-        frozen={frozen}
-        addSectionForm={manager && !frozen ? <AddSectionForm reportId={report.id} /> : null}
+        frozen={locked}
+        addSectionForm={manager && !locked ? <AddSectionForm reportId={report.id} /> : null}
       />
 
       {manager ? (

@@ -18,6 +18,7 @@ export type DraftDecisionError =
   | "decided"
   | "conflict"
   | "reportFinal"
+  | "readOnly"
   | "invalidInput"
   | "generic";
 
@@ -49,6 +50,9 @@ function decisionError(error: { code?: string | null; message?: string }): Draft
     // The report became final (KRB-20).
     case "KR020":
       return "reportFinal";
+    // The workspace became read-only (KRB-178).
+    case "KR043":
+      return "readOnly";
     case "22023":
     case "22P02":
       return "invalidInput";

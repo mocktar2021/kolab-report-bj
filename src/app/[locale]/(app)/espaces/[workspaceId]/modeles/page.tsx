@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft, ChevronRight, Plus, Split } from "lucide-react";
+import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { getReadOnlyReason } from "@/lib/billing/banner";
 import { listActiveRollouts, type ActiveRollout } from "@/lib/prompts/rollouts";
 import { listPromptTemplates, type PromptTemplateSummary } from "@/lib/prompts/server";
 import { createClient } from "@/lib/supabase/server";
@@ -28,6 +30,7 @@ export default async function PromptLibraryPage({
   const { locale, workspaceId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Prompts");
+  const tErrors = await getTranslations("Workspaces.errors");
 
   // Unknown ids and workspaces the user is not a member of both give a 404.
   if (!uuidSchema.safeParse(workspaceId).success) notFound();
@@ -35,10 +38,11 @@ export default async function PromptLibraryPage({
   if (!access) notFound();
 
   const supabase = await createClient();
-  const [{ data: workspace }, templates, allRollouts] = await Promise.all([
+  const [{ data: workspace }, templates, allRollouts, readOnly] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     listPromptTemplates(workspaceId),
     listActiveRollouts(workspaceId),
+    getReadOnlyReason(workspaceId),
   ]);
   if (!workspace || !templates) notFound();
 
@@ -73,7 +77,17 @@ export default async function PromptLibraryPage({
             {t("subtitle", { workspace: workspace.name })}
           </p>
         </div>
-        {manager ? (
+        {manager && readOnly ? (
+          <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
+            <Button type="button" shape="pill" disabled aria-describedby="new-template-disabled">
+              <Plus aria-hidden="true" />
+              {t("newTemplate")}
+            </Button>
+            <p id="new-template-disabled" className="text-xs text-muted-foreground">
+              {tErrors("readOnlyDisabled")}
+            </p>
+          </div>
+        ) : manager ? (
           <Button asChild shape="pill" className="shrink-0">
             <Link href={`/espaces/${workspaceId}/modeles/nouveau`}>
               <Plus aria-hidden="true" />
@@ -82,6 +96,7 @@ export default async function PromptLibraryPage({
           </Button>
         ) : null}
       </header>
+      {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-6" /> : null}
 
       {manager ? null : (
         <p className="mt-6 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

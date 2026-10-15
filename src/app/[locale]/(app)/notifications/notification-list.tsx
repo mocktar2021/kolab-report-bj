@@ -74,11 +74,13 @@ export function NotificationList({ notifications, now }: NotificationListProps) 
   function billingSentence(notification: BillingNotification) {
     // The organization owner may not belong to the workspace of a pass, so
     // its name can be out of reach.
-    const scope = !notification.workspaceId
-      ? "subscription"
-      : notification.workspaceName
+    const scope = notification.workspaceId
+      ? notification.workspaceName
         ? "mission"
-        : "missionUnnamed";
+        : "missionUnnamed"
+      : notification.plan === "trial"
+        ? "trial"
+        : "subscription";
     const values = {
       scope,
       plan: notification.plan ? PLANS[notification.plan].label : "",

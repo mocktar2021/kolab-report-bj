@@ -43,9 +43,11 @@ export function billingReminderEmail(input: BillingReminderInput): Email {
   const graceEnd = formatBillingDate(input.graceEndsAt);
   const days = Math.max(0, calendarDaysUntil(input.endsAt, input.now));
   const line =
-    input.workspaceName === null
-      ? t("line.subscription", { plan: PLANS[input.plan].label, organization: input.organizationName })
-      : t("line.mission", { workspace: input.workspaceName, organization: input.organizationName });
+    input.workspaceName !== null
+      ? t("line.mission", { workspace: input.workspaceName, organization: input.organizationName })
+      : input.plan === "trial"
+        ? t("line.trial", { organization: input.organizationName })
+        : t("line.subscription", { plan: PLANS[input.plan].label, organization: input.organizationName });
 
   const subject = t(`${key}.subject`, { days });
   const heading = t(`${key}.heading`, { date });

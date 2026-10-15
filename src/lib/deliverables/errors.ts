@@ -8,6 +8,8 @@ export type DeliverableErrorKey =
   | "sectionNotFound"
   | "forbidden"
   | "reportFinal"
+  // The workspace is read-only: its plan ended (KRB-178).
+  | "readOnly"
   | "notReceived"
   | "sizeMismatch"
   | "typeMismatch"

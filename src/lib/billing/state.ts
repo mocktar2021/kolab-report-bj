@@ -232,6 +232,17 @@ export async function getWorkspaceBillingState(workspaceId: string): Promise<Wor
 }
 
 /**
+ * Whether the signed-in user's writes to a workspace pass the read-only rule
+ * (KRB-178). For server code that writes with the service role on a user's
+ * behalf, which the database guards do not check. False when the state
+ * cannot be read: such a write waits rather than slips through.
+ */
+export async function workspaceIsWritable(workspaceId: string): Promise<boolean> {
+  const state = await getWorkspaceBillingState(workspaceId);
+  return state !== null && state.state !== "read_only";
+}
+
+/**
  * Billing overview of an organization for the signed-in user. Null when they
  * cannot read its billing, or on error.
  */

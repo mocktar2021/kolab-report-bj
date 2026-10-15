@@ -16,7 +16,7 @@ export type SectionContentVersion = { content: string | null; version: string };
 export type SaveSectionContentResult =
   | { ok: true; version: string }
   | { ok: false; error: "conflict"; current: SectionContentVersion }
-  | { ok: false; error: "forbidden" | "reportFinal" | "tooLong" | "invalidInput" | "generic" };
+  | { ok: false; error: "forbidden" | "reportFinal" | "readOnly" | "tooLong" | "invalidInput" | "generic" };
 
 const saveSchema = z.object({
   sectionId: uuidSchema,
@@ -67,6 +67,9 @@ export async function saveSectionContent(input: {
       // The report became final (KRB-20).
       case "KR020":
         return { ok: false, error: "reportFinal" };
+      // The workspace became read-only (KRB-178).
+      case "KR043":
+        return { ok: false, error: "readOnly" };
       case "22023":
         return { ok: false, error: "tooLong" };
       case "22007":

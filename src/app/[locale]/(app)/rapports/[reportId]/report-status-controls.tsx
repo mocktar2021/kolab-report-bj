@@ -64,6 +64,8 @@ type ReportStatusControlsProps = {
   actions: ReportAction[];
   /** The final version of a final report (getReportWorkflow), null otherwise. */
   snapshot: FinalSnapshot | null;
+  /** Set when the workspace is read-only (KRB-178): the buttons show, disabled, with this reason. */
+  disabledReason?: string;
 };
 
 /**
@@ -71,7 +73,13 @@ type ReportStatusControlsProps = {
  * status changes they can make, what happened to the last one, and the final
  * version of a final report.
  */
-export function ReportStatusControls({ reportId, status, actions, snapshot }: ReportStatusControlsProps) {
+export function ReportStatusControls({
+  reportId,
+  status,
+  actions,
+  snapshot,
+  disabledReason,
+}: ReportStatusControlsProps) {
   const t = useTranslations("ReportStatus");
   const router = useRouter();
   const [state, dispatch, pending] = useActionState<ReportStatusState, FormData>(changeReportStatus, {
@@ -135,7 +143,31 @@ export function ReportStatusControls({ reportId, status, actions, snapshot }: Re
           </p>
         </div>
 
-        {actions.length > 0 ? (
+        {actions.length > 0 && disabledReason ? (
+          <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              {actions.map((action) => {
+                const Icon = ACTION_ICONS[action];
+                return (
+                  <Button
+                    key={action}
+                    type="button"
+                    shape="pill"
+                    variant={ACTION_VARIANTS[action]}
+                    disabled
+                    aria-describedby="report-status-disabled"
+                  >
+                    <Icon aria-hidden="true" />
+                    {t(`actions.${action}`)}
+                  </Button>
+                );
+              })}
+            </div>
+            <p id="report-status-disabled" className="text-xs text-muted-foreground">
+              {disabledReason}
+            </p>
+          </div>
+        ) : actions.length > 0 ? (
           <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
             {actions.map((action) => {
               const Icon = ACTION_ICONS[action];
