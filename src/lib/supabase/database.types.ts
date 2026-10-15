@@ -1927,6 +1927,24 @@ export type Database = {
           state: string;
         }[];
       };
+      workspace_billing_usage: {
+        Args: { p_workspace_id: string };
+        Returns: {
+          billing_mode: string;
+          drafts_allowance: number;
+          drafts_period: string;
+          drafts_used: number;
+          enforced: boolean;
+          invitations: number;
+          max_members: number;
+          max_reports: number;
+          members: number;
+          pack_drafts_left: number;
+          plan: string;
+          reports: number;
+          state: string;
+        }[];
+      };
       workspace_deletion_preview: { Args: { p_workspace_id: string }; Returns: Json };
     };
     Enums: {
