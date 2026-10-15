@@ -97,7 +97,8 @@ export default async function SectionPage({ params }: { params: Params }) {
       mimeType: file.mime_type,
       size: file.size_bytes,
       uploadedAt: file.uploaded_at ?? "",
-      uploaderName: names.get(file.uploaded_by) ?? null,
+      // Null once the uploader's account is deleted: the file stays with the section.
+      uploaderName: file.uploaded_by ? (names.get(file.uploaded_by) ?? null) : null,
       parseState,
       parseError: file.parse_error,
       notStarted,
