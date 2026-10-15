@@ -310,6 +310,7 @@ test("signed-in pages have a skip link, landmarks, French titles and visible foc
               - link "En cours"
             - listitem:
               - link "Terminées"
+        - link "Mon compte"
         - button /^Thème/
         - button "Se déconnecter"
         - button "Réduire le menu" [expanded]
@@ -326,6 +327,7 @@ test("signed-in pages have a skip link, landmarks, French titles and visible foc
       [`/fr/espaces/${workspaceId}/modeles`, "Modèles de prompts · KolabReport"],
       [`/fr/espaces/${workspaceId}/ia`, "Pilotage de l'IA · KolabReport"],
       ["/fr/notifications", "Notifications · KolabReport"],
+      ["/fr/compte", "Mon compte · KolabReport"],
       ["/fr/espaces/nouveau", "Nouvel espace de travail · KolabReport"],
     ];
     const titles: string[] = [];
