@@ -1,6 +1,22 @@
 // @vitest-environment node
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadGlobalTemplates, parseTemplates, promptVersion, templateFromFile } from "./templates";
+import {
+  loadGlobalTemplates,
+  MIGRATIONS_DIR,
+  parseTemplates,
+  promptVersion,
+  templateFromFile,
+  type EvalTemplate,
+} from "./templates";
+
+function migration(name: string): EvalTemplate[] {
+  return parseTemplates(
+    readFileSync(join(resolve(MIGRATIONS_DIR), name), "utf8"),
+    `${MIGRATIONS_DIR}/${name}`,
+  );
+}
 
 describe("global templates", () => {
   const templates = loadGlobalTemplates();
@@ -22,6 +38,25 @@ describe("global templates", () => {
     expect(synthese?.text).toContain("{{deliverables}}");
     expect(synthese?.text.startsWith("Tu rédiges une section")).toBe(true);
     expect(templates.get("resume-executif")?.title).toBe("Résumé exécutif");
+  });
+
+  it("picks up the raised output caps of KRB-184, with the text of version 1", () => {
+    const seeded = new Map(
+      migration("20261013210100_global_prompt_templates.sql").map((template) => [template.key, template]),
+    );
+    const raised = migration("20261015120000_prompt_output_caps.sql");
+    expect(raised.map((template) => [template.key, template.maxOutputTokens])).toEqual([
+      ["resume-executif", 2048],
+      ["recommandations", 4096],
+    ]);
+    for (const template of raised) {
+      const before = seeded.get(template.key);
+      if (!before) throw new Error(`no version 1 of ${template.key}`);
+      expect(template.maxOutputTokens).toBeGreaterThan(before.maxOutputTokens);
+      // Same text (so the same prompt version), title, schema, tier and temperature.
+      expect({ ...template, maxOutputTokens: before.maxOutputTokens, source: before.source }).toEqual(before);
+      expect(templates.get(template.key)).toEqual(template);
+    }
   });
 
   it("gives each text a stable 8-character version", () => {
