@@ -259,7 +259,7 @@ The app's deletion stops at the database as well: an operator does these steps i
 - **E-mail provider**: look for their address in the provider's logs or contacts and delete it where the provider allows.
 - **LLM provider and traces**: the app sends no user id, name or e-mail to the LLM provider or to the traces, so there is nothing to look up there.
 - **Backups**: they expire on their own schedule. Keep the request in the log so the erasure can be applied again after a restore ([step 7](#step-7-after-a-backup-restore)).
-- **Trial claim**: kept on purpose, see the table above.
+- **Trial claim**: kept on purpose and with no time limit, see the table above.
 - Answer the person, at the address they used, once it is done.
 
 ### Step 7: after a backup restore
