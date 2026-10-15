@@ -112,6 +112,15 @@ $$;
 
 grant execute on all functions in schema pg_temp to authenticated, anon;
 
+-- A trial claim outlives its account (ADR 001, section 11). One left by
+-- fixture rows once committed to this database would give org_a and org_b
+-- no trial, so they would be read-only while billing is enforced (the seed
+-- turns it on in CI). The fixtures start without any.
+delete from private.billing_trial_claims c
+using unnest(array['owner','admin','expert','expert2','viewer','outsider','stranger']) as u (name)
+where c.user_id = pg_temp.id(u.name)
+   or c.email_hash = encode(sha256(convert_to(u.name || '@kolabreport.test', 'UTF8')), 'hex');
+
 -- Data, inserted as postgres (RLS does not apply).
 insert into auth.users (id, email, raw_user_meta_data)
 select pg_temp.id(u), u || '@kolabreport.test', json_build_object('full_name', initcap(u))::jsonb

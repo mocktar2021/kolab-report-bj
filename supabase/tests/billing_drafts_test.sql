@@ -109,10 +109,13 @@ insert into kept select 'dead', generation_id from pg_temp.start(pg_temp.id('w1'
 select pg_temp.used(pg_temp.id('org_a'), pg_temp.id('w1'), 'trial', pg_temp.kept_id('trial'), 17);
 select results_eq($$select refusal, retry_after from pg_temp.start(pg_temp.id('w1'), pg_temp.id('s3'))$$,
   $$values ('quotaExceeded', null::integer)$$, 'the 21st draft of the trial is refused, with no date to wait for');
-select is((select count(*)::int from public.ai_generations where status = 'running'), 1,
-  'nothing is recorded for it');
-select is((select count(*)::int from public.billing_draft_usage where status = 'reserved'), 1,
-  'nor reserved');
+select results_eq(
+  $$select id from public.ai_generations where workspace_id = pg_temp.id('w1') and status = 'running'$$,
+  $$select pg_temp.kept_id('dead')$$, 'nothing is recorded for it');
+select results_eq(
+  $$select generation_id from public.billing_draft_usage
+    where organization_id = pg_temp.id('org_a') and status = 'reserved'$$,
+  $$select pg_temp.kept_id('dead')$$, 'nor reserved');
 update public.ai_generations set created_at = now() - interval '11 minutes' where id = pg_temp.kept_id('dead');
 update public.billing_draft_usage set created_at = now() - interval '11 minutes' where generation_id = pg_temp.kept_id('dead');
 select isnt(pg_temp.draft(), 'quotaExceeded', 'after 10 minutes, the reservation of a dead request no longer counts');
