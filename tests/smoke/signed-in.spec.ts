@@ -46,6 +46,8 @@ test.describe("signed in", { tag: "@signed-in" }, () => {
     // the check stops before the last button. The smoke workspace itself
     // was made with this wizard (docs/operations/smoke-tests.md).
     await page.goto("/fr/espaces/nouveau");
+    // The smoke user owns the smoke organization, which the first step checks.
+    await page.getByRole("radio", { name: "Nouvelle organisation" }).check();
     await page.getByLabel("Nom de l'organisation").fill("A");
     await page.getByRole("button", { name: "Suivant" }).click();
     await expect(page.getByText("Saisissez entre 2 et 120 caractères.")).toBeVisible();

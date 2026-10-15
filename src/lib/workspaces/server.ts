@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
 import type { WorkspaceRole } from "./roles";
-import type { MyWorkspace } from "./types";
+import type { ManageableOrganization, MyWorkspace } from "./types";
 
 /** Cookie holding the workspace picked in the switcher. */
 export const CURRENT_WORKSPACE_COOKIE = "kr-espace";
@@ -23,7 +23,7 @@ export const getMyWorkspaces = cache(async (): Promise<MyWorkspace[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("workspace_members")
-    .select("role, workspace:workspaces(id, name, organization:organizations(name))")
+    .select("role, workspace:workspaces(id, name, organization_id, organization:organizations(name))")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
   if (error || !data) return [];
@@ -34,6 +34,7 @@ export const getMyWorkspaces = cache(async (): Promise<MyWorkspace[]> => {
           {
             id: row.workspace.id,
             name: row.workspace.name,
+            organizationId: row.workspace.organization_id,
             organizationName: row.workspace.organization?.name ?? null,
             role: row.role,
           },
@@ -41,6 +42,21 @@ export const getMyWorkspaces = cache(async (): Promise<MyWorkspace[]> => {
       : [],
   );
 });
+
+/**
+ * Organizations the signed-in user can add a workspace to, by name: the ones
+ * they own, and the ones where they own or administer a workspace. Empty
+ * when the call fails, so the wizard falls back to a new organization.
+ */
+export async function getManageableOrganizations(): Promise<ManageableOrganization[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("my_manageable_organizations");
+  if (error || !data) return [];
+  return data.map(({ id, name }) => ({ id, name }));
+}
 
 /** The workspace from the switcher cookie, or the first one when the cookie is missing or stale. */
 export const getCurrentWorkspace = cache(async (): Promise<MyWorkspace | null> => {

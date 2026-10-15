@@ -94,8 +94,8 @@ French is the only locale. Every page lives under `/fr`, and `/` redirects there
 
 | Route | Page |
 | --- | --- |
-| `/fr/tableau-de-bord` | Dashboard of the current workspace, or the "create your first workspace" screen |
-| `/fr/espaces/nouveau` | Wizard: organization, workspace, first report |
+| `/fr/tableau-de-bord` | Dashboard of the current workspace, or the "create your first workspace" screen. Owners and admins get "Nouveau rapport", a dialog that asks for the title and opens the new report |
+| `/fr/espaces/nouveau` | Wizard: organization, workspace, first report. The first step lists the organizations the user can add a workspace to, with the one of the current workspace checked, plus "Nouvelle organisation". Someone who manages none types the name of a new one |
 | `/fr/espaces/{id}/membres` | Members, roles and invitations (owners and admins) |
 | `/fr/invitations/{token}` | Invitation link from the e-mail (works signed out) |
 | `/fr/rapports/{id}` | Report sections, with assignment and weights for owners and admins |
@@ -134,7 +134,7 @@ Routes: `/fr/connexion`, `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/rein
 | End-to-end | `tests/e2e/` | `npm run build && npm run test:e2e` |
 
 - The RLS suite checks every table for the owner, admin, expert and viewer roles, a member of another tenant, a user without workspace and signed-out visitors. Add a test file with every new table.
-- The end-to-end suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password. It also creates a workspace with the wizard and checks the roles: assignment by the owner, admins kept away from owners, read-only experts and viewers.
+- The end-to-end suite signs up a new user, confirms the e-mail through Mailpit, signs in and out, and resets the password. It also creates a workspace with the wizard, adds a second one to the same organization, creates a report from the dashboard, and checks the roles: assignment by the owner, admins kept away from owners, read-only experts and viewers.
 - Invitation e-mails go through `EMAIL_PROVIDER` (`brevo`, `resend`, or `mailpit` for the local stack, see `.env.example`). Without one, the members page shows the link to send by hand. The e2e suite reads them from Mailpit.
 - The workspace tests create users with the service-role key, so `.env.local` needs `SUPABASE_SERVICE_ROLE_KEY` (from `npx supabase status`). `playwright.config.ts` loads `.env.local`.
 
@@ -169,7 +169,7 @@ Tables: `organizations`, `profiles`, `workspaces`, `workspace_members`, `reports
 - Every tenant row carries `workspace_id`, and RLS is enabled on every table.
 - Roles per workspace: `owner`, `admin`, `expert`, `viewer`.
 - Owners and admins manage reports, sections and members. Experts read their workspace and write only to sections assigned to them. A trigger blocks experts from reassigning, moving or re-weighting sections.
-- `create_workspace_with_owner()` creates the organization, the workspace and the first report in one transaction, with the caller as owner. It is the only function in `public` that the API exposes, and only to signed-in users.
+- `create_workspace_with_owner()` creates the organization, the workspace and the first report in one transaction, with the caller as owner. `create_workspace_in_organization()` does the same inside an existing organization, for its owner and for the owners and admins of its workspaces, the rule of the insert policy on `workspaces`. `my_manageable_organizations()` lists those organizations for the wizard. Only signed-in users can call them.
 - A workspace always keeps at least one owner (error `KR001`). Admins manage admins, experts and viewers, never owners, and only the `role` column of a membership can change.
 - A section can only be assigned to an owner, admin or expert of its workspace (error `KR002`). It goes back to "unassigned" when that person leaves or becomes a viewer.
 - Server actions check the role again with `requireWorkspaceRole()` in `src/lib/workspaces/server.ts` before writing, on top of RLS.

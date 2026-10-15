@@ -13,19 +13,26 @@ function fillWidth(percent: number) {
   return `${Math.min(100, Math.max(0, percent))}%`;
 }
 
-/** Reports of the current workspace as cards, with their completion and the breakdown by expert. */
-export function ReportList({ reports }: { reports: WorkspaceReport[] }) {
+/**
+ * Reports of the current workspace as cards, with their completion and the
+ * breakdown by expert. `action` sits next to the count, such as the
+ * "Nouveau rapport" button for owners and admins.
+ */
+export function ReportList({ reports, action }: { reports: WorkspaceReport[]; action?: React.ReactNode }) {
   const t = useTranslations("Dashboard.reports");
 
   return (
     <section aria-labelledby="reports-title" className="mt-8">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="reports-title" className="text-h3 text-foreground">
           {t("title")}
         </h2>
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {t("count", { count: reports.length })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {t("count", { count: reports.length })}
+          </span>
+          {action}
+        </div>
       </div>
       {reports.length === 0 ? (
         <p className="surface-card mt-4 rounded-2xl border px-5 py-8 text-center text-sm text-muted-foreground shadow-sm">

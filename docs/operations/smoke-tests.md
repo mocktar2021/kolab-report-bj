@@ -19,7 +19,7 @@ Each test carries a tag, so `--grep @public` (or `@sign-up`, `@signed-in`, `@ai`
 | `@public` | always | `/api/health` answers 200 with `database: ok`, and reports the deployed commit when `deploy.yml` passes it. The landing, sign-in, sign-up and password reset pages load in French. `/` goes to `/fr`, and `/fr/tableau-de-bord` sends a visitor to sign-in. Wrong credentials get the generic French error, so Supabase Auth answers. The manifest, `sw.js` and icons are served. Every page sends the security headers. The four public pages log no console error, break no CSP rule, and no request to the site answers 4xx or 5xx |
 | `@sign-up` | always | The sign-up form shows its three French errors. The server action rejects the input before calling Supabase, so nothing is created |
 | `@sign-up` | `SMOKE_SIGNUP_EMAIL` is set | Signs up a new address on that mailbox and expects "Vérifiez votre boîte mail" |
-| `@signed-in` | `SMOKE_EMAIL` and `SMOKE_PASSWORD` are set | Signs in through the form and selects the smoke workspace. The dashboard shows its figures and its report. The workspace wizard checks each of its three steps, and the check stops before "Créer l'espace de travail". Then it opens the report and its first section, uploads `smoke-<tag>.md`, waits for "Analysé", opens the preview, exports the report as .docx and checks the file. The file is deleted through the page and the session is ended |
+| `@signed-in` | `SMOKE_EMAIL` and `SMOKE_PASSWORD` are set | Signs in through the form and selects the smoke workspace. The dashboard shows its figures and its report. The workspace wizard, with "Nouvelle organisation" picked on the first step, checks each of its three steps, and the check stops before "Créer l'espace de travail". Then it opens the report and its first section, uploads `smoke-<tag>.md`, waits for "Analysé", opens the preview, exports the report as .docx and checks the file. The file is deleted through the page and the session is ended |
 | `@ai` | also `SMOKE_AI=true` | Uploads `smoke-ia-<tag>.md`, waits for "Analysé", generates a draft, waits for "Brouillon prêt", rejects it, deletes the file. One call to the real model per run |
 
 How this covers the second criterion of KRB-26:
@@ -34,7 +34,7 @@ How this covers the second criterion of KRB-26:
 | Dashboard | Figures and report card of the smoke workspace |
 | Export | The .docx download, checked as a zip file |
 
-The wizard is never submitted on a deployed site: it creates an organization, and no user can delete an organization, so every run would leave one behind. For the same reason the suite creates no report: in the app, a report only comes from the wizard. The suite works in one smoke workspace made once by hand.
+The wizard is never submitted on a deployed site: it creates a workspace, and a new organization unless the smoke one is picked, and the app can delete neither, so every run would leave them behind. For the same reason the suite creates no report, from the wizard or from "Nouveau rapport" on the dashboard: the app has no way to delete one. The suite works in one smoke workspace made once by hand.
 
 ## What a run creates and how it is cleaned up
 

@@ -20,12 +20,16 @@ export const CLIENT_MESSAGE_SCOPES = {
   /** Sign-in, sign-up and password forms. */
   auth: ["Auth"],
   invitation: ["Invitation", "Workspaces"],
-  /** app/[locale]/(app)/layout.tsx: sidebar, mobile menu (with the legal links), command palette. */
+  /**
+   * app/[locale]/(app)/layout.tsx: sidebar, mobile menu (with the legal links),
+   * command palette, and the "Nouveau rapport" dialog of the dashboard.
+   */
   appShell: [
     "AppShell",
     "CommandPalette",
     "Common",
     "Dashboard.filters",
+    "Dashboard.reports.create",
     "Legal.nav",
     "Notifications",
     "SectionStatus",

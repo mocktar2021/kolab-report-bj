@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  createReportSchema,
+  createWorkspaceInOrganizationSchema,
   createWorkspaceSchema,
   sectionTitleSchema,
   sectionWeightSchema,
@@ -33,6 +35,79 @@ describe("createWorkspaceSchema", () => {
         workspaceName: "nameLength",
         reportTitle: "titleLength",
       });
+    }
+  });
+});
+
+describe("createWorkspaceInOrganizationSchema", () => {
+  const organizationId = "00000000-0000-4000-b000-000000000001";
+
+  it("takes the organization id instead of a name and trims the other names", () => {
+    const result = createWorkspaceInOrganizationSchema.parse({
+      organizationId,
+      organizationName: "ignored",
+      workspaceName: " Mission Cotonou ",
+      reportTitle: "\nRapport Cotonou\t",
+    });
+    expect(result).toEqual({
+      organizationId,
+      workspaceName: "Mission Cotonou",
+      reportTitle: "Rapport Cotonou",
+    });
+  });
+
+  it("rejects an id that is not a uuid", () => {
+    const result = createWorkspaceInOrganizationSchema.safeParse({
+      organizationId: "cabinet-dossou",
+      workspaceName: "Mission Cotonou",
+      reportTitle: "Rapport Cotonou",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path[0])).toEqual(["organizationId"]);
+    }
+  });
+
+  it("checks the workspace name and the report title like the first wizard", () => {
+    const result = createWorkspaceInOrganizationSchema.safeParse({
+      organizationId,
+      workspaceName: " a ",
+      reportTitle: "x".repeat(201),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(workspaceFieldErrors(result.error)).toEqual({
+        workspaceName: "nameLength",
+        reportTitle: "titleLength",
+      });
+    }
+  });
+});
+
+describe("createReportSchema", () => {
+  const workspaceId = "00000000-0000-4000-c000-000000000001";
+
+  it("trims the title", () => {
+    expect(createReportSchema.parse({ workspaceId, title: "  Rapport annuel 2026 " })).toEqual({
+      workspaceId,
+      title: "Rapport annuel 2026",
+    });
+  });
+
+  it("needs a title between 2 and 200 characters", () => {
+    for (const title of [" a ", "", "x".repeat(201)]) {
+      const result = createReportSchema.safeParse({ workspaceId, title });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(workspaceFieldErrors(result.error)).toEqual({ title: "titleLength" });
+    }
+    expect(createReportSchema.safeParse({ workspaceId, title: "x".repeat(200) }).success).toBe(true);
+  });
+
+  it("rejects a workspace id that is not a uuid", () => {
+    const result = createReportSchema.safeParse({ workspaceId: "w1", title: "Rapport annuel" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path[0])).toEqual(["workspaceId"]);
     }
   });
 });

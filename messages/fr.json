@@ -407,7 +407,17 @@
       "noSections": "Aucune section pour le moment. Les sections ajoutées au rapport apparaissent ici.",
       "byExpert": "Par expert<hidden> pour {title}</hidden>",
       "completedOf": "{completed, plural, one {# sur {total, number} terminée} other {# sur {total, number} terminées}}",
-      "unknownMember": "Membre inconnu"
+      "unknownMember": "Membre inconnu",
+      "create": {
+        "button": "Nouveau rapport",
+        "title": "Nouveau rapport",
+        "description": "Il sera ajouté à l'espace de travail {workspace}. Vous le découperez ensuite en sections à attribuer aux experts.",
+        "field": "Titre du rapport",
+        "placeholder": "Rapport de fin de mission",
+        "cancel": "Annuler",
+        "submit": "Créer le rapport",
+        "submitting": "Création…"
+      }
     }
   },
   "SectionStatus": {
@@ -511,10 +521,15 @@
     "steps": {
       "organization": {
         "label": "Organisation",
-        "title": "Votre organisation",
+        "title": "Votre organisation (cabinet)",
         "description": "Le cabinet ou l'entreprise qui produit les rapports.",
+        "chooseDescription": "Le cabinet ou l'entreprise qui produit les rapports. Ajoutez l'espace de travail à une organisation que vous gérez, ou créez-en une nouvelle.",
+        "choiceLabel": "Organisation (cabinet)",
+        "newOption": "Nouvelle organisation",
+        "newOptionHint": "Pour un autre cabinet ou une autre entreprise.",
         "field": "Nom de l'organisation",
-        "placeholder": "Cabinet Dossou & Associés"
+        "placeholder": "Cabinet Dossou & Associés",
+        "summary": "Organisation (cabinet)"
       },
       "workspace": {
         "label": "Espace de travail",

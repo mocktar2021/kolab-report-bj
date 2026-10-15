@@ -214,6 +214,16 @@ for (const theme of THEMES) {
         await expect(page.getByRole("menu")).toHaveCount(0);
       });
 
+      await test.step("new report dialog with a title error", async () => {
+        await page.getByRole("button", { name: "Nouveau rapport" }).click();
+        const dialog = page.getByRole("dialog", { name: "Nouveau rapport" });
+        await dialog.getByRole("button", { name: "Créer le rapport" }).click();
+        await expect(dialog.getByText("Saisissez entre 2 et 200 caractères.")).toBeVisible();
+        await expectNoAxeViolations(page, `new report dialog (${theme})`);
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("dialog")).toHaveCount(0);
+      });
+
       await test.step("remove member dialog", async () => {
         await visit(page, `/fr/espaces/${setup.workspaceId}/membres`, /^Membres de/);
         await page

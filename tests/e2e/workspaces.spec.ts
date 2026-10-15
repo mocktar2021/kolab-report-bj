@@ -1,7 +1,8 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { adminClient, createTestUser, signedInClient, type TestUser } from "./supabase";
+import { adminClient, createTestUser, createWorkspaceFor, signedInClient, type TestUser } from "./supabase";
 
-// KRB-11: workspace creation, roles and section assignment.
+// KRB-11: workspace creation, roles and section assignment. KRB-175: a new
+// workspace in an organization the user manages, and "Nouveau rapport".
 test.describe.configure({ mode: "serial" });
 
 async function signIn(page: Page, user: TestUser) {
@@ -156,4 +157,115 @@ test("owners assign sections, admins leave owners alone, experts and viewers onl
   await ownerPage.getByRole("button", { name: /Espace de travail actuel : Audit Koffi/ }).click();
   await ownerPage.getByRole("menuitemradio", { name: /Mission Cotonou/ }).click();
   await expect(ownerPage.getByText("Avancement des sections de l'espace Mission Cotonou.")).toBeVisible();
+});
+
+test("an owner adds a second workspace to their organization, an expert only creates a new one", async ({
+  page,
+  browser,
+}) => {
+  const [owner, expert] = await Promise.all([createTestUser("Rose Parakou"), createTestUser("Ines Experte")]);
+  const first = await createWorkspaceFor(owner, "Audit Parakou");
+  const { error: memberError } = await adminClient()
+    .from("workspace_members")
+    .insert({ workspace_id: first.workspace_id, user_id: expert.id, role: "expert" });
+  if (memberError) throw memberError;
+
+  await signIn(page, owner);
+  await page.goto("/fr/espaces/nouveau");
+  const main = page.getByRole("main");
+
+  // The organization of the current workspace is checked. "Nouvelle
+  // organisation" asks for a name, the existing one does not.
+  const choice = main.getByRole("group", { name: "Organisation (cabinet)" });
+  await expect(choice.getByRole("radio", { name: "Cabinet Audit Parakou" })).toBeChecked();
+  await expect(main.getByLabel("Nom de l'organisation")).toHaveCount(0);
+  await choice.getByRole("radio", { name: "Nouvelle organisation" }).check();
+  await expect(main.getByLabel("Nom de l'organisation")).toBeVisible();
+  await choice.getByRole("radio", { name: "Cabinet Audit Parakou" }).check();
+  await expect(main.getByLabel("Nom de l'organisation")).toHaveCount(0);
+
+  await main.getByRole("button", { name: "Suivant" }).click();
+  await main.getByLabel("Nom de l'espace de travail").fill("Mission Natitingou");
+  await main.getByRole("button", { name: "Suivant" }).click();
+  await expect(main.getByRole("definition").first()).toHaveText("Cabinet Audit Parakou");
+  await main.getByLabel("Titre du rapport").fill("Rapport Natitingou");
+  await main.getByRole("button", { name: "Créer l'espace de travail" }).click();
+
+  await expect(page).toHaveURL(/\/fr\/rapports\/[0-9a-f-]{36}$/);
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Rapport Natitingou");
+
+  // Both workspaces sit in the one organization of the owner.
+  const admin = adminClient();
+  const { data: workspaces, error } = await admin
+    .from("workspaces")
+    .select("name, organization_id")
+    .eq("created_by", owner.id)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  expect(workspaces).toEqual([
+    { name: "Audit Parakou", organization_id: first.organization_id },
+    { name: "Mission Natitingou", organization_id: first.organization_id },
+  ]);
+  const { count } = await admin
+    .from("organizations")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", owner.id);
+  expect(count).toBe(1);
+
+  // The expert of "Audit Parakou" cannot add to that organization: the
+  // wizard only asks for the name of a new one.
+  const expertPage = await pageFor(browser, expert);
+  await expertPage.goto("/fr/espaces/nouveau");
+  await expect(expertPage.getByRole("main").getByLabel("Nom de l'organisation")).toBeVisible();
+  await expect(expertPage.getByRole("radio")).toHaveCount(0);
+});
+
+test("owners create a report from the dashboard, experts do not get the button", async ({
+  page,
+  browser,
+}) => {
+  const [owner, expert] = await Promise.all([createTestUser("Paul Bohicon"), createTestUser("Lea Experte")]);
+  const { workspace_id: workspaceId } = await createWorkspaceFor(owner, "Audit Bohicon");
+  const { error: memberError } = await adminClient()
+    .from("workspace_members")
+    .insert({ workspace_id: workspaceId, user_id: expert.id, role: "expert" });
+  if (memberError) throw memberError;
+
+  await signIn(page, owner);
+  const main = page.getByRole("main");
+  const reports = main.getByRole("region", { name: "Rapports", exact: true });
+  await expect(reports.getByRole("link")).toHaveCount(1);
+
+  // The dialog opens on the title field and Escape gives the focus back.
+  const opener = reports.getByRole("button", { name: "Nouveau rapport" });
+  await opener.click();
+  const dialog = page.getByRole("dialog", { name: "Nouveau rapport" });
+  const title = dialog.getByLabel("Titre du rapport");
+  await expect(title).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+
+  // A title that is too short stays in the dialog, tied to the field.
+  await page.keyboard.press("Enter");
+  await title.fill("x");
+  await dialog.getByRole("button", { name: "Créer le rapport" }).click();
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  await expect(title).toHaveAccessibleDescription("Saisissez entre 2 et 200 caractères.");
+  await expect(title).toBeFocused();
+
+  await title.fill("Rapport de fin de mission");
+  await dialog.getByRole("button", { name: "Créer le rapport" }).click();
+  await expect(page).toHaveURL(/\/fr\/rapports\/[0-9a-f-]{36}$/);
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Rapport de fin de mission");
+
+  await page.goto("/fr/tableau-de-bord");
+  await expect(reports.getByText("2 rapports")).toBeVisible();
+  await expect(reports.getByRole("link", { name: "Rapport de fin de mission" })).toBeVisible();
+
+  // The expert reads both reports and gets no button.
+  const expertPage = await pageFor(browser, expert);
+  const expertReports = expertPage.getByRole("main").getByRole("region", { name: "Rapports", exact: true });
+  await expect(expertReports.getByRole("link")).toHaveCount(2);
+  await expect(expertReports.getByRole("button", { name: "Nouveau rapport" })).toHaveCount(0);
 });
