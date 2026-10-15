@@ -3,8 +3,22 @@ import type { MyWorkspace } from "@/lib/workspaces/types";
 import { billingOrganizationOf } from "./navigation";
 
 const WORKSPACES: MyWorkspace[] = [
-  { id: "w1", name: "Etude A", organizationId: "org-a", organizationName: "Cabinet A", role: "expert" },
-  { id: "w2", name: "Etude B", organizationId: "org-b", organizationName: "Cabinet B", role: "owner" },
+  {
+    id: "w1",
+    name: "Etude A",
+    organizationId: "org-a",
+    organizationName: "Cabinet A",
+    role: "expert",
+    ownsOrganization: true,
+  },
+  {
+    id: "w2",
+    name: "Etude B",
+    organizationId: "org-b",
+    organizationName: "Cabinet B",
+    role: "owner",
+    ownsOrganization: false,
+  },
 ];
 
 describe("billingOrganizationOf", () => {
