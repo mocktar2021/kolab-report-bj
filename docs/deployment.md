@@ -33,7 +33,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 
 | Variable | Secret? | Value |
 | --- | --- | --- |
-| `NEXT_PUBLIC_APP_URL` | no | App URL of the environment |
+| `NEXT_PUBLIC_APP_URL` | no | App URL of the environment: `https://kolabreport.mocktar.com` for Preview, `https://kolabreport.com` for Production |
 | `NEXT_PUBLIC_SUPABASE_URL` | no | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no | Anon (publishable) key |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | no | Cloudflare Turnstile site key. Without it the forms show no captcha. Set it before turning the captcha on in Supabase, see [Turnstile captcha](#turnstile-captcha) |
@@ -57,7 +57,9 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `BILLING_ALERT_EMAIL` | no | Operator address for payment alerts: a payment in review, a refund, a payment that cannot be granted. Without it the alerts are only logged |
 
 5. Note the **Team ID** (Settings > General, or your account ID on a personal plan) and the **Project ID** (project Settings > General). Create a token in Account Settings > Tokens.
-6. Optional: add the staging domain in **Settings > Domains**, connected to **Preview** and the branch `master`, then add the CNAME record Vercel shows at your DNS provider. `deploy.yml` points it at each staging deployment. The production domain comes with KRB-134. HTTPS is automatic.
+6. Domains, in **Settings > Domains**. HTTPS is automatic once the DNS records resolve.
+   - Staging: `kolabreport.mocktar.com`, connected to **Preview** and the branch `master`, with the CNAME record Vercel shows at the DNS provider. `deploy.yml` points it at each staging deployment.
+   - Production: `kolabreport.com`, connected to **Production**, with `www.kolabreport.com` redirecting to it (Vercel offers the redirect when you add the bare domain). Its DNS is at GoDaddy (KRB-193): in **My Products > kolabreport.com > DNS**, delete the two parking A records on `@` (`15.197.148.33` and `3.33.130.190`), then add the A record on `@` and the CNAME on `www` that Vercel shows. `deploy.yml` deploys production with `vercel deploy --prod`, which puts the domain on each new production deployment.
 7. **Deployment Protection**: Vercel Authentication puts a Vercel login in front of preview domains, the staging domain included. Turn it off when people without a Vercel account test staging. The app's own login still applies.
 
 ### 3. GitHub environments (KRB-132)
@@ -111,7 +113,7 @@ FedaPay has two separate accounts in one dashboard: test (sandbox) and live. Sta
 1. **API keys**: on the API keys page of the FedaPay dashboard, copy the secret key into `FEDAPAY_SECRET_KEY` on Vercel (Preview for the sandbox key, Production for the live key), marked Sensitive. Set `FEDAPAY_ENVIRONMENT` to `sandbox` for Preview and `live` for Production. The app needs no public key.
 2. **Webhook**: on the Webhooks page of the dashboard, create one:
    - URL on staging (sandbox account): `https://kolabreport.mocktar.com/api/billing/fedapay/webhook`
-   - URL on production (live account): `https://<production domain>/api/billing/fedapay/webhook`, once the production domain is set up (KRB-134)
+   - URL on production (live account): `https://kolabreport.com/api/billing/fedapay/webhook`, once the domain answers (KRB-193)
    - Events: every `transaction.*` event.
    - Untick **"Désactiver le webhook lorsque l'application génère des erreurs"**. Otherwise ten failed deliveries during an outage switch the webhook off for good.
    - Copy the endpoint's secret into `FEDAPAY_WEBHOOK_SECRET` on Vercel, in the same environment as the key, marked Sensitive.
@@ -233,7 +235,7 @@ Setup, per GitHub environment (`staging`, `production`):
 | `SMTP_ADMIN_EMAIL` | variable | Sender address on the verified domain, for example `noreply@email.kolabreport.mocktar.com` |
 | `SMTP_SENDER_NAME` | variable, optional | Default `KolabReport` |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | variables, optional | Default `smtp.resend.com`, `465`, `resend`. Set them for Brevo or another provider |
-| `AUTH_SITE_URL` | variable, optional | The app's origin, for example `https://kolabreport.mocktar.com`. Then the redirect list is `<origin>/**` |
+| `AUTH_SITE_URL` | variable, optional | The app's origin: `https://kolabreport.mocktar.com` on staging, `https://kolabreport.com` on production. Then the redirect list is `<origin>/**` |
 | `AUTH_REDIRECT_URLS` | variable, optional | More redirect URLs, separated by commas, for example `https://*-<vercel-team-slug>.vercel.app/**` on staging |
 | `TURNSTILE_SECRET_KEY` | secret, optional | Secret key of the Turnstile widget |
 | `AUTH_CAPTCHA_ENABLED` | variable, optional | `true` turns the captcha on, `false` turns it off. Unset leaves it as it is. Set `true` only after the steps below |
@@ -259,7 +261,7 @@ The forms and the middleware call Supabase from the Vercel servers, so the per I
 
 Cloudflare Turnstile protects sign-up, sign-in and reset requests. The widget is on the three forms, and Supabase Auth checks the token: once the captcha is on, Supabase refuses `/signup`, `/recover` and password sign-in without a valid token. So the order matters. **Deploy the app with the site key first, then turn the captcha on in Supabase.** The other way round, nobody can sign up, sign in or reset a password until the app catches up.
 
-1. **Cloudflare**: **Turnstile > Add widget**. Name `KolabReport`, mode **Managed**, pre-clearance **No**. Hostnames: `kolabreport.mocktar.com` (it covers its subdomains, a staging domain under it included) and the production domain if it is another one. Copy the site key and the secret key.
+1. **Cloudflare**: **Turnstile > Add widget**. Name `KolabReport`, mode **Managed**, pre-clearance **No**. Hostnames: `kolabreport.mocktar.com` (it covers its subdomains, a staging domain under it included) and `kolabreport.com` for production. Copy the site key and the secret key.
 2. **Vercel**, **Settings > Environment Variables**: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` = the site key, for **Production**, not marked Sensitive (`vercel pull` cannot read Sensitive values, and the build inlines this one). For **Preview**, see the note below.
 3. **Deploy**: a variable change on Vercel needs a new build. Run **Deploy** again for staging, or tag a release for production: `deploy.yml` builds with the key (`vercel pull` brings it). Open `/fr/inscription` and check the "Vérification anti-robot" box shows and passes. Sign-up and sign-in keep working: Supabase ignores the token while its captcha is off.
 4. **GitHub**, on the environment you just deployed (`production` for Vercel's Production): add the secret `TURNSTILE_SECRET_KEY` = the secret key, then the variable `AUTH_CAPTCHA_ENABLED` = `true`.
