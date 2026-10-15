@@ -84,6 +84,7 @@ describe("getWorkspaceDeletionPreview", () => {
       members: 4,
       invitations: 1,
       templates: 0,
+      payments_in_progress: 1,
     });
     const preview = await getWorkspaceDeletionPreview(WORKSPACE_ID);
     expect(rpc).toHaveBeenCalledWith("workspace_deletion_preview", { p_workspace_id: WORKSPACE_ID });
@@ -95,6 +96,7 @@ describe("getWorkspaceDeletionPreview", () => {
       finalReports: 0,
       members: 4,
       passes: [{ entitlementId: "e1", workspaceId: WORKSPACE_ID, endsAt: "2026-12-30T00:00:00+00:00" }],
+      paymentsInProgress: 1,
     });
   });
 });
@@ -130,6 +132,7 @@ describe("getOrganizationDeletionPreview", () => {
       files: 5,
       members: 3,
       receipts: 2,
+      payments_in_progress: 0,
     });
     const preview = await getOrganizationDeletionPreview(ORGANIZATION_ID);
     expect(rpc).toHaveBeenCalledWith("organization_deletion_preview", { p_organization_id: ORGANIZATION_ID });
@@ -155,6 +158,7 @@ describe("getOrganizationDeletionPreview", () => {
       files: 5,
       members: 3,
       receipts: 2,
+      paymentsInProgress: 0,
     });
   });
 

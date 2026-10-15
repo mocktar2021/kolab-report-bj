@@ -20,9 +20,9 @@ const labels: DeleteDialogLabels = {
 
 type Action = (state: DeletionState, formData: FormData) => Promise<DeletionState>;
 
-function renderDialog(action: Action, expected?: string) {
+function renderDialog(action: Action, expected?: string, blocked?: string) {
   render(
-    <DeleteDialog action={action} id={ID} expected={expected} labels={labels}>
+    <DeleteDialog action={action} id={ID} expected={expected} labels={labels} blocked={blocked}>
       <p>3 sections et leur texte</p>
     </DeleteDialog>,
   );
@@ -89,5 +89,22 @@ describe("DeleteDialog", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Vous n'avez pas les droits pour faire cette suppression.",
     );
+  });
+
+  it("says why the deletion waits and offers no way to confirm", async () => {
+    const action = vi.fn<Action>(async () => ({ status: "idle" }));
+    const blocked =
+      "Un paiement de l'organisation est en cours ou en vérification. Vous pourrez supprimer l'organisation une fois le paiement abouti.";
+    renderDialog(action, "Audit du siège", blocked);
+    const { user, dialog } = await openDialog();
+
+    expect(dialog).toHaveTextContent("3 sections et leur texte");
+    expect(screen.getByRole("note")).toHaveTextContent(blocked);
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Supprimer le rapport" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Annuler" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(action).not.toHaveBeenCalled();
   });
 });

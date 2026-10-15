@@ -6,6 +6,7 @@ import { DangerZone, DeletionList } from "@/components/deletion/danger-zone";
 import { DeleteDialog } from "@/components/deletion/delete-dialog";
 import { DeleteWorkspaceDialog } from "@/components/deletion/delete-workspace-dialog";
 import { Button } from "@/components/ui/button";
+import { PUBLISHER } from "@/content/legal/publisher";
 import { Link } from "@/i18n/navigation";
 import { PLANS } from "@/lib/billing/catalog";
 import { formatBillingDate } from "@/lib/billing/format";
@@ -137,6 +138,14 @@ export default async function OrganizationPage({
           action={deleteOrganization}
           id={preview.organizationId}
           expected={preview.name}
+          blocked={
+            preview.paymentsInProgress > 0
+              ? tDeletion("organization.paymentPending", {
+                  count: preview.paymentsInProgress,
+                  support: PUBLISHER.email,
+                })
+              : undefined
+          }
           labels={{
             trigger: tDeletion("organization.button"),
             title: tDeletion("organization.title"),
@@ -144,6 +153,7 @@ export default async function OrganizationPage({
             confirm: tDeletion("organization.confirm"),
             pending: tDeletion("organization.pending"),
             cancel: tDeletion("cancel"),
+            close: tDeletion("close"),
             typed: tDeletion("organization.typed", { name: preview.name }),
             mismatch: tDeletion("mismatch"),
           }}

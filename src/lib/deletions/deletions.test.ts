@@ -35,6 +35,7 @@ describe("deletionErrorKey", () => {
     ["P0002", "notFound"],
     ["KR070", "confirmation"],
     ["40001", "stale"],
+    ["KR071", "paymentPending"],
     ["22P02", "invalidInput"],
     ["XX000", "generic"],
   ])("maps %s to %s", (code, key) => {

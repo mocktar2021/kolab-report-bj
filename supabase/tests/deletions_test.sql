@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(91);
+select plan(100);
 
 -- KRB-180: deleting a report, a workspace or an organization goes through
 -- delete_report, delete_workspace and delete_organization only. Each checks
@@ -9,19 +9,18 @@ select plan(91);
 -- enforced and the workspace is read-only, except where a plan is bought to
 -- show the billing time lost: read-only never blocks a deletion. Payments
 -- and receipts (KRB-176) are accounting records: they stay, without their
--- link to what was deleted.
+-- link to what was deleted. A payment still pending or in review blocks the
+-- deletion until it ends (KR071).
 
 create temp table kept (name text primary key, id uuid);
 grant all on kept to authenticated;
 create function pg_temp.kept_id(name text) returns uuid
 language sql as $$ select id from kept where kept.name = $1 $$;
 
--- A purchase paid through FedaPay (the mock), as the checkout and the
--- webhook make it: purchase, entitlement, receipt and its lines, payment
--- events. Terms and prices of src/lib/billing/catalog.ts, as in
+-- A purchase started at checkout, still pending: no FedaPay transaction
+-- yet. Terms and prices of src/lib/billing/catalog.ts, as in
 -- billing_grant_test.sql. Returns the purchase id.
-create temp sequence krb180_transactions start 970000001;
-create function pg_temp.buy_and_pay(p_org uuid, p_offer text, p_buyer text, p_ws uuid default null)
+create function pg_temp.start_purchase(p_org uuid, p_offer text, p_buyer text, p_ws uuid default null)
 returns uuid
 language plpgsql as $$
 declare
@@ -33,12 +32,30 @@ declare
   end)::jsonb;
   v_price bigint := case p_offer when 'cabinet_1m' then 49000 when 'mission_pass' then 39000 end;
   v_purchase uuid;
-  v_transaction bigint := nextval('krb180_transactions');
-  v_outcome text;
 begin
   select c.purchase_id into v_purchase
   from public.billing_create_purchase(p_org, p_offer, p_offer || ' (test)', 1, 1, v_terms, v_price, 0, 'mock',
     pg_temp.id(p_buyer), p_ws, false) c;
+  if v_purchase is null then
+    raise exception 'purchase of % refused', p_offer;
+  end if;
+  return v_purchase;
+end;
+$$;
+
+-- A purchase paid through FedaPay (the mock), as the checkout and the
+-- webhook make it: purchase, entitlement, receipt and its lines, payment
+-- events. Returns the purchase id.
+create temp sequence krb180_transactions start 970000001;
+create function pg_temp.buy_and_pay(p_org uuid, p_offer text, p_buyer text, p_ws uuid default null)
+returns uuid
+language plpgsql as $$
+declare
+  v_price bigint := case p_offer when 'cabinet_1m' then 49000 when 'mission_pass' then 39000 end;
+  v_purchase uuid := pg_temp.start_purchase(p_org, p_offer, p_buyer, p_ws);
+  v_transaction bigint := nextval('krb180_transactions');
+  v_outcome text;
+begin
   perform public.billing_set_transaction(v_purchase, v_transaction, 'pending');
   select a.outcome into v_outcome
   from public.billing_apply_transaction(v_purchase, 'webhook', v_transaction, 'approved', v_price, 'mock', 'XOF',
@@ -292,7 +309,7 @@ select is(
   public.workspace_deletion_preview(pg_temp.id('w2')) - 'workspace_id' - 'organization_id',
   '{"name": "Etude B", "organization_name": "Cabinet B", "billing_mode": "subscription", "passes": [],
     "reports": 1, "final_reports": 0, "sections": 1, "files": 1, "exports": 1, "members": 2,
-    "invitations": 1, "templates": 1}'::jsonb,
+    "invitations": 1, "templates": 1, "payments_in_progress": 0}'::jsonb,
   'the owner sees what the workspace holds');
 select is(
   public.delete_workspace(pg_temp.id('w2'), 'Etude B') - 'passes' - 'billing_mode',
@@ -326,6 +343,39 @@ select results_eq(
     where workspace_id = pg_temp.id('w2')$$,
   $$values ('workspace_deleted', pg_temp.id('outsider'), pg_temp.id('org_b'), pg_temp.id('w2'), null::uuid)$$,
   'the audit log has the workspace deletion');
+
+-- A second pass for Mission B, still pending: the payment may still land
+-- on it, so the deletion waits.
+insert into kept
+select 'pending_pass', pg_temp.start_purchase(pg_temp.id('org_b'), 'mission_pass', 'outsider',
+  '00000000-0000-4000-c000-000000000009');
+select pg_temp.act_as('outsider');
+select is(
+  (public.workspace_deletion_preview('00000000-0000-4000-c000-000000000009') ->> 'payments_in_progress')::integer, 1,
+  'the preview of Mission B counts the pass purchase still pending');
+select throws_ok($$select public.delete_workspace('00000000-0000-4000-c000-000000000009', 'Mission B')$$,
+  'KR071', null, 'and its owner cannot delete it, even with its exact name');
+
+-- FedaPay approves a different amount: the purchase goes to review.
+select pg_temp.act_as_server();
+select is(
+  (select a.outcome from public.billing_apply_transaction(pg_temp.kept_id('pending_pass'), 'webhook', nextval('krb180_transactions'),
+    'approved', 1, 'mock', 'XOF', 'KR-' || pg_temp.kept_id('pending_pass')::text) a),
+  'review', 'a wrong amount puts the pass purchase in review');
+select pg_temp.act_as('outsider');
+select throws_ok($$select public.delete_workspace('00000000-0000-4000-c000-000000000009', 'Mission B')$$,
+  'KR071', null, 'a pass purchase in review blocks the workspace too');
+select is((public.organization_deletion_preview(pg_temp.id('org_b')) ->> 'payments_in_progress')::integer, 1,
+  'the preview of org_b counts it');
+select throws_ok($$select public.delete_organization(pg_temp.id('org_b'), 'Cabinet B')$$,
+  'KR071', null, 'and blocks the organization');
+
+-- The operator refunds it: nothing is in progress any more.
+select pg_temp.act_as_server();
+select is(
+  (select a.outcome from public.billing_apply_transaction(pg_temp.kept_id('pending_pass'), 'webhook', currval('krb180_transactions'),
+    'refunded', 1, 'mock', 'XOF', 'KR-' || pg_temp.kept_id('pending_pass')::text) a),
+  'refunded', 'the operator refunds the purchase in review');
 
 -- A mission workspace loses its pass.
 select pg_temp.act_as('outsider');
@@ -402,9 +452,9 @@ select is(
   array['Etude A', 'Etude C'], 'the owner sees every workspace that goes, the ones they are not in included');
 select results_eq(
   $$select p -> 'billing' -> 'subscription' -> 0 ->> 'plan', p -> 'billing' -> 'packs' -> 0 ->> 'drafts_left',
-      p ->> 'reports', p ->> 'members', p ->> 'receipts'
+      p ->> 'reports', p ->> 'members', p ->> 'receipts', p ->> 'payments_in_progress'
     from public.organization_deletion_preview(pg_temp.id('org_a')) p$$,
-  $$values ('cabinet', '70', '1', '5', '1')$$,
+  $$values ('cabinet', '70', '1', '5', '1', '0')$$,
   'and the billing time it loses (the Cabinet period, 70 drafts of the pack), and its receipt');
 select throws_ok($$select public.delete_organization(pg_temp.id('org_a'), 'Cabinet')$$, 'KR070', null,
   'the owner must type its exact name');
@@ -477,6 +527,19 @@ select lives_ok($$delete from auth.users where id = pg_temp.id('owner')$$,
 select pg_temp.act_as('outsider');
 select is(jsonb_array_length(public.organization_deletion_preview(pg_temp.id('org_b')) -> 'workspaces'), 0,
   'org_b has no workspace left');
+-- A Cabinet month started and never paid holds the organization until the
+-- reconciliation expires it, 48 hours after the checkout.
+reset role;
+insert into kept select 'pending_cabinet', pg_temp.start_purchase(pg_temp.id('org_b'), 'cabinet_1m', 'outsider');
+select pg_temp.act_as('outsider');
+select throws_ok($$select public.delete_organization(pg_temp.id('org_b'), 'Cabinet B')$$,
+  'KR071', null, 'a pending purchase blocks the organization');
+reset role;
+update public.billing_purchases set created_at = now() - interval '49 hours'
+where id = pg_temp.kept_id('pending_cabinet');
+select pg_temp.act_as_server();
+select is(public.billing_check_pending(pg_temp.kept_id('pending_cabinet')), 'expired',
+  'the reconciliation expires it');
 reset role;
 create temp table org_b_lines as
 select array(select pg_temp.receipt_lines(array[pg_temp.kept_id('pass_purchase')])) as lines;

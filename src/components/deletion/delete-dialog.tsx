@@ -27,6 +27,8 @@ export type DeleteDialogLabels = {
   confirm: string;
   pending: string;
   cancel: string;
+  /** Closes the dialog when the deletion is blocked. Defaults to `cancel`. */
+  close?: string;
   /** Label of the field where the title or name is typed. */
   typed?: string;
   /** Under the field when the typed text does not match. */
@@ -43,6 +45,11 @@ export type DeleteDialogProps = {
   labels: DeleteDialogLabels;
   /** "sm" for a button in a list. */
   size?: "default" | "sm";
+  /**
+   * Why the deletion cannot happen now, such as a payment in progress. The
+   * dialog shows it in place of the form.
+   */
+  blocked?: string;
   /** What goes with it and what is lost, rendered by the page. */
   children?: React.ReactNode;
 };
@@ -51,7 +58,8 @@ export type DeleteDialogProps = {
  * "Supprimer …" for a report, a workspace or an organization (KRB-180): a
  * confirmation dialog that names what goes, asks for the exact title or name
  * when `expected` is set, and calls the deletion. The database checks the
- * rights and the typed text again.
+ * rights and the typed text again. With `blocked`, it says why the deletion
+ * waits and offers no way to confirm.
  */
 export function DeleteDialog({
   action,
@@ -59,6 +67,7 @@ export function DeleteDialog({
   expected,
   labels,
   size = "default",
+  blocked,
   children,
 }: DeleteDialogProps) {
   return (
@@ -73,14 +82,34 @@ export function DeleteDialog({
         <DialogTitle>{labels.title}</DialogTitle>
         <DialogDescription className="mt-2">{labels.description}</DialogDescription>
         {children ? <div className="mt-4 space-y-3 text-sm">{children}</div> : null}
-        {/* Mounted with the dialog, so each opening starts empty. */}
-        <DeleteForm action={action} id={id} expected={expected} labels={labels} />
+        {blocked ? (
+          <>
+            <p role="note" className="mt-4 rounded-lg border border-destructive/40 px-3 py-2 text-sm">
+              {blocked}
+            </p>
+            <div className="mt-6 flex justify-end">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  {labels.close ?? labels.cancel}
+                </Button>
+              </DialogClose>
+            </div>
+          </>
+        ) : (
+          // Mounted with the dialog, so each opening starts empty.
+          <DeleteForm action={action} id={id} expected={expected} labels={labels} />
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function DeleteForm({ action, id, expected, labels }: Omit<DeleteDialogProps, "children" | "size">) {
+function DeleteForm({
+  action,
+  id,
+  expected,
+  labels,
+}: Omit<DeleteDialogProps, "children" | "size" | "blocked">) {
   const [state, formAction, pending] = useActionState<DeletionState, FormData>(action, { status: "idle" });
   const [typed, setTyped] = useState("");
   const [mismatch, setMismatch] = useState(false);

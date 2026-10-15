@@ -36,13 +36,17 @@
 --   (workspace_id set to null) and takes the Pass Mission entitlements of a
 --   mission workspace.
 -- * Read-only does not block a deletion: nothing here reads the billing
---   state, except the previews, which show what time is lost.
+--   state, except the previews, which show what time is lost. A payment in
+--   progress does: an organization, or a workspace with a pass being bought,
+--   waits while one of its purchases is pending or in review (KR071).
 -- * The previews list what a deletion takes, for the confirmation dialogs.
 --
 -- Error codes:
 --   42501  signed out, or not allowed to delete it
 --   P0002  not found, or not visible to the caller
 --   KR070  the typed title or name does not match
+--   KR071  a purchase of the organization, or of the workspace's pass, is
+--          pending or in review: the payment may still land on it
 --   40001  a workspace was added to the organization meanwhile: try again
 -- =============================================================================
 
@@ -279,6 +283,26 @@ begin
 end;
 $$;
 
+-- Purchases (KRB-176) still pending or in review: of the organization, or
+-- only those of one workspace's pass when p_workspace_id is set. A payment
+-- could still land on them, so the deletion waits. A pending purchase
+-- expires 48 hours after its creation (reconciliation).
+create or replace function private.payments_in_progress(p_organization_id uuid, p_workspace_id uuid default null)
+returns integer
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select count(*)::integer
+  from public.billing_purchases p
+  where p.status in ('pending', 'review')
+    and case
+          when p_workspace_id is null then p.organization_id = p_organization_id
+          else p.workspace_id = p_workspace_id
+        end;
+$$;
+
 -- The signed-in user is organizations.owner_id of p_organization_id.
 create or replace function private.owns_organization(p_organization_id uuid)
 returns boolean
@@ -358,7 +382,8 @@ begin
     'organization_id', v_org.id,
     'organization_name', v_org.name,
     'billing_mode', v_workspace.billing_mode,
-    'passes', private.billing_time_left(v_org.id, v_workspace.id) -> 'passes'
+    'passes', private.billing_time_left(v_org.id, v_workspace.id) -> 'passes',
+    'payments_in_progress', private.payments_in_progress(v_org.id, v_workspace.id)
   ) || private.workspace_contents(v_workspace.id);
 end;
 $$;
@@ -411,7 +436,8 @@ begin
       join public.workspaces w on w.id = m.workspace_id
       where w.organization_id = v_org.id
     ),
-    'receipts', (select count(*) from public.billing_receipts r where r.organization_id = v_org.id)
+    'receipts', (select count(*) from public.billing_receipts r where r.organization_id = v_org.id),
+    'payments_in_progress', private.payments_in_progress(v_org.id)
   ) into v_totals;
 
   return jsonb_build_object(
@@ -539,6 +565,11 @@ begin
         using errcode = '42501';
     end if;
   end if;
+  -- Under the billing lock, so no purchase starts meanwhile.
+  if private.payments_in_progress(v_workspace.organization_id, v_workspace.id) > 0 then
+    raise exception 'Un paiement de Pass Mission pour cet espace est en cours ou en vérification'
+      using errcode = 'KR071';
+  end if;
   if not private.confirmation_matches(p_confirmation, v_workspace.name) then
     raise exception 'Saisissez le nom exact de l''espace de travail pour confirmer' using errcode = 'KR070';
   end if;
@@ -620,6 +651,10 @@ begin
     raise exception 'L''organisation a changé pendant la suppression, réessayez' using errcode = '40001';
   end if;
 
+  -- Under the billing lock, so no purchase starts meanwhile.
+  if private.payments_in_progress(v_org.id) > 0 then
+    raise exception 'Un paiement de l''organisation est en cours ou en vérification' using errcode = 'KR071';
+  end if;
   if not private.confirmation_matches(p_confirmation, v_org.name) then
     raise exception 'Saisissez le nom exact de l''organisation pour confirmer' using errcode = 'KR070';
   end if;
@@ -668,6 +703,7 @@ revoke all on function private.billing_time_left(uuid, uuid) from public, anon, 
 revoke all on function private.queue_scope_files(uuid, uuid) from public, anon, authenticated;
 revoke all on function private.lock_workspace_drafts(uuid) from public, anon, authenticated;
 revoke all on function private.owns_organization(uuid) from public, anon, authenticated;
+revoke all on function private.payments_in_progress(uuid, uuid) from public, anon, authenticated;
 
 revoke all on function public.report_deletion_preview(uuid) from public, anon;
 revoke all on function public.workspace_deletion_preview(uuid) from public, anon;

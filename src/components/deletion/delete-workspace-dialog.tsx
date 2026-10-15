@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { PUBLISHER } from "@/content/legal/publisher";
 import { DeletionList } from "@/components/deletion/danger-zone";
 import { DeleteDialog, type DeleteDialogProps } from "@/components/deletion/delete-dialog";
 import { formatBillingDate } from "@/lib/billing/format";
@@ -8,7 +9,8 @@ import type { WorkspaceDeletionPreview } from "@/lib/deletions/preview";
  * "Supprimer l'espace de travail" (KRB-180): the dialog that names what goes
  * with a workspace and the pass it loses, and asks for its exact name. The
  * settings page of the workspace and the organization page share it; each
- * passes its own action, which decides where the user goes next.
+ * passes its own action, which decides where the user goes next. While a
+ * pass purchase is pending or in review, it says the deletion waits.
  */
 export async function DeleteWorkspaceDialog({
   preview,
@@ -33,6 +35,11 @@ export async function DeleteWorkspaceDialog({
       id={preview.workspaceId}
       expected={preview.name}
       size={compact ? "sm" : "default"}
+      blocked={
+        preview.paymentsInProgress > 0
+          ? t("workspace.paymentPending", { support: PUBLISHER.email })
+          : undefined
+      }
       labels={{
         trigger: compact ? t("workspace.buttonShort") : t("workspace.button"),
         triggerLabel: compact ? t("workspace.buttonLabel", { name: preview.name }) : undefined,
@@ -41,6 +48,7 @@ export async function DeleteWorkspaceDialog({
         confirm: t("workspace.confirm"),
         pending: t("workspace.pending"),
         cancel: t("cancel"),
+        close: t("close"),
         typed: t("workspace.typed", { name: preview.name }),
         mismatch: t("mismatch"),
       }}

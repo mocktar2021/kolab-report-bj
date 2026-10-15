@@ -2,6 +2,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
+import { PUBLISHER } from "@/content/legal/publisher";
 import { redirect } from "@/i18n/navigation";
 import { log } from "@/lib/log";
 import {
@@ -28,7 +29,7 @@ export async function deletionRefused(
 ): Promise<DeletionState> {
   if (key === "generic") log.error("deletions: the deletion failed", { error: error?.message });
   const t = await getTranslations("Deletion.errors");
-  return { status: "error", error: key, message: t(key) };
+  return { status: "error", error: key, message: t(key, { support: PUBLISHER.email }) };
 }
 
 /** After a report is deleted: back to the dashboard, which says so. */

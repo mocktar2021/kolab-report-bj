@@ -95,6 +95,8 @@ const workspacePreviewSchema = z
     members: countSchema,
     invitations: countSchema,
     templates: countSchema,
+    // Pass purchases pending or in review: the deletion waits for them (KR071).
+    payments_in_progress: countSchema,
   })
   .transform((preview) => ({
     workspaceId: preview.workspace_id,
@@ -116,6 +118,7 @@ const workspacePreviewSchema = z
     members: preview.members,
     invitations: preview.invitations,
     templates: preview.templates,
+    paymentsInProgress: preview.payments_in_progress,
   }));
 
 export type WorkspaceDeletionPreview = z.output<typeof workspacePreviewSchema>;
@@ -139,6 +142,8 @@ const organizationPreviewSchema = z
     members: countSchema,
     // Receipts that stay for the accounts, read by nobody signed in afterwards.
     receipts: countSchema,
+    // Purchases pending or in review: the deletion waits for them (KR071).
+    payments_in_progress: countSchema,
   })
   .transform((preview) => ({
     organizationId: preview.organization_id,
@@ -155,6 +160,7 @@ const organizationPreviewSchema = z
     files: preview.files,
     members: preview.members,
     receipts: preview.receipts,
+    paymentsInProgress: preview.payments_in_progress,
   }));
 
 export type OrganizationDeletionPreview = z.output<typeof organizationPreviewSchema>;

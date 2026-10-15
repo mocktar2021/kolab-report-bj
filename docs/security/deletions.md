@@ -17,7 +17,18 @@ The typed title or name is checked again in the database (`KR070`): the same tex
 
 The organization owner deletes every workspace of the organization, alone or with the organization, including the ones they are not a member of. Workspace owners cannot delete their organization. When the organization owner deletes a workspace they are not a member of, the audit event records `actor_role` = `organization_owner`.
 
-A read-only workspace (billing, KRB-178) can still be deleted: none of the functions reads the billing state.
+A read-only workspace (billing, KRB-178) can still be deleted: none of the functions reads the billing state, except the payments in progress below.
+
+## A payment in progress
+
+An organization cannot be deleted while one of its purchases (KRB-176) is `pending` or in `review`, and a workspace cannot be deleted while a Pass Mission purchase for it is. The functions refuse with `KR071`. FedaPay may still approve a pending payment, and a purchase in review waits for an operator, so deleting first would leave a payment for nothing.
+
+The previews return `payments_in_progress`. When it is above 0, the dialog says the deletion waits, shows the support address and has no confirm button. The check runs again under the billing lock, so no purchase starts between the check and the deletion.
+
+The block ends on its own or with the operator:
+
+- A pending purchase becomes `paid` when FedaPay approves it, or `expired` 48 hours after the checkout through reconciliation.
+- A purchase in review waits for an operator, who settles it, for example with a refund ([`fedapay-webhook.md`](fedapay-webhook.md)). Until then the owner sees the support address.
 
 ## What goes and what stays
 
@@ -62,9 +73,10 @@ order by created_at desc;
 | `P0002` | Introuvable : il a peut-être déjà été supprimé. Rechargez la page. |
 | `KR070` | Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer. |
 | `40001` | Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez. |
+| `KR071` | Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à support@mocktar.com. |
 
 ## Tests
 
-- `supabase/tests/deletions_test.sql`: rights of each role, cross-workspace attempts, cascades, files queued, draft ledger kept, billing rows, audit events, read-only workspaces.
-- `tests/e2e/deletions.spec.ts`: each deletion through the pages, refusals for experts and viewers, files removed by the cleanup job (needs the Storage container).
+- `supabase/tests/deletions_test.sql`: rights of each role, cross-workspace attempts, cascades, files queued, draft ledger kept, billing rows, audit events, read-only workspaces, payments pending or in review.
+- `tests/e2e/deletions.spec.ts`: each deletion through the pages, refusals for experts and viewers, the dialog of an organization with a payment pending, files removed by the cleanup job (needs the Storage container).
 - The smoke suite creates and deletes its own report on every deploy ([`smoke-tests.md`](../operations/smoke-tests.md)).

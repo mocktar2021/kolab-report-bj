@@ -1464,6 +1464,7 @@
   },
   "Deletion": {
     "cancel": "Annuler",
+    "close": "Fermer",
     "mismatch": "Le texte ne correspond pas. Recopiez-le exactement, majuscules et accents compris.",
     "aiUsageKept": "Les brouillons IA déjà générés restent décomptés de l'offre de l'organisation.",
     "done": {
@@ -1476,6 +1477,7 @@
       "notFound": "Introuvable : il a peut-être déjà été supprimé. Rechargez la page.",
       "confirmation": "Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer.",
       "stale": "Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez.",
+      "paymentPending": "Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à {support}.",
       "invalidInput": "Cette demande de suppression n'est pas valide. Rechargez la page.",
       "generic": "La suppression n'a pas abouti. Réessayez dans un instant."
     },
@@ -1516,6 +1518,7 @@
       "access": "l'accès de {count, plural, one {# membre} other {# membres}} à cet espace",
       "pass": "Le Pass Mission de cet espace court jusqu'au {date}. Le temps restant est perdu, sans remboursement.",
       "organizationKept": "L'organisation « {organization} » et son abonnement restent, comme les comptes des membres.",
+      "paymentPending": "Un paiement de Pass Mission pour cet espace est en cours ou en vérification. Vous pourrez supprimer l'espace une fois le paiement abouti. S'il reste bloqué, écrivez au support à {support}.",
       "typed": "Saisissez « {name} » pour confirmer",
       "confirm": "Supprimer l'espace de travail",
       "pending": "Suppression…"
@@ -1537,6 +1540,7 @@
       "trial": "L'essai gratuit en cours s'arrête le jour de la suppression. Une nouvelle organisation n'aura pas de nouvel essai.",
       "receipts": "{count, plural, one {Son reçu de paiement est conservé} other {Ses # reçus de paiement sont conservés}} pour la comptabilité, mais vous ne pourrez plus {count, plural, one {le} other {les}} consulter dans l'application. Téléchargez-{count, plural, one {le} other {les}} avant, depuis la page <link>Abonnement</link>.",
       "accountsKept": "Les comptes des membres restent, avec leurs autres espaces de travail.",
+      "paymentPending": "{count, plural, one {Un paiement de l'organisation est} other {# paiements de l'organisation sont}} en cours ou en vérification. Vous pourrez supprimer l'organisation une fois le paiement abouti. S'il reste bloqué, écrivez au support à {support}.",
       "typed": "Saisissez « {name} » pour confirmer",
       "confirm": "Supprimer l'organisation",
       "pending": "Suppression…"

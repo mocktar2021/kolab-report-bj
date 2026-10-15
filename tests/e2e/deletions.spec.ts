@@ -407,6 +407,34 @@ test("the organization owner deletes it with every workspace, warned about the p
   expect(await count("workspaces", singleWorkspace.workspace_id)).toBe(0);
   expect(await count("organizations", organizationId)).toBe(1);
 
+  // A payment still pending holds the organization: the dialog says why and asks for nothing.
+  const pendingId = await addPendingPurchase(organizationId);
+  await page.reload();
+  await page.getByRole("button", { name: "Supprimer l'organisation" }).click();
+  const waiting = page.getByRole("dialog", { name: "Supprimer l'organisation ?" });
+  await expect(
+    waiting
+      .getByRole("note")
+      .filter({ hasText: "Un paiement de l'organisation est en cours ou en vérification." }),
+  ).toContainText("écrivez au support à support@mocktar.com");
+  await expect(waiting.getByRole("textbox")).toHaveCount(0);
+  await expect(waiting.getByRole("button", { name: "Supprimer l'organisation" })).toHaveCount(0);
+  await waiting.getByRole("button", { name: "Fermer" }).click();
+  await expect(waiting).toHaveCount(0);
+  const ownerApi = await signedInClient(owner);
+  const { error: waitingError } = await ownerApi.rpc("delete_organization", {
+    p_organization_id: organizationId,
+    p_confirmation: "Cabinet Mission Kandi",
+  });
+  expect(waitingError?.code).toBe("KR071");
+  // The reconciliation expires it.
+  const { error: expireError } = await adminClient()
+    .from("billing_purchases")
+    .update({ status: "expired" })
+    .eq("id", pendingId);
+  if (expireError) throw expireError;
+  await page.reload();
+
   await page.getByRole("button", { name: "Supprimer l'organisation" }).click();
   const dialog = page.getByRole("dialog", { name: "Supprimer l'organisation ?" });
   await expect(dialog.getByText("Ses 2 espaces de travail seront supprimés avec elle :")).toBeVisible();
@@ -458,6 +486,32 @@ test("the organization owner deletes it with every workspace, warned about the p
     purchase: { organization_id: null, status: "paid" },
   });
 });
+
+/**
+ * A checkout started and not paid yet, written with the service role. The
+ * deletion of its organization waits until it ends. Returns the purchase id.
+ */
+async function addPendingPurchase(organizationId: string) {
+  const purchaseId = randomUUID();
+  const { error } = await adminClient()
+    .from("billing_purchases")
+    .insert({
+      id: purchaseId,
+      organization_id: organizationId,
+      offer: "manual",
+      offer_label: "Paiement en attente de test",
+      catalog_version: 1,
+      terms: {},
+      amount_ht_xof: 0,
+      amount_xof: 0,
+      method: "manual",
+      environment: "manual",
+      status: "pending",
+      merchant_reference: `KR-${purchaseId}`,
+    });
+  if (error) throw error;
+  return purchaseId;
+}
 
 async function storageIsUp() {
   const { error } = await adminClient().storage.getBucket("exports");
