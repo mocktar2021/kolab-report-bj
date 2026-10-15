@@ -777,7 +777,7 @@ Read on 2026-10-14. The docs site moved to Mintlify; some details only appear in
 | The list of webhook source IP addresses (mentioned, not published) | No IP filter |
 | Host of the payment page behind `token.url` | Only needed for a `form-action` entry, which the redirect flow does not need |
 | How long a token and its link stay valid. The v1 docs say 24 hours and single use (https://docs-v1.fedapay.com/payments/payment-methods); the current docs only say a pending collect expires after 24 hours | Ask a new token for each "Réessayer"; reuse a purchase for 24 hours at most |
-| Whether the fee is paid by the merchant or added for the payer | Read `amount_debited` and `fees` on the transaction and keep `fees` on the purchase. Check the account setting in sandbox |
+| Whether the fee is paid by the merchant or added for the payer | Answered: it is a setting per payment method, under Préférences > Frais, and a new sandbox account has the fee added for the payer (15 625 FCFA charged for 15 000 in the first test). We pay it (Q18): every box unticked, in sandbox and live. `fees` stays on the purchase |
 | Prefixes of API keys | Only the webhook secret examples show a mode prefix (`wh_sandbox`); the mode check on prefixes is a bonus, not relied on |
 | Card test numbers in the current docs | From the v1 page https://docs-v1.fedapay.com/paiements/test; checklist item 5 |
 | Answer wrapping (`{"v1/transaction": {...}}` in SDK fixtures, top level in the API reference) | The client accepts both |
@@ -860,6 +860,7 @@ The product owner asked to go with the recommendations. Answered by the tech lea
 - **Q15.** The organization owner and every workspace owner of the organization.
 - **Q16.** Yes, Vercel Pro and Supabase Pro before the first paid customer.
 - **Q17.** No viewer cap.
+- **Q18. FedaPay fee** (added on 2026-10-15, after the first sandbox payment). We pay it, not the customer: the price on `/fr/tarifs`, the amount paid and the receipt are the same. FedaPay takes about 1.8% on mobile money and 3.6% on cards from the payout.
 
 ### For the accountant
 

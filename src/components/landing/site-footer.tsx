@@ -40,6 +40,11 @@ export function SiteFooter({ sectionBase = "" }: { sectionBase?: string }) {
               </a>
             </li>
             <li>
+              <Link href="/tarifs" className={footerLinkClass}>
+                {t("pricing")}
+              </Link>
+            </li>
+            <li>
               <Link href="/connexion" className={footerLinkClass}>
                 {t("signIn")}
               </Link>

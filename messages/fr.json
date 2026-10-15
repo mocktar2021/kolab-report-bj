@@ -28,6 +28,7 @@
       "home": "KolabReport, accueil",
       "features": "Fonctionnalités",
       "faq": "Questions fréquentes",
+      "pricing": "Tarifs",
       "signIn": "Se connecter"
     },
     "hero": {
@@ -208,6 +209,7 @@
       "product": "Produit",
       "features": "Fonctionnalités",
       "faq": "Questions fréquentes",
+      "pricing": "Tarifs",
       "signIn": "Connexion",
       "madeBy": "Conçu par <link>Mocktar Technologies</link>",
       "newTab": "(nouvel onglet)",
@@ -1764,6 +1766,127 @@
       "choose": "Choisir une offre",
       "askOwners": "Pour renouveler, adressez-vous à {names}.",
       "askOwner": "Pour renouveler, adressez-vous au propriétaire de l'organisation."
+    }
+  },
+  "Pricing": {
+    "metaTitle": "Tarifs",
+    "metaDescription": "Les offres de KolabReport en FCFA : essai gratuit de 14 jours, Indépendant, Cabinet, Institution, Pass Mission et Pack IA. Les lecteurs sont gratuits sur toutes les offres.",
+    "eyebrow": "Tarifs",
+    "title": "Des offres claires, en FCFA",
+    "subtitle": "Essayez KolabReport {days} jours sans carte bancaire. Payez ensuite au mois, au trimestre ou à l'année, par Mobile Money ou carte bancaire.",
+    "startTrial": "Commencer l'essai gratuit",
+    "notes": {
+      "tax": "Prix hors taxes",
+      "readers": "Lecteurs gratuits sur toutes les offres",
+      "year": "L'année au prix de {paidMonths} mois"
+    },
+    "plansTitle": "Les offres",
+    "plans": {
+      "trial": {
+        "description": "Pour découvrir KolabReport en équipe, sur un vrai rapport.",
+        "price": "0 FCFA",
+        "period": "pendant {days} jours, sans carte bancaire"
+      },
+      "independant": {
+        "description": "Pour un expert seul ou une petite équipe."
+      },
+      "cabinet": {
+        "description": "Pour les cabinets qui mènent plusieurs missions en même temps."
+      },
+      "institution": {
+        "description": "Pour les institutions et les grandes équipes, avec un contrat sur mesure.",
+        "price": "Sur devis",
+        "period": "à partir de {price} FCFA HT par mois",
+        "terms": "Engagement de {months} mois, paiement par virement bancaire.",
+        "contractDrafts": "Quota IA ajusté au contrat",
+        "onboarding": "Mise en route accompagnée de {hours} heures"
+      }
+    },
+    "perMonth": "FCFA HT par mois",
+    "lengths": {
+      "label": "Autres durées",
+      "quarter": "3 mois : {price} FCFA HT",
+      "year": "12 mois : {price} FCFA HT",
+      "yearSaving": "{freeMonths} mois offerts"
+    },
+    "features": {
+      "label": "Ce qui est inclus",
+      "members": "{count, plural, =1 {1 membre} other {# membres}}",
+      "membersUnlimited": "Membres illimités",
+      "reports": "{count, plural, =1 {1 rapport} other {# rapports}}",
+      "activeReports": "{count, plural, =1 {1 rapport actif} other {# rapports actifs}}",
+      "reportsUnlimited": "Rapports illimités",
+      "draftsPerMonth": "{count, plural, =1 {1 brouillon IA par mois} other {# brouillons IA par mois}}",
+      "draftsTotal": "{count, plural, =1 {1 brouillon IA} other {# brouillons IA}}",
+      "customTemplates": "Modèles de prompt personnalisés",
+      "readersFree": "Lecteurs gratuits et illimités"
+    },
+    "tryFree": "Essayer gratuitement",
+    "quote": "Demander un devis",
+    "quoteLabel": "Demander un devis Institution par e-mail à {email}",
+    "quoteSubject": "Devis Institution KolabReport",
+    "extrasTitle": "Pour une mission ou plus d'IA",
+    "extrasSubtitle": "Sans abonnement pour une mission ponctuelle, ou en plus de votre offre quand le quota IA ne suffit pas.",
+    "mission": {
+      "description": "Un espace de travail et un rapport pendant {days} jours, sans abonnement.",
+      "unit": "FCFA HT par rapport"
+    },
+    "pack": {
+      "title": "Pack IA",
+      "description": "{drafts} brouillons IA de plus, valables {months} mois, utilisés quand le quota de votre offre est épuisé.",
+      "unit": "FCFA HT le pack",
+      "max": "Jusqu'à {max} packs en même temps",
+      "paidOnly": "Avec une offre payante ou un Pass Mission, pas pendant l'essai"
+    },
+    "factsTitle": "Bon à savoir",
+    "facts": {
+      "members": {
+        "title": "Qui compte comme membre",
+        "text": "Les propriétaires, administrateurs et experts de vos espaces de travail, invitations en attente comprises. Une même personne compte une fois. Les lecteurs ne comptent pas, sans limite de nombre."
+      },
+      "payment": {
+        "title": "Aucun prélèvement automatique",
+        "text": "Chaque paiement couvre 1, 3 ou 12 mois. Nous vous écrivons 7 jours avant la fin de la période, la veille et le jour même."
+      },
+      "end": {
+        "title": "À la fin d'une période",
+        "text": "Vous gardez {days} jours d'accès complet pour renouveler. Ensuite, l'espace passe en lecture seule : vous pouvez toujours lire et exporter vos rapports, mais plus les modifier."
+      },
+      "receipt": {
+        "title": "Un reçu pour chaque paiement",
+        "text": "Les prix sont hors taxes. Chaque paiement donne un reçu, à télécharger en PDF depuis la page Abonnement de votre organisation."
+      }
+    },
+    "faqTitle": "Questions sur les tarifs",
+    "faq": {
+      "trialEnd": {
+        "question": "Que se passe-t-il à la fin de l'essai ?",
+        "answer": "Rien n'est perdu. Vous gardez {days} jours d'accès complet pour choisir une offre, puis l'espace passe en lecture seule jusqu'au paiement. Si vous payez pendant l'essai, les jours d'essai restants s'ajoutent à votre première période."
+      },
+      "pay": {
+        "question": "Comment payer ?",
+        "answer": "En ligne, par Mobile Money ou carte bancaire avec FedaPay, depuis la page Abonnement de votre organisation. L'offre Institution se paie par virement bancaire, après un devis."
+      },
+      "change": {
+        "question": "Puis-je changer d'offre ?",
+        "answer": "Oui. Vers une offre supérieure, les jours restants de votre période sont convertis en jours de la nouvelle offre. Vers une offre inférieure, la nouvelle offre commence à la fin de la période en cours."
+      },
+      "drafts": {
+        "question": "Qu'est-ce qu'un brouillon IA ?",
+        "answer": "Une proposition de texte pour une section du rapport, rédigée par l'IA à partir des documents de la section. Seules les propositions reçues comptent : une erreur de notre côté ne vous coûte rien."
+      },
+      "mission": {
+        "question": "Pass Mission ou abonnement ?",
+        "answer": "Le Pass Mission couvre un seul rapport, dans son propre espace de travail, pendant {days} jours. Un abonnement couvre tous les espaces de travail de votre organisation, pour mener plusieurs missions en même temps."
+      },
+      "refund": {
+        "question": "Puis-je être remboursé ?",
+        "answer": "Une période commencée n'est pas remboursée, puisque l'essai gratuit permet d'essayer avant de payer. Un paiement fait par erreur, en double ou d'un mauvais montant, est remboursé en entier. Les détails sont dans les <link>conditions générales de vente</link>."
+      }
+    },
+    "cta": {
+      "title": "Essayez avec votre équipe",
+      "subtitle": "{days} jours gratuits, sans carte bancaire. Vous choisissez une offre quand vous êtes prêt."
     }
   },
   "WorkspaceSettings": {

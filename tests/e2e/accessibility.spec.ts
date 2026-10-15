@@ -104,6 +104,7 @@ for (const theme of THEMES) {
         ["/fr/inscription", "Créer un compte"],
         ["/fr/mot-de-passe-oublie", "Mot de passe oublié"],
         ["/fr/hors-ligne", "Vous êtes hors ligne"],
+        ["/fr/tarifs", "Des offres claires, en FCFA"],
       ];
       for (const [url, heading] of pages) {
         await test.step(url, async () => {

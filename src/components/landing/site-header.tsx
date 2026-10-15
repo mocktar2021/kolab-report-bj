@@ -52,6 +52,9 @@ export function SiteHeader({ sectionBase = "" }: { sectionBase?: string }) {
           <a href={`${sectionBase}#faq`} className={navLinkClass}>
             {t("faq")}
           </a>
+          <Link href="/tarifs" className={navLinkClass}>
+            {t("pricing")}
+          </Link>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle className="size-11 sm:size-10" />
