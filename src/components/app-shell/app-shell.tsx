@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { LogOut, Menu, Search } from "lucide-react";
+import { LogOut, Menu, Search, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LegalLinks } from "@/components/legal/legal-links";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -16,7 +16,7 @@ import type { MyWorkspace } from "@/lib/workspaces/types";
 import { NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
-import { Sidebar } from "./sidebar";
+import { ACCOUNT_PATH, Sidebar } from "./sidebar";
 import { UserAvatar } from "./user-avatar";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
@@ -156,6 +156,14 @@ export function AppShell({
                 ) : null}
               </div>
             </div>
+            <Link
+              href={ACCOUNT_PATH}
+              onClick={() => setMenuOpen(false)}
+              className="flex h-10 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <UserRound className="size-4" aria-hidden="true" />
+              {t("account")}
+            </Link>
             <ThemeToggle variant="row" side="top" align="start" />
             <form action={signOut} onSubmit={clearOfflineCaches}>
               <button

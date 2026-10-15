@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LegalLinks } from "@/components/legal/legal-links";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
 import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
@@ -18,6 +18,9 @@ import { UserAvatar } from "./user-avatar";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 export const SIDEBAR_ID = "app-sidebar";
+
+/** Name, data export, organization transfer and account deletion (KRB-186). */
+export const ACCOUNT_PATH = "/compte";
 
 const footerButtonClass =
   "flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sidebar-collapsed:justify-center sidebar-collapsed:px-0";
@@ -45,6 +48,7 @@ export function Sidebar({
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const { collapsed, toggle } = useSidebarCollapsed();
+  const pathname = usePathname();
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
   return (
@@ -95,6 +99,15 @@ export function Sidebar({
             ) : null}
           </div>
         </div>
+        <Link
+          href={ACCOUNT_PATH}
+          className={footerButtonClass}
+          aria-label={t("account")}
+          aria-current={pathname === ACCOUNT_PATH ? "page" : undefined}
+        >
+          <UserRound className="size-4 shrink-0" aria-hidden="true" />
+          <span className="sidebar-collapsed:sr-only">{t("account")}</span>
+        </Link>
         <ThemeToggle variant="row" collapsible side="right" align="end" />
         <form action={signOut} onSubmit={clearOfflineCaches}>
           <button type="submit" className={footerButtonClass} aria-label={tCommon("signOut")}>

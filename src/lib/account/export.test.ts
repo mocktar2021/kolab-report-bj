@@ -1,0 +1,199 @@
+// @vitest-environment node
+import { describe, expect, it } from "vitest";
+import {
+  accountExportFileName,
+  buildAccountExport,
+  EXPORT_COLUMNS,
+  exportSelect,
+  type AccountExportSources,
+} from "./export";
+
+const USER_ID = "3f0c2a1b-5d4e-4f6a-8b7c-9d0e1f2a3b4c";
+const WORKSPACE_ID = "7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d";
+const EXPORTED_AT = new Date("2026-10-15T09:30:00.000Z");
+
+function emptySources(): AccountExportSources {
+  return {
+    account: { id: USER_ID, email: "awa@cabinet.test", created_at: "2026-10-01T08:00:00Z" },
+    profile: null,
+    sessions: [],
+    organizationsOwned: [],
+    memberships: [],
+    invitationsReceived: [],
+    invitationsSent: [],
+    reportsCreated: [],
+    sectionsAssigned: [],
+    deliverablesUploaded: [],
+    aiGenerations: [],
+    reportExports: [],
+    statusChanges: [],
+    notifications: [],
+    promptVersionsWritten: [],
+    promptRolloutsStarted: [],
+  };
+}
+
+describe("buildAccountExport", () => {
+  it("has the keys of the operator export, in its order", () => {
+    const file = buildAccountExport(emptySources(), EXPORTED_AT);
+    expect(Object.keys(file)).toEqual([
+      "exported_at",
+      "account",
+      "profile",
+      "sessions",
+      "organizations_owned",
+      "memberships",
+      "invitations_received",
+      "invitations_sent",
+      "reports_created",
+      "sections_assigned",
+      "deliverables_uploaded",
+      "ai_generations",
+      "report_exports",
+      "status_changes",
+      "notifications",
+      "prompt_versions_written",
+      "prompt_rollouts_started",
+    ]);
+    expect(file.exported_at).toBe("2026-10-15T09:30:00.000Z");
+  });
+
+  it("gives empty lists and a null profile when there is nothing, and null for missing account fields", () => {
+    const file = buildAccountExport(emptySources(), EXPORTED_AT);
+    expect(file.profile).toBeNull();
+    expect(file.memberships).toEqual([]);
+    expect(file.ai_generations).toEqual([]);
+    expect(file.account).toEqual({
+      id: USER_ID,
+      email: "awa@cabinet.test",
+      created_at: "2026-10-01T08:00:00Z",
+      email_confirmed_at: null,
+      last_sign_in_at: null,
+      user_metadata: null,
+    });
+  });
+
+  it("renames the columns the runbook renames and joins the workspace name", () => {
+    const sources = emptySources();
+    sources.memberships = [
+      {
+        workspace_id: WORKSPACE_ID,
+        role: "owner",
+        created_at: "2026-10-02T10:00:00Z",
+        workspace: { name: "Etude Abomey" },
+      },
+      { workspace_id: WORKSPACE_ID, role: "viewer", created_at: "2026-10-03T10:00:00Z", workspace: null },
+    ];
+    sources.statusChanges = [
+      { report_id: "r1", from_status: "draft", to_status: "in_review", changed_at: "2026-10-04T10:00:00Z" },
+    ];
+    const file = buildAccountExport(sources, EXPORTED_AT);
+    expect(file.memberships).toEqual([
+      {
+        workspace_id: WORKSPACE_ID,
+        workspace: "Etude Abomey",
+        role: "owner",
+        joined_at: "2026-10-02T10:00:00Z",
+      },
+      { workspace_id: WORKSPACE_ID, workspace: null, role: "viewer", joined_at: "2026-10-03T10:00:00Z" },
+    ]);
+    expect(file.status_changes).toEqual([
+      { report_id: "r1", from: "draft", to: "in_review", changed_at: "2026-10-04T10:00:00Z" },
+    ]);
+  });
+
+  it("keeps the requester's rating and comment on a draft, never its text", () => {
+    const sources = emptySources();
+    sources.aiGenerations = [
+      {
+        id: "g1",
+        section_id: null,
+        created_at: "2026-10-05T10:00:00Z",
+        model: "claude-sonnet",
+        status: "succeeded",
+        accepted: true,
+        user_rating: 1,
+        feedback_comment: "Bon point de départ.",
+        output: { blocks: ["Texte du brouillon"] },
+        raw_output: "Texte du brouillon",
+        context_meta: { files: ["rapport-client.docx"] },
+      },
+    ];
+    const [generation] = buildAccountExport(sources, EXPORTED_AT).ai_generations;
+    expect(generation).toEqual({
+      id: "g1",
+      section_id: null,
+      created_at: "2026-10-05T10:00:00Z",
+      model: "claude-sonnet",
+      status: "succeeded",
+      accepted: true,
+      user_rating: 1,
+      feedback_comment: "Bon point de départ.",
+    });
+  });
+
+  it("drops every column it does not list, so a wider select adds nothing to the file", () => {
+    const sources = emptySources();
+    sources.profile = {
+      id: USER_ID,
+      email: "awa@cabinet.test",
+      full_name: "Awa Dossou",
+      locale: "fr",
+      secret_column: "x",
+    };
+    sources.sectionsAssigned = [
+      { id: "s1", report_id: "r1", title: "Contexte", status: "in_progress", content: "Texte confidentiel" },
+    ];
+    sources.deliverablesUploaded = [
+      {
+        id: "d1",
+        section_id: "s1",
+        file_name: "plan.docx",
+        storage_path: `${WORKSPACE_ID}/s1/d1-plan.docx`,
+        size_bytes: 1000,
+        created_at: "2026-10-06T10:00:00Z",
+        parsed_content: "Texte extrait du fichier",
+      },
+    ];
+    const file = buildAccountExport(sources, EXPORTED_AT);
+    const text = JSON.stringify(file);
+    expect(text).not.toContain("Texte confidentiel");
+    expect(text).not.toContain("Texte extrait");
+    expect(text).not.toContain("secret_column");
+    expect(file.profile).toMatchObject({ full_name: "Awa Dossou", avatar_url: null, job_title: null });
+    expect(file.sections_assigned).toEqual([
+      { id: "s1", report_id: "r1", title: "Contexte", status: "in_progress" },
+    ]);
+  });
+});
+
+describe("exportSelect", () => {
+  it("reads only the columns the file keeps", () => {
+    expect(exportSelect("reportsCreated")).toBe("id, workspace_id, title, created_at");
+    expect(exportSelect("statusChanges")).toBe("report_id, from_status, to_status, changed_at");
+  });
+
+  it("never reads the text of a report, a section, a file or a draft", () => {
+    const columns = Object.values(EXPORT_COLUMNS).flatMap((kind) => Object.values(kind));
+    for (const column of [
+      "content",
+      "parsed_content",
+      "output",
+      "raw_output",
+      "ai_draft",
+      "template",
+      "instructions",
+    ]) {
+      expect(columns).not.toContain(column);
+    }
+  });
+});
+
+describe("accountExportFileName", () => {
+  it("names the file after the UTC day of the export", () => {
+    expect(accountExportFileName(EXPORTED_AT)).toBe("kolabreport-mes-donnees-2026-10-15.json");
+    expect(accountExportFileName(new Date("2026-12-31T23:59:59Z"))).toBe(
+      "kolabreport-mes-donnees-2026-12-31.json",
+    );
+  });
+});
