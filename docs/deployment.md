@@ -138,6 +138,28 @@ order by created_at;
 
 A `review` purchase was paid at FedaPay with an amount, currency, merchant reference or environment that does not match. Check the transaction in the FedaPay dashboard, then close the review as paid or as refunded ([`docs/operations/billing.md`](operations/billing.md#a-purchase-in-review)). Until it is closed, the organization cannot start another payment.
 
+### Billing page and receipts (KRB-177)
+
+The billing page is `/fr/organisations/<organization id>/abonnement`, linked as "Abonnement" in the sidebar for the organization's owner and the owners and admins of its workspaces. Experts, viewers and everyone else get a 404. Owners pay and edit the billing details; admins only read.
+
+Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draws the PDF on each download from the stored receipt and its lines, read with the user's own client (RLS), and answers 404 to anyone who is not a billing reader of that organization. A receipt never changes once issued, so:
+
+- The seller on the receipts is `private.billing_settings.seller` at the time of the payment. To change it (new address, for example), update that row in the SQL editor of each Supabase project. Only the next receipts change.
+- The buyer is the organization's billing details at the time of the payment. A customer who wants another name on a receipt already issued needs a credit note (`AV-` numbers, not built yet, ADR 001 question A3).
+- Receipts paid on staging (FedaPay sandbox) and locally (mock) say "Reçu de test, sans valeur comptable".
+- The e-MECeF number goes in `external_invoice_number`, the only column besides `external_invoice_data` that may change. The PDF shows "non émise" until it is set.
+
+To read a customer's receipts as the operator, in the SQL editor:
+
+```sql
+select r.number, r.issued_at, r.total_xof, r.environment, r.buyer ->> 'legal_name' as buyer
+from public.billing_receipts r
+where r.organization_id = '<organization id>'
+order by r.issued_at desc;
+```
+
+This section moves to `docs/operations/billing.md` once that runbook exists (KRB-178).
+
 ## Secrets rules
 
 - Secrets live in Vercel environment variables (marked Sensitive) and GitHub environment secrets, one value per environment. Never in the repository, never in `.env.example`.
