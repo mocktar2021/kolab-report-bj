@@ -17,7 +17,7 @@ const QUEUE: QueuedPath[] = [
 /** Service-role client stand-in: an in-memory queue and buckets that record removals. */
 function fakeAdmin(
   queue: QueuedPath[],
-  options: { expired?: number; failingRpc?: string; failingBucket?: string } = {},
+  options: { expired?: number; expiredEvents?: number; failingRpc?: string; failingBucket?: string } = {},
 ) {
   const waiting = [...queue];
   const finished: { ids: number[]; error: string | undefined }[] = [];
@@ -28,6 +28,8 @@ function fakeAdmin(
     switch (name) {
       case "expire_report_exports":
         return { data: options.expired ?? 0, error: null };
+      case "expire_audit_events":
+        return { data: options.expiredEvents ?? 0, error: null };
       case "claim_storage_cleanup":
         return { data: waiting.splice(0, args.p_limit as number), error: null };
       case "finish_storage_cleanup": {
@@ -57,13 +59,21 @@ beforeEach(() => {
 });
 
 describe("runStorageCleanup", () => {
-  it("expires old exports, then removes every queued file bucket by bucket", async () => {
-    const admin = fakeAdmin(QUEUE, { expired: 3 });
+  it("expires old exports and audit events, then removes every queued file bucket by bucket", async () => {
+    const admin = fakeAdmin(QUEUE, { expired: 3, expiredEvents: 2 });
 
     const summary = await runStorageCleanup(admin.client, { batchSize: 2 });
 
-    expect(summary).toEqual({ expiredExports: 3, removed: 5, failed: 0, timedOut: false, ok: true });
+    expect(summary).toEqual({
+      expiredExports: 3,
+      expiredAuditEvents: 2,
+      removed: 5,
+      failed: 0,
+      timedOut: false,
+      ok: true,
+    });
     expect(admin.rpc).toHaveBeenNthCalledWith(1, "expire_report_exports", { p_days: 90 });
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "expire_audit_events", { p_months: 12 });
     expect(admin.rpc.mock.calls.filter(([name]) => name === "claim_storage_cleanup")).toEqual([
       ["claim_storage_cleanup", { p_limit: 2 }],
       ["claim_storage_cleanup", { p_limit: 2 }],
@@ -127,7 +137,29 @@ describe("runStorageCleanup", () => {
 
     const summary = await runStorageCleanup(admin.client);
 
-    expect(summary).toEqual({ expiredExports: 0, removed: 5, failed: 0, timedOut: false, ok: false });
+    expect(summary).toEqual({
+      expiredExports: 0,
+      expiredAuditEvents: 0,
+      removed: 5,
+      failed: 0,
+      timedOut: false,
+      ok: false,
+    });
+  });
+
+  it("still empties the queue when expiring audit events fails", async () => {
+    const admin = fakeAdmin(QUEUE, { expired: 1, failingRpc: "expire_audit_events" });
+
+    const summary = await runStorageCleanup(admin.client);
+
+    expect(summary).toEqual({
+      expiredExports: 1,
+      expiredAuditEvents: 0,
+      removed: 5,
+      failed: 0,
+      timedOut: false,
+      ok: false,
+    });
   });
 
   it("stops when it cannot claim paths", async () => {

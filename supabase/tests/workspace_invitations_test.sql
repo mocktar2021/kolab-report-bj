@@ -323,7 +323,7 @@ select is((select invited_by from public.workspace_members where workspace_id = 
 
 -- Deleting a workspace --------------------------------------------------------
 select pg_temp.act_as('owner');
-select is(pg_temp.affected($$delete from public.workspaces where id = pg_temp.id('w1')$$), 1, 'owner deletes w1');
+select lives_ok($$select public.delete_workspace(pg_temp.id('w1'), 'Etude A')$$, 'owner deletes w1');
 reset role;
 select is((select count(*)::int from public.workspace_invitations where workspace_id = pg_temp.id('w1')),
   0, 'deleting a workspace deletes its invitations');

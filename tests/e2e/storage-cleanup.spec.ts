@@ -104,14 +104,11 @@ test("deleting a report removes its deliverable and export files from Storage", 
   expect(await storedNames("deliverables", deliverableFolder)).toEqual([deliverableName]);
   expect(await storedNames("exports", exportFolder)).toEqual([`${exportId}.pdf`]);
 
-  // The owner deletes the report, which takes its section, files and exports along.
-  const { data: deleted, error: deleteError } = await api
-    .from("reports")
-    .delete()
-    .eq("id", reportId)
-    .select("id");
+  // The owner deletes the report, which takes its section, files and exports
+  // along. Deletions go through delete_report since KRB-180.
+  const { data: deleted, error: deleteError } = await api.rpc("delete_report", { p_report_id: reportId });
   expect(deleteError).toBeNull();
-  expect(deleted).toHaveLength(1);
+  expect(deleted).toMatchObject({ sections: 1, files: 1, exports: 1 });
 
   const response = await request.get(CRON_PATH, { headers: { Authorization: `Bearer ${cronSecret}` } });
   expect(response.status()).toBe(200);

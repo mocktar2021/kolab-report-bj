@@ -6,7 +6,7 @@ import type { LegalDocument } from "./types";
 // from docs/gdpr and docs/operations.
 
 export const accordTraitement: LegalDocument = {
-  updatedAt: "2026-10-14",
+  updatedAt: "2026-10-15",
   intro: [
     `Le présent accord de traitement des données (l'Accord) fait partie du contrat entre l'organisation cliente (le Client) et ${PUBLISHER.name} pour l'utilisation de KolabReport. Il s'applique dès que le Client accepte les [conditions générales d'utilisation](/cgu) ou commande une offre selon les [conditions générales de vente](/cgv).`,
     `Il fixe les engagements de ${PUBLISHER.name} lorsqu'elle traite des données personnelles pour le compte du Client, conformément à la loi n° 2017-20 du 20 avril 2018 portant code du numérique en République du Bénin et, lorsqu'il s'applique, à l'article 28 du règlement général sur la protection des données (RGPD).`,
@@ -113,7 +113,7 @@ export const accordTraitement: LegalDocument = {
         `${PUBLISHER.name} aide le Client à répondre, dans la mesure du possible :`,
         {
           list: [
-            "depuis l'application, les membres exportent les rapports, téléchargent et suppriment les livrables, corrigent les sections et retirent des membres, selon leur rôle ;",
+            "depuis l'application, les membres exportent les rapports, téléchargent et suppriment les livrables, corrigent les sections, retirent des membres et suppriment un rapport, un espace de travail ou l'organisation, selon leur rôle ;",
             `sur instruction écrite d'un propriétaire, ${PUBLISHER.name} recherche les données d'une personne dans l'espace du Client, les extrait ou les supprime, y compris dans les brouillons IA conservés.`,
           ],
         },
@@ -140,6 +140,7 @@ export const accordTraitement: LegalDocument = {
       title: "Fin du contrat : restitution et suppression",
       body: [
         `Avant la fin du contrat, le Client récupère ses données : export des rapports en Word ou en PDF et téléchargement des livrables depuis l'application. ${PUBLISHER.name} peut l'aider sur demande.`,
+        "Les propriétaires peuvent supprimer eux-mêmes un espace de travail, et le propriétaire de l'organisation l'organisation entière, depuis l'application. Leurs fichiers sont retirés du stockage par la tâche quotidienne.",
         `Sur demande écrite d'un propriétaire, ${PUBLISHER.name} supprime les espaces du Client avec leur contenu et leurs fichiers dans un délai de 30 jours, et le confirme par écrit.`,
         `Sans demande, les espaces restent en lecture seule (voir les [conditions générales de vente](/cgv#fin-de-periode)). ${PUBLISHER.name} peut alors les supprimer après avoir prévenu les propriétaires par e-mail au moins 30 jours avant.`,
         "Les copies de sauvegarde disparaissent à leur expiration : 14 jours pour la base de données, environ 32 jours pour les fichiers. Elles ne servent qu'à une restauration après incident. Après une restauration, les suppressions demandées sont appliquées à nouveau.",

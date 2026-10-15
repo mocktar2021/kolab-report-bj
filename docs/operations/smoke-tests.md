@@ -19,7 +19,7 @@ Each test carries a tag, so `--grep @public` (or `@sign-up`, `@signed-in`, `@ai`
 | `@public` | always | `/api/health` answers 200 with `database: ok`, and reports the deployed commit when `deploy.yml` passes it. The landing, sign-in, sign-up and password reset pages load in French. `/` goes to `/fr`, and `/fr/tableau-de-bord` sends a visitor to sign-in. Wrong credentials get the generic French error, so Supabase Auth answers. The manifest, `sw.js` and icons are served. Every page sends the security headers. The four public pages log no console error, break no CSP rule, and no request to the site answers 4xx or 5xx |
 | `@sign-up` | always | The sign-up form shows its three French errors. The server action rejects the input before calling Supabase, so nothing is created |
 | `@sign-up` | `SMOKE_SIGNUP_EMAIL` is set | Signs up a new address on that mailbox and expects "Vérifiez votre boîte mail" |
-| `@signed-in` | `SMOKE_EMAIL` and `SMOKE_PASSWORD` are set | Signs in through the form and selects the smoke workspace. The dashboard shows its figures and its report. The workspace wizard, with "Nouvelle organisation" picked on the first step, checks each of its three steps, and the check stops before "Créer l'espace de travail". Then it opens the report and its first section, uploads `smoke-<tag>.md`, waits for "Analysé", opens the preview, exports the report as .docx and checks the file. The file is deleted through the page and the session is ended |
+| `@signed-in` | `SMOKE_EMAIL` and `SMOKE_PASSWORD` are set | Signs in through the form and selects the smoke workspace. The dashboard shows its figures and its report. The workspace wizard, with "Nouvelle organisation" picked on the first step, checks each of its three steps, and the check stops before "Créer l'espace de travail". Then it opens the report and its first section, uploads `smoke-<tag>.md`, waits for "Analysé", opens the preview, exports the report as .docx and checks the file. The file is deleted through the page. Then it creates a report `smoke-rapport-<tag>` with "Nouveau rapport", deletes it with "Supprimer le rapport" and checks the dashboard says so (KRB-180). The session is ended |
 | `@ai` | also `SMOKE_AI=true` | Uploads `smoke-ia-<tag>.md`, waits for "Analysé", generates a draft, waits for "Brouillon prêt", rejects it, deletes the file. One call to the real model per run |
 
 How this covers the second criterion of KRB-26:
@@ -29,18 +29,20 @@ How this covers the second criterion of KRB-26:
 | Signup | Form checks always. A real sign-up with `SMOKE_SIGNUP_EMAIL` |
 | Login | `sign in with the smoke account`, plus the wrong credentials check |
 | Workspace creation | Each step of the wizard, not submitted (see below). The smoke workspace itself was created with it |
+| Report creation and deletion | A report made with "Nouveau rapport" and deleted from its page, on every deploy (KRB-180) |
 | Upload, parse | The Markdown file, up to "Analysé" and its preview |
 | AI draft | `@ai`, with `SMOKE_AI=true` |
 | Dashboard | Figures and report card of the smoke workspace |
 | Export | The .docx download, checked as a zip file |
 
-The wizard is never submitted on a deployed site: it creates a workspace, and a new organization unless the smoke one is picked, and the app can delete neither, so every run would leave them behind. For the same reason the suite creates no report, from the wizard or from "Nouveau rapport" on the dashboard: the app has no way to delete one. The suite works in one smoke workspace made once by hand.
+The wizard is never submitted on a deployed site: every run would create a workspace, and an organization unless the smoke one is picked. Since KRB-180 the app can delete both, so the suite could submit it and delete them at the end; for now it works in one smoke workspace made once by hand. Reports are different: each run creates its own with "Nouveau rapport" and deletes it at the end, so nothing is left behind.
 
 ## What a run creates and how it is cleaned up
 
 | What | Per run | Cleanup |
 | --- | --- | --- |
 | `smoke-*.md` files in the smoke section | 1, or 2 with `@ai` | Deleted through the page after each test, failed tests included. The next run deletes any `smoke-*` file left in the section by a run that stopped halfway. Other files in the section are never touched |
+| A report `smoke-rapport-<tag>` in the smoke workspace | 1 | Deleted through its page at the end of its test. When a run stops halfway, the same test of the next run deletes every `smoke-rapport-*` report first. Other reports are never touched |
 | A .docx export of the smoke report | 1 | Listed in "Exports récents". The storage cleanup job deletes exports after 90 days ([Scheduled jobs](../deployment.md#scheduled-jobs)) |
 | A session of the smoke account | 1 | Ended by the `sign out the smoke account` step, which runs even when checks fail |
 | A rejected AI generation (`@ai`) | 1 | Kept in the AI usage history on purpose. It shows in the AI dashboard of the smoke workspace and counts toward its budget |
@@ -60,7 +62,7 @@ Their profile goes with them. Never click the confirmation links. Each sign-up a
 ## Setup, once per environment
 
 1. **Smoke account.** On the site itself, sign up at `/fr/inscription` with a mailbox you control, for example `you+smoke-staging@example.com`, and a long random password from the password manager. Confirm the address with the e-mail. Use this account for nothing else.
-2. **Smoke workspace.** Signed in as that account, create the workspace with the wizard: organization `Smoke tests`, workspace `Smoke tests`, report `Rapport smoke`. Invite nobody. Keep the report as a draft: a final report refuses uploads. The first run adds "Section smoke" to it.
+2. **Smoke workspace.** Signed in as that account, create the workspace with the wizard: organization `Smoke tests`, workspace `Smoke tests`, report `Rapport smoke`. Invite nobody. Keep the report as a draft: a final report refuses uploads. The first run adds "Section smoke" to it. The account must stay an owner of the workspace: only owners and admins create and delete reports. Once billing is enforced, the trial allows one active report, so the smoke organization needs a plan with room for a second one (Cabinet or Institution), granted by hand like the owner's other organizations (ADR 001, section 10).
 3. **AI drafts** (for `@ai`): the environment needs `AI_DRAFTS_ENABLED=true` and its provider key on Vercel ([deployment](../deployment.md)).
 4. **Vercel Deployment Protection.** With the default Standard Protection, Vercel Authentication covers every URL except the production domains: preview deployments, so the staging domain, and the generated deployment URLs, production ones included. Either turn it off for the URL the tests use, or create a **Protection Bypass for Automation** (project **Settings > Deployment Protection**) and store it as `VERCEL_AUTOMATION_BYPASS_SECRET`. The suite trades it for Vercel's bypass cookie before the first test, so the secret is not in the report.
 5. **GitHub environment settings** (**Settings > Environments**, on `staging` and on `production`):
@@ -106,6 +108,9 @@ The report never holds the password: the sign-in step runs without a trace and k
 | "The smoke account could not sign in" | The message says why: wrong password, or the address was never confirmed |
 | "has no workspace", "is not a workspace the smoke account manages" | Setup step 2, or `SMOKE_WORKSPACE_ID` / `SMOKE_WORKSPACE_NAME` |
 | "the smoke report is final" | Reopen the report as a draft |
+| "The report was not created: …" | The message is the app's. "Limite de rapports actifs" means the smoke organization has no room for a second report: setup step 2 |
+| "the delete action is missing" | The smoke account is not an owner or admin of the smoke workspace any more |
+| "reports of the smoke tests are left in the smoke workspace" | The deletion failed: delete the `smoke-rapport-*` reports by hand from their page |
 | "The upload failed" | Storage or the upload routes: the function logs of `/api/deliverables/*` |
 | "the read of … did not succeed" | The file reader: logs of `/api/deliverables/[id]/complete` |
 | No download after "Exporter en .docx" | The export route or the `exports` bucket. The page shows the export error in the screenshot |
@@ -124,7 +129,7 @@ Do not run the suite from your machine while a deploy runs its own on the same e
 | `tests/smoke/global-setup.ts` | Vercel bypass cookie, and removal of the cookie files at the end |
 | `tests/smoke/public.spec.ts`, `tests/smoke/sign-up.spec.ts` | Checks without an account |
 | `tests/smoke/sign-in.setup.ts`, `tests/smoke/sign-out.teardown.ts` | The session of the smoke account |
-| `tests/smoke/signed-in.spec.ts`, `tests/smoke/section.ts` | Signed-in and AI checks |
+| `tests/smoke/signed-in.spec.ts`, `tests/smoke/section.ts`, `tests/smoke/report.ts` | Signed-in and AI checks |
 | `.github/workflows/smoke.yml` | The job, called by `deploy.yml` or run by hand |
 
 The end-to-end suite (`tests/e2e`, `npm run test:e2e`) and the unit tests (`npm test`) do not include these files.

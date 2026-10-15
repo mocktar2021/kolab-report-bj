@@ -15,7 +15,7 @@ select throws_ok($$insert into public.reports (workspace_id, title) values (pg_t
 select pg_temp.act_as('expert');
 select throws_ok($$insert into public.reports (workspace_id, title) values (pg_temp.id('w1'), 'Rapport expert')$$,
   '42501', null, 'expert cannot create a report');
-select is(pg_temp.affected($$delete from public.reports where id = pg_temp.id('r1')$$), 0, 'expert cannot delete a report');
+select throws_ok($$select public.delete_report(pg_temp.id('r1'))$$, '42501', null, 'expert cannot delete a report');
 
 select pg_temp.act_as('admin');
 -- created_by comes from the column default (auth.uid()), KRB-152 F-15.

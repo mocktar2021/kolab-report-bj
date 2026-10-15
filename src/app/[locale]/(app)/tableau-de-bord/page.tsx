@@ -9,10 +9,11 @@ import { SectionTable, SectionsError } from "@/components/dashboard/section-tabl
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { getDashboardData, getWorkspaceReports } from "@/lib/dashboard";
+import { DELETED_KINDS, type DeletedKind } from "@/lib/deletions/server";
 import { sectionStatusSchema } from "@/lib/sections";
 import { getCurrentProfile } from "@/lib/supabase/user";
 import { isManager } from "@/lib/workspaces/roles";
-import { getCurrentWorkspace } from "@/lib/workspaces/server";
+import { getCurrentWorkspace, getOwnedOrganizations } from "@/lib/workspaces/server";
 import { NewReportDialog } from "./new-report-dialog";
 
 // Per-user data behind auth: never prerender or cache.
@@ -28,21 +29,28 @@ export default async function TableauDeBordPage({
   searchParams,
 }: {
   params: Promise<{ locale: "fr" }>;
-  searchParams: Promise<{ statut?: string | string[] }>;
+  searchParams: Promise<{ statut?: string | string[]; suppression?: string | string[] }>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Dashboard");
 
   // Unknown or repeated ?statut= values are ignored: the page shows everything.
-  const { statut } = await searchParams;
+  const { statut, suppression } = await searchParams;
   const parsedStatus = sectionStatusSchema.safeParse(statut);
   const activeStatus = parsedStatus.success ? parsedStatus.data : null;
+  // Set by the deletion actions (KRB-180) when they bring the user back here.
+  const deleted = (DELETED_KINDS as readonly unknown[]).includes(suppression)
+    ? (suppression as DeletedKind)
+    : null;
+  const tDeletion = await getTranslations("Deletion");
 
   const [profile, workspace] = await Promise.all([getCurrentProfile(), getCurrentWorkspace()]);
   const [data, reports] = workspace
     ? await Promise.all([getDashboardData(workspace.id, activeStatus), getWorkspaceReports(workspace.id)])
     : [null, null];
+  // With no workspace, the organizations the user still owns, so they can reach them.
+  const ownedOrganizations = workspace ? [] : await getOwnedOrganizations();
 
   // Every signed-in page fades in from half opacity, not zero: Chrome does
   // not count a transparent element as largest contentful paint, so a fade
@@ -69,6 +77,12 @@ export default async function TableauDeBordPage({
         ) : null}
       </header>
 
+      {deleted ? (
+        <p role="status" className="mt-6 rounded-xl border bg-muted/40 px-4 py-3 text-sm">
+          {tDeletion(`done.${deleted}`)}
+        </p>
+      ) : null}
+
       {/*
         Reloads the page when a section of the workspace changes elsewhere
         (KRB-19). No loading.tsx for this route: with a route loading boundary,
@@ -78,7 +92,7 @@ export default async function TableauDeBordPage({
       {workspace ? <LiveDashboard workspaceId={workspace.id} /> : null}
 
       {!workspace ? (
-        <NoWorkspace />
+        <NoWorkspace organizations={ownedOrganizations} />
       ) : data && reports ? (
         <>
           <KpiCards

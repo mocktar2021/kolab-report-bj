@@ -23,7 +23,9 @@ export const getMyWorkspaces = cache(async (): Promise<MyWorkspace[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("workspace_members")
-    .select("role, workspace:workspaces(id, name, organization_id, organization:organizations(name))")
+    .select(
+      "role, workspace:workspaces(id, name, organization_id, organization:organizations(name, owner_id))",
+    )
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
   if (error || !data) return [];
@@ -36,12 +38,32 @@ export const getMyWorkspaces = cache(async (): Promise<MyWorkspace[]> => {
             name: row.workspace.name,
             organizationId: row.workspace.organization_id,
             organizationName: row.workspace.organization?.name ?? null,
+            ownsOrganization: row.workspace.organization?.owner_id === user.id,
             role: row.role,
           },
         ]
       : [],
   );
 });
+
+/**
+ * Organizations the signed-in user owns, by name. RLS lets an owner read
+ * their organization even with no workspace left in it, so the dashboard can
+ * still link to it.
+ */
+export async function getOwnedOrganizations(): Promise<ManageableOrganization[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("id, name")
+    .eq("owner_id", user.id)
+    .order("name", { ascending: true });
+  if (error || !data) return [];
+  return data.map(({ id, name }) => ({ id, name }));
+}
 
 /**
  * Organizations the signed-in user can add a workspace to, by name: the ones
@@ -110,4 +132,10 @@ export async function setCurrentWorkspaceCookie(workspaceId: string) {
     path: "/",
     maxAge: ONE_YEAR,
   });
+}
+
+/** Forgets the current workspace, once the user belongs to none (KRB-180). */
+export async function clearCurrentWorkspaceCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete(CURRENT_WORKSPACE_COOKIE);
 }

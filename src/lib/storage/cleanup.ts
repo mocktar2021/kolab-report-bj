@@ -8,6 +8,8 @@ import type { Database } from "@/lib/supabase/database.types";
 // files in private.storage_cleanup_queue (migration 20261014140000). This
 // job, run once a day by /api/cron/storage-cleanup, deletes the manual
 // exports past their retention, then removes the queued objects in batches.
+// It also deletes the events of the deletion log (KRB-180) older than 12
+// months.
 //
 // `admin` is the service-role client. The queue is global by design, so
 // nothing here is scoped by workspace_id: the job only ever removes paths
@@ -17,6 +19,9 @@ export const STORAGE_CLEANUP_BUCKETS = ["deliverables", "exports"] as const;
 
 /** Days a manual export is kept. A final report's snapshot stays as long as the report. */
 export const EXPORT_RETENTION_DAYS = 90;
+
+/** Months the deletion log (private.audit_events) is kept. */
+export const AUDIT_RETENTION_MONTHS = 12;
 
 /** Paths claimed at once. Storage removes up to 1000 per call. */
 export const CLEANUP_BATCH_SIZE = 100;
@@ -30,6 +35,8 @@ type Bucket = (typeof STORAGE_CLEANUP_BUCKETS)[number];
 export type StorageCleanupSummary = {
   /** Manual exports deleted because they were past the retention. */
   expiredExports: number;
+  /** Events of the deletion log deleted because they were past the retention. */
+  expiredAuditEvents: number;
   /** Queued paths cleared: the object is removed, or was already gone. */
   removed: number;
   /** Paths whose removal failed. They stay queued for the next run. */
@@ -42,6 +49,7 @@ export type StorageCleanupSummary = {
 
 export type StorageCleanupOptions = {
   retentionDays?: number;
+  auditRetentionMonths?: number;
   batchSize?: number;
   budgetMs?: number;
   now?: () => number;
@@ -69,6 +77,7 @@ export async function runStorageCleanup(
 ): Promise<StorageCleanupSummary> {
   const {
     retentionDays = EXPORT_RETENTION_DAYS,
+    auditRetentionMonths = AUDIT_RETENTION_MONTHS,
     batchSize = CLEANUP_BATCH_SIZE,
     budgetMs = CLEANUP_TIME_BUDGET_MS,
     now = Date.now,
@@ -76,6 +85,7 @@ export async function runStorageCleanup(
   const deadline = now() + budgetMs;
   const summary: StorageCleanupSummary = {
     expiredExports: 0,
+    expiredAuditEvents: 0,
     removed: 0,
     failed: 0,
     timedOut: false,
@@ -91,6 +101,16 @@ export async function runStorageCleanup(
     summary.ok = false;
   } else {
     summary.expiredExports = expired ?? 0;
+  }
+
+  const { data: expiredEvents, error: auditError } = await admin.rpc("expire_audit_events", {
+    p_months: auditRetentionMonths,
+  });
+  if (auditError) {
+    log.error("storage-cleanup: could not expire old audit events", { error: auditError.message });
+    summary.ok = false;
+  } else {
+    summary.expiredAuditEvents = expiredEvents ?? 0;
   }
 
   for (;;) {

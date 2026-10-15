@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import { PASSWORD_MIN_LENGTH } from "../../src/lib/auth/password-policy";
 import { fillSecret, runTag, signupAddress, smoke } from "./support";
 
 // Sign-up without polluting the site: the form check sends nothing to
@@ -15,7 +16,10 @@ test.describe("sign-up", { tag: "@sign-up" }, () => {
     await page.getByRole("button", { name: "Créer mon compte" }).click();
     await expect(page.getByText("Indiquez votre nom.")).toBeVisible();
     await expect(page.getByText("Saisissez une adresse e-mail valide.")).toBeVisible();
-    await expect(page.getByText("Le mot de passe doit faire au moins 8 caractères.")).toBeVisible();
+    // The rule of the deployed code (KRB-58), which this checkout matches.
+    await expect(
+      page.getByText(`Le mot de passe doit faire au moins ${PASSWORD_MIN_LENGTH} caractères.`),
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/fr\/inscription$/);
   });
 

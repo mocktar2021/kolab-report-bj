@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createSmokeReport, deleteOpenReport, deleteSmokeReports } from "./report";
 import {
   deleteSmokeFiles,
   exportDocx,
@@ -8,18 +9,22 @@ import {
   uploadMarkdown,
   waitUntilParsed,
 } from "./section";
-import { FILE_PREFIX, hasAccount, runTag, smoke } from "./support";
+import { FILE_PREFIX, REPORT_PREFIX, hasAccount, runTag, smoke } from "./support";
 
 // Signed in as the smoke account (session from sign-in.setup.ts), in its
 // smoke workspace, through the pages only. What a run leaves behind: one
 // .docx export, removed by the storage cleanup job after 90 days, and with
 // SMOKE_AI one discarded generation in the AI usage history. Every uploaded
-// file is deleted after its test, even a failed one, or else by the next run.
+// file and the report each run creates are deleted after their test, even a
+// failed one, or else by the next run.
 
 test.skip(!hasAccount, "Set SMOKE_EMAIL and SMOKE_PASSWORD to run the signed-in checks");
 
 /** Section whose smoke files go after the current test, once the test has opened it. */
 let sectionToClean: string | undefined;
+
+/** Set while the current test may have left a smoke report behind. */
+let reportsToClean = false;
 
 // After the test, not in a finally block: the failure screenshot is taken
 // when the test function ends, so it shows the failure, not the cleanup.
@@ -27,6 +32,10 @@ test.afterEach(async ({ page }) => {
   const sectionPath = sectionToClean;
   sectionToClean = undefined;
   if (sectionPath) await deleteSmokeFiles(page, sectionPath);
+  if (reportsToClean) {
+    reportsToClean = false;
+    await deleteSmokeReports(page);
+  }
 });
 
 test.describe("signed in", { tag: "@signed-in" }, () => {
@@ -42,9 +51,9 @@ test.describe("signed in", { tag: "@signed-in" }, () => {
   });
 
   test("the workspace wizard checks each step, and nothing is created", async ({ page }) => {
-    // Submitting would create an organization that no user can delete, so
-    // the check stops before the last button. The smoke workspace itself
-    // was made with this wizard (docs/operations/smoke-tests.md).
+    // Submitting would create an organization and a workspace on every
+    // deploy, so the check stops before the last button. The smoke workspace
+    // itself was made with this wizard (docs/operations/smoke-tests.md).
     await page.goto("/fr/espaces/nouveau");
     // The smoke user owns the smoke organization, which the first step checks.
     await page.getByRole("radio", { name: "Nouvelle organisation" }).check();
@@ -69,6 +78,18 @@ test.describe("signed in", { tag: "@signed-in" }, () => {
     await waitUntilParsed(page, fileName);
     await previewShowsContent(page, fileName);
     await exportDocx(page, reportPath);
+  });
+
+  test("a report is created with « Nouveau rapport », then deleted", async ({ page }) => {
+    // KRB-26 criterion 2 (KRB-180): the run makes its own report and deletes
+    // it, so nothing is left. A report left by a run that stopped halfway
+    // goes first.
+    reportsToClean = true;
+    await deleteSmokeReports(page);
+    const title = `${REPORT_PREFIX}${runTag()}`;
+    await createSmokeReport(page, title);
+    await deleteOpenReport(page, title);
+    reportsToClean = false;
   });
 });
 

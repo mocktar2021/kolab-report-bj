@@ -4,8 +4,8 @@ How long KolabReport keeps each kind of personal data. The "Today" column is wha
 
 Two facts shape most of the table:
 
-- The app has no screen to delete an account, an organization, a workspace, a report or a section. A deliverable can be deleted from its section page, and a member can leave or be removed. Everything else is deleted by an operator on request ([`data-subject-requests.md`](data-subject-requests.md)).
-- Deleting a deliverable or an export row, directly or by a cascade (a deleted section, report or workspace), queues its file. A daily job (KRB-166, `/api/cron/storage-cleanup`) removes the queued files. A deliverable's file waits at least 2 hours 15 minutes after its upload started, because a signed upload link stays valid 2 hours.
+- Since KRB-180 the app deletes a report (owners and admins, owners only for a final one), a workspace (its owners, or the organization owner) and an organization with all its workspaces (its owner). Who can delete what: [`docs/security/deletions.md`](../security/deletions.md). A deliverable can be deleted from its section page, and a member can leave or be removed. The app has no screen to delete an account or a section: an operator deletes them on request ([`data-subject-requests.md`](data-subject-requests.md)).
+- Deleting a deliverable or an export row, directly or by a cascade (a deleted section, report, workspace or organization), queues its file. The delete functions of KRB-180 also queue every file stored under the folder of what goes, including one no row records. A daily job (KRB-166, `/api/cron/storage-cleanup`) removes the queued files. A deliverable's file waits at least 2 hours 15 minutes after its upload started, because a signed upload link stays valid 2 hours.
 
 ## Database
 
@@ -14,17 +14,20 @@ Two facts shape most of the table:
 | Account | `auth.users`, `public.profiles` | Until an operator deletes it | Self-service deletion (follow-up). **To decide**: delete sign-ups never confirmed after a set time, and what happens to inactive accounts. |
 | Sessions | `auth.sessions`, refresh tokens | Managed by Supabase Auth. Access tokens last 3,600 s and refresh tokens rotate (`supabase/config.toml`, to confirm on the hosted projects). Signing out ends the session of that browser only. | Provider default |
 | Auth audit log | `auth.audit_log_entries` (user id, name, e-mail, IP address) | Nothing in the repository removes it | **To decide**, as a security log with a fixed period |
-| Organizations and workspaces | `organizations`, `workspaces` | Until an operator deletes them. Deleting an organization deletes its workspaces. | Deleted or returned at the end of the firm's contract, as the customer DPA will say (**to confirm**) |
+| Organizations and workspaces | `organizations`, `workspaces` | Until the organization owner deletes the organization, or a workspace owner the workspace, in the app. Deleting an organization deletes its workspaces. | Deleted or returned at the end of the firm's contract, as the customer DPA will say (**to confirm**) |
 | Memberships | `workspace_members` | Until the member leaves or is removed, or the account or workspace is deleted | Same |
 | Invitations | `workspace_invitations` (invitee e-mail, token hash) | The link works once and for 7 days. The row stays until the workspace or the inviter's account is deleted, and stays even when the invitee deletes their own account. | **To decide**: remove used, revoked and expired invitations after a set time |
-| Reports and sections | `reports`, `report_sections` (text, accepted AI draft, assignee) | Until an operator deletes them, or the workspace is deleted. When an assignee's account is deleted, their sections become unassigned. | Set by the firm |
+| Reports and sections | `reports`, `report_sections` (text, accepted AI draft, assignee) | Until an owner or admin deletes the report in the app (an owner, for a final report), or its workspace or organization is deleted. When an assignee's account is deleted, their sections become unassigned. | Set by the firm |
 | Deliverables | `deliverables` (file name, extracted text, uploader) | Until a section editor deletes the file in the app, or its section, report or workspace is deleted. An upload never finished is deleted, row and file, after one day, the next time the same person starts an upload in that section. | Same |
-| AI generations | `ai_generations` | The whole row stays until the workspace is deleted, see [below](#ai-generations) | **To decide**: clear the content columns once the section is gone |
+| AI generations | `ai_generations` | The row stays until the workspace is deleted. Once its section is gone, only the usage columns keep data: the text is cleared. See [below](#ai-generations) | Same |
 | Prompt templates | `prompt_library`, `prompt_rollouts` | Versions are never deleted, only archived, until the workspace is deleted. The author link becomes null when the author's account is deleted. | Same |
 | Exports | `report_exports` | Until the report or workspace is deleted. An export still pending after 2 minutes is marked failed. | 90 days, see [below](#exports) |
 | Status history | `report_status_events` | Until the report or workspace is deleted. The author link becomes null when the author's account is deleted. | Same |
 | Notifications | `notifications` | Until the recipient's account, the report or the workspace is deleted | **To decide**: for example remove read notifications after a set time |
 | AI cost alerts | `ai_cost_alerts` | One row per day, kept. No personal data. | Same |
+| Deletion log | `private.audit_events`: who deleted a report, a workspace or an organization (user id), when, the ids and counts of what went. No title, name or content. | 12 months. The daily cleanup job (`/api/cron/storage-cleanup`) calls `expire_audit_events(12)`, which deletes older events. No foreign key, so an event outlives the account and what it is about until then. | Same |
+| Billing of a deleted organization | `organization_billing`, `billing_entitlements`, `billing_ai_packs`, `billing_draft_usage` | Deleted with the organization. `private.billing_events` and `private.billing_trial_claims` stay: no foreign key, so a new organization of the same person gets no second trial. Deleting a workspace keeps the draft ledger of its organization. | Same |
+| Payments and receipts (KRB-176) | `billing_purchases`, `billing_receipts`, their lines and payment events | Kept when the organization is deleted, with `organization_id` set to null: the receipt holds a copy of the buyer. Only the service role reads them after that. | 10 years under OHADA, **to confirm** with the accountant (ADR 001, A5) |
 
 ## Storage files
 
@@ -40,11 +43,15 @@ The daily job runs at 03:00 UTC from Vercel Cron (`vercel.json`; on the Hobby pl
 Each request for a draft is one row in `ai_generations`. It holds usage (tokens, cost, latency, model, requester, dates) and content (the draft in `output` and `raw_output`, the file names in `context_meta`, the requester's `feedback_comment`).
 
 - Before migration `20261013230000_ai_generations_keep_usage.sql`, deleting a section deleted its generations, which took their tokens out of the hourly limit and the monthly budget. Now the row stays with `section_id` set to null, and only owners and admins can read it. Deleting the workspace removes it.
-- That migration keeps the whole row, not only the usage. The draft text and file names of a deleted section stay until the workspace goes.
-- When the requester's account is deleted, `requested_by` becomes null. The rest of the row, `feedback_comment` included, stays.
+- Decided in KRB-180: when the section goes, with its report or alone, a trigger clears the text of its generations. `output`, `raw_output` and `feedback_comment` become null, and `context_meta` keeps only the number of files used, the token estimate and whether usage was estimated. `content_cleared_at` records when. A draft still running when its section goes is cleared when the app records its end.
+- What stays: tokens, cost, latency, model, prompt version, status, the decision, the edit distance, the rating, the requester and the dates. The hourly limit, the monthly budget, the draft ledger and the AI dashboard keep working. The SHA-256 hashes of the context stay too: they cannot give the text back.
+- Deleting a workspace or an organization deletes its generations. Only the draft ledger (`billing_draft_usage`) stays, with ids, months and statuses and no text.
+- When the requester's account is deleted, `requested_by` becomes null. The rest of the row, `feedback_comment` included, stays while the section exists.
 - The hourly limit reads the last hour and the budget reads the current calendar month (UTC). The AI dashboard reads usage over a chosen period. None of them reads the content columns.
 
-**To decide**: when a section is deleted, or when the month of a generation is over, set `output`, `raw_output` and `feedback_comment` to null and strip the file names from `context_meta`, keeping the usage columns. That keeps the limits, the budget and the dashboard working. It needs a migration and a job, so it is a follow-up.
+**To decide**: also clear the text of generations whose section still exists once their month is over. That needs a job, so it is a follow-up.
+
+With `AI_TRACE_CONTENT=true`, Langfuse traces hold the prompt and the output. Clearing a generation does not touch its trace, which follows the Langfuse retention setting.
 
 Provider side: how long Anthropic or OpenAI keep prompts and outputs is set by their terms, **to confirm** ([`processors.md`](processors.md)). With tracing on, Langfuse keeps traces per its own settings: provider default.
 

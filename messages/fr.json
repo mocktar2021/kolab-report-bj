@@ -390,7 +390,9 @@
       "title": "Créez votre premier espace de travail",
       "description": "Un espace de travail regroupe votre organisation, ses rapports et les experts qui les rédigent. Vous en serez propriétaire.",
       "cta": "Créer un espace de travail",
-      "invited": "Vous attendez une invitation ? L'espace apparaîtra ici dès qu'un administrateur vous aura ajouté."
+      "invited": "Vous attendez une invitation ? L'espace apparaîtra ici dès qu'un administrateur vous aura ajouté.",
+      "organizationsTitle": "Vos organisations",
+      "organizationsDescription": "Vous en êtes propriétaire. Ouvrez-en une pour voir ses espaces de travail ou la supprimer."
     },
     "reports": {
       "title": "Rapports",
@@ -523,7 +525,9 @@
       "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution.",
       "billingLimit": "Ce changement dépasse les limites de l'offre de l'organisation.",
       "billingReadOnly": "Cet espace de travail est en lecture seule : l'offre de l'organisation n'est plus active."
-    }
+    },
+    "settings": "Paramètres de l'espace",
+    "organization": "Gérer l'organisation"
   },
   "WorkspaceWizard": {
     "metaTitle": "Nouvel espace de travail",
@@ -1433,6 +1437,113 @@
       "refunded": "Ce paiement a été remboursé.",
       "retry": "Réessayer",
       "back": "Retour à l'abonnement"
+    }
+  },
+  "WorkspaceSettings": {
+    "metaTitle": "Paramètres de l'espace",
+    "title": "Paramètres de {workspace}",
+    "subtitle": "Réservé aux propriétaires de l'espace de travail.",
+    "backToDashboard": "Tableau de bord",
+    "forbiddenTitle": "Page réservée",
+    "forbiddenDescription": "Seuls les propriétaires de l'espace de travail ouvrent ses paramètres.",
+    "organizationTitle": "Organisation",
+    "organization": "Cet espace fait partie de l'organisation {organization}.",
+    "organizationOwner": "Vous en êtes propriétaire : sa page liste ses espaces de travail et permet de la supprimer.",
+    "organizationLink": "Gérer l'organisation"
+  },
+  "OrganizationSettings": {
+    "metaTitle": "Organisation",
+    "eyebrow": "Organisation",
+    "subtitle": "Réservé au propriétaire de l'organisation. Vous pouvez supprimer chacun de ses espaces de travail, même ceux dont vous n'êtes pas membre.",
+    "backToDashboard": "Tableau de bord",
+    "workspacesTitle": "Espaces de travail",
+    "workspacesEmpty": "Aucun espace de travail dans cette organisation pour le moment.",
+    "workspaceMeta": "{reports, plural, =0 {Aucun rapport} one {# rapport} other {# rapports}}, {members, plural, =0 {aucun membre} one {# membre} other {# membres}}",
+    "mission": "Pass Mission",
+    "addWorkspace": "Nouvel espace de travail"
+  },
+  "Deletion": {
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "mismatch": "Le texte ne correspond pas. Recopiez-le exactement, majuscules et accents compris.",
+    "aiUsageKept": "Les brouillons IA déjà générés restent décomptés de l'offre de l'organisation.",
+    "done": {
+      "rapport": "Le rapport a été supprimé.",
+      "espace": "L'espace de travail a été supprimé.",
+      "organisation": "L'organisation a été supprimée."
+    },
+    "errors": {
+      "forbidden": "Vous n'avez pas les droits pour faire cette suppression.",
+      "notFound": "Introuvable : il a peut-être déjà été supprimé. Rechargez la page.",
+      "confirmation": "Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer.",
+      "stale": "Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez.",
+      "paymentPending": "Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à {support}.",
+      "invalidInput": "Cette demande de suppression n'est pas valide. Rechargez la page.",
+      "generic": "La suppression n'a pas abouti. Réessayez dans un instant."
+    },
+    "report": {
+      "zoneTitle": "Supprimer le rapport",
+      "zoneDescription": "Le rapport disparaît pour tous les membres de l'espace, avec ses sections, les fichiers déposés et ses exports. Cette action est définitive.",
+      "finalOwner": "Ce rapport est final : pour le supprimer, vous saisirez son titre.",
+      "finalAdmin": "Ce rapport est final : seul un propriétaire de l'espace peut le supprimer.",
+      "button": "Supprimer le rapport",
+      "title": "Supprimer le rapport ?",
+      "description": "« {title} » sera supprimé pour tous les membres de l'espace. Cette action est définitive.",
+      "contentsTitle": "Seront supprimés avec lui :",
+      "sections": "{count, plural, one {# section et son texte} other {# sections et leur texte}}",
+      "files": "{count, plural, one {# fichier déposé} other {# fichiers déposés}}",
+      "exports": "{count, plural, one {# export} other {# exports}}",
+      "history": "l'historique des statuts et ses notifications",
+      "finalNote": "Ce rapport est final : sa version finale enregistrée est supprimée aussi.",
+      "typed": "Saisissez « {title} » pour confirmer",
+      "confirm": "Supprimer le rapport",
+      "pending": "Suppression…"
+    },
+    "workspace": {
+      "zoneTitle": "Supprimer l'espace de travail",
+      "zoneDescription": "L'espace disparaît pour tous ses membres, avec ses rapports, ses fichiers, ses exports, ses invitations et ses modèles de prompt. L'organisation et son abonnement restent. Cette action est définitive.",
+      "button": "Supprimer l'espace de travail",
+      "buttonShort": "Supprimer",
+      "buttonLabel": "Supprimer l'espace de travail « {name} »",
+      "title": "Supprimer l'espace de travail ?",
+      "description": "L'espace « {name} » sera supprimé pour {members, plural, one {son seul membre} other {ses # membres}}. Cette action est définitive.",
+      "contentsTitle": "Seront supprimés avec lui :",
+      "reports": "{count, plural, one {# rapport} other {# rapports}}",
+      "finalReports": "{count, plural, one {dont # rapport final} other {dont # rapports finaux}}",
+      "sections": "{count, plural, one {# section} other {# sections}}",
+      "files": "{count, plural, one {# fichier déposé} other {# fichiers déposés}}",
+      "exports": "{count, plural, one {# export} other {# exports}}",
+      "invitations": "{count, plural, one {# invitation en attente} other {# invitations en attente}}",
+      "templates": "{count, plural, one {# modèle de prompt de l'espace} other {# modèles de prompt de l'espace}}",
+      "access": "l'accès de {count, plural, one {# membre} other {# membres}} à cet espace",
+      "pass": "Le Pass Mission de cet espace court jusqu'au {date}. Le temps restant est perdu, sans remboursement.",
+      "organizationKept": "L'organisation « {organization} » et son abonnement restent, comme les comptes des membres.",
+      "paymentPending": "Un paiement de Pass Mission pour cet espace est en cours ou en vérification. Vous pourrez supprimer l'espace une fois le paiement abouti. S'il reste bloqué, écrivez au support à {support}.",
+      "typed": "Saisissez « {name} » pour confirmer",
+      "confirm": "Supprimer l'espace de travail",
+      "pending": "Suppression…"
+    },
+    "organization": {
+      "zoneTitle": "Supprimer l'organisation",
+      "zoneDescription": "L'organisation disparaît avec tous ses espaces de travail et ce qu'ils contiennent, pour tous leurs membres. L'abonnement, les Pass Mission et les crédits en cours sont perdus. Cette action est définitive.",
+      "button": "Supprimer l'organisation",
+      "title": "Supprimer l'organisation ?",
+      "description": "L'organisation « {name} » sera supprimée pour tous ses membres. Cette action est définitive.",
+      "workspacesTitle": "{count, plural, =0 {Aucun espace de travail ne lui est rattaché.} one {Son espace de travail sera supprimé avec elle :} other {Ses # espaces de travail seront supprimés avec elle :}}",
+      "workspace": "« {name} » : {reports, plural, =0 {aucun rapport} one {# rapport} other {# rapports}}, {members, plural, =0 {aucun membre} one {# membre} other {# membres}}",
+      "mission": "Pass Mission",
+      "billingTitle": "Vous perdez aussi :",
+      "plan": "l'offre {plan}, qui court jusqu'au {date}",
+      "pass": "le Pass Mission de « {workspace} », jusqu'au {date}",
+      "packs": "{count, plural, one {# brouillon IA de Pack IA non utilisé} other {# brouillons IA de Pack IA non utilisés}}",
+      "lost": "Le temps restant et les crédits non utilisés sont perdus, sans remboursement.",
+      "trial": "L'essai gratuit en cours s'arrête le jour de la suppression. Une nouvelle organisation n'aura pas de nouvel essai.",
+      "receipts": "{count, plural, one {Son reçu de paiement est conservé} other {Ses # reçus de paiement sont conservés}} pour la comptabilité, mais vous ne pourrez plus {count, plural, one {le} other {les}} consulter dans l'application. Téléchargez-{count, plural, one {le} other {les}} avant, depuis la page <link>Abonnement</link>.",
+      "accountsKept": "Les comptes des membres restent, avec leurs autres espaces de travail.",
+      "paymentPending": "{count, plural, one {Un paiement de l'organisation est} other {# paiements de l'organisation sont}} en cours ou en vérification. Vous pourrez supprimer l'organisation une fois le paiement abouti. S'il reste bloqué, écrivez au support à {support}.",
+      "typed": "Saisissez « {name} » pour confirmer",
+      "confirm": "Supprimer l'organisation",
+      "pending": "Suppression…"
     }
   }
 }

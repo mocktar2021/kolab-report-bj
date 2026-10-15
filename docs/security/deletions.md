@@ -1,0 +1,89 @@
+# Deletions
+
+Who can delete a report, a workspace or an organization in KolabReport, and what goes with it (KRB-180). The database checks every rule: `delete_report`, `delete_workspace` and `delete_organization`, from the deletions migration of KRB-180, are the only way a signed-in user deletes these rows. The DELETE privilege on `reports`, `workspaces` and `organizations` is revoked from `authenticated`, and the delete policies of `reports` and `workspaces` are gone, so the API refuses a direct delete with `42501`.
+
+## Who can delete what
+
+| What | Who | Confirmation | Where in the app |
+| --- | --- | --- | --- |
+| Report, not final | Owners and admins of its workspace | Dialog that names what goes | "Supprimer le rapport" at the bottom of the report page |
+| Report, final | Owners of its workspace | Dialog, and the exact title typed | Same. Admins see why they cannot |
+| Workspace | Owners of the workspace, and the organization owner even when not a member of it | Dialog, and the exact name typed | `/fr/espaces/<id>/parametres`, "Paramètres de l'espace" in the workspace menu (owners only), or "Supprimer" next to the workspace on the organization page |
+| Organization | Its owner (`organizations.owner_id`) only | Dialog listing every workspace and the billing time lost, and the exact name typed | `/fr/organisations/<id>`, "Gérer l'organisation" in the workspace menu (organization owner only), or the dashboard once no workspace is left |
+
+Everyone else is refused. Experts, viewers, admins of a workspace for its deletion, and owners of a workspace for its organization get `42501`. Someone outside the workspace or the organization gets `P0002`, the same answer as for an id that does not exist. The functions need a signed-in user: the service role gets `42501`, and operators delete with SQL only when no owner can do it ([`data-subject-requests.md`](../gdpr/data-subject-requests.md#deleting-a-workspace-or-an-organization)).
+
+The typed title or name is checked again in the database (`KR070`): the same text once the spaces around it are trimmed, accents compared in one Unicode form, case included.
+
+The organization owner deletes every workspace of the organization, alone or with the organization, including the ones they are not a member of. Workspace owners cannot delete their organization. When the organization owner deletes a workspace they are not a member of, the audit event records `actor_role` = `organization_owner`.
+
+A read-only workspace (billing, KRB-178) can still be deleted: none of the functions reads the billing state, except the payments in progress below.
+
+## A payment in progress
+
+An organization cannot be deleted while one of its purchases (KRB-176) is `pending` or in `review`, and a workspace cannot be deleted while a Pass Mission purchase for it is. The functions refuse with `KR071`. FedaPay may still approve a pending payment, and a purchase in review waits for an operator, so deleting first would leave a payment for nothing.
+
+The previews return `payments_in_progress`. When it is above 0, the dialog says the deletion waits, shows the support address and has no confirm button. The check runs again under the billing lock, so no purchase starts between the check and the deletion.
+
+The block ends on its own or with the operator:
+
+- A pending purchase becomes `paid` when FedaPay approves it, or `expired` 48 hours after the checkout through reconciliation.
+- A purchase in review waits for an operator, who settles it, for example with a refund ([`fedapay-webhook.md`](fedapay-webhook.md)). Until then the owner sees the support address.
+
+## What goes and what stays
+
+| Deleted | Goes with it | Stays |
+| --- | --- | --- |
+| Report | Sections, deliverable rows, exports and final snapshots, status history, notifications. Files are queued for removal. The text of its AI generations: draft, raw answer, feedback and file names | AI generations of its sections, with `section_id` set to null and their usage only (tokens, cost, dates), so their tokens and drafts still count |
+| Workspace | Members, invitations, reports and all they hold, prompt templates and rollouts, AI generations, notifications, the Pass Mission entitlements of a mission workspace | The organization and its subscription. The organization's draft ledger (`workspace_id` set to null), so deleting a workspace never gives drafts back. Member accounts |
+| Organization | Every workspace and all it holds, the buyer row, entitlements, Pack IA credits, the draft ledger | Payments and receipts (KRB-176), with `organization_id` set to null and a copy of the buyer in the receipt. `private.billing_events` and `private.billing_trial_claims`, which have no foreign key: a new organization of the same person gets no new trial. Member accounts |
+
+The dialogs warn when time is lost: a running Pass Mission for a workspace; for an organization, the plan and the end of its last period (trial aside), the passes and the Pack IA drafts left. A period, a pass or a pack already started is not refunded (`/fr/cgv#remboursement`). When the organization has receipts, its dialog says they stay for the accounts but cannot be read in the app afterwards, and links to its "Abonnement" page to download them first (the receipt list there comes with KRB-177).
+
+## No undo period
+
+A deletion is immediate, as decided for KRB-180: no waiting period, no trash and no undo. The rows go in the transaction of the function, and the stored files at the next daily cleanup run. The dialogs say "Cette action est définitive", and a final report, a workspace and an organization ask for their exact title or name first.
+
+The app cannot bring back what went. A database backup can, but a restore replaces the whole database and only covers its own window ([`retention.md`](../gdpr/retention.md#backups)), so it is for incidents, not for undoing one deletion.
+
+## How a deletion runs
+
+In one transaction:
+
+1. The caller's rights, as above.
+2. Locks: the draft lock of each workspace concerned (the one `start_ai_generation` takes), then for a workspace or an organization the billing lock of the organization (always the last advisory lock), then the rows. A draft that starts in what is being deleted waits, then fails; one that started first goes with it. Uploads and exports are covered by the foreign keys and by the upload window of the cleanup queue. If a workspace is added to the organization while its deletion waits for the locks, it refuses with `40001` and the owner tries again.
+3. The stored files are queued in `private.storage_cleanup_queue`: the files of the deliverable and export rows, and every object under the folders of what goes, including an export file no row records. The daily job (KRB-166) removes them. A deliverable registered less than 2 hours 15 minutes ago waits for its upload window.
+4. The row is deleted; the foreign keys take the rest.
+5. An event goes to `private.audit_events`: action, the user id, the ids of the organization, workspace and report, and in `details` the counts of what went, the status of the report, the role of the user and the billing time lost. For an organization it also keeps the ids of its purchases and how many receipts stay, since their own link to the organization is set to null. No title, name or content. Nobody signed in reads it, not even the service role. Events are kept 12 months: the daily cleanup job calls `expire_audit_events(12)`, the only thing the service role can do with the log, which deletes older events ([`retention.md`](../gdpr/retention.md)).
+
+To see the deletions of an organization:
+
+```sql
+select created_at, action, actor_id, workspace_id, report_id, details
+from private.audit_events
+where organization_id = '<organization-id>'
+order by created_at desc;
+```
+
+## After a deletion
+
+- The user who deleted a report goes back to the dashboard. After a workspace or an organization, the workspace cookie (`kr-espace`) moves to another workspace they belong to, of the same organization first, or goes when none is left and they land on the wizard.
+- Other members whose cookie names a deleted workspace see their first workspace on their next page: the app ignores a cookie that names no workspace of theirs.
+- After an organization is deleted, every owner and admin of its workspaces gets one e-mail in French, except the person who deleted it (`src/lib/email/organization-deleted-email.ts`). It names the organization, the recipient's own workspaces that went, who deleted them (`profiles.full_name`, or "Le propriétaire de l'organisation" when empty, never an e-mail) and when, in Cotonou time. The recipients are read with the service role just before the deletion, scoped to the workspaces of the organization, because the organization owner cannot read the members of workspaces they are not in. The e-mails go through `sendEmail` after the response, once the deletion is committed. A failed send is logged with counts only and never undoes the deletion. Deleting a report or a single workspace sends no e-mail.
+- Pages kept offline by the service worker on a member's device stay until they sign out.
+
+## Errors
+
+| Code | Message |
+| --- | --- |
+| `42501` | Vous n'avez pas les droits pour faire cette suppression. |
+| `P0002` | Introuvable : il a peut-être déjà été supprimé. Rechargez la page. |
+| `KR070` | Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer. |
+| `40001` | Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez. |
+| `KR071` | Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à support@mocktar.com. |
+
+## Tests
+
+- `supabase/tests/deletions_test.sql`: rights of each role, cross-workspace attempts, cascades, files queued, draft ledger kept, billing rows, audit events, read-only workspaces, payments pending or in review.
+- `tests/e2e/deletions.spec.ts`: each deletion through the pages, refusals for experts and viewers, the dialog of an organization with a payment pending, the e-mail to the owners and admins in Mailpit, files removed by the cleanup job (needs the Storage container).
+- The smoke suite creates and deletes its own report on every deploy ([`smoke-tests.md`](../operations/smoke-tests.md)).

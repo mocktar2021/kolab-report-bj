@@ -141,8 +141,8 @@ select results_eq($$select user_id from public.workspace_members where workspace
 -- The admin user is now the only owner of w1. Deleting the workspace
 -- cascades to that membership and must not hit the last owner guard.
 select pg_temp.act_as('admin');
-select is(pg_temp.affected($$delete from public.workspaces where id = pg_temp.id('w1')$$),
-  1, 'the last owner can still delete the workspace');
+select lives_ok($$select public.delete_workspace(pg_temp.id('w1'), 'Etude A')$$,
+  'the last owner can still delete the workspace');
 
 select * from finish();
 rollback;

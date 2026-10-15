@@ -23,10 +23,10 @@ select pg_temp.act_as('owner');
 select throws_ok('truncate public.reports', '42501', null, 'signed-in users cannot truncate a table');
 -- One privilege per check: has_table_privilege with a list is true when any one is held.
 select ok(has_table_privilege('authenticated', 'public.reports', 'select')
-  and has_table_privilege('authenticated', 'public.reports', 'delete')
+  and not has_table_privilege('authenticated', 'public.reports', 'delete')
   and has_column_privilege('authenticated', 'public.reports', 'title', 'insert')
   and has_column_privilege('authenticated', 'public.reports', 'title', 'update'),
-  'signed-in users keep select and delete, and insert and update on the columns they may write');
+  'signed-in users keep select, and insert and update on the columns they may write; they delete through delete_report');
 
 select * from finish();
 rollback;
