@@ -1709,20 +1709,6 @@ export type Database = {
           reused: boolean;
         }[];
       };
-      billing_find_purchase: {
-        Args: {
-          p_environment: string;
-          p_event_id?: string;
-          p_merchant_reference?: string;
-          p_transaction_id: number;
-        };
-        Returns: {
-          event_seen: boolean;
-          organization_id: string;
-          purchase_id: string;
-          status: string;
-        }[];
-      };
       billing_due_notices: {
         Args: { p_at?: string };
         Returns: {
@@ -1736,6 +1722,20 @@ export type Database = {
           recipients: Json;
           workspace_id: string;
           workspace_name: string;
+        }[];
+      };
+      billing_find_purchase: {
+        Args: {
+          p_environment: string;
+          p_event_id?: string;
+          p_merchant_reference?: string;
+          p_transaction_id: number;
+        };
+        Returns: {
+          event_seen: boolean;
+          organization_id: string;
+          purchase_id: string;
+          status: string;
         }[];
       };
       billing_finish_notice: {
