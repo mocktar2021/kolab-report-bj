@@ -88,11 +88,11 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 
 | Field | Entry |
 | --- | --- |
-| Role | Controller for Auth e-mails. Processor for invitations and report status e-mails, sent for the firm. Assumptions to confirm. |
-| Purpose | Confirm an e-mail address, reset a password, invite someone to a workspace, tell members that a report changed status. A daily AI cost alert goes to the operator. |
+| Role | Controller for Auth e-mails. Processor for invitations, report status e-mails and the organization deletion e-mail, sent for the firm. Assumptions to confirm. |
+| Purpose | Confirm an e-mail address, reset a password, invite someone to a workspace, tell members that a report changed status, tell owners and admins that their organization was deleted. A daily AI cost alert goes to the operator. |
 | Legal basis (proposed) | Contract for Auth e-mails. Set by the firm for invitations and status e-mails. |
 | Data subjects | Users and invitees |
-| Data categories | Recipient e-mail in every case. Auth e-mails: confirmation, recovery and e-mail change links. Invitation (`src/lib/email/invitation-email.ts`): inviter's name, workspace and organization names, role, link with the token, expiry date. Status e-mail (`src/lib/email/report-status-email.ts`): report title, workspace name, name of the person who changed the status, link to the report. Cost alert: environment name and amounts only, sent to `AI_ALERT_EMAIL`. |
+| Data categories | Recipient e-mail in every case. Auth e-mails: confirmation, recovery and e-mail change links. Invitation (`src/lib/email/invitation-email.ts`): inviter's name, workspace and organization names, role, link with the token, expiry date. Status e-mail (`src/lib/email/report-status-email.ts`): report title, workspace name, name of the person who changed the status, link to the report. Organization deletion e-mail (`src/lib/email/organization-deleted-email.ts`, KRB-180): organization name, names of the recipient's workspaces that went, name of the person who deleted it, date and time. Cost alert: environment name and amounts only, sent to `AI_ALERT_EMAIL`. |
 | Recipients | The e-mail provider: Resend or Brevo through `EMAIL_PROVIDER` for the app's e-mails, and the SMTP sender set in Supabase Auth for Auth e-mails. Then the recipient's mailbox provider. |
 | Transfers outside the EU | See [`processors.md`](processors.md) |
 | Retention | The app keeps no copy of sent e-mails. The provider keeps its own logs: provider default, **to confirm**. |

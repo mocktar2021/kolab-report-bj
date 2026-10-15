@@ -34,6 +34,35 @@ export async function waitForLink(
   throw new Error(`No e-mail "${subject}" for ${to} within ${timeoutMs} ms`);
 }
 
+/** Subjects of the e-mails to `to`, newest first. */
+export async function subjectsFor(to: string): Promise<string[]> {
+  const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+  if (!res.ok) throw new Error(`Mailpit answered ${res.status}`);
+  const { messages } = (await res.json()) as { messages: MailpitSummary[] };
+  return messages.map((m) => m.Subject);
+}
+
+/** Waits for the newest e-mail to `to` with this subject, and returns its plain text with "\n" line ends. */
+export async function waitForText(to: string, subject: string, timeoutMs = 20_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+    if (res.ok) {
+      const { messages } = (await res.json()) as { messages: MailpitSummary[] };
+      const match = messages.find((m) => m.Subject === subject);
+      if (match) {
+        const detail = (await (await fetch(`${MAILPIT_URL}/api/v1/message/${match.ID}`)).json()) as {
+          Text: string;
+        };
+        // Mailpit keeps the CRLF line ends of the message.
+        return detail.Text.replace(/[ \t]*\r\n/g, "\n");
+      }
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`No e-mail "${subject}" for ${to} within ${timeoutMs} ms`);
+}
+
 /** Deletes every message in the inbox of `to`, so later searches only see new mail. */
 export async function clearInbox(to: string) {
   await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`, { method: "DELETE" });

@@ -3,6 +3,7 @@ import { confirmationMatches } from "./confirmation";
 import { deletionErrorKey } from "./errors";
 import { billingLosses } from "./losses";
 import { workspaceAfterDeletion } from "./next-workspace";
+import { organizationDeletionRecipients } from "./recipients";
 
 describe("confirmationMatches", () => {
   it("needs the same text, spaces around it aside", () => {
@@ -157,5 +158,45 @@ describe("billingLosses", () => {
     expect(losses.packDrafts).toBe(170);
     expect(losses.packsExpireAt).toBe("2027-09-01T00:00:00Z");
     expect(losses.any).toBe(true);
+  });
+});
+
+describe("organizationDeletionRecipients", () => {
+  const OWNER = "owner";
+  const names = new Map([
+    ["w1", "Mission Kandi"],
+    ["w2", "Audit Natitingou"],
+  ]);
+
+  it("tells each owner and admin once, with their own workspaces, but not the person deleting", () => {
+    expect(
+      organizationDeletionRecipients(
+        [
+          { user_id: OWNER, workspace_id: "w1", email: "owner@kolabreport.test" },
+          { user_id: "paul", workspace_id: "w1", email: "paul@kolabreport.test" },
+          { user_id: "paul", workspace_id: "w2", email: "paul@kolabreport.test" },
+          { user_id: "awa", workspace_id: "w2", email: "awa@kolabreport.test" },
+        ],
+        names,
+        OWNER,
+      ),
+    ).toEqual([
+      { email: "awa@kolabreport.test", workspaceNames: ["Audit Natitingou"] },
+      { email: "paul@kolabreport.test", workspaceNames: ["Audit Natitingou", "Mission Kandi"] },
+    ]);
+  });
+
+  it("leaves out rows without an e-mail or a workspace of the organization", () => {
+    expect(
+      organizationDeletionRecipients(
+        [
+          { user_id: "paul", workspace_id: "w1", email: null },
+          { user_id: "awa", workspace_id: "w9", email: "awa@kolabreport.test" },
+          { user_id: "eve", workspace_id: "w1", email: "  " },
+        ],
+        names,
+        OWNER,
+      ),
+    ).toEqual([]);
   });
 });

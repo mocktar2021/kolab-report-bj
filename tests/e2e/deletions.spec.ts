@@ -8,6 +8,7 @@ import {
   signedInClient,
   type TestUser,
 } from "./supabase";
+import { clearInbox, subjectsFor, waitForText } from "./mailpit";
 
 // KRB-180: deleting a report, a workspace or an organization. Each goes
 // through a French confirmation dialog that names what goes; a final report,
@@ -371,6 +372,7 @@ test("the organization owner deletes it with every workspace, warned about the p
     });
   if (packError) throw packError;
   const receiptId = await addPaidReceipt(organizationId, "Cabinet Mission Kandi");
+  await Promise.all([clearInbox(owner.email), clearInbox(partner.email)]);
 
   // The partner owns a workspace of the organization, not the organization.
   const partnerPage = await pageFor(browser, partner);
@@ -472,6 +474,18 @@ test("the organization owner deletes it with every workspace, warned about the p
     .select("id", { count: "exact", head: true })
     .eq("id", entitlementId);
   expect(entitlements).toBe(0);
+
+  // The partner, admin of Mission Kandi and owner of Mission Malanville, hears of it. The owner does not.
+  const subject = "L'organisation « Cabinet Mission Kandi » a été supprimée";
+  const text = await waitForText(partner.email, subject);
+  expect(text).toMatch(
+    /^Orphée Owner a supprimé l'organisation « Cabinet Mission Kandi » le \d{1,2} \S+ \d{4} à \d{2}:\d{2} \(heure de Cotonou\)\./,
+  );
+  expect(text).toContain(
+    "Ces espaces de travail ont été supprimés avec elle :\n- « Mission Kandi »\n- « Mission Malanville »",
+  );
+  expect(text).not.toContain(owner.email);
+  expect(await subjectsFor(owner.email)).not.toContain(subject);
 
   // The receipt and its payment stay, detached from the organization.
   const { data: receipt, error: receiptError } = await adminClient()

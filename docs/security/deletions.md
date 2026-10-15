@@ -63,6 +63,7 @@ order by created_at desc;
 
 - The user who deleted a report goes back to the dashboard. After a workspace or an organization, the workspace cookie (`kr-espace`) moves to another workspace they belong to, of the same organization first, or goes when none is left and they land on the wizard.
 - Other members whose cookie names a deleted workspace see their first workspace on their next page: the app ignores a cookie that names no workspace of theirs.
+- After an organization is deleted, every owner and admin of its workspaces gets one e-mail in French, except the person who deleted it (`src/lib/email/organization-deleted-email.ts`). It names the organization, the recipient's own workspaces that went, who deleted them (`profiles.full_name`, or "Le propriétaire de l'organisation" when empty, never an e-mail) and when, in Cotonou time. The recipients are read with the service role just before the deletion, scoped to the workspaces of the organization, because the organization owner cannot read the members of workspaces they are not in. The e-mails go through `sendEmail` after the response, once the deletion is committed. A failed send is logged with counts only and never undoes the deletion. Deleting a report or a single workspace sends no e-mail.
 - Pages kept offline by the service worker on a member's device stay until they sign out.
 
 ## Errors
@@ -78,5 +79,5 @@ order by created_at desc;
 ## Tests
 
 - `supabase/tests/deletions_test.sql`: rights of each role, cross-workspace attempts, cascades, files queued, draft ledger kept, billing rows, audit events, read-only workspaces, payments pending or in review.
-- `tests/e2e/deletions.spec.ts`: each deletion through the pages, refusals for experts and viewers, the dialog of an organization with a payment pending, files removed by the cleanup job (needs the Storage container).
+- `tests/e2e/deletions.spec.ts`: each deletion through the pages, refusals for experts and viewers, the dialog of an organization with a payment pending, the e-mail to the owners and admins in Mailpit, files removed by the cleanup job (needs the Storage container).
 - The smoke suite creates and deletes its own report on every deploy ([`smoke-tests.md`](../operations/smoke-tests.md)).
