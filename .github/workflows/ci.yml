@@ -23,6 +23,29 @@ env:
   SUPABASE_EXCLUDE: studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
 
 jobs:
+  changes:
+    # Decides whether the end-to-end and Lighthouse jobs run (KRB-190). They
+    # are skipped with an if:, not with paths-ignore on the workflow: a
+    # skipped job counts as passed for a required check, while a workflow
+    # that never starts leaves its checks pending and blocks the merge.
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The commit and its parents: on a PR, the merge into the base.
+          fetch-depth: 2
+
+      - name: Code or documentation only
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: sh scripts/ci-changed-code.sh >> "$GITHUB_OUTPUT"
+
   checks:
     name: Lint, typecheck, unit tests, build
     runs-on: ubuntu-latest
@@ -78,6 +101,10 @@ jobs:
 
   supabase:
     name: Database and end-to-end tests
+    needs: changes
+    # Skipped when only docs/ or Markdown files changed. Runs when the
+    # changes job fails, so a broken check never skips the tests.
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     # 15 to 20 minutes with 151 tests on one worker, and 30% more on a slow
     # runner. Past 20 minutes on a normal runner, split the Playwright suite
@@ -144,7 +171,12 @@ jobs:
     # Its own job, next to the end-to-end one: both need about the same setup
     # time, so running in parallel adds no wall-clock time to CI. As a last
     # step of the end-to-end job it would add about 2.5 minutes to every run.
+    # Not on PRs, to save 7 minutes per push (KRB-190): it runs on master,
+    # where a failure stops the staging deploy, and on a manual run, which is
+    # how to check a PR before the merge. Skipped for documentation only.
     name: Lighthouse
+    needs: changes
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
