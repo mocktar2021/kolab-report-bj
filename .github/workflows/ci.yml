@@ -79,7 +79,10 @@ jobs:
   supabase:
     name: Database and end-to-end tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 15 to 20 minutes with 151 tests on one worker, and 30% more on a slow
+    # runner. Past 20 minutes on a normal runner, split the Playwright suite
+    # in shards instead of raising this (KRB-188).
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

@@ -20,6 +20,8 @@ Every pull request and every push to `master` runs two workflows in GitHub Actio
 3. `npm run db:types` regenerates `src/lib/supabase/database.types.ts`. The job fails if the result differs from the committed file, so a migration always ships with its types.
 4. Writes `.env.local` from `supabase status` (`scripts/ci-env-local.sh`), builds the app and runs the Playwright suite. Traces are kept as an artifact when a test fails.
 
+The job takes 15 to 20 minutes: about 5 to start the stack and build, the rest for the Playwright suite on one worker. A slow runner adds about 30%, so the job stops at 35 minutes. When the suite alone passes 20 minutes on a normal runner, split it in two shards rather than raising the limit again (KRB-188).
+
 **Lighthouse** (KRB-153) starts the same local stack, writes the same `.env.local` and builds the same way, then runs `npx lhci autorun`: Lighthouse mobile, 3 runs on `/fr/connexion` and 3 on `/fr/tableau-de-bord` signed in as the seeded demo user. It fails when a median score is under the KRB-25 targets: performance 85, accessibility 95, best practices 95. The dashboard's performance floor is 65 until KRB-172 brings it to 85. The HTML and JSON reports are kept as the `lighthouse-reports` artifact for 14 days. It runs next to the end-to-end job, so it adds no wall-clock time to CI. Thresholds, budgets and how to run it locally: `docs/performance.md`.
 
 All three jobs run on every PR, not only on PRs that touch `supabase/`, so they can be required checks.
