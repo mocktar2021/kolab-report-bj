@@ -51,6 +51,12 @@ where r.organization_id is null and r.buyer ->> 'organization_id' = '<organizati
 order by r.issued_at desc;
 ```
 
+## Prices, the pricing page and the FedaPay fee
+
+Every price and limit lives in `src/lib/billing/catalog.ts`. The public page `/fr/tarifs` (KRB-179) is built from it when the app builds, like the checkout and the receipts. To change a price, change it there, bump `CATALOG_VERSION` and deploy: the page changes with the deploy, and periods already paid keep their terms.
+
+We pay the FedaPay fee, not the customer (ADR 001, Q18), so the price on the page, the amount paid and the receipt match. It is a FedaPay setting, one box per payment method under **Préférences > Frais**: every box unticked, in Sandbox and in Live. Check that page again when FedaPay adds a payment method, since a new one may start ticked. A payment that charged the customer more than the price shows `amount_debited` above `amount` in the transaction details.
+
 ## Move dates on staging to test
 
 Staging only. On production, dates change through a purchase or the operator functions of PR 179-2, never by hand.

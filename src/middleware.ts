@@ -24,6 +24,8 @@ const PUBLIC_PATHS = [
   "/invitations",
   // Where a deleted account lands: the session is already gone (KRB-186).
   "/compte-supprime",
+  // Prices and offers (KRB-179). Signed-in users read them too.
+  "/tarifs",
   // Mentions légales, privacy policy, CGU, CGV and data processing agreement.
   // Signed-in users read them too: they are not in SIGNED_IN_REDIRECT_PATHS.
   ...Object.values(LEGAL_PAGES),
