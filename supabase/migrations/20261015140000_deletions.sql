@@ -346,8 +346,9 @@ end;
 $$;
 
 -- What deleting an organization takes, for its owner: every workspace, by
--- name, including the ones the owner is not a member of, and the billing
--- time it loses. Null for anyone else.
+-- name, including the ones the owner is not a member of, the billing time it
+-- loses, and how many receipts stay without it (nobody signed in reads them
+-- after the deletion). Null for anyone else.
 create or replace function public.organization_deletion_preview(p_organization_id uuid)
 returns jsonb
 language plpgsql
@@ -391,7 +392,8 @@ begin
       select count(distinct m.user_id) from public.workspace_members m
       join public.workspaces w on w.id = m.workspace_id
       where w.organization_id = v_org.id
-    )
+    ),
+    'receipts', (select count(*) from public.billing_receipts r where r.organization_id = v_org.id)
   ) into v_totals;
 
   return jsonb_build_object(
@@ -604,6 +606,12 @@ begin
       select count(distinct m.user_id) from public.workspace_members m where m.workspace_id = any (v_workspaces)
     ),
     'billing_lost', private.billing_time_left(v_org.id),
+    -- The foreign keys drop their link to the organization: the log keeps it.
+    'purchase_ids', (
+      select coalesce(jsonb_agg(p.id order by p.created_at, p.id), '[]'::jsonb)
+      from public.billing_purchases p where p.organization_id = v_org.id
+    ),
+    'receipts_kept', (select count(*) from public.billing_receipts r where r.organization_id = v_org.id),
     'files_queued', v_files
   );
 

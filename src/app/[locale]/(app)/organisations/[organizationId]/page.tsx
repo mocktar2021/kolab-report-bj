@@ -7,7 +7,7 @@ import { DeleteDialog } from "@/components/deletion/delete-dialog";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { PLANS } from "@/lib/billing/catalog";
-import { formatBillingDate } from "@/lib/billing/errors";
+import { formatBillingDate } from "@/lib/billing/format";
 import { billingLosses } from "@/lib/deletions/losses";
 import { getOrganizationDeletionPreview } from "@/lib/deletions/preview";
 import { deleteOrganization } from "./actions";
@@ -160,6 +160,21 @@ export default async function OrganizationPage({
             </div>
           ) : null}
           {losses.trialEndsAt ? <p>{tDeletion("organization.trial")}</p> : null}
+          {preview.receipts > 0 ? (
+            <p role="note" className="rounded-lg border px-3 py-2">
+              {tDeletion.rich("organization.receipts", {
+                count: preview.receipts,
+                link: (chunks) => (
+                  <Link
+                    href={`/organisations/${preview.organizationId}/abonnement`}
+                    className="font-medium underline underline-offset-4"
+                  >
+                    {chunks}
+                  </Link>
+                ),
+              })}
+            </p>
+          ) : null}
           <p className="text-muted-foreground">{tDeletion("organization.accountsKept")}</p>
         </DeleteDialog>
       </DangerZone>

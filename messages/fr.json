@@ -1533,6 +1533,7 @@
       "packs": "{count, plural, one {# brouillon IA de Pack IA non utilisé} other {# brouillons IA de Pack IA non utilisés}}",
       "lost": "Le temps restant et les crédits non utilisés sont perdus, sans remboursement.",
       "trial": "L'essai gratuit en cours s'arrête le jour de la suppression. Une nouvelle organisation n'aura pas de nouvel essai.",
+      "receipts": "{count, plural, one {Son reçu de paiement est conservé} other {Ses # reçus de paiement sont conservés}} pour la comptabilité, mais vous ne pourrez plus {count, plural, one {le} other {les}} consulter dans l'application. Téléchargez-{count, plural, one {le} other {les}} avant, depuis la page <link>Abonnement</link>.",
       "accountsKept": "Les comptes des membres restent, avec leurs autres espaces de travail.",
       "typed": "Saisissez « {name} » pour confirmer",
       "confirm": "Supprimer l'organisation",

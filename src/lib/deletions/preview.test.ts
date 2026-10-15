@@ -129,6 +129,7 @@ describe("getOrganizationDeletionPreview", () => {
       reports: 2,
       files: 5,
       members: 3,
+      receipts: 2,
     });
     const preview = await getOrganizationDeletionPreview(ORGANIZATION_ID);
     expect(rpc).toHaveBeenCalledWith("organization_deletion_preview", { p_organization_id: ORGANIZATION_ID });
@@ -153,6 +154,7 @@ describe("getOrganizationDeletionPreview", () => {
       reports: 2,
       files: 5,
       members: 3,
+      receipts: 2,
     });
   });
 

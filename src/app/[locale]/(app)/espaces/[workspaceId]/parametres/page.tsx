@@ -6,7 +6,7 @@ import { DangerZone, DeletionList } from "@/components/deletion/danger-zone";
 import { DeleteDialog } from "@/components/deletion/delete-dialog";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { formatBillingDate } from "@/lib/billing/errors";
+import { formatBillingDate } from "@/lib/billing/format";
 import { getWorkspaceDeletionPreview } from "@/lib/deletions/preview";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { getMyWorkspaces, requireWorkspaceRole } from "@/lib/workspaces/server";

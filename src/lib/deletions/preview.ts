@@ -137,6 +137,8 @@ const organizationPreviewSchema = z
     reports: countSchema,
     files: countSchema,
     members: countSchema,
+    // Receipts that stay for the accounts, read by nobody signed in afterwards.
+    receipts: countSchema,
   })
   .transform((preview) => ({
     organizationId: preview.organization_id,
@@ -152,6 +154,7 @@ const organizationPreviewSchema = z
     reports: preview.reports,
     files: preview.files,
     members: preview.members,
+    receipts: preview.receipts,
   }));
 
 export type OrganizationDeletionPreview = z.output<typeof organizationPreviewSchema>;

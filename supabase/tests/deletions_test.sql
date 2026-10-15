@@ -1,18 +1,64 @@
 begin;
 \ir fixtures.psql
-select plan(77);
+select plan(86);
 
 -- KRB-180: deleting a report, a workspace or an organization goes through
 -- delete_report, delete_workspace and delete_organization only. Each checks
 -- the caller's rights, queues the stored files, deletes the row with what it
 -- holds and writes an audit event. Every deletion below runs while billing is
--- enforced and the workspace is read-only, except where a plan is set to
--- show the billing time lost: read-only never blocks a deletion.
+-- enforced and the workspace is read-only, except where a plan is bought to
+-- show the billing time lost: read-only never blocks a deletion. Payments
+-- and receipts (KRB-176) are accounting records: they stay, without their
+-- link to what was deleted.
 
 create temp table kept (name text primary key, id uuid);
 grant all on kept to authenticated;
 create function pg_temp.kept_id(name text) returns uuid
 language sql as $$ select id from kept where kept.name = $1 $$;
+
+-- A purchase paid through FedaPay (the mock), as the checkout and the
+-- webhook make it: purchase, entitlement, receipt and its lines, payment
+-- events. Terms and prices of src/lib/billing/catalog.ts, as in
+-- billing_grant_test.sql. Returns the purchase id.
+create temp sequence krb180_transactions start 970000001;
+create function pg_temp.buy_and_pay(p_org uuid, p_offer text, p_buyer text, p_ws uuid default null)
+returns uuid
+language plpgsql as $$
+declare
+  v_terms jsonb := (case p_offer
+    when 'cabinet_1m' then '{"kind": "subscription", "plan": "cabinet", "months": 1, "monthly_price_ht_xof": 49000,
+      "limits": {"max_members": 10, "max_reports": null, "drafts_per_month": 250, "drafts_total": null, "custom_templates": true}}'
+    when 'mission_pass' then '{"kind": "mission", "plan": "mission", "days": 90,
+      "limits": {"max_members": 10, "max_reports": 1, "drafts_per_month": null, "drafts_total": 80, "custom_templates": false}}'
+  end)::jsonb;
+  v_price bigint := case p_offer when 'cabinet_1m' then 49000 when 'mission_pass' then 39000 end;
+  v_purchase uuid;
+  v_transaction bigint := nextval('krb180_transactions');
+  v_outcome text;
+begin
+  select c.purchase_id into v_purchase
+  from public.billing_create_purchase(p_org, p_offer, p_offer || ' (test)', 1, 1, v_terms, v_price, 0, 'mock',
+    pg_temp.id(p_buyer), p_ws, false) c;
+  perform public.billing_set_transaction(v_purchase, v_transaction, 'pending');
+  select a.outcome into v_outcome
+  from public.billing_apply_transaction(v_purchase, 'webhook', v_transaction, 'approved', v_price, 'mock', 'XOF',
+    'KR-' || v_purchase::text, null, 'transaction.approved', 'trx_test', 'momo_test', 270, now()) a;
+  if v_outcome is distinct from 'granted' then
+    raise exception 'purchase % not granted: %', v_purchase, v_outcome;
+  end if;
+  return v_purchase;
+end;
+$$;
+
+-- The lines of the receipts of some purchases, to compare before and after.
+create function pg_temp.receipt_lines(p_purchases uuid[]) returns setof text
+language sql as $$
+  select to_jsonb(l)::text
+  from public.billing_receipt_lines l
+  join public.billing_receipts r on r.id = l.receipt_id
+  where r.purchase_id = any (p_purchases)
+  order by r.number, l.position
+$$;
 
 -- Paths queued under a workspace.
 create function pg_temp.queued(ws uuid) returns table (bucket text, path text)
@@ -206,8 +252,8 @@ select is((select details ->> 'actor_role' from private.audit_events
 
 -- Deleting a workspace ----------------------------------------------------------------------
 -- w2 (org_b, read-only) gets a file, an export, an invitation, a template, a
--- counted draft, and a second member. wm, a mission workspace of org_b,
--- has a running pass.
+-- counted draft, and a second member. Mission B, a workspace of org_b, gets
+-- a Pass Mission bought and paid, which makes it a mission workspace.
 insert into public.workspace_members (workspace_id, user_id, role)
 values (pg_temp.id('w2'), pg_temp.id('expert'), 'admin');
 insert into public.deliverables (workspace_id, section_id, uploaded_by, storage_path, file_name, mime_type, size_bytes, uploaded_at, created_at)
@@ -223,12 +269,12 @@ values (pg_temp.id('w2'), 'invite@kolabreport.test', 'expert', repeat('a', 64), 
 insert into public.billing_draft_usage (generation_id, organization_id, workspace_id, pool, usage_month, status, settled_at)
 values (gen_random_uuid(), pg_temp.id('org_b'), pg_temp.id('w2'), 'trial',
         date_trunc('month', now() at time zone 'utc')::date, 'counted', now());
-insert into public.workspaces (id, organization_id, name, created_by, billing_mode)
-values ('00000000-0000-4000-c000-000000000009', pg_temp.id('org_b'), 'Mission B', pg_temp.id('outsider'), 'mission');
-insert into public.billing_entitlements (id, organization_id, workspace_id, scope, plan, source, starts_at, ends_at,
-  max_members, max_reports, drafts_total)
-values ('00000000-0000-4000-8000-000000000031', pg_temp.id('org_b'), '00000000-0000-4000-c000-000000000009',
-        'mission', 'mission', 'manual', now() - interval '10 days', now() + interval '80 days', 10, 1, 80);
+insert into public.workspaces (id, organization_id, name, created_by)
+values ('00000000-0000-4000-c000-000000000009', pg_temp.id('org_b'), 'Mission B', pg_temp.id('outsider'));
+insert into kept
+select 'pass_purchase',
+  pg_temp.buy_and_pay(pg_temp.id('org_b'), 'mission_pass', 'outsider', '00000000-0000-4000-c000-000000000009');
+insert into kept select 'pass', e.id from public.billing_entitlements e where e.purchase_id = pg_temp.kept_id('pass_purchase');
 
 select pg_temp.act_as('admin');
 select throws_ok($$select public.delete_workspace(pg_temp.id('w2'), 'Etude B')$$, 'P0002', null,
@@ -288,14 +334,22 @@ select is(
   'the preview of a mission workspace shows its running pass');
 select is(
   public.delete_workspace('00000000-0000-4000-c000-000000000009', 'Mission B') -> 'passes' -> 0 ->> 'entitlement_id',
-  '00000000-0000-4000-8000-000000000031', 'deleting it records the pass it loses');
+  pg_temp.kept_id('pass')::text, 'deleting it records the pass it loses');
 select pg_temp.act_as_server();
-select is((select count(*)::integer from public.billing_entitlements where id = '00000000-0000-4000-8000-000000000031'),
+select is((select count(*)::integer from public.billing_entitlements where id = pg_temp.kept_id('pass')),
   0, 'the pass goes with its workspace');
+select results_eq(
+  $$select organization_id, workspace_id, status from public.billing_purchases where id = pg_temp.kept_id('pass_purchase')$$,
+  $$values (pg_temp.id('org_b'), null::uuid, 'paid')$$,
+  'its purchase stays, without the workspace');
+select is(
+  (select count(*)::integer from public.billing_receipts
+   where purchase_id = pg_temp.kept_id('pass_purchase') and organization_id = pg_temp.id('org_b')),
+  1, 'and so does its receipt, still read by the organization''s billing readers');
 
 -- Deleting an organization ----------------------------------------------------------------
 -- org_a: w1, and w3 made by the admin, where the organization owner is not a
--- member. A Cabinet period and a Pack IA with drafts left.
+-- member. A Cabinet month bought and paid, and a Pack IA with drafts left.
 insert into public.workspaces (id, organization_id, name, created_by)
 values ('00000000-0000-4000-c000-000000000003', pg_temp.id('org_a'), 'Etude C', pg_temp.id('admin'));
 insert into public.reports (id, workspace_id, title, created_by)
@@ -306,7 +360,8 @@ insert into public.deliverables (workspace_id, section_id, uploaded_by, storage_
 values (pg_temp.id('w1'), '00000000-0000-4000-e000-000000000005', pg_temp.id('owner'),
         pg_temp.id('w1') || '/00000000-0000-4000-e000-000000000005/e-annexe.pdf',
         'annexe.pdf', 'application/pdf', 10, now());
-insert into kept select 'cabinet', pg_temp.set_plan(pg_temp.id('org_a'), 'cabinet');
+insert into kept select 'cabinet_purchase', pg_temp.buy_and_pay(pg_temp.id('org_a'), 'cabinet_1m', 'owner');
+insert into kept select 'cabinet', e.id from public.billing_entitlements e where e.purchase_id = pg_temp.kept_id('cabinet_purchase');
 insert into public.billing_ai_packs (id, organization_id, drafts, expires_at)
 values ('00000000-0000-4000-8000-000000000041', pg_temp.id('org_a'), 100, now() + interval '11 months');
 insert into public.billing_draft_usage (generation_id, organization_id, workspace_id, pool, pack_id, usage_month, status, settled_at)
@@ -331,12 +386,20 @@ select is(
   array['Etude A', 'Etude C'], 'the owner sees every workspace that goes, the ones they are not in included');
 select results_eq(
   $$select p -> 'billing' -> 'subscription' -> 0 ->> 'plan', p -> 'billing' -> 'packs' -> 0 ->> 'drafts_left',
-      p ->> 'reports', p ->> 'members'
+      p ->> 'reports', p ->> 'members', p ->> 'receipts'
     from public.organization_deletion_preview(pg_temp.id('org_a')) p$$,
-  $$values ('cabinet', '70', '1', '5')$$,
-  'and the billing time it loses: the Cabinet period and 70 drafts of the pack');
+  $$values ('cabinet', '70', '1', '5', '1')$$,
+  'and the billing time it loses (the Cabinet period, 70 drafts of the pack), and its receipt');
 select throws_ok($$select public.delete_organization(pg_temp.id('org_a'), 'Cabinet')$$, 'KR070', null,
   'the owner must type its exact name');
+reset role;
+create temp table org_a_before as
+select
+  (select count(*) from private.billing_events where organization_id = pg_temp.id('org_a')) as billing_events,
+  (select count(*) from private.billing_payment_events where purchase_id = pg_temp.kept_id('cabinet_purchase'))
+    as payment_events,
+  array(select pg_temp.receipt_lines(array[pg_temp.kept_id('cabinet_purchase')])) as lines;
+select pg_temp.act_as('owner');
 select results_eq(
   $$select d ->> 'workspaces', d ->> 'reports', d -> 'billing_lost' -> 'subscription' -> 0 ->> 'entitlement_id',
       d ->> 'files_queued'
@@ -358,7 +421,20 @@ select is(
   + (select count(*)::integer from public.billing_draft_usage where organization_id = pg_temp.id('org_a')),
   0, 'its buyer row, entitlements, packs and draft ledger go with it');
 select is((select count(*)::integer from private.billing_events where organization_id = pg_temp.id('org_a')),
-  (select org_a_events::integer from before), 'the billing audit log keeps its history');
+  (select billing_events::integer from org_a_before), 'the billing audit log keeps its history');
+select results_eq(
+  $$select organization_id, workspace_id, status from public.billing_purchases where id = pg_temp.kept_id('cabinet_purchase')$$,
+  $$values (null::uuid, null::uuid, 'paid')$$,
+  'its purchase stays, without the organization');
+select results_eq(
+  $$select count(*)::integer, count(organization_id)::integer, min(buyer ->> 'name') from public.billing_receipts
+    where purchase_id = pg_temp.kept_id('cabinet_purchase')$$,
+  $$values (1, 0, 'Cabinet A')$$,
+  'so does its receipt, without the link, with its copy of the buyer');
+select is(array(select pg_temp.receipt_lines(array[pg_temp.kept_id('cabinet_purchase')])),
+  (select lines from org_a_before), 'the receipt lines do not change');
+select is((select count(*) from private.billing_payment_events where purchase_id = pg_temp.kept_id('cabinet_purchase')),
+  (select payment_events from org_a_before), 'nor do the payment events');
 select is((select organization_id from private.billing_trial_claims where user_id = pg_temp.id('owner')),
   pg_temp.id('org_a'), 'and the trial claim stays, so a new organization of the owner gets no trial');
 select ok(
@@ -371,6 +447,11 @@ select results_eq(
   $$values ('organization_deleted', pg_temp.id('owner'), pg_temp.id('org_a'), null::uuid,
             array[pg_temp.id('w1')::text, '00000000-0000-4000-c000-000000000003'])$$,
   'the audit log has the deletion and the workspaces that went');
+select results_eq(
+  $$select details -> 'purchase_ids', details ->> 'receipts_kept' from private.audit_events
+    where action = 'organization_deleted' and organization_id = pg_temp.id('org_a')$$,
+  $$values (jsonb_build_array(pg_temp.kept_id('cabinet_purchase')), '1')$$,
+  'and the purchases that lost their link to it');
 select is((select count(*)::integer from private.audit_events), (select audit_events::integer from before) + 5,
   'one audit event per deletion so far');
 select lives_ok($$delete from auth.users where id = pg_temp.id('owner')$$,
@@ -380,10 +461,22 @@ select lives_ok($$delete from auth.users where id = pg_temp.id('owner')$$,
 select pg_temp.act_as('outsider');
 select is(jsonb_array_length(public.organization_deletion_preview(pg_temp.id('org_b')) -> 'workspaces'), 0,
   'org_b has no workspace left');
+reset role;
+create temp table org_b_lines as
+select array(select pg_temp.receipt_lines(array[pg_temp.kept_id('pass_purchase')])) as lines;
+select pg_temp.act_as('outsider');
 select is(public.delete_organization(pg_temp.id('org_b'), 'Cabinet B') ->> 'workspaces', '0',
   'its owner deletes it');
 select pg_temp.act_as_server();
 select is((select count(*)::integer from public.organizations where id = pg_temp.id('org_b')), 0, 'org_b is gone');
+select results_eq(
+  $$select p.organization_id, p.workspace_id, (select count(r.organization_id)::integer from public.billing_receipts r
+      where r.purchase_id = p.id)
+    from public.billing_purchases p where p.id = pg_temp.kept_id('pass_purchase')$$,
+  $$values (null::uuid, null::uuid, 0)$$,
+  'the pass purchase and its receipt stay, linked to nothing');
+select is(array(select pg_temp.receipt_lines(array[pg_temp.kept_id('pass_purchase')])),
+  (select lines from org_b_lines), 'with the same receipt lines');
 
 -- A deletion leaves nothing to undo: the same call again finds nothing.
 select pg_temp.act_as('outsider');

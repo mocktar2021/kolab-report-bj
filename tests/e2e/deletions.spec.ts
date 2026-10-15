@@ -55,6 +55,51 @@ async function addReport(workspaceId: string, title: string, createdBy: string) 
   return report.id;
 }
 
+/**
+ * A payment recorded by hand and its receipt, as the operator script of KRB-176
+ * leaves them, written with the service role. Returns the receipt id.
+ */
+async function addPaidReceipt(organizationId: string, buyerName: string) {
+  const admin = adminClient();
+  const purchaseId = randomUUID();
+  const now = new Date().toISOString();
+  const { error: purchaseError } = await admin.from("billing_purchases").insert({
+    id: purchaseId,
+    organization_id: organizationId,
+    offer: "manual",
+    offer_label: "Paiement de test",
+    catalog_version: 1,
+    terms: {},
+    amount_ht_xof: 0,
+    amount_xof: 0,
+    method: "manual",
+    environment: "manual",
+    status: "paid",
+    merchant_reference: `KR-${purchaseId}`,
+    paid_at: now,
+    granted_at: now,
+  });
+  if (purchaseError) throw purchaseError;
+  const number = `KR-2099-${String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0")}`;
+  const { data: receipt, error: receiptError } = await admin
+    .from("billing_receipts")
+    .insert({
+      number,
+      purchase_id: purchaseId,
+      organization_id: organizationId,
+      environment: "manual",
+      seller: { name: "Mocktar Technologies" },
+      buyer: { name: buyerName },
+      payment: { method: "manual" },
+      total_ht_xof: 0,
+      total_xof: 0,
+    })
+    .select("id")
+    .single();
+  if (receiptError || !receipt) throw receiptError ?? new Error("Could not create the receipt");
+  return receipt.id;
+}
+
 async function count(table: "reports" | "workspaces" | "organizations", id: string) {
   const { count: rows, error } = await adminClient()
     .from(table)
@@ -315,6 +360,7 @@ test("the organization owner deletes it with every workspace, warned about the p
       expires_at: new Date(Date.now() + 300 * 86_400_000).toISOString(),
     });
   if (packError) throw packError;
+  const receiptId = await addPaidReceipt(organizationId, "Cabinet Mission Kandi");
 
   // The partner owns a workspace of the organization, not the organization.
   const partnerPage = await pageFor(browser, partner);
@@ -344,6 +390,16 @@ test("the organization owner deletes it with every workspace, warned about the p
   await expect(
     dialog.getByText("Le temps restant et les crédits non utilisés sont perdus, sans remboursement."),
   ).toBeVisible();
+  // Receipts stay for the accounts, but nobody reads them in the app afterwards.
+  await expect(
+    dialog.getByText(
+      /^Son reçu de paiement est conservé pour la comptabilité, mais vous ne pourrez plus le consulter/,
+    ),
+  ).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "Abonnement" })).toHaveAttribute(
+    "href",
+    `/fr/organisations/${organizationId}/abonnement`,
+  );
 
   const field = dialog.getByLabel("Saisissez « Cabinet Mission Kandi » pour confirmer");
   await field.fill("Cabinet Mission");
@@ -362,6 +418,19 @@ test("the organization owner deletes it with every workspace, warned about the p
     .select("id", { count: "exact", head: true })
     .eq("id", entitlementId);
   expect(entitlements).toBe(0);
+
+  // The receipt and its payment stay, detached from the organization.
+  const { data: receipt, error: receiptError } = await adminClient()
+    .from("billing_receipts")
+    .select("organization_id, buyer, purchase:billing_purchases(organization_id, status)")
+    .eq("id", receiptId)
+    .single();
+  if (receiptError) throw receiptError;
+  expect(receipt).toMatchObject({
+    organization_id: null,
+    buyer: { name: "Cabinet Mission Kandi" },
+    purchase: { organization_id: null, status: "paid" },
+  });
 });
 
 async function storageIsUp() {
