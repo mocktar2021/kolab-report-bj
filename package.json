@@ -13,6 +13,7 @@
     "eval": "npm run eval:build --silent && node build/evals.mjs",
     "eval:build": "node scripts/build-evals.mjs",
     "eval:agreement": "npm run eval:build --silent && node build/evals.mjs agreement",
+    "eval:template-writer": "npm run eval:build --silent && node build/evals.mjs template-writer",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
