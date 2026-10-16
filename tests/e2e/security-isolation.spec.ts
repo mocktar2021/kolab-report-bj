@@ -133,6 +133,21 @@ test.beforeAll(async () => {
   });
   if (invitationError) throw invitationError;
 
+  // An AI reading of a PDF plan by A's owner (KRB-196), as the server records it.
+  const { error: planError } = await admin.from("plan_import_calls").insert({
+    workspace_id: a.workspace_id,
+    report_id: a.report_id,
+    user_id: owner.id,
+    provider: "mock",
+    model: "mock",
+    input_chars: 1200,
+    pages: 2,
+    status: "succeeded",
+    items: 6,
+    completed_at: new Date().toISOString(),
+  });
+  if (planError) throw planError;
+
   // A status change writes the history and notifies the expert and the viewer's managers.
   const { error: transitionError } = await a.api.rpc("transition_report_status", {
     p_report_id: a.report_id,
@@ -173,6 +188,7 @@ const WORKSPACE_TABLES = [
   "prompt_library",
   "ai_generations",
   "report_exports",
+  "plan_import_calls",
   "report_status_events",
   "notifications",
 ] as const;
