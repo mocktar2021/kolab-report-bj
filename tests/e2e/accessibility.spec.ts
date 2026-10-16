@@ -185,6 +185,26 @@ for (const theme of THEMES) {
         await expectNoAxeViolations(page, `draft editor (${theme})`);
         await main.getByRole("button", { name: "Annuler" }).click();
       });
+
+      await test.step("section editor, Texte and Markdown tabs", async () => {
+        await main.getByRole("button", { name: "Modifier le texte" }).click();
+        const field = main.getByRole("textbox", { name: "Texte de la section", exact: true });
+        await expect(field).toBeFocused();
+        await expect(main.getByRole("toolbar", { name: "Mise en forme" })).toBeVisible();
+        await expectNoAxeViolations(page, `section editor, Texte (${theme})`);
+        // The table buttons show up with the cursor in a table.
+        await main.getByRole("button", { name: "Insérer un tableau" }).click();
+        await expect(main.getByRole("button", { name: "Supprimer le tableau" })).toBeVisible();
+        await main.getByRole("button", { name: "Lien" }).click();
+        await expect(main.getByRole("textbox", { name: "Adresse du lien" })).toBeFocused();
+        await expectNoAxeViolations(page, `section editor, table and link (${theme})`);
+        await main.getByRole("button", { name: "Fermer" }).click();
+        await main.getByRole("tab", { name: "Markdown" }).click();
+        await expect(main.getByLabel("Texte de la section (Markdown)")).toBeVisible();
+        await expectNoAxeViolations(page, `section editor, Markdown (${theme})`);
+        await main.getByRole("button", { name: "Annuler" }).click();
+        await expect(main.getByRole("button", { name: "Modifier le texte" })).toBeFocused();
+      });
     });
 
     test("menus, dialogs and the command palette have no axe violations", async ({ page }) => {
