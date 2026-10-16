@@ -145,6 +145,37 @@ describe("parseMarkdown and docToMarkdown", () => {
     expect(docToMarkdown(changed, origin)).toBe(markdown.replace("Avant ", "Après "));
   });
 
+  it("keeps bold, italic and strikethrough around a plain address when its paragraph changes", () => {
+    const markdown =
+      "Voir **https://example.com**, ~~https://y.fr~~, _<https://z.fr>_ et **https://x.fr ou ailleurs**.";
+    const { doc, origin } = load(markdown);
+    const first = doc.child(0);
+    const changed = replaceBlock(doc, 0, {
+      ...first.toJSON(),
+      content: [{ type: "text", text: "Lire " }, ...first.toJSON().content.slice(1)],
+    });
+    const written = docToMarkdown(changed, origin);
+    expect(written).toBe(
+      "Lire **https://example.com**, ~~https://y.fr~~, *https://z.fr* et **https://x.fr ou ailleurs**.",
+    );
+    expect(load(written).doc.toJSON()).toEqual(changed.toJSON());
+  });
+
+  it("keeps a link without text and a leading &nbsp; when their paragraph changes", () => {
+    const markdown = "Voir [](https://example.com) ici.\n\n&nbsp;&nbsp;Texte en retrait.";
+    const { doc, origin } = load(markdown);
+    const first = doc.child(0);
+    let changed = replaceBlock(doc, 0, {
+      ...first.toJSON(),
+      content: [{ type: "text", text: "Lire " }, ...first.toJSON().content.slice(1)],
+    });
+    expect(changed.child(1).textContent).toBe("\u00a0\u00a0Texte en retrait.");
+    changed = replaceBlock(changed, 1, paragraph("\u00a0\u00a0Texte modifié."));
+    const written = docToMarkdown(changed, origin);
+    expect(written).toBe("Lire [](https://example.com) ici.\n\n\u00a0\u00a0Texte modifié.");
+    expect(load(written).doc.toJSON()).toEqual(changed.toJSON());
+  });
+
   it("writes two new lists of the same kind with different markers, so they stay apart", () => {
     const list = (text: string): JSONContent => ({
       type: "bulletList",
@@ -189,6 +220,7 @@ describe("parseMarkdown and docToMarkdown", () => {
         ],
       },
       { type: "paragraph", content: [{ type: "text", text: "   " }] },
+      { type: "paragraph", content: [{ type: "text", text: " \u00a0 " }] },
       { type: "heading", attrs: { level: 3 } },
       { type: "paragraph", content: [{ type: "hardBreak" }, { type: "text", text: "Fin" }] },
     ]);

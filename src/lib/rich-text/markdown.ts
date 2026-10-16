@@ -119,6 +119,16 @@ function textJson(text: string, marks: readonly MarkJson[]): JSONContent[] {
   return [marks.length ? { type: "text", text, marks: [...marks] } : { type: "text", text }];
 }
 
+/** Inline Markdown the editor can't show, kept as written. */
+function rawInlineJson(node: PhrasingContent, marks: readonly MarkJson[], source: string): JSONContent {
+  const raw: JSONContent = {
+    type: "rawInline",
+    attrs: { mdast: rawJson(node), text: sourceOf(node, source) },
+  };
+  if (marks.length) raw.marks = [...marks];
+  return raw;
+}
+
 function inlineJson(
   nodes: readonly PhrasingContent[],
   marks: readonly MarkJson[],
@@ -137,23 +147,20 @@ function inlineJson(
         return inlineJson(node.children, withMark(marks, { type: "strike" }), source);
       case "inlineCode":
         return textJson(node.value, withMark(marks, { type: "code" }));
-      case "link":
-        return inlineJson(
+      case "link": {
+        const content = inlineJson(
           node.children,
           withMark(marks, { type: "link", attrs: { href: node.url, title: node.title ?? null } }),
           source,
         );
+        // [](address) has no text to hold the link: kept as written.
+        return content.length ? content : [rawInlineJson(node, marks, source)];
+      }
       case "break":
         return [marks.length ? { type: "hardBreak", marks: [...marks] } : { type: "hardBreak" }];
-      default: {
+      default:
         // Images, raw HTML, footnote and reference links: kept as written.
-        const raw: JSONContent = {
-          type: "rawInline",
-          attrs: { mdast: rawJson(node), text: sourceOf(node, source) },
-        };
-        if (marks.length) raw.marks = [...marks];
-        return [raw];
-      }
+        return [rawInlineJson(node, marks, source)];
     }
   });
 }
@@ -298,18 +305,20 @@ const MARK_ORDER = ["link", "bold", "italic", "strike"] as const;
 
 type MarkName = (typeof MARK_ORDER)[number];
 
-type InlineItem = { node: PmNode; from: number; to: number };
-
 const WHITESPACE_START = /^\s+/;
 const WHITESPACE_END = /\s+$/;
+// Markdown drops spaces, tabs and line endings at the edges of a paragraph,
+// not "&nbsp;": a leading one stays, as indentation.
+const EDGE_START = /^[ \t\r\n]+/;
+const EDGE_END = /[ \t\r\n]+$/;
 
 function isCode(node: PmNode): boolean {
   return node.marks.some((mark) => mark.type.name === "code");
 }
 
 /** The paragraph's text with a placeholder for breaks and raw nodes, to look at a link's neighbors. */
-function flatText(items: readonly InlineItem[]): string {
-  return items.map((item) => (item.node.isText ? (item.node.text ?? "") : "￼")).join("");
+function flatText(nodes: readonly PmNode[]): string {
+  return nodes.map((node) => (node.isText ? (node.text ?? "") : "￼")).join("");
 }
 
 /**
@@ -331,6 +340,43 @@ function isLiteralLink(mark: PmMark, text: string, before: string, after: string
     (before === "" || /[\s(]/.test(before)) &&
     (after === "" || /[\s.,:;!?)]/.test(after))
   );
+}
+
+/**
+ * Links GitHub Markdown finds on its own become plain text, inside the bold,
+ * italic or strikethrough of the whole address: **https://x.fr** reads back as
+ * a bold link. Bold or italic on part of the address is lost; GitHub would not
+ * read it anyway.
+ */
+function literalLinksAsText(nodes: readonly PmNode[]): PmNode[] {
+  const flat = flatText(nodes);
+  const result: PmNode[] = [];
+  let from = 0;
+  let index = 0;
+  while (index < nodes.length) {
+    const node = nodes[index]!;
+    const link = node.isText ? node.marks.find((mark) => mark.type.name === "link") : undefined;
+    let end = index + 1;
+    while (link && end < nodes.length && link.isInSet(nodes[end]!.marks)) end++;
+    const group = nodes.slice(index, end);
+    const to = from + flatText(group).length;
+    const text = flat.slice(from, to);
+    if (
+      link &&
+      group.every((part) => part.isText && !isCode(part)) &&
+      isLiteralLink(link, text, flat.slice(from - 1, from), flat.slice(to, to + 1))
+    ) {
+      const marks = node.marks.filter(
+        (mark) => mark.type.name !== "link" && group.every((part) => mark.isInSet(part.marks)),
+      );
+      result.push(node.type.schema.text(text, marks));
+    } else {
+      result.push(...group);
+    }
+    from = to;
+    index = end;
+  }
+  return result;
 }
 
 function wrap(name: MarkName, mark: PmMark, children: PhrasingContent[]): PhrasingContent {
@@ -390,41 +436,24 @@ function leaf(node: PmNode): PhrasingContent[] {
   return node.textContent ? [{ type: "text", value: node.textContent }] : [];
 }
 
-function phrasingOf(
-  items: readonly InlineItem[],
-  open: ReadonlySet<MarkName>,
-  flat: string,
-): PhrasingContent[] {
+function phrasingOf(nodes: readonly PmNode[], open: ReadonlySet<MarkName>): PhrasingContent[] {
   const result: PhrasingContent[] = [];
   let index = 0;
-  while (index < items.length) {
-    const item = items[index]!;
+  while (index < nodes.length) {
+    const node = nodes[index]!;
     const name = MARK_ORDER.find(
-      (candidate) => !open.has(candidate) && item.node.marks.some((mark) => mark.type.name === candidate),
+      (candidate) => !open.has(candidate) && node.marks.some((mark) => mark.type.name === candidate),
     );
     if (!name) {
-      result.push(...leaf(item.node));
+      result.push(...leaf(node));
       index++;
       continue;
     }
-    const mark = item.node.marks.find((candidate) => candidate.type.name === name)!;
+    const mark = node.marks.find((candidate) => candidate.type.name === name)!;
     let end = index + 1;
-    while (end < items.length && mark.isInSet(items[end]!.node.marks)) end++;
-    const group = items.slice(index, end);
-    const from = group[0]!.from;
-    const to = group[group.length - 1]!.to;
-    const text = flat.slice(from, to);
-    if (
-      name === "link" &&
-      group.every((part) => part.node.isText && !isCode(part.node)) &&
-      isLiteralLink(mark, text, flat.slice(from - 1, from), flat.slice(to, to + 1))
-    ) {
-      // Bold or italic inside the address is lost; GitHub would not read it anyway.
-      result.push({ type: "text", value: text });
-    } else {
-      const node = wrap(name, mark, phrasingOf(group, new Set([...open, name]), flat));
-      result.push(...hoistSpaces(node as PhrasingContent & { children: PhrasingContent[] }));
-    }
+    while (end < nodes.length && mark.isInSet(nodes[end]!.marks)) end++;
+    const wrapped = wrap(name, mark, phrasingOf(nodes.slice(index, end), new Set([...open, name])));
+    result.push(...hoistSpaces(wrapped as PhrasingContent & { children: PhrasingContent[] }));
     index = end;
   }
   return result;
@@ -446,14 +475,14 @@ function inlineMdast(node: PmNode, breaks: "keep" | "spaces" = "keep"): Phrasing
     if (index > 0 && !isBreak(index - 1)) continue;
     // From the start, or after a break, up to the first visible character.
     for (let at = index; at < nodes.length && texts[at] !== null && !isBreak(at); at++) {
-      texts[at] = texts[at]!.replace(WHITESPACE_START, "");
+      texts[at] = texts[at]!.replace(EDGE_START, "");
       if (texts[at]) break;
     }
   }
   for (let index = nodes.length - 1; index >= 0; index--) {
     if (index < nodes.length - 1 && !isBreak(index + 1)) continue;
     for (let at = index; at >= 0 && texts[at] !== null && !isBreak(at); at--) {
-      texts[at] = texts[at]!.replace(WHITESPACE_END, "");
+      texts[at] = texts[at]!.replace(EDGE_END, "");
       if (texts[at]) break;
     }
   }
@@ -469,15 +498,9 @@ function inlineMdast(node: PmNode, breaks: "keep" | "spaces" = "keep"): Phrasing
   while (first < end && kept[first]!.type.name === "hardBreak") first++;
   while (end > first && kept[end - 1]!.type.name === "hardBreak") end--;
   const trimmed = kept.slice(first, end);
-
-  const items: InlineItem[] = [];
-  let offset = 0;
-  for (const child of trimmed) {
-    const length = child.isText ? (child.text ?? "").length : 1;
-    items.push({ node: child, from: offset, to: offset + length });
-    offset += length;
-  }
-  return phrasingOf(items, new Set(), flatText(items));
+  // "&nbsp;" alone makes an empty paragraph too: nothing to write.
+  if (trimmed.every((child) => child.isText && !isCode(child) && !/\S/.test(child.text ?? ""))) return [];
+  return phrasingOf(literalLinksAsText(trimmed), new Set());
 }
 
 type FlowNode = BlockContent | DefinitionContent;

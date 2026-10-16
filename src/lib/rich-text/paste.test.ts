@@ -1,11 +1,20 @@
-import { getSchema } from "@tiptap/core";
+import { Editor, getSchema } from "@tiptap/core";
 import { DOMParser as PmDOMParser } from "@tiptap/pm/model";
-import { describe, expect, it } from "vitest";
-import { docToMarkdown } from "./markdown";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { bindOrigin, docToMarkdown, parseMarkdown } from "./markdown";
 import { cleanPastedHtml } from "./paste";
 import { richTextExtensions } from "./schema";
 
 const schema = getSchema(richTextExtensions());
+
+beforeAll(() => {
+  // jsdom draws nothing: ProseMirror measures the selection to scroll to it.
+  const rects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+  Range.prototype.getClientRects ??= rects;
+  Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+  Element.prototype.getClientRects ??= rects;
+  document.elementFromPoint ??= () => null;
+});
 
 /** What the editor keeps of a paste, as the Markdown it saves. */
 function pasted(html: string): string {
@@ -124,5 +133,102 @@ describe("cleanPastedHtml", () => {
       <tbody><tr><td><table><tr><td>x</td><td>y</td></tr></table></td></tr>
       <tr><td><ul><li>un</li><li>deux</li></ul></td><td>fin<br>de ligne</td></tr></tbody></table>`;
     expect(pasted(html)).toBe("| A | B |\n| - | - |\n| | x y |\n| un deux | fin de ligne |");
+  });
+});
+
+const editors: Editor[] = [];
+
+afterEach(() => {
+  for (const editor of editors.splice(0)) editor.destroy();
+});
+
+/** A Texte editor on `markdown`, and the Markdown it saves, as in rich-text-editor.tsx. */
+function openEditor(markdown: string) {
+  const parsed = parseMarkdown(markdown);
+  if (!parsed) throw new Error("not parsed");
+  const editor = new Editor({
+    element: document.body.appendChild(document.createElement("div")),
+    extensions: richTextExtensions(),
+    content: parsed.doc,
+  });
+  editors.push(editor);
+  const origin = bindOrigin(parsed, editor.state.doc);
+  return { editor, saved: () => docToMarkdown(editor.state.doc, origin) };
+}
+
+type Clipboard = Record<string, string>;
+
+/** A copy, cut or paste event on the editor, with the clipboard the browser would give. */
+function clipboardEvent(editor: Editor, type: "copy" | "cut" | "paste", data: Clipboard) {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "clipboardData", {
+    value: {
+      clearData: () => {
+        for (const format of Object.keys(data)) delete data[format];
+      },
+      setData: (format: string, value: string) => {
+        data[format] = value;
+      },
+      getData: (format: string) => data[format] ?? "",
+    },
+  });
+  editor.view.dom.dispatchEvent(event);
+}
+
+// What the editor's HTML can't carry: raw Markdown and a link the page doesn't open.
+const OWN =
+  "Voir la note[^1] et l'[annexe](annexe.pdf) et [ref][r] et ![logo](a.png) et a<br>b.\n\n[^1]: Une note.\n\n[r]: https://example.com";
+const FIRST = "Voir la note[^1] et l'[annexe](annexe.pdf) et [ref][r] et ![logo](a.png) et a<br>b.";
+// The same paragraph read from its HTML, cleaned.
+const CLEANED = "Voir la note`[^1]` et l'annexe et `[ref][r]` et `![logo](a.png)` et a`<br>`b.";
+
+/** Copies the first paragraph's text. */
+function copyFirst(editor: Editor): Clipboard {
+  editor.commands.setTextSelection({ from: 1, to: editor.state.doc.child(0).nodeSize - 1 });
+  const data: Clipboard = {};
+  clipboardEvent(editor, "copy", data);
+  return data;
+}
+
+describe("copy and paste inside the editor", () => {
+  it("pastes its own copy as it was, raw Markdown and links included", () => {
+    const { editor, saved } = openEditor(OWN);
+    const data = copyFirst(editor);
+    expect(data["text/html"]).toContain("data-pm-slice");
+
+    // Over the copied text: the Markdown doesn't change.
+    clipboardEvent(editor, "paste", data);
+    expect(saved()).toBe(OWN);
+
+    // At the end of the paragraph.
+    editor.commands.setTextSelection(editor.state.doc.child(0).nodeSize - 1);
+    clipboardEvent(editor, "paste", data);
+    expect(saved()).toBe(OWN.replace(FIRST, FIRST + FIRST));
+  });
+
+  it("pastes back what was cut, with the line endings of a Windows clipboard", () => {
+    const { editor, saved } = openEditor(OWN);
+    editor.commands.selectAll();
+    const data: Clipboard = {};
+    clipboardEvent(editor, "cut", data);
+    expect(saved()).toBe("");
+    expect(data["text/plain"]).toContain("\n\n");
+    clipboardEvent(editor, "paste", { ...data, "text/plain": data["text/plain"]!.replace(/\n/g, "\r\n") });
+    expect(saved()).toBe(OWN);
+  });
+
+  it("cleans the same HTML when it is not this editor's last copy", () => {
+    const { editor, saved } = openEditor(OWN);
+    const data = copyFirst(editor);
+
+    // Another editor never copied it.
+    const other = openEditor("");
+    clipboardEvent(other.editor, "paste", data);
+    expect(other.saved()).toBe(CLEANED);
+
+    // Same HTML, other text: a forged clipboard.
+    editor.commands.setTextSelection(editor.state.doc.child(0).nodeSize - 1);
+    clipboardEvent(editor, "paste", { ...data, "text/plain": "Autre texte" });
+    expect(saved()).toBe(OWN.replace(FIRST, FIRST + CLEANED));
   });
 });

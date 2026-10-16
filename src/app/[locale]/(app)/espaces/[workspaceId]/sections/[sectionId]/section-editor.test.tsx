@@ -497,6 +497,38 @@ describe("SectionEditor in Texte mode", () => {
     expect(screen.getByRole("textbox", { name: VISUAL_LABEL })).toBe(field);
   });
 
+  it("moves between table cells with Tab, and leaves the table from the last cell without adding a row", async () => {
+    const table = "| a | b |\n| - | - |\n| 1 | 2 |";
+    const { user } = renderEditor({ content: table, version: V1 });
+    await user.click(openButton());
+    const field = await visualEditor();
+    await waitFor(() => expect(field).toHaveFocus());
+    const editor = tiptap(field);
+    const cell = () => editor.state.selection.$from.parent.textContent;
+    const into = (text: string) => {
+      let at = 0;
+      editor.state.doc.descendants((node, position) => {
+        if (node.isText && node.text === text) at = position;
+      });
+      act(() => {
+        editor.commands.setTextSelection(at);
+      });
+    };
+
+    into("a");
+    await user.keyboard("{Tab}");
+    expect(cell()).toBe("b");
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(cell()).toBe("a");
+    expect(field).toHaveFocus();
+
+    into("2");
+    await user.keyboard("{Tab}");
+    expect(field).not.toHaveFocus();
+    await user.click(screen.getByRole("tab", { name: "Markdown" }));
+    expect(textarea()).toHaveValue(table);
+  });
+
   it("moves between toolbar buttons with the arrow keys and goes back to the text with Escape", async () => {
     const { user } = renderEditor();
     await user.click(openButton());

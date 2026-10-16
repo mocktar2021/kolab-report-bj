@@ -3,6 +3,7 @@ import { Code } from "@tiptap/extension-code";
 import { Heading } from "@tiptap/extension-heading";
 import { Link } from "@tiptap/extension-link";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
+import type { Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { StarterKit } from "@tiptap/starter-kit";
 import { cleanPastedHtml } from "./paste";
@@ -72,6 +73,16 @@ const SafeLink = Link.extend({
 // Markdown writes **`code`** and [`code`](url): inline code can carry other marks.
 const MarkdownCode = Code.extend({ excludes: "" });
 
+const MarkdownTable = Table.extend({
+  addKeyboardShortcuts() {
+    return {
+      ...this.parent?.(),
+      // In the last cell, Tab adds no row: the focus moves on, so the keyboard can leave the table.
+      Tab: () => this.editor.commands.goToNextCell(),
+    };
+  },
+});
+
 // GitHub table cells hold one line of text, without lists or paragraphs.
 const MarkdownTableCell = TableCell.extend({ content: "paragraph" });
 const MarkdownTableHeader = TableHeader.extend({ content: "paragraph" });
@@ -127,7 +138,8 @@ type RawOptions = { title: string };
 /**
  * Markdown the editor can't show as formatted text, kept as is. `mdast` is
  * the node as JSON, written back in place; `text` is its source, shown in the
- * editor. Paste never creates one: they come from the section's own text.
+ * editor. Pasted HTML never creates one: they come from the section's own
+ * text, or from a copy made in the editor (see OwnCopies).
  */
 const RawBlock = Node.create<RawOptions>({
   name: "rawBlock",
@@ -203,6 +215,59 @@ const PasteCleanup = Extension.create({
   },
 });
 
+/** The same text, whatever the line endings: the clipboard on Windows gives CRLF. */
+function sameText(a: string, b: string): boolean {
+  return a.replace(/\r\n?/g, "\n") === b.replace(/\r\n?/g, "\n");
+}
+
+/**
+ * Copy and paste inside the editor. Its HTML can't carry raw Markdown or the
+ * links the page doesn't open (relative, #anchor, tel:), so the editor keeps
+ * its last copy and pastes it as it was while the clipboard holds its text.
+ * Any other HTML goes through the cleanup: only a copy made in this editor
+ * comes back this way.
+ */
+const OwnCopies = Extension.create({
+  name: "ownCopies",
+  addProseMirrorPlugins() {
+    // Kept per editor: a copy from another editor goes through the cleanup.
+    let copied: { slice: Slice; text: string } | null = null;
+    return [
+      new Plugin({
+        key: new PluginKey("ownCopies"),
+        props: {
+          // On copy, cut and drag, before ProseMirror writes the clipboard.
+          transformCopied: (slice, view) => {
+            // The text ProseMirror puts next to the HTML.
+            const text =
+              view.someProp("clipboardTextSerializer", (serialize) => serialize(slice, view)) ||
+              slice.content.textBetween(0, slice.content.size, "\n\n");
+            copied = { slice, text };
+            return slice;
+          },
+          handlePaste: (view, event) => {
+            const data = event.clipboardData;
+            if (!copied?.text || !data) return false;
+            if (!data.getData("text/html").includes("data-pm-slice")) return false;
+            if (!sameText(data.getData("text/plain"), copied.text)) return false;
+            // Inserted the way ProseMirror inserts a pasted slice.
+            const { slice } = copied;
+            const single =
+              slice.openStart === 0 && slice.openEnd === 0 && slice.content.childCount === 1
+                ? slice.content.firstChild
+                : null;
+            const tr = single
+              ? view.state.tr.replaceSelectionWith(single, false)
+              : view.state.tr.replaceSelection(slice);
+            view.dispatch(tr.scrollIntoView().setMeta("paste", true).setMeta("uiEvent", "paste"));
+            return true;
+          },
+        },
+      }),
+    ];
+  },
+});
+
 export type RichTextOptions = {
   /** Tooltip of the raw Markdown nodes. */
   rawTitle?: string;
@@ -230,7 +295,7 @@ export function richTextExtensions({ rawTitle = "" }: RichTextOptions = {}): Ext
       shouldAutoLink: autoLinks,
       HTMLAttributes: { target: "_blank", rel: "noopener noreferrer nofollow", class: null },
     }),
-    Table.configure({ resizable: false, renderWrapper: true, allowTableNodeSelection: false }),
+    MarkdownTable.configure({ resizable: false, renderWrapper: true, allowTableNodeSelection: false }),
     TableRow,
     MarkdownTableHeader,
     MarkdownTableCell,
@@ -238,5 +303,6 @@ export function richTextExtensions({ rawTitle = "" }: RichTextOptions = {}): Ext
     RawBlock.configure({ title: rawTitle }),
     RawInline.configure({ title: rawTitle }),
     PasteCleanup,
+    OwnCopies,
   ];
 }
