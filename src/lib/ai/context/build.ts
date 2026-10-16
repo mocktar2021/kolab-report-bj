@@ -277,8 +277,13 @@ function templateValues(
     if (result.counts) decisions.push({ ref: name, action: "redacted", counts: result.counts });
     return result.text ? capChars(result.text, max) : fallback;
   };
+  // A subsection says which section it belongs to, with any template.
+  const title = value("section_title", input.section.title, TITLE_MAX_CHARS, NO_TITLE);
+  const parent = input.section.parentTitle
+    ? value("parent_section_title", input.section.parentTitle, TITLE_MAX_CHARS, "")
+    : "";
   return {
-    section_title: value("section_title", input.section.title, TITLE_MAX_CHARS, NO_TITLE),
+    section_title: parent ? `${title} (sous-section de « ${parent} »)` : title,
     section_instructions: value(
       "section_instructions",
       input.section.instructions,

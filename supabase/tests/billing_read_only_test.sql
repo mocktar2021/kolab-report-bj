@@ -209,8 +209,8 @@ update private.billing_settings set enforced = true;
 select pg_temp.act_as('owner');
 select is(pg_temp.affected($$delete from public.deliverables where id = pg_temp.id('d1')$$),
   1, 'read-only: a file is deleted');
-select is(pg_temp.affected($$delete from public.report_sections where id = pg_temp.id('s3')$$),
-  1, 'a section is deleted');
+select lives_ok($$select public.delete_report_section(pg_temp.id('s3'))$$,
+  'a section is deleted');
 select is(pg_temp.affected($$delete from public.workspace_members
   where workspace_id = pg_temp.id('w1') and user_id = pg_temp.id('expert2')$$),
   1, 'a member is removed');

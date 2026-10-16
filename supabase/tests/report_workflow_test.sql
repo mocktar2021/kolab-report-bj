@@ -169,8 +169,8 @@ select throws_ok(
 select throws_ok(
   $$insert into public.report_sections (workspace_id, report_id, title) values (pg_temp.id('w1'), pg_temp.id('r1'), 'Ajout')$$,
   'KR020', null, 'nor add a section');
-select is(pg_temp.affected($$delete from public.report_sections where id = pg_temp.id('s3')$$),
-  0, 'nor delete one');
+select throws_ok($$select public.delete_report_section(pg_temp.id('s3'))$$,
+  'KR020', null, 'nor delete one');
 select throws_ok(
   $$select public.reorder_report_sections(pg_temp.id('r1'),
       array[pg_temp.id('s3'), pg_temp.id('s2'), pg_temp.id('s1')])$$,

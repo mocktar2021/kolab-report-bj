@@ -32,6 +32,7 @@ const sectionRowSchema = z.object({
   status: sectionStatusSchema,
   updated_at: z.string(),
   report: embedded(z.object({ title: z.string() })),
+  parent: embedded(z.object({ title: z.string() })),
   assignee: embedded(profileSchema),
 });
 
@@ -46,6 +47,8 @@ export type DashboardSection = {
   status: SectionStatus;
   updatedAt: string;
   reportTitle: string | null;
+  /** The section a subsection belongs to (KRB-195), null for a section. */
+  parentTitle: string | null;
   assignee: { name: string; email: string } | null;
 };
 
@@ -81,7 +84,7 @@ export async function getDashboardData(
   let sectionsQuery = supabase
     .from("report_sections")
     .select(
-      "id, title, status, updated_at, report:reports(title), assignee:profiles!report_sections_assigned_to_fkey(full_name, email)",
+      "id, title, status, updated_at, report:reports(title), parent:parent_id(title), assignee:profiles!report_sections_assigned_to_fkey(full_name, email)",
       { count: "exact" },
     )
     .eq("workspace_id", workspaceId)
@@ -136,6 +139,7 @@ export async function getDashboardData(
       status: row.status,
       updatedAt: row.updated_at,
       reportTitle: row.report?.title ?? null,
+      parentTitle: row.parent?.title ?? null,
       assignee: row.assignee ? { name: displayName(row.assignee), email: row.assignee.email } : null,
     })),
   };

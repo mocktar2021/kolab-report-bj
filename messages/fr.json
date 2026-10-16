@@ -507,6 +507,7 @@
       "nameLength": "Saisissez entre 2 et 120 caractères.",
       "titleLength": "Saisissez entre 2 et 200 caractères.",
       "sectionTitleLength": "Saisissez un titre de 200 caractères au plus.",
+      "instructionsLength": "Saisissez des consignes de 4 000 caractères au plus.",
       "weightRange": "Saisissez un nombre entre 0,01 et 9 999,99."
     },
     "errors": {
@@ -522,6 +523,7 @@
       "alreadyMember": "Cette personne est déjà membre de l'espace de travail.",
       "invitationPending": "Une invitation est déjà en attente pour cette adresse. Renvoyez-la depuis la liste.",
       "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
+      "parentInvalid": "Une sous-section se place sous une section du rapport, pas sous une autre sous-section. Rechargez la page et choisissez un autre emplacement.",
       "seatLimit": "Limite de membres atteinte : l'offre {plan} compte {max, plural, one {# membre} other {# membres}}, invitations en attente comprises. Annulez une invitation, retirez un membre ou invitez cette personne comme lecteur, les lecteurs sont gratuits.",
       "seatLimitRole": "Limite de membres atteinte : l'offre {plan} compte {max, plural, one {# membre} other {# membres}}. Cette personne peut rester lecteur, ou libérez une place.",
       "seatLimitInvitee": "L'organisation qui vous invite a atteint la limite de membres de son offre. Prévenez la personne qui vous a invité, puis rouvrez ce lien.",
@@ -648,9 +650,14 @@
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
     "addSubmit": "Ajouter",
+    "addPlace": "Emplacement",
+    "addPlaceTop": "À la fin du rapport",
+    "addPlaceUnder": "Sous-section de {label} {title}",
     "added": "Section « {title} » ajoutée à la fin du rapport.",
+    "addedSub": "Sous-section « {title} » ajoutée à la fin de la section « {parent} ».",
     "tocTitle": "Sommaire",
-    "reorderHint": "Faites glisser une section par sa poignée pour changer l'ordre. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
+    "subsectionsLabel": "Sous-sections de {title}",
+    "reorderHint": "Faites glisser une section ou une sous-section par sa poignée pour changer l'ordre. Une section emporte ses sous-sections. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
     "edit": "Modifier<hidden> la section {title}</hidden>",
     "documentTitle": "Texte du rapport",
     "emptySection": "Section non rédigée.",
@@ -1039,6 +1046,17 @@
       "generic": "Le texte n'a pas pu être enregistré. Réessayez.",
       "readOnly": "Cet espace de travail est en lecture seule : le texte n'a pas été enregistré. Copiez-le si vous voulez le garder."
     }
+  },
+  "SectionManage": {
+    "edit": "Modifier le titre et les consignes",
+    "titleLabel": "Titre",
+    "instructionsLabel": "Consignes pour l'IA",
+    "instructionsHelp": "Ce que la section doit contenir, facultatif. Les brouillons de l'IA suivent ces consignes. 4 000 caractères au plus.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Titre et consignes enregistrés.",
+    "instructionsTitle": "Consignes pour l'IA",
+    "subsectionOf": "Sous-section de {label} {title}"
   },
   "Invitation": {
     "metaTitle": "Invitation",
@@ -1929,6 +1947,7 @@
       "confirmation": "Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer.",
       "stale": "Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez.",
       "paymentPending": "Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à {support}.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir avant de supprimer une section.",
       "invalidInput": "Cette demande de suppression n'est pas valide. Rechargez la page.",
       "generic": "La suppression n'a pas abouti. Réessayez dans un instant."
     },
@@ -1948,6 +1967,24 @@
       "finalNote": "Ce rapport est final : sa version finale enregistrée est supprimée aussi.",
       "typed": "Saisissez « {title} » pour confirmer",
       "confirm": "Supprimer le rapport",
+      "pending": "Suppression…"
+    },
+    "section": {
+      "zoneTitle": "Supprimer la section",
+      "zoneTitleSub": "Supprimer la sous-section",
+      "zoneDescription": "La section disparaît du rapport pour tous les membres, avec ses sous-sections, son texte et les fichiers déposés. Cette action est définitive.",
+      "zoneDescriptionSub": "La sous-section disparaît du rapport pour tous les membres, avec son texte et les fichiers déposés. Cette action est définitive.",
+      "button": "Supprimer la section",
+      "buttonSub": "Supprimer la sous-section",
+      "title": "Supprimer la section ?",
+      "titleSub": "Supprimer la sous-section ?",
+      "description": "« {title} » sera supprimée du rapport pour tous les membres. Cette action est définitive.",
+      "contentsTitle": "Seront supprimés avec elle :",
+      "subsections": "{count, plural, one {# sous-section} other {# sous-sections}}",
+      "files": "{count, plural, one {# fichier déposé} other {# fichiers déposés}}",
+      "withText": "{count, plural, one {le texte rédigé de # section} other {le texte rédigé de # sections}}",
+      "nothing": "Elle n'a encore ni texte, ni fichier, ni sous-section.",
+      "confirm": "Supprimer",
       "pending": "Suppression…"
     },
     "workspace": {

@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Check, LoaderCircle } from "lucide-react";
+import { renumber } from "@/lib/section-outline";
 import type { ReorderResult } from "./actions";
 import { ReportDocument, type ReportSection } from "./report-document";
 import { SectionList, type Assignee } from "./section-list";
@@ -38,8 +39,10 @@ export function MasterReport({
 }: MasterReportProps) {
   const order = useSectionOrder(reportId, sections);
   const manage = canManage && !frozen;
+  // A new order shows its numbers right away (1, 1.1, 2), not after the save.
   const shown = useMemo(
-    () => (frozen ? order.sections.map((section) => ({ ...section, canEdit: false })) : order.sections),
+    () =>
+      renumber(frozen ? order.sections.map((section) => ({ ...section, canEdit: false })) : order.sections),
     [frozen, order.sections],
   );
 

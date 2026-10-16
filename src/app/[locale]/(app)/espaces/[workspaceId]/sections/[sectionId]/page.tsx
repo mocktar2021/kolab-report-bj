@@ -12,19 +12,23 @@ import { getReadOnlyReason } from "@/lib/billing/banner";
 import { draftsHintText } from "@/lib/billing/hints";
 import { getWorkspaceUsage } from "@/lib/billing/state";
 import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
+import { getSectionDeletionPreview } from "@/lib/deletions/preview";
 import { isReportFrozen } from "@/lib/reports/status";
+import { outline } from "@/lib/section-outline";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
 import { isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
+import { DeleteSection } from "./delete-section";
 import { DeliverableList, type DeliverableRow } from "./deliverable-list";
 import { DeliverableUploader } from "./deliverable-uploader";
 import { DraftPanel } from "./draft-panel";
 import type { ParseState } from "./parse-badge";
 import { ParseWatcher } from "./parse-watcher";
 import { SectionContent } from "./section-content";
+import { SectionDetailsForm } from "./section-details-form";
 import { SectionEditor } from "./section-editor";
 import { SectionStatusControl } from "./section-status";
 
@@ -74,8 +78,9 @@ export default async function SectionPage({ params }: { params: Params }) {
   const readOnly = await getReadOnlyReason(workspaceId);
   const editor = canEditSection(access, section.assigned_to);
   const canEdit = !frozen && !readOnly && editor;
+  const manager = isManager(access.role);
   const supabase = await createClient();
-  const [{ data: files }, members, draft, usage] = await Promise.all([
+  const [{ data: files }, members, draft, usage, { data: outlineRows }, deletion] = await Promise.all([
     supabase
       .from("deliverables")
       .select(
@@ -89,7 +94,20 @@ export default async function SectionPage({ params }: { params: Params }) {
     canEdit ? getDraftPanel(workspaceId, section.id, access.userId) : null,
     // The AI drafts left, for the same people, in the same round trip.
     canEdit ? getWorkspaceUsage(workspaceId) : null,
+    // The other sections of the report, for the number and the parent (KRB-195).
+    supabase
+      .from("report_sections")
+      .select("id, parent_id, position, created_at, title")
+      .eq("report_id", section.report.id),
+    // Owners and admins delete a section while the report is not final, read-only or not.
+    manager && !frozen ? getSectionDeletionPreview(section.id) : null,
   ]);
+  const placed = outline(
+    (outlineRows ?? []).map((row) => ({ ...row, parentId: row.parent_id, createdAt: row.created_at })),
+  );
+  const place = placed.find((row) => row.id === section.id);
+  const parent = place?.parentId ? placed.find((row) => row.id === place.parentId) : undefined;
+  const tManage = await getTranslations("SectionManage");
   const draftsHint = draft?.availability === "enabled" ? await draftsHintText(usage) : null;
 
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
@@ -115,7 +133,7 @@ export default async function SectionPage({ params }: { params: Params }) {
       notStarted,
       // Same rule as the delete policy: managers, or the uploader while the
       // section is theirs. A read-only workspace still deletes.
-      canDelete: !frozen && editor && (isManager(access.role) || file.uploaded_by === access.userId),
+      canDelete: !frozen && editor && (manager || file.uploaded_by === access.userId),
       canRetry: canEdit && (parseState === "failed" || parseState === "stale" || notStarted),
     };
   });
@@ -139,7 +157,20 @@ export default async function SectionPage({ params }: { params: Params }) {
       </div>
 
       <header className="mt-4">
-        <h1 className="break-words text-h2 text-foreground">{section.title}</h1>
+        {parent ? (
+          <p className="mb-1 text-sm text-muted-foreground">
+            <Link
+              href={`/espaces/${workspaceId}/sections/${parent.id}`}
+              className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {tManage("subsectionOf", { label: parent.label, title: parent.title })}
+            </Link>
+          </p>
+        ) : null}
+        <h1 className="break-words text-h2 text-foreground">
+          {place ? <span className="mr-1 tabular-nums text-muted-foreground">{place.label}</span> : null}{" "}
+          {section.title}
+        </h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
           {canEdit ? null : <StatusBadge status={status} />}
           <span>
@@ -159,7 +190,17 @@ export default async function SectionPage({ params }: { params: Params }) {
           </div>
         ) : null}
         {section.instructions ? (
-          <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{section.instructions}</p>
+          <div className="mt-4 text-sm">
+            <p className="font-medium">{tManage("instructionsTitle")}</p>
+            <p className="mt-1 whitespace-pre-line text-muted-foreground">{section.instructions}</p>
+          </div>
+        ) : null}
+        {manager && !frozen && !readOnly ? (
+          <SectionDetailsForm
+            sectionId={section.id}
+            title={section.title}
+            instructions={section.instructions}
+          />
         ) : null}
         {frozen ? <FrozenReportNotice className="mt-4" /> : null}
         {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-4" /> : null}
@@ -196,6 +237,7 @@ export default async function SectionPage({ params }: { params: Params }) {
       )}
 
       <DeliverableList files={rows} canEdit={canEdit} />
+      {deletion ? <DeleteSection preview={deletion} /> : null}
       <ParseWatcher reading={reading} />
     </div>
   );

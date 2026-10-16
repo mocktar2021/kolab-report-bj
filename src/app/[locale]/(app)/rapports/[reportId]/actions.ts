@@ -30,10 +30,16 @@ const FORBIDDEN: SectionActionState = { status: "error", error: "forbidden" };
 // change anyway; checking first gives the right message.
 const REPORT_FINAL: SectionActionState = { status: "error", error: "reportFinal" };
 
-/** Adds a section at the end of the report. Owners and admins only. */
+/**
+ * Adds a section at the end of the report, or with "parentId" a subsection at
+ * the end of that section (KRB-195). Owners and admins only. The check_parent
+ * trigger refuses a parent from another report or a subsection as parent.
+ */
 export async function addSection(_prev: SectionActionState, formData: FormData): Promise<SectionActionState> {
   const reportId = uuidSchema.safeParse(formData.get("reportId"));
-  if (!reportId.success) return { status: "error", error: "invalidInput" };
+  const parent = String(formData.get("parentId") ?? "");
+  const parentId = parent === "" ? null : uuidSchema.safeParse(parent);
+  if (!reportId.success || (parentId && !parentId.success)) return { status: "error", error: "invalidInput" };
   const parsed = z.object({ title: sectionTitleSchema }).safeParse({ title: formData.get("title") ?? "" });
   if (!parsed.success) {
     return { status: "error", fieldErrors: workspaceFieldErrors<"title">(parsed.error) };
@@ -48,17 +54,20 @@ export async function addSection(_prev: SectionActionState, formData: FormData):
   if (!report || !(await requireWorkspaceRole(report.workspace_id, MANAGER_ROLES))) return FORBIDDEN;
   if (report.status === "final") return REPORT_FINAL;
 
-  const { data: last } = await supabase
+  // Positions count among the sections that share the parent.
+  let siblings = supabase
     .from("report_sections")
     .select("position")
     .eq("report_id", report.id)
     .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  siblings = parentId ? siblings.eq("parent_id", parentId.data) : siblings.is("parent_id", null);
+  const { data: last } = await siblings.maybeSingle();
 
   const { error } = await supabase.from("report_sections").insert({
     workspace_id: report.workspace_id,
     report_id: report.id,
+    parent_id: parentId ? parentId.data.toLowerCase() : null,
     title: parsed.data.title,
     position: (last?.position ?? -1) + 1,
   });

@@ -12,6 +12,7 @@ import { getReportDeletionPreview } from "@/lib/deletions/preview";
 import { EXPORTS_PER_HOUR, listReportExports } from "@/lib/reports/exports";
 import { allowedReportActions, isReportFrozen } from "@/lib/reports/status";
 import { getReportWorkflow } from "@/lib/reports/workflow";
+import { outline } from "@/lib/section-outline";
 import { canEditSection, sectionStatusSchema } from "@/lib/sections";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -79,10 +80,8 @@ export default async function ReportPage({ params }: { params: Params }) {
     await Promise.all([
       supabase
         .from("report_sections")
-        .select("id, title, status, weight, assigned_to, content")
-        .eq("report_id", report.id)
-        .order("position", { ascending: true })
-        .order("created_at", { ascending: true }),
+        .select("id, parent_id, position, created_at, title, status, weight, assigned_to, content")
+        .eq("report_id", report.id),
       getWorkspaceMembers(report.workspace_id),
       supabase.from("report_progress").select("completion_percent").eq("report_id", report.id).maybeSingle(),
       // RLS only lets owners and admins read the exports.
@@ -97,9 +96,16 @@ export default async function ReportPage({ params }: { params: Params }) {
   const locked = frozen || readOnly !== null;
 
   const names = new Map(members.map((member) => [member.userId, member.name]));
-  const rows: ReportSection[] = sections.map((section) => ({
+  // Sections, each followed by its subsections, numbered 1, 1.1, 2 (KRB-195).
+  const ordered = outline(
+    sections.map((section) => ({ ...section, parentId: section.parent_id, createdAt: section.created_at })),
+  );
+  const rows: ReportSection[] = ordered.map((section) => ({
     id: section.id,
     title: section.title,
+    label: section.label,
+    level: section.level,
+    parentId: section.parentId,
     status: sectionStatusSchema.catch("not_started").parse(section.status),
     weight: Number(section.weight),
     assignedTo: section.assigned_to,
@@ -174,7 +180,16 @@ export default async function ReportPage({ params }: { params: Params }) {
         assignees={assignees}
         canManage={manager}
         frozen={locked}
-        addSectionForm={manager && !locked ? <AddSectionForm reportId={report.id} /> : null}
+        addSectionForm={
+          manager && !locked ? (
+            <AddSectionForm
+              reportId={report.id}
+              parents={rows
+                .filter((row) => row.level === 1)
+                .map((row) => ({ id: row.id, label: row.label, title: row.title }))}
+            />
+          ) : null
+        }
       />
 
       {manager ? (

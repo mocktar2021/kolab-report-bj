@@ -1,11 +1,12 @@
 # Deletions
 
-Who can delete a report, a workspace or an organization in KolabReport, and what goes with it (KRB-180). The database checks every rule: `delete_report`, `delete_workspace` and `delete_organization`, from the deletions migration of KRB-180, are the only way a signed-in user deletes these rows. The DELETE privilege on `reports`, `workspaces` and `organizations` is revoked from `authenticated`, and the delete policies of `reports` and `workspaces` are gone, so the API refuses a direct delete with `42501`.
+Who can delete a section, a report, a workspace or an organization in KolabReport, and what goes with it (KRB-180, KRB-195). The database checks every rule: `delete_report_section` from the subsections migration of KRB-195, and `delete_report`, `delete_workspace` and `delete_organization` from the deletions migration of KRB-180, are the only way a signed-in user deletes these rows. The DELETE privilege on `report_sections`, `reports`, `workspaces` and `organizations` is revoked from `authenticated`, and their delete policies are gone, so the API refuses a direct delete with `42501`.
 
 ## Who can delete what
 
 | What | Who | Confirmation | Where in the app |
 | --- | --- | --- | --- |
+| Section or subsection, report not final | Owners and admins of its workspace | Dialog that names what goes | "Supprimer la section" at the bottom of the section page |
 | Report, not final | Owners and admins of its workspace | Dialog that names what goes | "Supprimer le rapport" at the bottom of the report page |
 | Report, final | Owners of its workspace | Dialog, and the exact title typed | Same. Admins see why they cannot |
 | Workspace | Owners of the workspace, and the organization owner even when not a member of it | Dialog, and the exact name typed | `/fr/espaces/<id>/parametres`, "Paramètres de l'espace" in the workspace menu (owners only), or "Supprimer" next to the workspace on the organization page |
@@ -34,6 +35,7 @@ The block ends on its own or with the operator:
 
 | Deleted | Goes with it | Stays |
 | --- | --- | --- |
+| Section | Its subsections, their text, deliverable rows and the text of their AI generations. Files are queued for removal | AI generations, with `section_id` set to null and their usage only, as for a report |
 | Report | Sections, deliverable rows, exports and final snapshots, status history, notifications. Files are queued for removal. The text of its AI generations: draft, raw answer, feedback and file names | AI generations of its sections, with `section_id` set to null and their usage only (tokens, cost, dates), so their tokens and drafts still count |
 | Workspace | Members, invitations, reports and all they hold, prompt templates and rollouts, AI generations, notifications, the Pass Mission entitlements of a mission workspace | The organization and its subscription. The organization's draft ledger (`workspace_id` set to null), so deleting a workspace never gives drafts back. Member accounts |
 | Organization | Every workspace and all it holds, the buyer row, entitlements, Pack IA credits, the draft ledger | Payments and receipts (KRB-176), with `organization_id` set to null and a copy of the buyer in the receipt. `private.billing_events` and `private.billing_trial_claims`, which have no foreign key: a new organization of the same person gets no new trial. Member accounts |
@@ -42,7 +44,7 @@ The dialogs warn when time is lost: a running Pass Mission for a workspace; for 
 
 ## No undo period
 
-A deletion is immediate, as decided for KRB-180: no waiting period, no trash and no undo. The rows go in the transaction of the function, and the stored files at the next daily cleanup run. The dialogs say "Cette action est définitive", and a final report, a workspace and an organization ask for their exact title or name first.
+A deletion is immediate, as decided for KRB-180: no waiting period, no trash and no undo. The rows go in the transaction of the function, and the stored files at the next daily cleanup run. The dialogs say "Cette action est définitive", and a final report, a workspace and an organization ask for their exact title or name first. A section of a final report can't be deleted at all (`KR020`): an owner reopens the report first.
 
 The app cannot bring back what went. A database backup can, but a restore replaces the whole database and only covers its own window ([`retention.md`](../gdpr/retention.md#backups)), so it is for incidents, not for undoing one deletion.
 
@@ -81,9 +83,12 @@ order by created_at desc;
 | `KR070` | Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer. |
 | `40001` | Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez. |
 | `KR071` | Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à support@mocktar.com. |
+| `KR020` | Ce rapport est final. Un propriétaire doit le rouvrir avant de supprimer une section. |
 
 ## Tests
 
 - `supabase/tests/deletions_test.sql`: rights of each role, cross-workspace attempts, cascades, files queued, draft ledger kept, billing rows, audit events, read-only workspaces, payments pending or in review.
+- `supabase/tests/section_subsections_test.sql`: section deletion rights, subsections and files that go with a section, files queued, the audit event without the title, final reports.
+- `tests/e2e/subsections.spec.ts`: deleting a section with its subsections from the section page.
 - `tests/e2e/deletions.spec.ts`: each deletion through the pages, refusals for experts and viewers, the dialog of an organization with a payment pending, the e-mail to the owners and admins in Mailpit, files removed by the cleanup job (needs the Storage container).
 - The smoke suite creates and deletes its own report on every deploy ([`smoke-tests.md`](../operations/smoke-tests.md)).

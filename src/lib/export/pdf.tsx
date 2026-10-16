@@ -21,14 +21,15 @@ import {
   type Place,
   type TextRun,
 } from "./markdown";
-import type { ExportDocument, ExportSection } from "./types";
+import { numberedSections, type ExportDocument, type NumberedSection } from "./types";
 import { toWinAnsi } from "./winansi";
 
 // The PDF export (KRB-18), drawn server-side with @react-pdf/renderer: a
 // cover page, a "Sommaire" page whose entries link to the sections, then
-// each section on a new page. The footer shows the report title and
-// "Page X sur Y". Sections are also PDF bookmarks, so readers list them in
-// their side panel.
+// each section on a new page, its subsections (KRB-195) following its text.
+// The footer shows the report title and "Page X sur Y". Sections are also
+// PDF bookmarks, so readers list them in their side panel; react-pdf only
+// takes bookmarks on pages, so subsections are reached from the contents.
 //
 // Blocks are laid out flat, each with its own left margin, instead of nested
 // views: deep lists and quotes stop at EXPORT_LIMITS.depth like in the .docx,
@@ -72,7 +73,22 @@ const styles = StyleSheet.create({
   },
   contentsTitle: { fontSize: 18, fontWeight: 700, color: "#1f3864", marginBottom: 14 },
   contentsEntry: { fontSize: 11, marginBottom: 6, color: COLORS.text, textDecoration: "none" },
+  contentsEntrySub: {
+    fontSize: 10.5,
+    marginBottom: 5,
+    marginLeft: 16,
+    color: COLORS.text,
+    textDecoration: "none",
+  },
   sectionTitle: { fontSize: 18, fontWeight: 700, color: "#1f3864", lineHeight: 1.25, marginBottom: 4 },
+  subsectionTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: "#1f3864",
+    lineHeight: 1.25,
+    marginTop: 14,
+    marginBottom: 4,
+  },
   sectionMeta: { fontSize: 9, fontStyle: "italic", color: COLORS.muted, marginBottom: 14 },
   empty: { fontStyle: "italic", color: COLORS.muted },
   // Line heights stay off the page style, where react-pdf drops the page
@@ -204,6 +220,8 @@ function marginOf(place: Place): Style {
 /** Draws blocks as a flat list of boxes. */
 class PdfBody {
   private keys = 0;
+  /** 1 in a subsection (KRB-195): its text's headings start one level lower. */
+  headingShift = 0;
 
   private key(): number {
     return this.keys++;
@@ -231,7 +249,9 @@ class PdfBody {
       case "paragraph":
         return [this.paragraph(block.runs, place)];
       case "heading": {
-        const style = HEADING_STYLES[Math.min(block.depth, HEADING_STYLES.length) - 1] ?? styles.heading4;
+        const style =
+          HEADING_STYLES[Math.min(block.depth + this.headingShift, HEADING_STYLES.length) - 1] ??
+          styles.heading4;
         return [
           <Text
             key={this.key()}
@@ -385,45 +405,114 @@ function blockSize(block: Block): number {
 const PAGE_GROUP = { soft: 12_000, hard: 40_000 } as const;
 
 export function pageGroups(blocks: readonly Block[]): Block[][] {
-  const groups: Block[][] = [[]];
-  let size = 0;
-  for (const block of blocks) {
-    const atHeading = block.type === "heading" && block.depth <= 2;
-    if (size >= PAGE_GROUP.hard || (size >= PAGE_GROUP.soft && atHeading)) {
+  return groupItems(blocks, blockSize, (block) => block.type === "heading" && block.depth <= 2);
+}
+
+/** Splits items as pageGroups does, `opens` telling where a group may start early. */
+function groupItems<T>(items: readonly T[], size: (item: T) => number, opens: (item: T) => boolean): T[][] {
+  const groups: T[][] = [[]];
+  let total = 0;
+  for (const item of items) {
+    if (total >= PAGE_GROUP.hard || (total >= PAGE_GROUP.soft && opens(item))) {
       groups.push([]);
-      size = 0;
+      total = 0;
     }
-    groups.at(-1)!.push(block);
-    size += blockSize(block);
+    groups.at(-1)!.push(item);
+    total += size(item);
   }
   return groups;
 }
 
-function sectionPages(section: ExportSection, index: number, title: string) {
+/** What follows a section's title on its pages: its text, then each subsection with its text. */
+type PdfItem =
+  | { kind: "block"; block: Block; shift: 0 | 1 }
+  | { kind: "subsection"; section: NumberedSection; index: number }
+  | { kind: "empty" };
+
+const itemSize = (item: PdfItem) =>
+  item.kind === "block"
+    ? blockSize(item.block)
+    : item.kind === "subsection"
+      ? 40 + item.section.title.length
+      : 20;
+
+const opensPage = (item: PdfItem) =>
+  item.kind === "subsection" ||
+  (item.kind === "block" && item.block.type === "heading" && item.block.depth <= 2);
+
+function textItems(section: NumberedSection, shift: 0 | 1, showEmpty: boolean): PdfItem[] {
   const blocks = sectionBlocks(section.markdown);
+  if (blocks.length === 0) return showEmpty ? [{ kind: "empty" }] : [];
+  return blocks.map((block) => ({ kind: "block", block, shift }));
+}
+
+/** "1. Contexte" or "1.1 Objectifs", for the standard fonts. */
+const numberedTitle = (section: NumberedSection) => toWinAnsi(`${section.label} ${cleanLine(section.title)}`);
+
+type Placed = { section: NumberedSection; index: number };
+
+/**
+ * A section on new pages, then its subsections, each after the text before
+ * it. A section without text shows "Section non rédigée." only when it has no
+ * subsections either.
+ */
+function sectionPages({ section, index }: Placed, subsections: Placed[], title: string) {
+  const items: PdfItem[] = [
+    ...textItems(section, 0, subsections.length === 0),
+    ...subsections.flatMap((sub): PdfItem[] => [
+      { kind: "subsection", section: sub.section, index: sub.index },
+      ...textItems(sub.section, 1, true),
+    ]),
+  ];
   const assignee = section.assigneeName && cleanLine(section.assigneeName);
   const body = new PdfBody();
-  return pageGroups(blocks).map((group, groupIndex) => (
+
+  const draw = (item: PdfItem, key: number): ReactNode => {
+    if (item.kind === "empty") {
+      return (
+        <Text key={`empty-${key}`} style={styles.empty}>
+          {EXPORT_TEXT.emptySection}
+        </Text>
+      );
+    }
+    if (item.kind === "subsection") {
+      const subAssignee = item.section.assigneeName && cleanLine(item.section.assigneeName);
+      return (
+        <View key={`sub-${item.index}`} minPresenceAhead={60}>
+          <Text
+            id={sectionAnchor(item.index)}
+            style={styles.subsectionTitle}
+            hyphenationCallback={breakWords}
+          >
+            {numberedTitle(item.section)}
+          </Text>
+          <Text style={styles.sectionMeta}>{toWinAnsi(sectionMeta(subAssignee, item.section.status))}</Text>
+        </View>
+      );
+    }
+    body.headingShift = item.shift;
+    return body.blocks([item.block], TOP_PLACE);
+  };
+
+  return groupItems(items, itemSize, opensPage).map((group, groupIndex) => (
     <Page
       key={`${index}-${groupIndex}`}
       size="A4"
       style={styles.page}
-      bookmark={groupIndex === 0 ? { title: cleanLine(section.title), fit: true } : undefined}
+      bookmark={
+        groupIndex === 0 ? { title: cleanLine(`${section.label} ${section.title}`), fit: true } : undefined
+      }
     >
       <Footer title={title} />
       {groupIndex === 0 ? (
         <>
           <Text id={sectionAnchor(index)} style={styles.sectionTitle} hyphenationCallback={breakWords}>
-            {toWinAnsi(cleanLine(section.title))}
+            {numberedTitle(section)}
           </Text>
           <Text style={styles.sectionMeta}>{toWinAnsi(sectionMeta(assignee, section.status))}</Text>
         </>
       ) : null}
-      {blocks.length > 0 ? (
-        body.blocks(group, TOP_PLACE)
-      ) : (
-        <Text style={styles.empty}>{EXPORT_TEXT.emptySection}</Text>
-      )}
+      {group.map((item, key) => draw(item, key))}
     </Page>
   ));
 }
@@ -431,6 +520,14 @@ function sectionPages(section: ExportSection, index: number, title: string) {
 function ReportPdf({ doc }: { doc: ExportDocument }) {
   const plainTitle = cleanLine(doc.title);
   const title = toWinAnsi(plainTitle);
+  const numbered = numberedSections(doc.sections).map((section, index) => ({ section, index }));
+  // Each section with the subsections that follow it.
+  const chapters: { head: Placed; subsections: Placed[] }[] = [];
+  for (const placed of numbered) {
+    const last = chapters.at(-1);
+    if (placed.section.level === 2 && last) last.subsections.push(placed);
+    else chapters.push({ head: placed, subsections: [] });
+  }
   return (
     <Document title={plainTitle} creator="KolabReport" producer="KolabReport" language="fr-FR">
       <Page size="A4" style={styles.cover}>
@@ -444,13 +541,17 @@ function ReportPdf({ doc }: { doc: ExportDocument }) {
         <Footer title={title} />
         <Text style={styles.contentsTitle}>{EXPORT_TEXT.contents}</Text>
         {doc.sections.length === 0 ? <Text style={styles.empty}>{EXPORT_TEXT.noSections}</Text> : null}
-        {doc.sections.map((section, index) => (
-          <Link key={index} src={`#${sectionAnchor(index)}`} style={styles.contentsEntry}>
-            {toWinAnsi(`${index + 1}. ${cleanLine(section.title)}`)}
+        {numbered.map(({ section, index }) => (
+          <Link
+            key={index}
+            src={`#${sectionAnchor(index)}`}
+            style={section.level === 2 ? styles.contentsEntrySub : styles.contentsEntry}
+          >
+            {numberedTitle(section)}
           </Link>
         ))}
       </Page>
-      {doc.sections.flatMap((section, index) => sectionPages(section, index, title))}
+      {chapters.flatMap((chapter) => sectionPages(chapter.head, chapter.subsections, title))}
     </Document>
   );
 }

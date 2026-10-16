@@ -62,8 +62,8 @@ export function SectionTable({ sections, matchingSections, activeStatus }: Secti
               {sections.map((section) => (
                 <tr key={section.id} className="transition-colors duration-200 hover:bg-muted/50">
                   <td className="max-w-[18rem] px-5 py-3.5">
-                    <span className="block truncate font-medium text-foreground" title={section.title}>
-                      {section.title}
+                    <span className="block truncate font-medium text-foreground" title={fullTitle(section)}>
+                      {fullTitle(section)}
                     </span>
                   </td>
                   <td className="max-w-[14rem] px-3 py-3.5 text-muted-foreground">
@@ -91,7 +91,7 @@ export function SectionTable({ sections, matchingSections, activeStatus }: Secti
             {sections.map((section) => (
               <li key={section.id} className="px-4 py-4 transition-colors hover:bg-muted/50">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 font-medium leading-snug text-foreground">{section.title}</p>
+                  <p className="min-w-0 font-medium leading-snug text-foreground">{fullTitle(section)}</p>
                   <StatusBadge status={section.status} className="shrink-0" />
                 </div>
                 {section.reportTitle ? (
@@ -229,6 +229,11 @@ function EmptyState({ activeStatus }: { activeStatus: SectionStatus | null }) {
 }
 
 /** Shown when a Supabase query fails, instead of an error page. */
+/** A subsection shows after its section (KRB-195): "Contexte › Objectifs". */
+function fullTitle(section: Pick<DashboardSection, "title" | "parentTitle">): string {
+  return section.parentTitle ? `${section.parentTitle} › ${section.title}` : section.title;
+}
+
 export function SectionsError() {
   const t = useTranslations("Dashboard.error");
 
