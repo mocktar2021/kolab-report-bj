@@ -93,6 +93,10 @@ select jsonb_pretty(jsonb_build_object(
       'status', g.status, 'accepted', g.accepted, 'user_rating', g.user_rating,
       'feedback_comment', g.feedback_comment)), '[]')
     from public.ai_generations g join target t on t.id = g.requested_by),
+  'template_writer_calls', (select coalesce(jsonb_agg(jsonb_build_object(
+      'id', c.id, 'workspace_id', c.workspace_id, 'created_at', c.created_at, 'model', c.model,
+      'status', c.status)), '[]')
+    from public.prompt_assist_calls c join target t on t.id = c.user_id),
   'report_exports', (select coalesce(jsonb_agg(jsonb_build_object(
       'id', e.id, 'report_id', e.report_id, 'kind', e.kind, 'format', e.format,
       'file_name', e.file_name, 'created_at', e.created_at)), '[]')
@@ -179,6 +183,7 @@ A person deletes their own account on `/fr/compte` ([Self-service in the app](#s
 | `notifications` they received | Deleted |
 | `report_sections.assigned_to` | Set to null |
 | `ai_generations.requested_by` | Set to null. Drafts and ratings stay. `prepare_account_deletion` clears `feedback_comment`. |
+| `prompt_assist_calls.user_id` | Set to null. The usage and cost of the calls stay with the workspace. |
 | `workspaces.created_by`, `reports.created_by`, `deliverables.uploaded_by` | Set to null, rows kept with the workspace |
 | `prompt_library.created_by`, `prompt_rollouts.created_by`, `report_exports.created_by`, `report_status_events.changed_by` | Set to null, rows kept (they are the firm's records) |
 | Storage objects they own (`storage.objects.owner`, `owner_id`) | Kept with the workspace. `prepare_account_deletion` sets the owner to null first. |
