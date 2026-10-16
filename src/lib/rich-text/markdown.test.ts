@@ -95,12 +95,7 @@ describe("parseMarkdown and docToMarkdown", () => {
   });
 
   it("writes an AI draft in the same style as it came", () => {
-    expect(rewrite(AI_DRAFT)).toBe(
-      AI_DRAFT.replace("| --- | ---: | :---: |", "| - | -: | :-: |").replace(
-        "2. Isoler la toiture du bâtiment B.\n   - Devis",
-        "2. Isoler la toiture du bâtiment B.\n   - Devis",
-      ),
-    );
+    expect(rewrite(AI_DRAFT)).toBe(AI_DRAFT.replace("| --- | ---: | :---: |", "| - | -: | :-: |"));
   });
 
   it("rewrites only the block that changed", () => {
