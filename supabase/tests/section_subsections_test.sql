@@ -1,7 +1,7 @@
 -- Subsections, reordering by level, and deleting a section (KRB-195).
 begin;
 \ir fixtures.psql
-select plan(34);
+select plan(37);
 
 -- A second report in w1, to check that a parent stays in its own report.
 insert into public.reports (id, workspace_id, title, created_by) values
@@ -48,6 +48,16 @@ select throws_ok(
     (pg_temp.id('w1'), pg_temp.id('r1'), pg_temp.id('s1'), 'Par un expert')$$,
   '42501', null, 'an expert cannot add a subsection');
 
+select pg_temp.act_as('outsider');
+select throws_ok(
+  $$insert into public.report_sections (workspace_id, report_id, parent_id, title) values
+    (pg_temp.id('w1'), pg_temp.id('r1'), '00000000-0000-4000-e000-0000000000a1', 'Sonde')$$,
+  '42501', null, 'someone outside the workspace gets the usual refusal, not the parent rules');
+select throws_ok(
+  $$insert into public.report_sections (workspace_id, report_id, parent_id, title) values
+    (pg_temp.id('w1'), pg_temp.id('r1'), '00000000-0000-4000-e000-00000000ffff', 'Sonde')$$,
+  '42501', null, 'whether the parent exists or not');
+
 select pg_temp.act_as_server();
 select throws_ok(
   $$update public.report_sections set parent_id = pg_temp.id('s2') where id = pg_temp.id('s1')$$,
@@ -62,6 +72,9 @@ select is(pg_temp.affected(
 select throws_ok(
   $$update public.report_sections set instructions = repeat('a', 4001) where id = pg_temp.id('s3')$$,
   '23514', null, 'instructions hold at most 4000 characters');
+select ok(
+  (select convalidated from pg_catalog.pg_constraint where conname = 'report_sections_instructions_length'),
+  'and every row was checked when the limit came');
 
 select pg_temp.act_as('expert');
 select throws_ok(
