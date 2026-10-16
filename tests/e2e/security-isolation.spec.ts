@@ -115,6 +115,20 @@ test.beforeAll(async () => {
     .single();
   if (generationError || !generation) throw generationError ?? new Error("No generation");
 
+  // A "Rédiger avec l'IA" call of A's owner (KRB-198), as the server records it.
+  const { error: assistError } = await admin.from("prompt_assist_calls").insert({
+    workspace_id: a.workspace_id,
+    user_id: owner.id,
+    provider: "mock",
+    model: "mock",
+    input_chars: 120,
+    status: "succeeded",
+    input_tokens: 400,
+    output_tokens: 300,
+    completed_at: new Date().toISOString(),
+  });
+  if (assistError) throw assistError;
+
   const { error: exportError } = await admin.from("report_exports").insert({
     workspace_id: a.workspace_id,
     report_id: a.report_id,
@@ -187,6 +201,7 @@ const WORKSPACE_TABLES = [
   "deliverables",
   "prompt_library",
   "ai_generations",
+  "prompt_assist_calls",
   "report_exports",
   "plan_import_calls",
   "report_status_events",

@@ -3,6 +3,7 @@ import {
   createReportSchema,
   createWorkspaceInOrganizationSchema,
   createWorkspaceSchema,
+  sectionInstructionsSchema,
   sectionTitleSchema,
   sectionWeightSchema,
   workspaceFieldErrors,
@@ -129,5 +130,22 @@ describe("sectionTitleSchema", () => {
   it("needs at least one visible character", () => {
     expect(sectionTitleSchema.safeParse("   ").success).toBe(false);
     expect(sectionTitleSchema.parse(" Contexte ")).toBe("Contexte");
+  });
+});
+
+describe("sectionInstructionsSchema", () => {
+  it("counts a posted line break once, as the field does", () => {
+    const lines = Array.from({ length: 21 }, () => "a".repeat(189));
+    const posted = lines.join("\r\n");
+    expect(lines.join("\n")).toHaveLength(3989);
+    expect(posted).toHaveLength(4009);
+    expect(sectionInstructionsSchema.parse(posted)).toBe(lines.join("\n"));
+  });
+
+  it("holds at most 4000 characters", () => {
+    expect(sectionInstructionsSchema.safeParse("a".repeat(4000)).success).toBe(true);
+    expect(sectionInstructionsSchema.safeParse("a".repeat(4001)).error?.issues[0]?.message).toBe(
+      "instructionsLength",
+    );
   });
 });

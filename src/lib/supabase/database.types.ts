@@ -985,6 +985,79 @@ export type Database = {
         };
         Relationships: [];
       };
+      prompt_assist_calls: {
+        Row: {
+          completed_at: string | null;
+          cost_estimate: number | null;
+          created_at: string;
+          error_code: string | null;
+          id: string;
+          input_chars: number;
+          input_tokens: number | null;
+          latency_ms: number | null;
+          model: string;
+          output_tokens: number | null;
+          provider: string;
+          status: string;
+          total_tokens: number | null;
+          trace_id: string | null;
+          user_id: string | null;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          completed_at?: string | null;
+          cost_estimate?: number | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          input_chars: number;
+          input_tokens?: number | null;
+          latency_ms?: number | null;
+          model: string;
+          output_tokens?: number | null;
+          provider: string;
+          status?: string;
+          total_tokens?: never;
+          trace_id?: string | null;
+          user_id?: string | null;
+          workspace_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          cost_estimate?: number | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          input_chars?: number;
+          input_tokens?: number | null;
+          latency_ms?: number | null;
+          model?: string;
+          output_tokens?: number | null;
+          provider?: string;
+          status?: string;
+          total_tokens?: never;
+          trace_id?: string | null;
+          user_id?: string | null;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "prompt_assist_calls_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "prompt_assist_calls_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       prompt_library: {
         Row: {
           changelog: string | null;
@@ -1907,6 +1980,7 @@ export type Database = {
       };
       claim_account_deletion: { Args: Record<PropertyKey, never>; Returns: string };
       claim_ai_cost_alert: { Args: { p_threshold: number }; Returns: number };
+      claim_ai_daily_cost_alert: { Args: { p_threshold: number }; Returns: number };
       claim_report_export: {
         Args: {
           p_file_name: string;
@@ -1962,6 +2036,20 @@ export type Database = {
           p_latency_ms: number;
           p_output_tokens: number;
           p_status: string;
+          p_workspace_id: string;
+        };
+        Returns: boolean;
+      };
+      finish_prompt_assist: {
+        Args: {
+          p_call_id: string;
+          p_cost_estimate: number;
+          p_error_code: string;
+          p_input_tokens: number;
+          p_latency_ms: number;
+          p_output_tokens: number;
+          p_status: string;
+          p_trace_id?: string;
           p_workspace_id: string;
         };
         Returns: boolean;
@@ -2038,6 +2126,19 @@ export type Database = {
         }[];
       };
       prepare_account_deletion: { Args: { p_user_id: string }; Returns: Json };
+      prompt_assist_metrics: {
+        Args: { p_since: string; p_workspace_id: string };
+        Returns: {
+          calls: number;
+          cost: number;
+          failed: number;
+          input_tokens: number;
+          last_call: string;
+          model: string;
+          output_tokens: number;
+          succeeded: number;
+        }[];
+      };
       release_account_deletion: { Args: Record<PropertyKey, never>; Returns: undefined };
       release_ai_cost_alert: { Args: Record<PropertyKey, never>; Returns: undefined };
       reorder_report_sections: { Args: { p_report_id: string; p_section_ids: string[] }; Returns: undefined };
@@ -2079,6 +2180,21 @@ export type Database = {
           p_pages: number;
           p_provider: string;
           p_report_id: string;
+          p_user_id: string;
+          p_workspace_id: string;
+        };
+        Returns: {
+          call_id: string;
+          refusal: string;
+          retry_after: number;
+        }[];
+      };
+      start_prompt_assist: {
+        Args: {
+          p_daily_limit: number;
+          p_input_chars: number;
+          p_model: string;
+          p_provider: string;
           p_user_id: string;
           p_workspace_id: string;
         };

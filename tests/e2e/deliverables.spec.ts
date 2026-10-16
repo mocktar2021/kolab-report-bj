@@ -76,7 +76,7 @@ test("an expert uploads a Word file and downloads it back", async ({ page }) => 
   await signIn(page, setup.expert);
   await page.goto(sectionUrl());
   const main = page.getByRole("main");
-  await expect(main.getByRole("heading", { level: 1 })).toHaveText("Analyse énergétique");
+  await expect(main.getByRole("heading", { level: 1 })).toHaveText("1. Analyse énergétique");
   await expect(main.getByText("Votre section")).toBeVisible();
 
   await page.getByLabel("Choisir des fichiers").setInputFiles({

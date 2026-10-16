@@ -42,7 +42,8 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | **yes**, mark Sensitive | One key per environment |
 | `APP_ENV` | no | `staging` or `production` |
 | `AI_PROVIDER`, `AI_MODEL`, other `AI_*` | no | See `.env.example` |
-| `AI_DRAFTS_ENABLED` | no | `true` only once the eval suite passes on the model of that environment (`evals/README.md`) |
+| `AI_DRAFTS_ENABLED` | no | `true` only once the eval suite passes on the model of that environment (`evals/README.md`). It also turns on "Rédiger avec l'IA" for templates |
+| `AI_TEMPLATE_WRITER_PER_DAY` | no | "Rédiger avec l'IA" calls per person and UTC day, 20 by default |
 | `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` | **yes** for the secret key, mark Sensitive | Tracing of AI calls, with `AI_TRACING=true` (`docs/ai-evaluation.md`) |
 | `AI_FALLBACK_PROVIDER`, `AI_FALLBACK_MODEL`, `AI_FALLBACK_PRICE_INPUT_PER_MTOK`, `AI_FALLBACK_PRICE_OUTPUT_PER_MTOK`, `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` | no | Fallback model, its price, and the daily cost alert, see `.env.example` |
 | `EMAIL_PROVIDER` | no | `brevo` or `resend`, for invitation, report and billing reminder e-mails. Without it, or without the matching key, the app shows the invitation link to copy and logs `sendEmail skipped` with the reason |

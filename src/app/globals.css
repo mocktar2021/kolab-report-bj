@@ -333,3 +333,125 @@
     stroke-dashoffset: -1;
   }
 }
+
+/*
+ * Text in the "Texte" mode of the section editor (KRB-197). Same looks as the
+ * Markdown view of a section, with the heading levels told apart.
+ */
+@layer components {
+  .rich-text-content > * + *,
+  .rich-text-content li > * + *,
+  .rich-text-content blockquote > * + * {
+    margin-top: 0.5rem;
+  }
+
+  .rich-text-content [data-level] {
+    @apply font-semibold;
+    margin-top: 1rem;
+  }
+
+  .rich-text-content > [data-level]:first-child {
+    margin-top: 0;
+  }
+
+  .rich-text-content [data-level="1"] {
+    @apply text-lg;
+  }
+
+  .rich-text-content [data-level="2"] {
+    @apply text-base;
+  }
+
+  .rich-text-content [data-level="3"] {
+    font-size: 0.9375rem;
+  }
+
+  .rich-text-content [data-level="4"],
+  .rich-text-content [data-level="5"],
+  .rich-text-content [data-level="6"] {
+    @apply text-sm font-medium;
+  }
+
+  .rich-text-content ul {
+    @apply list-disc pl-5;
+  }
+
+  .rich-text-content ol {
+    @apply list-decimal pl-5;
+  }
+
+  .rich-text-content li[data-checked="false"]::before {
+    content: "☐ ";
+  }
+
+  .rich-text-content li[data-checked="true"]::before {
+    content: "☑ ";
+  }
+
+  .rich-text-content li[data-checked] > p:first-child {
+    display: inline;
+  }
+
+  .rich-text-content blockquote {
+    @apply border-l-2 pl-3 text-muted-foreground;
+  }
+
+  .rich-text-content a {
+    @apply underline underline-offset-2;
+  }
+
+  .rich-text-content code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.85em];
+  }
+
+  .rich-text-content pre {
+    @apply overflow-x-auto whitespace-pre rounded-lg bg-muted px-3 py-2 font-mono text-xs;
+  }
+
+  .rich-text-content pre code {
+    @apply bg-transparent p-0 text-[1em];
+  }
+
+  .rich-text-content hr {
+    @apply my-4 border-border;
+  }
+
+  .rich-text-content .tableWrapper {
+    @apply overflow-x-auto rounded-lg border;
+  }
+
+  .rich-text-content table {
+    @apply w-full border-collapse text-left text-xs;
+  }
+
+  .rich-text-content th,
+  .rich-text-content td {
+    @apply min-w-[4rem] border-b px-2.5 py-1.5 align-top;
+  }
+
+  .rich-text-content th + th,
+  .rich-text-content td + td {
+    @apply border-l;
+  }
+
+  .rich-text-content th {
+    @apply bg-muted/60 font-medium;
+  }
+
+  .rich-text-content .selectedCell {
+    background-color: hsl(var(--highlight) / 0.12);
+  }
+
+  .rich-text-content .rich-text-raw {
+    @apply rounded border border-dashed bg-muted/60 px-1 font-mono text-[0.85em] text-muted-foreground;
+  }
+
+  .rich-text-content pre.rich-text-raw {
+    @apply whitespace-pre-wrap px-3 py-2 text-xs;
+  }
+
+  .rich-text-content .ProseMirror-selectednode {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}

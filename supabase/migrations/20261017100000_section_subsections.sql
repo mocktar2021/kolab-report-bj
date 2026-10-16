@@ -19,8 +19,10 @@
 --   characters, the length the AI context keeps (src/lib/ai/context/build.ts).
 -- =============================================================================
 
--- Rows that would break the parent rules: none is expected, since nothing set
--- parent_id before. Stop here rather than leave a report the app can't show.
+-- Rows that would break the parent rules or the length of the instructions:
+-- none is expected, since nothing set parent_id before and the app had no
+-- field for the instructions. Stop here rather than leave a report the app
+-- can't show, or a row that no update (a reorder, a save) could touch.
 do $$
 begin
   if exists (
@@ -31,6 +33,9 @@ begin
   ) then
     raise exception 'report_sections has subsections in another report or on two levels';
   end if;
+  if exists (select 1 from public.report_sections s where char_length(s.instructions) > 4000) then
+    raise exception 'report_sections has instructions over 4000 characters: shorten them first';
+  end if;
 end;
 $$;
 
@@ -40,7 +45,7 @@ create index if not exists report_sections_parent_id_idx
 
 alter table public.report_sections drop constraint if exists report_sections_instructions_length;
 alter table public.report_sections add constraint report_sections_instructions_length
-  check (instructions is null or char_length(instructions) <= 4000) not valid;
+  check (instructions is null or char_length(instructions) <= 4000);
 
 -- -----------------------------------------------------------------------------
 -- Parent rules
@@ -58,6 +63,13 @@ declare
   v_parent public.report_sections;
 begin
   if new.parent_id is null then
+    return new;
+  end if;
+  -- An insert reaches this trigger before RLS: people from outside the
+  -- workspace get the usual refusal, not ours, and learn nothing about the
+  -- parent. Users can't update parent_id (column grants).
+  if tg_op = 'INSERT' and (select auth.uid()) is not null
+     and not private.is_workspace_member(new.workspace_id) then
     return new;
   end if;
 
@@ -259,10 +271,16 @@ begin
   end if;
 
   -- A draft starting in this workspace finishes first, or waits. Then the
-  -- report, so it can't become final meanwhile, and the section, read again.
+  -- report, so it can't become final meanwhile. Then the section and its
+  -- subsections in id order, the order of reorder_report_sections, so the two
+  -- can't wait on each other. The section is read again.
   perform private.lock_workspace_drafts(v_section.workspace_id);
   select r.* into v_report from public.reports r where r.id = v_section.report_id for share;
-  select s.* into v_section from public.report_sections s where s.id = p_section_id for update;
+  perform 1 from public.report_sections s
+  where s.id = p_section_id or s.parent_id = p_section_id
+  order by s.id
+  for update;
+  select s.* into v_section from public.report_sections s where s.id = p_section_id;
   if not found then
     raise exception 'Section introuvable' using errcode = 'P0002';
   end if;

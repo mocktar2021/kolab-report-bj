@@ -297,6 +297,8 @@ test("an update waits while a section holds unsaved text", async ({ page, baseUR
     const editor = main.getByLabel("Texte de la section (Markdown)");
     const text = "Premier jet, pas encore enregistré.";
     await main.getByRole("button", { name: "Modifier le texte" }).click();
+    // The editor opens in "Texte" mode (KRB-197); the Markdown tab has the plain field.
+    await main.getByRole("tab", { name: "Markdown" }).click();
     await editor.fill(text);
 
     proxy.nextDeploy();

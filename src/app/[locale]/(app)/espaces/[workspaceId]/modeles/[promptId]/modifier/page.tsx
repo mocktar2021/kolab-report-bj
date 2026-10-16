@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { getTemplatePlan, templatesBlocked } from "@/lib/prompts/plan";
 import { getPromptTemplate } from "@/lib/prompts/server";
 import { isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
@@ -10,6 +11,7 @@ import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { editorValuesFrom } from "../../editor-values";
 import { PromptsForbidden } from "../../forbidden";
 import { PromptEditor } from "../../prompt-editor";
+import { TemplatesBlocked } from "../../templates-blocked";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,10 @@ export default async function NewPromptVersionPage({
   if (!isManager(access.role)) return <PromptsForbidden workspaceId={workspaceId} />;
 
   // Global templates change through migrations only: they get "Personnaliser" instead.
-  const detail = await getPromptTemplate(workspaceId, promptId);
+  const [detail, plan] = await Promise.all([
+    getPromptTemplate(workspaceId, promptId),
+    getTemplatePlan(workspaceId),
+  ]);
   if (!detail || detail.version.workspaceId === null) notFound();
 
   const { version, history } = detail;
@@ -58,13 +63,18 @@ export default async function NewPromptVersionPage({
         </p>
       </header>
 
-      <PromptEditor
-        workspaceId={workspaceId}
-        baseId={version.id}
-        expectedLatest={latest}
-        initial={editorValuesFrom(version)}
-        cancelHref={versionHref}
-      />
+      {/* Read-only, or a plan without custom templates (KRB-198): saving would fail. */}
+      {templatesBlocked(plan) ? (
+        <TemplatesBlocked plan={plan} workspaceId={workspaceId} />
+      ) : (
+        <PromptEditor
+          workspaceId={workspaceId}
+          baseId={version.id}
+          expectedLatest={latest}
+          initial={editorValuesFrom(version)}
+          cancelHref={versionHref}
+        />
+      )}
     </div>
   );
 }

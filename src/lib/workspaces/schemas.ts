@@ -15,8 +15,14 @@ export const sectionTitleSchema = z
   .min(1, "sectionTitleLength")
   .max(200, "sectionTitleLength");
 
-/** Instructions of a section for the AI drafts (KRB-195), as the database caps them. */
-export const sectionInstructionsSchema = z.string().trim().max(4000, "instructionsLength");
+/**
+ * Instructions of a section for the AI drafts (KRB-195), as the database caps
+ * them. A form posts each line break as CRLF; it counts once, as in the field.
+ */
+export const sectionInstructionsSchema = z
+  .string()
+  .transform((text) => text.replace(/\r\n?/g, "\n"))
+  .pipe(z.string().trim().max(4000, "instructionsLength"));
 
 export const uuidSchema = z.string().uuid();
 

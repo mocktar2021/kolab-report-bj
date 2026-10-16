@@ -122,5 +122,5 @@ Audits that stay red and do not count in the score:
 
 - Content visible on first load never starts at opacity 0. Use `fade-in-50`, or move it with a transform only.
 - A Client Component that calls `useTranslations` needs its namespace in the scope of its route (`src/i18n/client-messages.ts`). The unit test tells you which one.
-- Load large client libraries when they are used: `next/dynamic`, `import()` or `LazyMotion`. cmdk, motion's layout features, supabase-js and Sentry already work this way.
+- Load large client libraries when they are used: `next/dynamic`, `import()` or `LazyMotion`. cmdk, motion's layout features, supabase-js, Sentry and the Tiptap editor of the section page (loaded when "Modifier le texte" is hovered, focused or clicked) already work this way.
 - Keep zod out of modules that Client Components import.

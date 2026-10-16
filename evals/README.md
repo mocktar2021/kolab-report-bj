@@ -137,6 +137,18 @@ Each case's `description` says what it checks. The long cases are filled at load
 
 For a long case, use `generated` with `{ "type": "narrative", "topic", "seed", "sections" }` or `{ "type": "table", "topic", "seed", "sheets": [{ "name", "rows" }] }`, after any hand-written `markdown` or `markdownFile` that holds the facts.
 
+## Template writer
+
+"Rédiger avec l'IA" on the new template page (KRB-198) turns a few sentences into a template. Its cases are in `template-writer/cases.json`: descriptions a manager could type, one per kind of request (each output schema, a description in English, an injection, variables that don't exist, a request to invent figures), each with key points, forbidden strings and a reference template.
+
+```bash
+npm run eval:template-writer -- --mock          # the reference answers: checks the pipeline, no key
+npm run eval:template-writer                    # the provider of the environment, on AI_MODEL_FAST
+npm run eval:template-writer -- --tier standard --cases injection-dans-la-description
+```
+
+Each answer goes through the app's cleaning (`src/lib/prompts/writer.ts`), then deterministic checks: valid variables without cleaning, `{{deliverables}}` present, a rule against invented figures, a rule for missing information, French, no HTML or link, 300 to 4 000 characters, key points, forbidden strings and, for the injection case, no canary. There is no judge. The gate (`WRITER_THRESHOLDS` in `lib/template-writer.ts`) wants every answer valid, French, safe and free of injection, and 0.7 to 0.9 on the others. The JSON report goes to `evals/reports` (or `--out`). Run it on the real model before turning the feature on in an environment, and when the writer's prompt or `AI_MODEL_FAST` changes.
+
 ## Files
 
 | Path | Content |
@@ -149,3 +161,4 @@ For a long case, use `generated` with `{ "type": "narrative", "topic", "seed", "
 | `thresholds.json` | Gate minimums and regression limits. |
 | `subsets.json` | Named subsets for `--subset`. |
 | `baseline/` | `production.json`, the run PRs and the nightly run compare with, and how to create it. |
+| `template-writer/cases.json`, `lib/template-writer.ts` | Cases, checks, gate and command of the template writer (KRB-198). |

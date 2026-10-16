@@ -10,6 +10,7 @@ import {
   getPlanImportUsage,
   getPromptMetrics,
   getRecentGenerations,
+  getTemplateWriterUsage,
   type MetricPeriod,
 } from "@/lib/ai/metrics-server";
 import { createClient } from "@/lib/supabase/server";
@@ -21,6 +22,7 @@ import { PeriodSwitch } from "./period-switch";
 import { PlanImportUsage } from "./plan-import-usage";
 import { RecentGenerations } from "./recent-generations";
 import { summarizeMetrics } from "./summary";
+import { TemplateWriterUsage } from "./template-writer-usage";
 
 export const dynamic = "force-dynamic";
 
@@ -71,10 +73,11 @@ export default async function AiDashboardPage({
 
   const days = periodOf((await searchParams).periode);
   const supabase = await createClient();
-  const [{ data: workspace }, metrics, recent, planImports] = await Promise.all([
+  const [{ data: workspace }, metrics, recent, writerUsage, planImports] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getPromptMetrics(workspaceId, days),
     getRecentGenerations(workspaceId, RECENT_LIMIT),
+    getTemplateWriterUsage(workspaceId, days),
     getPlanImportUsage(workspaceId, days),
   ]);
   if (!workspace) notFound();
@@ -113,6 +116,8 @@ export default async function AiDashboardPage({
           <MetricsTable rows={metrics} workspaceId={workspaceId} />
         </>
       )}
+
+      {writerUsage === null ? null : <TemplateWriterUsage rows={writerUsage} days={days} />}
 
       {planImports === null ? null : <PlanImportUsage rows={planImports} days={days} />}
 

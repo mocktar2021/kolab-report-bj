@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Archive, FilePlus2, Send } from "lucide-react";
+import { Archive, Copy, FilePlus2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -14,16 +14,19 @@ type VersionActionsProps = {
   versionId: string;
   status: PromptStatus;
   newVersionHref: string;
+  /** The new template page, started from this version (KRB-198). */
+  copyHref: string;
   /** False for the candidate of an active rollout: it is published from the rollout banner, with a confirmation. */
   canPublish?: boolean;
   /**
-   * Set when the workspace is read-only (KRB-178): a new version and
-   * publishing stay visible, disabled, with this reason. Archiving still works.
+   * Set when the workspace is read-only (KRB-178) or its plan has no custom
+   * templates (KRB-198): a new version, a copy and publishing stay visible,
+   * disabled, with this reason. Archiving still works.
    */
-  readOnlyReason?: string;
+  blockedReason?: string;
 };
 
-const READ_ONLY_ID = "version-actions-read-only";
+const BLOCKED_ID = "version-actions-blocked";
 
 /** Manager actions on a version of a workspace template. */
 export function VersionActions({
@@ -31,8 +34,9 @@ export function VersionActions({
   versionId,
   status,
   newVersionHref,
+  copyHref,
   canPublish = true,
-  readOnlyReason,
+  blockedReason,
 }: VersionActionsProps) {
   const t = useTranslations("Prompts");
   const router = useRouter();
@@ -60,26 +64,40 @@ export function VersionActions({
   return (
     <div className="mt-5">
       <div className="flex flex-wrap items-center gap-2">
-        {readOnlyReason ? (
-          <Button type="button" shape="pill" disabled aria-describedby={READ_ONLY_ID}>
-            <FilePlus2 aria-hidden="true" />
-            {t("actions.newVersion")}
-          </Button>
-        ) : (
-          <Button asChild shape="pill">
-            <Link href={newVersionHref}>
+        {blockedReason ? (
+          <>
+            <Button type="button" shape="pill" disabled aria-describedby={BLOCKED_ID}>
               <FilePlus2 aria-hidden="true" />
               {t("actions.newVersion")}
-            </Link>
-          </Button>
+            </Button>
+            <Button type="button" variant="outline" shape="pill" disabled aria-describedby={BLOCKED_ID}>
+              <Copy aria-hidden="true" />
+              {t("actions.copy")}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button asChild shape="pill">
+              <Link href={newVersionHref}>
+                <FilePlus2 aria-hidden="true" />
+                {t("actions.newVersion")}
+              </Link>
+            </Button>
+            <Button asChild variant="outline" shape="pill">
+              <Link href={copyHref}>
+                <Copy aria-hidden="true" />
+                {t("actions.copy")}
+              </Link>
+            </Button>
+          </>
         )}
         {status === "published" || !canPublish ? null : (
           <Button
             type="button"
             variant="outline"
             shape="pill"
-            disabled={pending || Boolean(readOnlyReason)}
-            aria-describedby={readOnlyReason ? READ_ONLY_ID : undefined}
+            disabled={pending || Boolean(blockedReason)}
+            aria-describedby={blockedReason ? BLOCKED_ID : undefined}
             onClick={() => changeStatus("published")}
           >
             <Send aria-hidden="true" />
@@ -100,9 +118,9 @@ export function VersionActions({
           </Button>
         )}
       </div>
-      {readOnlyReason ? (
-        <p id={READ_ONLY_ID} className="mt-2 text-xs text-muted-foreground">
-          {readOnlyReason}
+      {blockedReason ? (
+        <p id={BLOCKED_ID} className="mt-2 text-xs text-muted-foreground">
+          {blockedReason}
         </p>
       ) : null}
       <div role="status" aria-live="polite" className="mt-2 text-sm">

@@ -25,6 +25,7 @@ function emptySources(): AccountExportSources {
     sectionsAssigned: [],
     deliverablesUploaded: [],
     aiGenerations: [],
+    templateWriterCalls: [],
     reportExports: [],
     planImportCalls: [],
     statusChanges: [],
@@ -51,6 +52,7 @@ describe("buildAccountExport", () => {
       "sections_assigned",
       "deliverables_uploaded",
       "ai_generations",
+      "template_writer_calls",
       "report_exports",
       "plan_import_calls",
       "status_changes",
@@ -134,6 +136,31 @@ describe("buildAccountExport", () => {
       user_rating: 1,
       feedback_comment: "Bon point de départ.",
     });
+  });
+
+  it("lists the person's \"Rédiger avec l'IA\" calls with their model and status only", () => {
+    const sources = emptySources();
+    sources.templateWriterCalls = [
+      {
+        id: "c1",
+        workspace_id: WORKSPACE_ID,
+        created_at: "2026-10-06T10:00:00Z",
+        model: "claude-haiku-5-5",
+        status: "succeeded",
+        input_tokens: 900,
+        cost_estimate: 0.004,
+      },
+    ];
+    expect(buildAccountExport(sources, EXPORTED_AT).template_writer_calls).toEqual([
+      {
+        id: "c1",
+        workspace_id: WORKSPACE_ID,
+        created_at: "2026-10-06T10:00:00Z",
+        model: "claude-haiku-5-5",
+        status: "succeeded",
+      },
+    ]);
+    expect(exportSelect("templateWriterCalls")).toBe("id, workspace_id, created_at, model, status");
   });
 
   it("drops every column it does not list, so a wider select adds nothing to the file", () => {

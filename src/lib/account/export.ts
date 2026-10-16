@@ -27,6 +27,8 @@ export type AccountExportSources = {
   sectionsAssigned: Row[];
   deliverablesUploaded: Row[];
   aiGenerations: Row[];
+  /** "Rédiger avec l'IA" calls (KRB-198): usage only, the text is never kept. */
+  templateWriterCalls: Row[];
   reportExports: Row[];
   /** AI readings of PDF plans (KRB-196): usage only, the file and its text are never kept. */
   planImportCalls: Row[];
@@ -51,6 +53,7 @@ export type AccountExport = {
   sections_assigned: Row[];
   deliverables_uploaded: Row[];
   ai_generations: Row[];
+  template_writer_calls: Row[];
   report_exports: Row[];
   plan_import_calls: Row[];
   status_changes: Row[];
@@ -120,6 +123,13 @@ export const EXPORT_COLUMNS = {
     accepted: "accepted",
     user_rating: "user_rating",
     feedback_comment: "feedback_comment",
+  },
+  templateWriterCalls: {
+    id: "id",
+    workspace_id: "workspace_id",
+    created_at: "created_at",
+    model: "model",
+    status: "status",
   },
   reportExports: {
     id: "id",
@@ -225,6 +235,7 @@ export function buildAccountExport(sources: AccountExportSources, exportedAt: Da
     sections_assigned: pickAll(sources.sectionsAssigned, c.sectionsAssigned),
     deliverables_uploaded: pickAll(sources.deliverablesUploaded, c.deliverablesUploaded),
     ai_generations: pickAll(sources.aiGenerations, c.aiGenerations),
+    template_writer_calls: pickAll(sources.templateWriterCalls, c.templateWriterCalls),
     report_exports: pickAll(sources.reportExports, c.reportExports),
     plan_import_calls: pickAll(sources.planImportCalls, c.planImportCalls),
     status_changes: pickAll(sources.statusChanges, c.statusChanges),

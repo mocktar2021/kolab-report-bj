@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { approximatePages, approximateWords } from "./catalog";
 import { checkTemplate, renderTemplate, templateKeyFromTitle } from "./template";
 
 describe("checkTemplate", () => {
@@ -100,5 +101,15 @@ describe("templateKeyFromTitle", () => {
     expect(key.length).toBeLessThanOrEqual(60);
     expect(key).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
     expect(key.endsWith("recommandations")).toBe(true);
+  });
+});
+
+describe("approximateWords", () => {
+  it("turns tokens into words and pages for the hints", () => {
+    expect(approximateWords(4096)).toBe(2450);
+    expect(approximateWords(256)).toBe(150);
+    expect(approximateWords(10)).toBe(50);
+    expect(approximatePages(2450)).toBe(5);
+    expect(approximatePages(150)).toBe(1);
   });
 });

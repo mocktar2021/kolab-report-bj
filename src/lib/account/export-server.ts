@@ -70,6 +70,7 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
     sectionsAssigned,
     deliverablesUploaded,
     aiGenerations,
+    templateWriterCalls,
     reportExports,
     planImportCalls,
     statusChanges,
@@ -150,6 +151,15 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
         .from("ai_generations")
         .select(exportSelect("aiGenerations"))
         .eq("requested_by", userId)
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    ),
+    allRows("template writer calls", (from, to) =>
+      admin
+        .from("prompt_assist_calls")
+        .select(exportSelect("templateWriterCalls"))
+        .eq("user_id", userId)
         .order("created_at")
         .order("id")
         .range(from, to),
@@ -263,6 +273,7 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
     sectionsAssigned,
     deliverablesUploaded,
     aiGenerations,
+    templateWriterCalls,
     reportExports,
     planImportCalls,
     statusChanges,
