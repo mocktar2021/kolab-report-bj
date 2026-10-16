@@ -51,6 +51,16 @@ describe("cleanWriterTemplate", () => {
     expect(cleaned.removed).toEqual(["{{client}}", "{{date_du_jour}}"]);
   });
 
+  it("names each removed placeholder once, and at most 10", () => {
+    const repeated = cleanWriterTemplate(`${"{{client}} ".repeat(500)}{{deliverables}}`);
+    expect(repeated.removed).toEqual(["{{client}}"]);
+    const many = cleanWriterTemplate(
+      `${Array.from({ length: 30 }, (_, i) => `{{inconnu_${i}}}`).join(" ")} {{deliverables}}`,
+    );
+    expect(many.removed).toHaveLength(11);
+    expect(many.removed.slice(-2)).toEqual(["{{inconnu_9}}", "…"]);
+  });
+
   it("splits a brace that never closes", () => {
     const cleaned = cleanWriterTemplate("{{deliverables}}\nFin {{section_title");
     expect(cleaned.template).toBe("{{deliverables}}\nFin { {section_title");

@@ -2,6 +2,7 @@
 
 import { after } from "next/server";
 import { aiSettings, draftAvailability, modelFor } from "@/lib/ai/config";
+import { redactPii } from "@/lib/ai/context";
 import { checkDailyCost } from "@/lib/ai/generation-store";
 import { mockModel } from "@/lib/ai/mock";
 import { estimateCost } from "@/lib/ai/models";
@@ -124,7 +125,8 @@ export async function writeTemplateWithAi(request: WriteTemplateRequest): Promis
       const result = model
         ? await writeTemplate({
             model,
-            description,
+            // Masked like the files of a draft, when AI_REDACT_PII is on.
+            description: settings.redactPii ? redactPii(description).text : description,
             outputSchema,
             signal: AbortSignal.timeout(WRITER_TIMEOUT_MS),
             telemetry: {

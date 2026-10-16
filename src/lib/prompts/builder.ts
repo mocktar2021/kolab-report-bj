@@ -111,6 +111,27 @@ export function builderFieldErrors(
 }
 
 /**
+ * String.prototype.toWellFormed, with a fallback: this file also runs in the
+ * browser, and Safari only has it from 16.4 (iOS 15 devices never get it).
+ * Each lone surrogate becomes U+FFFD, as the native method does.
+ */
+export function wellFormed(text: string): string {
+  if (typeof text.toWellFormed === "function") return text.toWellFormed();
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    const next = text.charCodeAt(i + 1);
+    if (code >= 0xd800 && code <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
+      out += text.slice(i, i + 2);
+      i++;
+    } else {
+      out += code >= 0xd800 && code <= 0xdfff ? "\ufffd" : text.charAt(i);
+    }
+  }
+  return out;
+}
+
+/**
  * Text typed by the manager, made safe to put in a template: no control
  * characters (NUL included, which Postgres refuses), Unix line ends, at most
  * one empty line in a row, and no "{{" or "}}": a space goes between two
@@ -118,8 +139,7 @@ export function builderFieldErrors(
  */
 export function neutralizeText(text: string): string {
   return (
-    text
-      .toWellFormed()
+    wellFormed(text)
       .replace(/\r\n?/g, "\n")
       // Control characters other than tab and line feed, and invisible format characters.
       .replace(/(?![\t\n])\p{Cc}|\p{Cf}/gu, "")
@@ -133,8 +153,7 @@ export function neutralizeText(text: string): string {
 
 /** One line of text, such as a title: cleaned like neutralizeText, with every run of blanks as one space. */
 export function cleanLine(text: string): string {
-  return text
-    .toWellFormed()
+  return wellFormed(text)
     .replace(/(?![\t\n])\p{Cc}|\p{Cf}/gu, "")
     .replace(/\s+/g, " ")
     .trim();

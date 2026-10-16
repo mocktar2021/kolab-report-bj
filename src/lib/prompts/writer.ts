@@ -6,7 +6,7 @@ import {
   type OutputSchema,
   type PromptVariable,
 } from "./catalog";
-import { cleanLine } from "./builder";
+import { cleanLine, wellFormed } from "./builder";
 import { checkTemplate } from "./template";
 
 // "Rédiger avec l'IA" (KRB-198): the prompt that asks a model for a
@@ -93,8 +93,7 @@ Répondez avec un titre court (moins de 80 caractères), une phrase qui dit à q
  * that could open or close a tag, and no control or invisible character.
  */
 export function writerPrompt(description: string, outputSchema: OutputSchema | null): string {
-  const text = description
-    .toWellFormed()
+  const text = wellFormed(description)
     .replace(/\r\n?/g, "\n")
     .replace(/(?![\t\n])\p{Cc}|\p{Cf}/gu, "")
     .replaceAll("<", "‹")
@@ -123,11 +122,13 @@ export type WrittenTemplate = {
   description: string;
   template: string;
   notes: WriterNote[];
-  /** Placeholders that were not variables, as the model wrote them. */
+  /** Placeholders that were not variables, as the model wrote them: each once, at most 10, then "…". */
   removed: string[];
 };
 
 const KNOWN = new Set<string>(PROMPT_VARIABLES);
+/** How many removed placeholders the note above the editor names. */
+const REMOVED_SHOWN = 10;
 
 function cutAt(text: string, max: number): string {
   const chars = [...text];
@@ -143,13 +144,12 @@ function cutAt(text: string, max: number): string {
  * when the model left it out. Known variables are written the canonical way.
  */
 export function cleanWriterTemplate(raw: string): Omit<WrittenTemplate, "title" | "description"> {
-  const text = raw
-    .toWellFormed()
+  const text = wellFormed(raw)
     .replace(/\r\n?/g, "\n")
     .replace(/(?![\t\n])\p{Cc}|\p{Cf}/gu, "")
     .trim();
   const notes = new Set<WriterNote>();
-  const removed: string[] = [];
+  const removed = new Set<string>();
   let out = "";
   let from = 0;
   for (;;) {
@@ -169,7 +169,7 @@ export function cleanWriterTemplate(raw: string): Omit<WrittenTemplate, "title" 
       out += `{{${name}}}`;
     } else {
       notes.add("unknownVariablesRemoved");
-      removed.push(text.slice(open, close + 2).slice(0, 60));
+      removed.add(text.slice(open, close + 2).slice(0, 60));
     }
     from = close + 2;
   }
@@ -182,7 +182,12 @@ export function cleanWriterTemplate(raw: string): Omit<WrittenTemplate, "title" 
     template = `${template}\n\nLivrables fournis par l'équipe :\n{{deliverables}}`.trim();
     notes.add("deliverablesAdded");
   }
-  return { template, notes: [...notes], removed };
+  const names = [...removed];
+  return {
+    template,
+    notes: [...notes],
+    removed: names.length > REMOVED_SHOWN ? [...names.slice(0, REMOVED_SHOWN), "…"] : names,
+  };
 }
 
 export type WriterRejection = "emptyTemplate" | "templateTooLong";

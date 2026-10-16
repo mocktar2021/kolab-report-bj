@@ -10,6 +10,7 @@ import {
   DEFAULT_BUILDER_ANSWERS,
   headingLines,
   neutralizeText,
+  wellFormed,
   type BuilderAnswers,
 } from "./builder";
 import { OUTPUT_SCHEMAS, PROMPT_LIMITS } from "./catalog";
@@ -209,5 +210,22 @@ describe("helpers", () => {
     expect(neutralizeText("{{{{a}}}}")).toBe("{ { { {a} } } }");
     expect(checkTemplate(neutralizeText("{{x}} {{ y {{z")).variables).toEqual([]);
     expect(neutralizeText("{a} {b}")).toBe("{a} {b}");
+  });
+});
+
+describe("wellFormed", () => {
+  it("replaces lone surrogates without toWellFormed, as old Safari lacks it", () => {
+    const proto = String.prototype as { toWellFormed?: () => string };
+    const native = proto.toWellFormed;
+    const text = "a\ud800b\udc00c😀d\ud83d";
+    const expected = "a\ufffdb\ufffdc😀d\ufffd";
+    expect(wellFormed(text)).toBe(expected);
+    delete proto.toWellFormed;
+    try {
+      expect(wellFormed(text)).toBe(expected);
+      expect(neutralizeText("Titre\ud800 {{client}}")).toBe("Titre\ufffd { {client} }");
+    } finally {
+      proto.toWellFormed = native;
+    }
   });
 });
