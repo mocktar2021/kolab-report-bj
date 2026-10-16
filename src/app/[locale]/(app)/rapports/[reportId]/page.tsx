@@ -184,6 +184,7 @@ export default async function ReportPage({ params }: { params: Params }) {
           manager && !locked ? (
             <AddSectionForm
               reportId={report.id}
+              importHref={`/rapports/${report.id}/importer-le-plan`}
               parents={rows
                 .filter((row) => row.level === 1)
                 .map((row) => ({ id: row.id, label: row.label, title: row.title }))}
