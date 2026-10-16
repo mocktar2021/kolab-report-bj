@@ -9,7 +9,7 @@ import { workspaceIsWritable } from "@/lib/billing/state";
 import { fileExtension, FILE_TYPES } from "@/lib/deliverables/file-types";
 import { matchesSignature, SNIFF_BYTES } from "@/lib/deliverables/sniff";
 import { getRequestId, log, withRequestId } from "@/lib/log";
-import { readPlanWithAi, samplePlanOutput } from "@/lib/plan/ai";
+import { readPlanWithAi, samplePlanOutput, textForModel } from "@/lib/plan/ai";
 import {
   FILE_NAME_HEADER,
   type PlanImportErrorBody,
@@ -220,7 +220,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
   }
 
   const startedAt = performance.now();
-  const text = read.text;
+  const text = textForModel(read.text, settings.redactPii);
   const model = mock ? mockModel(() => JSON.stringify(samplePlanOutput(text))) : modelFor("standard");
   const result = model
     ? await readPlanWithAi({

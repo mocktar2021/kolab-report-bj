@@ -1,6 +1,7 @@
 import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { generateText, NoObjectGeneratedError, Output } from "ai";
 import { z } from "zod";
+import { redactPii } from "@/lib/ai/context/redact";
 import { estimateTokens } from "@/lib/ai/context/tokens";
 import type { TokenUsage } from "@/lib/ai/generate";
 import { noThinking } from "@/lib/ai/models";
@@ -45,6 +46,15 @@ export const planOutputSchema = z.object({
 });
 
 export type PlanOutput = z.infer<typeof planOutputSchema>;
+
+/**
+ * The PDF's text as it may leave the app: masked like the files of a draft
+ * (e-mails, phone numbers, IBAN, card and social security numbers) when
+ * AI_REDACT_PII is on. A plan's structure doesn't need them.
+ */
+export function textForModel(text: string, redact: boolean): string {
+  return redact ? redactPii(text).text : text;
+}
 
 /** The text as the model reads it: inside its block, with no sign that could open or close a tag. */
 export function planPrompt(text: string, meta: { pages: number; truncated: boolean }): string {
