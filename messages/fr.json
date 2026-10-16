@@ -1609,6 +1609,16 @@
       "trace": "Voir la trace",
       "traceLabel": "Voir la trace de la génération du {date} (nouvel onglet)",
       "tracingOff": "Les liens « Voir la trace » apparaissent une fois le traçage des générations configuré sur le serveur."
+    },
+    "planImport": {
+      "title": "Lecture de plans PDF",
+      "description": "Les PDF dont l'IA a lu le plan sur les {days} derniers jours, pour « Importer le plan ». Chaque lecture compte comme un brouillon IA du mois.",
+      "empty": "Aucun plan PDF lu par l'IA sur la période.",
+      "calls": "{count, plural, one {# lecture} other {# lectures}}",
+      "failed": "{count, plural, =0 {aucun échec} one {# échec} other {# échecs}}",
+      "tokens": "Jetons : {input} en entrée, {output} en sortie",
+      "cost": "Coût estimé : {cost}",
+      "costMissing": "Prix non configurés"
     }
   },
   "Billing": {

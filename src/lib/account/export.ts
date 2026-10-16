@@ -28,6 +28,8 @@ export type AccountExportSources = {
   deliverablesUploaded: Row[];
   aiGenerations: Row[];
   reportExports: Row[];
+  /** AI readings of PDF plans (KRB-196): usage only, the file and its text are never kept. */
+  planImportCalls: Row[];
   statusChanges: Row[];
   notifications: Row[];
   promptVersionsWritten: Row[];
@@ -50,6 +52,7 @@ export type AccountExport = {
   deliverables_uploaded: Row[];
   ai_generations: Row[];
   report_exports: Row[];
+  plan_import_calls: Row[];
   status_changes: Row[];
   notifications: Row[];
   prompt_versions_written: Row[];
@@ -125,6 +128,14 @@ export const EXPORT_COLUMNS = {
     format: "format",
     file_name: "file_name",
     created_at: "created_at",
+  },
+  planImportCalls: {
+    id: "id",
+    workspace_id: "workspace_id",
+    report_id: "report_id",
+    created_at: "created_at",
+    model: "model",
+    status: "status",
   },
   statusChanges: { report_id: "report_id", from: "from_status", to: "to_status", changed_at: "changed_at" },
   // A report status change (event_id), or a renewal reminder of an
@@ -215,6 +226,7 @@ export function buildAccountExport(sources: AccountExportSources, exportedAt: Da
     deliverables_uploaded: pickAll(sources.deliverablesUploaded, c.deliverablesUploaded),
     ai_generations: pickAll(sources.aiGenerations, c.aiGenerations),
     report_exports: pickAll(sources.reportExports, c.reportExports),
+    plan_import_calls: pickAll(sources.planImportCalls, c.planImportCalls),
     status_changes: pickAll(sources.statusChanges, c.statusChanges),
     notifications: pickAll(sources.notifications, c.notifications),
     prompt_versions_written: pickAll(sources.promptVersionsWritten, c.promptVersionsWritten),

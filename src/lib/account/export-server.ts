@@ -71,6 +71,7 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
     deliverablesUploaded,
     aiGenerations,
     reportExports,
+    planImportCalls,
     statusChanges,
     notifications,
     promptVersionsWritten,
@@ -158,6 +159,15 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
         .from("report_exports")
         .select(exportSelect("reportExports"))
         .eq("created_by", userId)
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    ),
+    allRows("plan import calls", (from, to) =>
+      admin
+        .from("plan_import_calls")
+        .select(exportSelect("planImportCalls"))
+        .eq("user_id", userId)
         .order("created_at")
         .order("id")
         .range(from, to),
@@ -254,6 +264,7 @@ export async function loadAccountExport(user: User, exportedAt = new Date()): Pr
     deliverablesUploaded,
     aiGenerations,
     reportExports,
+    planImportCalls,
     statusChanges,
     notifications,
     promptVersionsWritten,

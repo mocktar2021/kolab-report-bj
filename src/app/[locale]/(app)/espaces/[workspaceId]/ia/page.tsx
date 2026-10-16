@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { aiSettings } from "@/lib/ai/config";
 import {
   METRIC_PERIODS,
+  getPlanImportUsage,
   getPromptMetrics,
   getRecentGenerations,
   type MetricPeriod,
@@ -17,6 +18,7 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { EmptyMetrics, MetricsTable, SummaryTiles } from "./metrics-table";
 import { PeriodSwitch } from "./period-switch";
+import { PlanImportUsage } from "./plan-import-usage";
 import { RecentGenerations } from "./recent-generations";
 import { summarizeMetrics } from "./summary";
 
@@ -69,10 +71,11 @@ export default async function AiDashboardPage({
 
   const days = periodOf((await searchParams).periode);
   const supabase = await createClient();
-  const [{ data: workspace }, metrics, recent] = await Promise.all([
+  const [{ data: workspace }, metrics, recent, planImports] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getPromptMetrics(workspaceId, days),
     getRecentGenerations(workspaceId, RECENT_LIMIT),
+    getPlanImportUsage(workspaceId, days),
   ]);
   if (!workspace) notFound();
   const { tracing } = aiSettings();
@@ -110,6 +113,8 @@ export default async function AiDashboardPage({
           <MetricsTable rows={metrics} workspaceId={workspaceId} />
         </>
       )}
+
+      {planImports === null ? null : <PlanImportUsage rows={planImports} days={days} />}
 
       <RecentGenerations
         generations={recent}
