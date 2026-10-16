@@ -128,14 +128,16 @@ export type DraftSpan = {
 /**
  * Runs `work` inside a new trace for one generation. The AI SDK's spans
  * started in `work` become its children. Without tracing, the API's no-op
- * tracer makes this free.
+ * tracer makes this free. `name` starts with "kolab.ai" so the span is
+ * exported: "kolab.ai.template_writer" for "Rédiger avec l'IA" (KRB-198).
  */
 export async function withDraftSpan<T>(
   attributes: Attributes,
   work: (span: DraftSpan) => Promise<T>,
+  name: `kolab.ai.${string}` = "kolab.ai.draft",
 ): Promise<T> {
   const tracer = trace.getTracer("kolab-report");
-  return tracer.startActiveSpan("kolab.ai.draft", { root: true, attributes }, async (span: Span) => {
+  return tracer.startActiveSpan(name, { root: true, attributes }, async (span: Span) => {
     const spanContext = span.spanContext();
     const draftSpan: DraftSpan = {
       // The no-op tracer used without tracing gives a span that doesn't record.

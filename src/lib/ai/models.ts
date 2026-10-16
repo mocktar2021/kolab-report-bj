@@ -29,6 +29,8 @@ export type AiSettings = {
   maxInputTokens: number;
   rateLimitPerHour: number;
   monthlyTokenBudget: number;
+  /** "Rédiger avec l'IA" calls per person and UTC day, on the new template page (KRB-198). */
+  templateWriterPerDay: number;
   redactPii: boolean;
   /** OpenTelemetry spans for each generation (KRB-17). Off unless AI_TRACING=true. */
   tracing: {
@@ -120,6 +122,7 @@ export function readAiSettings(env: Env): AiSettings {
     maxInputTokens: setting(positiveInt.min(4000), env.AI_MAX_INPUT_TOKENS, 60_000),
     rateLimitPerHour: setting(positiveInt, env.AI_RATE_LIMIT_PER_HOUR, 30),
     monthlyTokenBudget: setting(positiveInt, env.AI_MONTHLY_TOKEN_BUDGET, 2_000_000),
+    templateWriterPerDay: setting(positiveInt.max(1000), env.AI_TEMPLATE_WRITER_PER_DAY, 20),
     redactPii: setting(flag, env.AI_REDACT_PII, true),
     tracing: {
       enabled: setting(flag, env.AI_TRACING, false),
