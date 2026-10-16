@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Component,
+  useCallback,
   useDeferredValue,
   useEffect,
   useId,
@@ -8,7 +10,9 @@ import {
   useState,
   useTransition,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { Check, Eye, PencilLine, RotateCcw } from "lucide-react";
 import { Markdown } from "@/components/markdown";
@@ -27,6 +31,66 @@ import { SectionContent } from "./section-content";
 // Hand editing of the section's text (Story KRB-18). The editor keeps the
 // version its text started from and sends it back on save: if someone saved
 // in between, the server refuses and returns the saved text to compare.
+//
+// Two modes (KRB-197): "Texte", a Word-like editor, and "Markdown", the
+// source. Both edit the same Markdown, which is what gets saved. The Texte
+// editor and its libraries load only when the editor opens.
+
+const loadRichTextEditor = () => import("./rich-text-editor");
+
+const RichTextEditor = dynamic(() => loadRichTextEditor().then((module) => module.RichTextEditor), {
+  ssr: false,
+  loading: EditorLoading,
+});
+
+function EditorLoading() {
+  const t = useTranslations("SectionEditor.visual");
+  return (
+    <div className="flex min-h-[22.75rem] items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground">
+      <p role="status">{t("loading")}</p>
+    </div>
+  );
+}
+
+/**
+ * Shows `fallback` when the Texte editor fails, for example when its code
+ * can't load offline or after a deploy, instead of the route's error page:
+ * the text stays here and the Markdown tab still works.
+ */
+class EditorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+export type EditorMode = "text" | "markdown";
+
+const MODES: readonly EditorMode[] = ["text", "markdown"];
+
+/** localStorage key of the last mode used on this device, next to kolabreport:theme. */
+export const EDITOR_MODE_STORAGE_KEY = "kolabreport:section-editor-mode";
+
+function storedMode(): EditorMode {
+  try {
+    return window.localStorage.getItem(EDITOR_MODE_STORAGE_KEY) === "markdown" ? "markdown" : "text";
+  } catch {
+    return "text";
+  }
+}
+
+function storeMode(mode: EditorMode) {
+  try {
+    window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, mode);
+  } catch {
+    // Storage unavailable, for example in private browsing: the choice lasts until the page closes.
+  }
+}
 
 type SaveError = Exclude<Extract<SaveSectionContentResult, { ok: false }>["error"], "conflict">;
 
@@ -36,7 +100,7 @@ type Notice = "saved" | "cleared" | "kept" | "restored";
 /** The saved text the server sent back on a conflict. `again`: the overwrite conflicted too. */
 type Conflict = SectionContentVersion & { again: boolean };
 
-type FocusTarget = "edit" | "title" | "textarea" | "conflict";
+type FocusTarget = "edit" | "title" | "textarea" | "conflict" | "tab";
 
 /** The counter shows from this length on. */
 const COUNT_FROM = Math.floor(MAX_SECTION_CONTENT * 0.9);
@@ -69,6 +133,11 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
   const [base, setBase] = useState<SectionContentVersion>(seen);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState("");
+  const [mode, setMode] = useState<EditorMode>("text");
+  // A new key loads the Texte editor again, after the text changed from outside it.
+  const [visualKey, setVisualKey] = useState(0);
+  // The Texte editor takes the focus once it is ready.
+  const [visualFocus, setVisualFocus] = useState(false);
   const [preview, setPreview] = useState(false);
   const [conflict, setConflict] = useState<Conflict | null>(null);
   const [error, setError] = useState<SaveError | null>(null);
@@ -77,6 +146,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
 
   const editRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const tabRefs = useRef<Record<EditorMode, HTMLButtonElement | null>>({ text: null, markdown: null });
   const conflictRef = useRef<HTMLHeadingElement>(null);
   const focusNext = useRef<FocusTarget | null>(null);
 
@@ -94,7 +164,11 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
       setBase(next);
     } else if (!dirty || text === (content ?? "")) {
       setBase(next);
-      setText(content ?? "");
+      // After a Ctrl+S save the text is the same: the Texte editor keeps its cursor.
+      if (text !== (content ?? "")) {
+        setText(content ?? "");
+        setVisualKey((key) => key + 1);
+      }
       setConflict(null);
     }
   }
@@ -107,6 +181,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     if (target === "title") document.getElementById("section-content-title")?.focus();
     else if (target === "edit") editRef.current?.focus();
     else if (target === "textarea") textareaRef.current?.focus();
+    else if (target === "tab") tabRefs.current[mode]?.focus();
     else conflictRef.current?.focus();
   });
 
@@ -118,14 +193,61 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     setBase(next);
   }
 
+  /** The text field of the mode takes the focus: the textarea now, the Texte editor once it is ready. */
+  function focusField(fieldMode: EditorMode) {
+    if (fieldMode === "markdown") focusNext.current = "textarea";
+    else setVisualFocus(true);
+  }
+
+  const onVisualFocused = useCallback(() => setVisualFocus(false), []);
+
+  /** Replaces the text from outside the Texte editor, which then reads it again. */
+  function replaceText(next: string) {
+    setText(next);
+    setVisualKey((key) => key + 1);
+  }
+
   function open() {
-    setText(base.content ?? "");
+    const lastMode = storedMode();
+    replaceText(base.content ?? "");
+    setMode(lastMode);
     setEditing(true);
     setPreview(false);
     setConflict(null);
     setError(null);
     setNotice(null);
-    focusNext.current = "textarea";
+    focusField(lastMode);
+  }
+
+  function switchMode(next: EditorMode) {
+    if (next === mode) return;
+    setMode(next);
+    storeMode(next);
+    setVisualFocus(false);
+  }
+
+  /** From a notice in the Texte tab: the Markdown tab, with the focus on it. */
+  function showMarkdown() {
+    switchMode("markdown");
+    focusNext.current = "tab";
+  }
+
+  function onTabKey(event: KeyboardEvent<HTMLButtonElement>) {
+    const index = MODES.indexOf(mode);
+    const next =
+      event.key === "ArrowRight"
+        ? MODES[(index + 1) % MODES.length]
+        : event.key === "ArrowLeft"
+          ? MODES[(index - 1 + MODES.length) % MODES.length]
+          : event.key === "Home"
+            ? MODES[0]
+            : event.key === "End"
+              ? MODES[MODES.length - 1]
+              : undefined;
+    if (!next) return;
+    event.preventDefault();
+    switchMode(next);
+    tabRefs.current[next]?.focus();
   }
 
   function cancel() {
@@ -135,6 +257,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     setEditing(false);
     setConflict(null);
     setError(null);
+    setVisualFocus(false);
     focusNext.current = "edit";
   }
 
@@ -179,16 +302,17 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     if (pending || !conflict) return;
     const saved = { content: conflict.content, version: conflict.version };
     adopt(saved);
-    setText(saved.content ?? "");
+    replaceText(saved.content ?? "");
     setConflict(null);
     setError(null);
     setPreview(false);
     setNotice("restored");
-    focusNext.current = "textarea";
+    focusField(mode);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.nativeEvent.isComposing || event.altKey) return;
+    // Ctrl+Shift+S is strikethrough in the Texte editor.
+    if (event.nativeEvent.isComposing || event.altKey || event.shiftKey) return;
     if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s") return;
     event.preventDefault();
     // During a conflict, saving means choosing a version first.
@@ -197,6 +321,8 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
   }
 
   const textareaId = `${id}-text`;
+  const visualLabelId = `${id}-visual-label`;
+  const panelId = `${id}-panel`;
   const helpId = `${id}-help`;
   const conflictTitleId = `${id}-conflict`;
   const keepHelpId = `${id}-keep`;
@@ -210,7 +336,17 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
         {notice ? t(`notices.${notice}`) : null}
       </p>
       {editing ? null : (
-        <Button ref={editRef} type="button" variant="outline" size="sm" shape="pill" onClick={open}>
+        <Button
+          ref={editRef}
+          type="button"
+          variant="outline"
+          size="sm"
+          shape="pill"
+          onClick={open}
+          // Starts loading the Texte editor before the click.
+          onPointerEnter={() => void loadRichTextEditor()}
+          onFocus={() => void loadRichTextEditor()}
+        >
           <PencilLine aria-hidden="true" />
           {t("edit")}
         </Button>
@@ -282,67 +418,141 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
 
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor={textareaId} className="text-sm font-medium">
-                {t("label")}
-              </label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-pressed={preview}
-                aria-controls={`${textareaId}-preview`}
-                onClick={() => setPreview((value) => !value)}
+              <div
+                role="tablist"
+                aria-label={t("modes")}
+                className="inline-flex rounded-lg border bg-muted/40 p-0.5"
               >
-                <Eye aria-hidden="true" />
-                {t("preview")}
-              </Button>
-            </div>
-            <textarea
-              id={textareaId}
-              ref={textareaRef}
-              value={text}
-              hidden={preview}
-              onChange={(event) => {
-                setText(event.target.value);
-                setNotice(null);
-              }}
-              rows={16}
-              readOnly={pending}
-              spellCheck
-              className={cn(
-                textareaClass,
-                "min-h-[20rem] font-mono text-[13px] leading-relaxed md:text-[13px]",
-                // The hidden attribute alone loses to the flex class.
-                preview && "hidden",
-              )}
-              aria-invalid={tooLong}
-              aria-describedby={helpId}
-            />
-            <div
-              id={`${textareaId}-preview`}
-              role="region"
-              aria-label={t("preview")}
-              hidden={!preview}
-              className="min-h-[20rem] break-words rounded-lg border bg-card px-4 py-3 text-sm leading-relaxed"
-            >
-              {preview ? (
-                text.trim() ? (
-                  <Markdown
-                    headingLevel={3}
-                    headings="flatten"
-                    links="text"
-                    fallback={<p className="text-destructive">{t("previewError")}</p>}
+                {MODES.map((value) => (
+                  <button
+                    key={value}
+                    ref={(element) => {
+                      tabRefs.current[value] = element;
+                    }}
+                    type="button"
+                    role="tab"
+                    id={`${id}-tab-${value}`}
+                    aria-selected={mode === value}
+                    aria-controls={panelId}
+                    tabIndex={mode === value ? 0 : -1}
+                    onClick={() => switchMode(value)}
+                    onKeyDown={onTabKey}
+                    className={cn(
+                      "min-h-9 rounded-md px-3 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring sm:min-h-0",
+                      mode === value
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
                   >
-                    {text}
-                  </Markdown>
-                ) : (
-                  <p className="text-muted-foreground">{t("previewEmpty")}</p>
-                )
+                    {value === "text" ? t("modeText") : t("modeMarkdown")}
+                  </button>
+                ))}
+              </div>
+              {mode === "markdown" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-pressed={preview}
+                  aria-controls={`${textareaId}-preview`}
+                  onClick={() => setPreview((value) => !value)}
+                >
+                  <Eye aria-hidden="true" />
+                  {t("preview")}
+                </Button>
               ) : null}
+            </div>
+            <div role="tabpanel" id={panelId} aria-labelledby={`${id}-tab-${mode}`} className="space-y-1.5">
+              {mode === "text" ? (
+                <>
+                  <p id={visualLabelId} className="text-sm font-medium">
+                    {t("visual.label")}
+                  </p>
+                  <EditorBoundary
+                    key={visualKey}
+                    fallback={
+                      <div className="flex min-h-[20rem] flex-col items-start gap-3 rounded-lg border border-dashed px-4 py-3 text-sm">
+                        <p role="alert">{t("visual.loadError")}</p>
+                        <Button type="button" size="sm" variant="outline" onClick={showMarkdown}>
+                          {t("visual.showMarkdown")}
+                        </Button>
+                      </div>
+                    }
+                  >
+                    <RichTextEditor
+                      initialMarkdown={text}
+                      onChange={(markdown) => {
+                        setText(markdown);
+                        setNotice(null);
+                      }}
+                      labelledBy={visualLabelId}
+                      describedBy={helpId}
+                      invalid={tooLong}
+                      readOnly={pending}
+                      autoFocus={visualFocus}
+                      onAutoFocused={onVisualFocused}
+                      onShowMarkdown={showMarkdown}
+                    />
+                  </EditorBoundary>
+                </>
+              ) : (
+                <>
+                  <label htmlFor={textareaId} className="block text-sm font-medium">
+                    {t("label")}
+                  </label>
+                  <textarea
+                    id={textareaId}
+                    ref={textareaRef}
+                    value={text}
+                    hidden={preview}
+                    onChange={(event) => {
+                      setText(event.target.value);
+                      setNotice(null);
+                    }}
+                    rows={16}
+                    readOnly={pending}
+                    spellCheck
+                    className={cn(
+                      textareaClass,
+                      "min-h-[20rem] font-mono text-[13px] leading-relaxed md:text-[13px]",
+                      // The hidden attribute alone loses to the flex class.
+                      preview && "hidden",
+                    )}
+                    aria-invalid={tooLong}
+                    aria-describedby={helpId}
+                  />
+                  <div
+                    id={`${textareaId}-preview`}
+                    role="region"
+                    aria-label={t("preview")}
+                    hidden={!preview}
+                    className="min-h-[20rem] break-words rounded-lg border bg-card px-4 py-3 text-sm leading-relaxed"
+                  >
+                    {preview ? (
+                      text.trim() ? (
+                        <Markdown
+                          headingLevel={3}
+                          headings="flatten"
+                          links="text"
+                          fallback={<p className="text-destructive">{t("previewError")}</p>}
+                        >
+                          {text}
+                        </Markdown>
+                      ) : (
+                        <p className="text-muted-foreground">{t("previewEmpty")}</p>
+                      )
+                    ) : null}
+                  </div>
+                </>
+              )}
             </div>
             <p id={helpId} className="flex flex-wrap justify-between gap-x-3 text-xs text-muted-foreground">
               <span className={tooLong ? "text-destructive" : undefined}>
-                {tooLong ? t("tooLong", { max: MAX_SECTION_CONTENT }) : t("help")}
+                {tooLong
+                  ? t("tooLong", { max: MAX_SECTION_CONTENT })
+                  : mode === "text"
+                    ? t("visual.help")
+                    : t("help")}
               </span>
               {text.length >= COUNT_FROM ? (
                 <span className={cn("tabular-nums", tooLong && "text-destructive")}>

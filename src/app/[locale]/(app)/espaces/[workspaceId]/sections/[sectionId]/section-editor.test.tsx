@@ -1,13 +1,27 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Editor } from "@tiptap/core";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../../../messages/fr.json";
 import { hasUnsavedWork } from "@/lib/unsaved-work";
 import { saveSectionContent } from "./content-actions";
-import { SectionEditor } from "./section-editor";
+import { EDITOR_MODE_STORAGE_KEY, SectionEditor } from "./section-editor";
 
 vi.mock("./content-actions", () => ({ saveSectionContent: vi.fn() }));
+
+beforeAll(() => {
+  // jsdom draws nothing: ProseMirror measures the selection to scroll to it.
+  const rects = () => Object.assign([], { item: () => null }) as unknown as DOMRectList;
+  Range.prototype.getClientRects ??= rects;
+  Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+  Element.prototype.getClientRects ??= rects;
+  document.elementFromPoint ??= () => null;
+});
+
+afterEach(() => {
+  window.localStorage.clear();
+});
 
 const SECTION_ID = "6f1f2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b";
 // content_updated_at strings as Supabase returns them, microseconds included.
@@ -45,7 +59,11 @@ async function openAndWrite(user: ReturnType<typeof userEvent.setup>, value: str
   await user.type(textarea(), value);
 }
 
-describe("SectionEditor", () => {
+describe("SectionEditor in Markdown mode", () => {
+  beforeEach(() => {
+    window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, "markdown");
+  });
+
   it("opens on the current text with the focus in it, and cancel goes back to the text", async () => {
     const { user } = renderEditor();
     expect(screen.getByRole("heading", { level: 2, name: "Contenu de la section" })).toBeVisible();
@@ -333,5 +351,268 @@ describe("SectionEditor", () => {
         expect.objectContaining({ content: "## Constats\n\nVoir [le site](https://example.com)." }),
       ),
     );
+  });
+});
+
+const VISUAL_LABEL = "Texte de la section";
+
+/** The Texte editor, once its code has loaded. */
+const visualEditor = () => screen.findByRole("textbox", { name: VISUAL_LABEL });
+
+/** The Tiptap editor behind the Texte field, to place the selection: jsdom has no layout to click into. */
+function tiptap(element: HTMLElement): Editor {
+  const editor = (element as HTMLElement & { editor?: Editor }).editor;
+  if (!editor) throw new Error("No editor on the element");
+  return editor;
+}
+
+const MARKDOWN = "## Constats\n\nLe **bâtiment** consomme 412 MWh par an.\n\n* chaufferie\n* éclairage";
+
+describe("SectionEditor in Texte mode", () => {
+  it("opens in Texte mode with a toolbar and no Markdown symbols, with the focus in the text", async () => {
+    const { user } = renderEditor({ content: MARKDOWN, version: V1 });
+    await user.click(openButton());
+
+    const field = await visualEditor();
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(screen.getByRole("tab", { name: "Texte" })).toHaveAttribute("aria-selected", "true");
+    expect(field).toHaveTextContent("ConstatsLe bâtiment consomme 412 MWh par an.chaufferieéclairage");
+    expect(field.textContent).not.toMatch(/[#*]/);
+    expect(within(field).getByRole("heading", { name: "Constats" })).toBeInTheDocument();
+    expect(within(field).getByText("bâtiment").tagName).toBe("STRONG");
+    expect(within(field).getAllByRole("listitem")).toHaveLength(2);
+
+    const toolbar = screen.getByRole("toolbar", { name: "Mise en forme" });
+    for (const name of [
+      "Titre 1",
+      "Titre 2",
+      "Titre 3",
+      "Gras",
+      "Italique",
+      "Barré",
+      "Liste à puces",
+      "Liste numérotée",
+      "Citation",
+      "Lien",
+      "Insérer un tableau",
+    ]) {
+      expect(within(toolbar).getByRole("button", { name })).toBeInTheDocument();
+    }
+    // Nothing Markdown can't hold.
+    expect(within(toolbar).queryByRole("button", { name: /Souligné|Couleur|Police/ })).toBeNull();
+    expect(screen.queryByLabelText("Texte de la section (Markdown)")).toBeNull();
+  });
+
+  it("shows the same text in the Markdown tab, unchanged when nothing was edited", async () => {
+    const { user } = renderEditor({ content: MARKDOWN, version: V1 });
+    await user.click(openButton());
+    await visualEditor();
+
+    await user.click(screen.getByRole("tab", { name: "Markdown" }));
+    expect(textarea()).toHaveValue(MARKDOWN);
+    expect(window.localStorage.getItem(EDITOR_MODE_STORAGE_KEY)).toBe("markdown");
+
+    // A change in Markdown shows in the Texte tab.
+    fireEvent.change(textarea(), { target: { value: `${MARKDOWN}\n\n> Citation ajoutée.` } });
+    await user.click(screen.getByRole("tab", { name: "Texte" }));
+    const field = await visualEditor();
+    expect(within(field).getByText("Citation ajoutée.").closest("blockquote")).not.toBeNull();
+    expect(window.localStorage.getItem(EDITOR_MODE_STORAGE_KEY)).toBe("text");
+    expect(hasUnsavedWork()).toBe(true);
+  });
+
+  it("formats with the toolbar and saves the Markdown, keeping the untouched blocks as they were", async () => {
+    saveMock().mockResolvedValueOnce({ ok: true, version: V2 });
+    const { user } = renderEditor({ content: MARKDOWN, version: V1 });
+    await user.click(openButton());
+    const field = await visualEditor();
+    const editor = tiptap(field);
+
+    // Select "consomme" in the paragraph and make it italic.
+    let from = 0;
+    editor.state.doc.descendants((node, position) => {
+      if (node.isText && node.text?.includes("consomme")) from = position + node.text.indexOf("consomme");
+    });
+    act(() => {
+      editor.commands.setTextSelection({ from, to: from + "consomme".length });
+    });
+    await user.click(screen.getByRole("button", { name: "Italique" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Italique" })).toHaveAttribute("aria-pressed", "true"),
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Markdown" }));
+    const expected = MARKDOWN.replace("consomme", "*consomme*");
+    expect(textarea()).toHaveValue(expected);
+    await user.click(saveButton());
+    expect(saveMock()).toHaveBeenCalledWith({
+      sectionId: SECTION_ID,
+      content: expected,
+      expectedVersion: V1,
+    });
+  });
+
+  it("inserts a table and a link, and Ctrl+S saves from the text", async () => {
+    saveMock().mockResolvedValue({ ok: true, version: V2 });
+    const { user } = renderEditor({ content: "Intro.", version: V1 });
+    await user.click(openButton());
+    const field = await visualEditor();
+    const editor = tiptap(field);
+
+    act(() => {
+      editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    });
+    await user.click(screen.getByRole("button", { name: "Insérer un tableau" }));
+    expect(within(field).getByRole("table")).toBeInTheDocument();
+    const toolbar = screen.getByRole("toolbar", { name: "Mise en forme" });
+    expect(within(toolbar).getByRole("button", { name: "Ajouter une ligne" })).toBeInTheDocument();
+    act(() => {
+      editor.commands.insertContent("Poste");
+    });
+
+    // A link on the selected word "Intro".
+    act(() => {
+      editor.commands.setTextSelection({ from: 1, to: 6 });
+    });
+    await user.click(screen.getByRole("button", { name: "Lien" }));
+    const address = screen.getByRole("textbox", { name: "Adresse du lien" });
+    await waitFor(() => expect(address).toHaveFocus());
+    await user.type(address, "javascript:alert(1){Enter}");
+    expect(screen.getByRole("alert")).toHaveTextContent("Saisissez une adresse web");
+    await user.clear(address);
+    await user.type(address, "www.ademe.fr{Enter}");
+    expect(screen.queryByRole("textbox", { name: "Adresse du lien" })).toBeNull();
+
+    field.focus();
+    await user.keyboard("{Control>}s{/Control}");
+    await waitFor(() =>
+      expect(saveMock()).toHaveBeenLastCalledWith({
+        sectionId: SECTION_ID,
+        content: "[Intro](https://www.ademe.fr).\n\n| Poste | | |\n| - | - | - |\n| | | |\n| | | |",
+        expectedVersion: V1,
+      }),
+    );
+    // Saved with Ctrl+S: the editor stays open, on the same field.
+    expect(await screen.findByText("Texte enregistré.")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: VISUAL_LABEL })).toBe(field);
+  });
+
+  it("moves between toolbar buttons with the arrow keys and goes back to the text with Escape", async () => {
+    const { user } = renderEditor();
+    await user.click(openButton());
+    const field = await visualEditor();
+    await waitFor(() => expect(field).toHaveFocus());
+
+    // Alt+F10 goes to the toolbar.
+    await user.keyboard("{Alt>}{F10}{/Alt}");
+    const first = screen.getByRole("button", { name: "Titre 1" });
+    expect(first).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("button", { name: "Titre 2" })).toHaveFocus();
+    await user.keyboard("{End}");
+    expect(screen.getByRole("button", { name: "Insérer un tableau" })).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(first).toHaveFocus();
+    await user.keyboard("{Escape}");
+    // Tiptap focuses on the next animation frame.
+    await waitFor(() => expect(field).toHaveFocus());
+    // One stop in the tab order.
+    expect(
+      screen
+        .getAllByRole("button")
+        .filter((button) => button.closest('[role="toolbar"]') && button.tabIndex === 0),
+    ).toHaveLength(1);
+  });
+
+  it("remembers the last mode on the device", async () => {
+    const { user } = renderEditor();
+    await user.click(openButton());
+    await visualEditor();
+    await user.click(screen.getByRole("tab", { name: "Markdown" }));
+    await user.click(screen.getByRole("button", { name: "Annuler" }));
+
+    await user.click(openButton());
+    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveAttribute("aria-selected", "true");
+    expect(textarea()).toHaveFocus();
+  });
+
+  it("still opens when the browser storage throws", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("SecurityError");
+    });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("SecurityError");
+    });
+    const { user } = renderEditor();
+    await user.click(openButton());
+    expect(screen.getByRole("tab", { name: "Texte" })).toHaveAttribute("aria-selected", "true");
+    await visualEditor();
+    await user.click(screen.getByRole("tab", { name: "Markdown" }));
+    expect(textarea()).toHaveValue("Texte initial.");
+    expect(getItem).toHaveBeenCalled();
+    expect(setItem).toHaveBeenCalled();
+  });
+
+  it("loads an accepted draft into the open editor, and takes the saved version on a conflict", async () => {
+    saveMock().mockResolvedValueOnce({
+      ok: false,
+      error: "conflict",
+      current: { content: "### Version de Marie\n\nTexte relu.", version: V3 },
+    });
+    const { user, rerender } = renderEditor();
+    await user.click(openButton());
+    await visualEditor();
+
+    // An accepted draft: new page data while the editor holds no change.
+    rerender({ content: "### Points clés\n\n- Premier point", version: V2 });
+    let field = await visualEditor();
+    await waitFor(() =>
+      expect(within(field).getByRole("heading", { name: "Points clés" })).toBeInTheDocument(),
+    );
+    expect(within(field).getByRole("listitem")).toHaveTextContent("Premier point");
+
+    act(() => {
+      tiptap(field).commands.insertContentAt(tiptap(field).state.doc.content.size, {
+        type: "paragraph",
+        content: [{ type: "text", text: "Ajout de l'expert." }],
+      });
+    });
+    await user.click(saveButton());
+    expect(saveMock()).toHaveBeenLastCalledWith({
+      sectionId: SECTION_ID,
+      content: "### Points clés\n\n- Premier point\n\nAjout de l'expert.",
+      expectedVersion: V2,
+    });
+    await screen.findByRole("heading", { name: CONFLICT_TITLE });
+
+    await user.click(screen.getByRole("button", { name: "Reprendre la version enregistrée" }));
+    field = await visualEditor();
+    await waitFor(() =>
+      expect(within(field).getByRole("heading", { name: "Version de Marie" })).toBeInTheDocument(),
+    );
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(field).not.toHaveTextContent("Ajout de l'expert.");
+  });
+
+  it("sends a text it can't show to the Markdown tab", async () => {
+    const deep = `${">".repeat(300)} citation`;
+    const { user } = renderEditor({ content: deep, version: V1 });
+    await user.click(openButton());
+    await user.click(await screen.findByRole("button", { name: "Ouvrir l'onglet Markdown" }));
+    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveFocus();
+    expect(textarea()).toHaveValue(deep);
+  });
+
+  it("counts the Markdown length and refuses a text that is too long", async () => {
+    const { user } = renderEditor({ content: "a".repeat(100_000), version: V1 });
+    await user.click(openButton());
+    const field = await visualEditor();
+    act(() => {
+      tiptap(field).commands.insertContentAt(1, "bb");
+    });
+    await waitFor(() => expect(screen.getByText(/^100\s002 \/ 100\s000 caractères$/)).toBeVisible());
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(saveButton()).toHaveAttribute("aria-disabled", "true");
   });
 });
