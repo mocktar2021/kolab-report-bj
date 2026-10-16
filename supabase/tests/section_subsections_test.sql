@@ -1,7 +1,7 @@
 -- Subsections, reordering by level, and deleting a section (KRB-195).
 begin;
 \ir fixtures.psql
-select plan(33);
+select plan(34);
 
 -- A second report in w1, to check that a parent stays in its own report.
 insert into public.reports (id, workspace_id, title, created_by) values
@@ -119,7 +119,7 @@ select is(
 select pg_temp.act_as('owner');
 select is(
   (select public.delete_report_section(pg_temp.id('s1')) - 'section_id' - 'actor_role'),
-  jsonb_build_object('title', 'Contexte', 'parent_id', null,
+  jsonb_build_object('parent_id', null,
     'subsections', 1, 'files', 1, 'with_text', 0, 'files_queued', 1),
   'the owner deletes a section with its subsection and its file');
 select is(
@@ -140,6 +140,10 @@ select is(
 select is(
   (select count(*)::int from private.audit_events where action = 'section_deleted' and report_id = pg_temp.id('r1')),
   2, 'one record per deletion');
+select is(
+  (select count(*)::int from private.audit_events
+   where action = 'section_deleted' and report_id = pg_temp.id('r1') and details ? 'title'),
+  0, 'without the title of the section');
 
 -- A final report keeps its sections -----------------------------------------------
 update public.reports set status = 'final' where id = pg_temp.id('r1');

@@ -133,7 +133,7 @@ for (const theme of THEMES) {
         ["/fr/tableau-de-bord", "Tableau de bord"],
         [`/fr/espaces/${workspaceId}/membres`, "Membres de Accessibilité Porto-Novo"],
         [`/fr/rapports/${reportId}`, "Rapport Accessibilité Porto-Novo"],
-        [sectionUrl(), "Diagnostic de la chaufferie"],
+        [sectionUrl(), "1. Diagnostic de la chaufferie"],
         [`/fr/espaces/${workspaceId}/modeles`, "Modèles de prompts"],
         [`/fr/espaces/${workspaceId}/ia`, "Pilotage de l'IA"],
         ["/fr/notifications", "Notifications"],
@@ -149,7 +149,7 @@ for (const theme of THEMES) {
 
     test("the section page's interactive states have no axe violations", async ({ page }) => {
       await signIn(page, setup.owner);
-      await visit(page, sectionUrl(), "Diagnostic de la chaufferie");
+      await visit(page, sectionUrl(), "1. Diagnostic de la chaufferie");
       const main = page.getByRole("main");
       const files = main.getByRole("region", { name: "Livrables", exact: true });
 

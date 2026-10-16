@@ -232,7 +232,8 @@ $$;
 
 -- Owners and admins delete a section, with its subsections, while the report
 -- is not final. Its files are queued for removal; AI generations stay with
--- section_id set to null, so their usage still counts. Returns what went.
+-- section_id set to null, so their usage still counts. Returns what went,
+-- which is also what the audit event keeps.
 create or replace function public.delete_report_section(p_section_id uuid)
 returns jsonb
 language plpgsql
@@ -282,9 +283,9 @@ begin
   where s.id = v_section.id or s.parent_id = v_section.id;
 
   select w.organization_id into v_org from public.workspaces w where w.id = v_section.workspace_id;
+  -- Ids and counts only, like the other deletions: no title, no text.
   v_details := jsonb_build_object(
       'section_id', v_section.id,
-      'title', v_section.title,
       'parent_id', v_section.parent_id,
       'actor_role', v_role
     )

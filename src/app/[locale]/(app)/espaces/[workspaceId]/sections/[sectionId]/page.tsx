@@ -168,7 +168,7 @@ export default async function SectionPage({ params }: { params: Params }) {
           </p>
         ) : null}
         <h1 className="break-words text-h2 text-foreground">
-          {place ? <span className="mr-2 tabular-nums text-muted-foreground">{place.label}</span> : null}
+          {place ? <span className="mr-1 tabular-nums text-muted-foreground">{place.label}</span> : null}{" "}
           {section.title}
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
