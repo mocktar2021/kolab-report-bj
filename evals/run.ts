@@ -21,16 +21,19 @@ import { aggregate, calibration, REPORTS_DIR, writeReports, type TemplateReport 
 import type { CaseResult, RunDeps } from "./lib/runner";
 import { loadSubsets, subsetIds } from "./lib/subsets";
 import { summarizeCase } from "./lib/summary";
+import { templateWriterCli } from "./lib/template-writer";
 import { loadGlobalTemplates, templateFromFile, type EvalTemplate } from "./lib/templates";
 
 // Entry of `npm run eval` (bundled to build/evals.mjs by scripts/build-evals.mjs).
 // Runs the golden set, writes the reports and exits 1 when the gate fails or
 // a metric drops past its limit against the baseline (--compare).
-// `npm run eval:agreement` runs the inter-rater agreement instead. See
-// evals/README.md and docs/ai-evaluation.md.
+// `npm run eval:agreement` runs the inter-rater agreement instead, and
+// `npm run eval:template-writer` the cases of "Rédiger avec l'IA" (KRB-198).
+// See evals/README.md and docs/ai-evaluation.md.
 
 const USAGE = `Usage: npm run eval -- [options]
        npm run eval:agreement -- [scores.csv ...]
+       npm run eval:template-writer -- [--mock] [--cases a,b] [--tier fast|standard]
 
 Options:
   --mock                 Use the mock model (no API key, no network)
@@ -417,6 +420,7 @@ async function main(argv: string[]): Promise<number> {
   if (existsSync(".env.local")) process.loadEnvFile(".env.local");
   const [command, ...rest] = argv;
   if (command === "agreement") return agreementCli(rest);
+  if (command === "template-writer") return templateWriterCli(rest);
   try {
     const options = parseOptions(argv);
     try {

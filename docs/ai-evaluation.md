@@ -227,7 +227,7 @@ The flow we recommend:
 
 ## Tracing
 
-Tracing is off unless `AI_TRACING=true`. When it is on, each generation is one trace: a `kolab.ai.draft` span with the prompt version, the model, tokens, latency, cost and error, and the AI SDK's spans (`experimental_telemetry`) below it. Spans go out over OTLP:
+Tracing is off unless `AI_TRACING=true`. When it is on, each generation is one trace: a `kolab.ai.draft` span with the prompt version, the model, tokens, latency, cost and error, and the AI SDK's spans (`experimental_telemetry`) below it. A "Rédiger avec l'IA" call on the new template page is a `kolab.ai.template_writer` trace with the same figures. Spans go out over OTLP:
 
 - to Langfuse Cloud EU with `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` (`LANGFUSE_BASE_URL` defaults to `https://cloud.langfuse.com`);
 - or to any OTLP backend with the standard `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS`.
@@ -236,9 +236,9 @@ Prompt and output text never leave the server unless `AI_TRACE_CONTENT=true`, wh
 
 ## The AI dashboard
 
-`/fr/espaces/{id}/ia`, for owners and admins, shows per prompt version and model, over the last 7, 30 or 90 days: generations, acceptance rate, mean rating, edit ratio, tokens, cost, p50 and p95 latency and failure rate. Versions served by a rollout are marked, and the recent generations link to their traces when `AI_TRACE_URL_TEMPLATE` is set.
+`/fr/espaces/{id}/ia`, for owners and admins, shows per prompt version and model, over the last 7, 30 or 90 days: generations, acceptance rate, mean rating, edit ratio, tokens, cost, p50 and p95 latency and failure rate. Versions served by a rollout are marked, and the recent generations link to their traces when `AI_TRACE_URL_TEMPLATE` is set. A separate section lists the "Rédiger avec l'IA" calls of the period per model: calls, failures, tokens and cost (`prompt_assist_metrics`).
 
 ## Cost alert and fallback model
 
-- **Cost alert.** With `AI_DAILY_COST_ALERT_USD` and `AI_ALERT_EMAIL` (and an `EMAIL_PROVIDER`), the app sends one e-mail a day when the estimated spend of the environment for the UTC day passes that amount. The estimate comes from the `AI_PRICE_*` variables. If the e-mail can't be sent, the next generation tries again.
+- **Cost alert.** With `AI_DAILY_COST_ALERT_USD` and `AI_ALERT_EMAIL` (and an `EMAIL_PROVIDER`), the app sends one e-mail a day when the estimated spend of the environment for the UTC day passes that amount: section drafts and "Rédiger avec l'IA" calls together (`claim_ai_daily_cost_alert`). The estimate comes from the `AI_PRICE_*` variables. If the e-mail can't be sent, the next call tries again.
 - **Fallback model.** `AI_FALLBACK_PROVIDER` and `AI_FALLBACK_MODEL` give a second model, used when the first one fails before answering (overloaded, rate limited, unreachable). The generation records which model answered. Set `AI_FALLBACK_PRICE_INPUT_PER_MTOK` and `AI_FALLBACK_PRICE_OUTPUT_PER_MTOK` too: without them, drafts the fallback writes have no cost, so the dashboard and the daily alert miss that spend. The evals never switch to it: to check the fallback model, run the suite with `AI_PROVIDER` and `AI_MODEL` set to it, with the judge and `--compare`.

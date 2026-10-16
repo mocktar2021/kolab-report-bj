@@ -9,6 +9,7 @@ import {
   METRIC_PERIODS,
   getPromptMetrics,
   getRecentGenerations,
+  getTemplateWriterUsage,
   type MetricPeriod,
 } from "@/lib/ai/metrics-server";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,7 @@ import { EmptyMetrics, MetricsTable, SummaryTiles } from "./metrics-table";
 import { PeriodSwitch } from "./period-switch";
 import { RecentGenerations } from "./recent-generations";
 import { summarizeMetrics } from "./summary";
+import { TemplateWriterUsage } from "./template-writer-usage";
 
 export const dynamic = "force-dynamic";
 
@@ -69,10 +71,11 @@ export default async function AiDashboardPage({
 
   const days = periodOf((await searchParams).periode);
   const supabase = await createClient();
-  const [{ data: workspace }, metrics, recent] = await Promise.all([
+  const [{ data: workspace }, metrics, recent, writerUsage] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getPromptMetrics(workspaceId, days),
     getRecentGenerations(workspaceId, RECENT_LIMIT),
+    getTemplateWriterUsage(workspaceId, days),
   ]);
   if (!workspace) notFound();
   const { tracing } = aiSettings();
@@ -110,6 +113,8 @@ export default async function AiDashboardPage({
           <MetricsTable rows={metrics} workspaceId={workspaceId} />
         </>
       )}
+
+      {writerUsage === null ? null : <TemplateWriterUsage rows={writerUsage} days={days} />}
 
       <RecentGenerations
         generations={recent}

@@ -151,12 +151,13 @@ export async function finishGeneration(
 
 /**
  * Sends the daily cost alert once the environment's estimated spend of the
- * day (UTC) passes the threshold. The database claims the day, so only one
- * e-mail goes out however many generations finish at the same time.
+ * day (UTC) passes the threshold: section drafts and "Rédiger avec l'IA"
+ * calls (KRB-198) together. The database claims the day, so only one e-mail
+ * goes out however many calls finish at the same time.
  */
 export async function checkDailyCost(alert: { dailyUsd: number; email: string } | null): Promise<void> {
   if (!alert) return;
-  const { data: spent, error } = await createAdminClient().rpc("claim_ai_cost_alert", {
+  const { data: spent, error } = await createAdminClient().rpc("claim_ai_daily_cost_alert", {
     p_threshold: alert.dailyUsd,
   });
   if (error) {
@@ -173,7 +174,7 @@ export async function checkDailyCost(alert: { dailyUsd: number; email: string } 
     environment,
   });
   const subject = `[KolabReport ${environment}] Dépenses IA du jour : ${amount} USD`;
-  const text = `Les générations IA du jour (UTC) ont coûté environ ${amount} USD sur l'environnement ${environment}, au-delà du seuil de ${threshold} USD (AI_DAILY_COST_ALERT_USD).\n\nLe tableau de bord IA de chaque espace donne le détail par version de modèle de prompt. Cette alerte part une fois par jour.`;
+  const text = `Les générations IA du jour (UTC) ont coûté environ ${amount} USD sur l'environnement ${environment}, au-delà du seuil de ${threshold} USD (AI_DAILY_COST_ALERT_USD). Le montant compte les brouillons de section et les modèles rédigés avec l'IA.\n\nLe tableau de bord IA de chaque espace donne le détail par version de modèle de prompt. Cette alerte part une fois par jour.`;
   const sent = await sendEmail({
     to: alert.email,
     subject,

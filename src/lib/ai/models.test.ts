@@ -51,3 +51,12 @@ describe("fallback model settings", () => {
     expect(estimateFallbackCost(readAiSettings({}), usage)).toBeNull();
   });
 });
+
+describe("template writer limit", () => {
+  it("allows 20 calls a day by default and reads AI_TEMPLATE_WRITER_PER_DAY", () => {
+    expect(readAiSettings({}).templateWriterPerDay).toBe(20);
+    expect(readAiSettings({ AI_TEMPLATE_WRITER_PER_DAY: "5" }).templateWriterPerDay).toBe(5);
+    expect(readAiSettings({ AI_TEMPLATE_WRITER_PER_DAY: "0" }).templateWriterPerDay).toBe(20);
+    expect(readAiSettings({ AI_TEMPLATE_WRITER_PER_DAY: "beaucoup" }).templateWriterPerDay).toBe(20);
+  });
+});

@@ -8,6 +8,8 @@ import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { getReadOnlyReason } from "@/lib/billing/banner";
+import { approximateWords } from "@/lib/prompts/catalog";
+import { getTemplatePlan, templatesBlocked } from "@/lib/prompts/plan";
 import { getActiveRollout, hasPreviousPublished } from "@/lib/prompts/rollouts";
 import { getPromptTemplate, type PromptVersionRow } from "@/lib/prompts/server";
 import { cn } from "@/lib/utils";
@@ -88,14 +90,19 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
   const manager = isManager(access.role);
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
   const published = history.find((row) => row.status === "published") ?? null;
-  const [activeRollout, canRollback, readOnly] = await Promise.all([
+  const [activeRollout, canRollback, readOnly, plan] = await Promise.all([
     getActiveRollout(version.workspaceId, version.templateKey),
     manager && !global && version.status === "published" ? hasPreviousPublished(version) : false,
     getReadOnlyReason(workspaceId),
+    getTemplatePlan(workspaceId),
   ]);
   // In read-only (KRB-178), archiving a version and ending a rollout stay open:
   // they tidy up. Everything that writes or publishes a version is disabled.
   const readOnlyReason = readOnly ? tErrors("readOnlyDisabled") : undefined;
+  // A plan without custom templates (KRB-198) blocks the same writes, so
+  // they show as disabled with the reason instead of failing on save.
+  const writeBlockedReason =
+    readOnlyReason ?? (templatesBlocked(plan) === "templatesNotIncluded" ? t("plan.disabled") : undefined);
   // A global rollout limited to another workspace of the user doesn't reach this one.
   const rollout =
     activeRollout &&
@@ -186,7 +193,7 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
             <p className="mt-4 max-w-3xl text-sm text-muted-foreground">
               {manager ? t("globalNoteManager") : t("globalNote")}
             </p>
-            {manager && readOnlyReason ? (
+            {manager && writeBlockedReason ? (
               <div className="mt-4">
                 <Button
                   type="button"
@@ -199,7 +206,7 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
                   {t("actions.customize")}
                 </Button>
                 <p id="customize-read-only" className="mt-2 text-xs text-muted-foreground">
-                  {readOnlyReason}
+                  {writeBlockedReason}
                 </p>
               </div>
             ) : manager ? (
@@ -218,8 +225,9 @@ export default async function PromptVersionPage({ params }: { params: Params }) 
               versionId={version.id}
               status={version.status}
               newVersionHref={`${libraryHref}/${version.id}/modifier`}
+              copyHref={`${libraryHref}/nouveau?depuis=${version.id}`}
               canPublish={rolloutInfo?.candidate.id !== version.id}
-              readOnlyReason={readOnlyReason}
+              blockedReason={writeBlockedReason}
             />
             {/* A rollback publishes a version and a rollout serves one: both wait for a plan. */}
             {version.status === "published" && rollbackTarget && !readOnly ? (
@@ -334,7 +342,10 @@ function Settings({ version }: { version: PromptVersionRow }) {
           <dd className="mt-0.5 font-medium">
             {version.maxOutputTokens === null
               ? t("byDefault")
-              : t("tokens", { count: version.maxOutputTokens })}
+              : t("tokensWithWords", {
+                  count: version.maxOutputTokens,
+                  words: approximateWords(version.maxOutputTokens),
+                })}
           </dd>
         </div>
       </dl>

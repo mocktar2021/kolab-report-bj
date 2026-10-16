@@ -3,14 +3,17 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { getPromptTemplate } from "@/lib/prompts/server";
+import { getTemplatePlan, templatesBlocked } from "@/lib/prompts/plan";
+import { getPromptTemplate, listPromptTemplates } from "@/lib/prompts/server";
 import { createClient } from "@/lib/supabase/server";
 import { isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
-import { EMPTY_EDITOR_VALUES, editorValuesFrom } from "../editor-values";
+import { editorValuesFrom } from "../editor-values";
 import { PromptsForbidden } from "../forbidden";
 import { PromptEditor } from "../prompt-editor";
+import { TemplatesBlocked } from "../templates-blocked";
+import { NewTemplateStart } from "./start";
 
 export const dynamic = "force-dynamic";
 
@@ -37,18 +40,22 @@ export default async function NewPromptPage({
 
   // ?depuis=<version id> starts from a global template or one of this
   // workspace. The result is still a new template: the source never changes.
+  // Without it, the page offers the three starts (KRB-198).
   const { depuis } = await searchParams;
   const sourceId = typeof depuis === "string" ? depuis : null;
   const supabase = await createClient();
-  const [{ data: workspace }, source] = await Promise.all([
+  const [{ data: workspace }, source, templates, plan] = await Promise.all([
     supabase.from("workspaces").select("name").eq("id", workspaceId).maybeSingle(),
     sourceId ? getPromptTemplate(workspaceId, sourceId) : null,
+    sourceId ? null : listPromptTemplates(workspaceId),
+    getTemplatePlan(workspaceId),
   ]);
-  if (!workspace || (sourceId && !source)) notFound();
+  if (!workspace || (sourceId && !source) || (!sourceId && !templates)) notFound();
 
   const libraryHref = `/espaces/${workspaceId}/modeles`;
   const base = source?.version ?? null;
   const backHref = base ? `${libraryHref}/${base.id}` : libraryHref;
+  const blocked = templatesBlocked(plan) !== null;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in-50 motion-safe:duration-500">
@@ -64,21 +71,26 @@ export default async function NewPromptPage({
         <p className="mt-1 text-small text-muted-foreground">
           {base
             ? t("editor.customizeSubtitle", { title: base.title, version: base.version })
-            : t("editor.newSubtitle", { workspace: workspace.name })}
+            : t("start.subtitle")}
         </p>
       </header>
 
-      <PromptEditor
-        workspaceId={workspaceId}
-        baseId={null}
-        expectedLatest={null}
-        initial={
-          base
-            ? editorValuesFrom(base, t("editor.customizedFrom", { title: base.title, version: base.version }))
-            : EMPTY_EDITOR_VALUES
-        }
-        cancelHref={backHref}
-      />
+      {blocked ? (
+        <TemplatesBlocked plan={plan} workspaceId={workspaceId} />
+      ) : base ? (
+        <PromptEditor
+          workspaceId={workspaceId}
+          baseId={null}
+          expectedLatest={null}
+          initial={editorValuesFrom(
+            base,
+            t("editor.customizedFrom", { title: base.title, version: base.version }),
+          )}
+          cancelHref={backHref}
+        />
+      ) : (
+        <NewTemplateStart workspaceId={workspaceId} templates={templates ?? []} />
+      )}
     </div>
   );
 }

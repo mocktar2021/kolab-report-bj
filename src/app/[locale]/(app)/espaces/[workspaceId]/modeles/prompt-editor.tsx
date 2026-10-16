@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { AlertCircle, Eye, RefreshCw } from "lucide-react";
+import { AlertCircle, ChevronRight, Eye, RefreshCw } from "lucide-react";
 import { FieldError } from "@/components/auth/field-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Link, useRouter } from "@/i18n/navigation";
 import {
+  approximatePages,
+  approximateWords,
   MODEL_TIERS,
   OUTPUT_SCHEMAS,
   PROMPT_LIMITS,
@@ -27,16 +29,34 @@ import type { EditorValues } from "./editor-values";
 type Field = keyof EditorValues;
 type FieldErrors = Partial<Record<string, PromptFieldErrorKey>>;
 
+// In the order of the form, so the first field in error gets the focus.
 const FIELD_IDS: Record<Field, string> = {
   title: "prompt-title",
   description: "prompt-description",
-  template: "prompt-template",
   outputSchema: "prompt-output-schema",
+  template: "prompt-template",
   modelTier: "prompt-model-tier",
   temperature: "prompt-temperature",
   maxOutputTokens: "prompt-max-output-tokens",
   changelog: "prompt-changelog",
 };
+
+/** Technical settings, folded under "Réglages avancés" (KRB-198). */
+const ADVANCED_FIELDS: readonly Field[] = ["modelTier", "temperature", "maxOutputTokens"];
+
+/** The words and pages a cap in tokens gives, when the field holds a valid one. */
+function capInWords(value: string): { words: number; pages: number } | null {
+  const tokens = Number(value.trim());
+  if (
+    value.trim() === "" ||
+    !Number.isInteger(tokens) ||
+    tokens < PROMPT_LIMITS.maxOutputTokensMin ||
+    tokens > PROMPT_LIMITS.maxOutputTokensMax
+  )
+    return null;
+  const words = approximateWords(tokens);
+  return { words, pages: approximatePages(words) };
+}
 
 // Same look as <Input>, for the multi-line fields.
 const textareaClass =
@@ -70,7 +90,9 @@ export function PromptEditor({
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
   const templateRef = useRef<HTMLTextAreaElement>(null);
+  const advancedRef = useRef<HTMLDetailsElement>(null);
   const caretAfterInsert = useRef<number | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const isNew = baseId === null;
 
   const check = useMemo(() => checkTemplate(values.template), [values.template]);
@@ -119,7 +141,13 @@ export function PromptEditor({
 
   function focusFirstError(errors: FieldErrors) {
     const first = (Object.keys(FIELD_IDS) as Field[]).find((field) => errors[field]);
-    if (first) document.getElementById(FIELD_IDS[first])?.focus();
+    if (!first) return;
+    // A field inside the folded settings can't take the focus until they open.
+    if (ADVANCED_FIELDS.includes(first) && advancedRef.current) {
+      advancedRef.current.open = true;
+      setAdvancedOpen(true);
+    }
+    document.getElementById(FIELD_IDS[first])?.focus();
   }
 
   function save(publish: boolean) {
@@ -165,6 +193,11 @@ export function PromptEditor({
   };
   const describedBy = (...ids: (string | false)[]) => ids.filter(Boolean).join(" ") || undefined;
   const disabled = pending || saved;
+  const advancedChanged =
+    values.modelTier !== "standard" ||
+    values.temperature.trim() !== "" ||
+    values.maxOutputTokens.trim() !== "";
+  const cap = capInWords(values.maxOutputTokens);
 
   return (
     <form
@@ -212,6 +245,31 @@ export function PromptEditor({
             {t("editor.descriptionHelp")}
           </p>
           <FieldError id="prompt-description-error" message={errorText("description")} />
+        </div>
+        {/* The type of result shapes the draft experts get, so it stays in view. */}
+        <div className="space-y-2">
+          <Label htmlFor={FIELD_IDS.outputSchema}>{t("fields.outputSchema")}</Label>
+          <NativeSelect
+            id={FIELD_IDS.outputSchema}
+            value={values.outputSchema}
+            onChange={(event) => update("outputSchema", event.target.value as OutputSchema)}
+            selectClassName="h-10"
+            aria-invalid={Boolean(fieldErrors.outputSchema)}
+            aria-describedby={describedBy(
+              "prompt-output-schema-help",
+              Boolean(fieldErrors.outputSchema) && "prompt-output-schema-error",
+            )}
+          >
+            {OUTPUT_SCHEMAS.map((schema) => (
+              <option key={schema} value={schema}>
+                {t(`outputSchemas.${schema}.label`)}
+              </option>
+            ))}
+          </NativeSelect>
+          <p id="prompt-output-schema-help" className="text-xs text-muted-foreground">
+            {t(`outputSchemas.${values.outputSchema}.description`)}
+          </p>
+          <FieldError id="prompt-output-schema-error" message={errorText("outputSchema")} />
         </div>
       </div>
 
@@ -328,96 +386,99 @@ export function PromptEditor({
         </section>
       </div>
 
-      <div className={cn(cardClass, "grid gap-5 sm:grid-cols-2")}>
-        <div className="space-y-2">
-          <Label htmlFor={FIELD_IDS.outputSchema}>{t("fields.outputSchema")}</Label>
-          <NativeSelect
-            id={FIELD_IDS.outputSchema}
-            value={values.outputSchema}
-            onChange={(event) => update("outputSchema", event.target.value as OutputSchema)}
-            selectClassName="h-10"
-            aria-invalid={Boolean(fieldErrors.outputSchema)}
-            aria-describedby={describedBy(
-              "prompt-output-schema-help",
-              Boolean(fieldErrors.outputSchema) && "prompt-output-schema-error",
-            )}
-          >
-            {OUTPUT_SCHEMAS.map((schema) => (
-              <option key={schema} value={schema}>
-                {t(`outputSchemas.${schema}.label`)}
-              </option>
-            ))}
-          </NativeSelect>
-          <p id="prompt-output-schema-help" className="text-xs text-muted-foreground">
-            {t(`outputSchemas.${values.outputSchema}.description`)}
-          </p>
-          <FieldError id="prompt-output-schema-error" message={errorText("outputSchema")} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={FIELD_IDS.modelTier}>{t("fields.modelTier")}</Label>
-          <NativeSelect
-            id={FIELD_IDS.modelTier}
-            value={values.modelTier}
-            onChange={(event) => update("modelTier", event.target.value as ModelTier)}
-            selectClassName="h-10"
-            aria-invalid={Boolean(fieldErrors.modelTier)}
-            aria-describedby={describedBy(
-              "prompt-model-tier-help",
-              Boolean(fieldErrors.modelTier) && "prompt-model-tier-error",
-            )}
-          >
-            {MODEL_TIERS.map((tier) => (
-              <option key={tier} value={tier}>
-                {t(`modelTiers.${tier}.label`)}
-              </option>
-            ))}
-          </NativeSelect>
-          <p id="prompt-model-tier-help" className="text-xs text-muted-foreground">
-            {t(`modelTiers.${values.modelTier}.description`)}
-          </p>
-          <FieldError id="prompt-model-tier-error" message={errorText("modelTier")} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={FIELD_IDS.temperature}>{t("fields.temperature")}</Label>
-          <Input
-            id={FIELD_IDS.temperature}
-            value={values.temperature}
-            onChange={(event) => update("temperature", event.target.value)}
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder={t("editor.placeholderDefault")}
-            aria-invalid={Boolean(fieldErrors.temperature)}
-            aria-describedby={describedBy(
-              "prompt-temperature-help",
-              Boolean(fieldErrors.temperature) && "prompt-temperature-error",
-            )}
+      <details
+        ref={advancedRef}
+        open={advancedOpen}
+        onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+        className={cn(cardClass, "group")}
+      >
+        <summary className="-m-2 flex cursor-pointer list-none items-start gap-2 rounded-lg p-2 outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+            aria-hidden="true"
           />
-          <p id="prompt-temperature-help" className="text-xs text-muted-foreground">
-            {t("editor.temperatureHelp")}
-          </p>
-          <FieldError id="prompt-temperature-error" message={errorText("temperature")} />
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2 font-medium">
+              {t("editor.advanced")}
+              {advancedChanged ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  {t("editor.advancedChanged")}
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+              {t("editor.advancedHelp")}
+            </span>
+          </span>
+        </summary>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={FIELD_IDS.modelTier}>{t("fields.modelTier")}</Label>
+            <NativeSelect
+              id={FIELD_IDS.modelTier}
+              value={values.modelTier}
+              onChange={(event) => update("modelTier", event.target.value as ModelTier)}
+              selectClassName="h-10"
+              aria-invalid={Boolean(fieldErrors.modelTier)}
+              aria-describedby={describedBy(
+                "prompt-model-tier-help",
+                Boolean(fieldErrors.modelTier) && "prompt-model-tier-error",
+              )}
+            >
+              {MODEL_TIERS.map((tier) => (
+                <option key={tier} value={tier}>
+                  {t(`modelTiers.${tier}.label`)}
+                </option>
+              ))}
+            </NativeSelect>
+            <p id="prompt-model-tier-help" className="text-xs text-muted-foreground">
+              {t(`modelTiers.${values.modelTier}.description`)}
+            </p>
+            <FieldError id="prompt-model-tier-error" message={errorText("modelTier")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={FIELD_IDS.temperature}>{t("fields.temperature")}</Label>
+            <Input
+              id={FIELD_IDS.temperature}
+              value={values.temperature}
+              onChange={(event) => update("temperature", event.target.value)}
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder={t("editor.placeholderDefault")}
+              aria-invalid={Boolean(fieldErrors.temperature)}
+              aria-describedby={describedBy(
+                "prompt-temperature-help",
+                Boolean(fieldErrors.temperature) && "prompt-temperature-error",
+              )}
+            />
+            <p id="prompt-temperature-help" className="text-xs text-muted-foreground">
+              {t("editor.temperatureHelp")}
+            </p>
+            <FieldError id="prompt-temperature-error" message={errorText("temperature")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={FIELD_IDS.maxOutputTokens}>{t("fields.maxOutputTokens")}</Label>
+            <Input
+              id={FIELD_IDS.maxOutputTokens}
+              value={values.maxOutputTokens}
+              onChange={(event) => update("maxOutputTokens", event.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder={t("editor.placeholderDefault")}
+              aria-invalid={Boolean(fieldErrors.maxOutputTokens)}
+              aria-describedby={describedBy(
+                "prompt-max-output-tokens-help",
+                Boolean(fieldErrors.maxOutputTokens) && "prompt-max-output-tokens-error",
+              )}
+            />
+            <p id="prompt-max-output-tokens-help" className="text-xs text-muted-foreground">
+              {t("editor.maxOutputTokensHelp")}
+              {cap ? <> {t("editor.maxOutputTokensWords", cap)}</> : null}
+            </p>
+            <FieldError id="prompt-max-output-tokens-error" message={errorText("maxOutputTokens")} />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={FIELD_IDS.maxOutputTokens}>{t("fields.maxOutputTokens")}</Label>
-          <Input
-            id={FIELD_IDS.maxOutputTokens}
-            value={values.maxOutputTokens}
-            onChange={(event) => update("maxOutputTokens", event.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={t("editor.placeholderDefault")}
-            aria-invalid={Boolean(fieldErrors.maxOutputTokens)}
-            aria-describedby={describedBy(
-              "prompt-max-output-tokens-help",
-              Boolean(fieldErrors.maxOutputTokens) && "prompt-max-output-tokens-error",
-            )}
-          />
-          <p id="prompt-max-output-tokens-help" className="text-xs text-muted-foreground">
-            {t("editor.maxOutputTokensHelp")}
-          </p>
-          <FieldError id="prompt-max-output-tokens-error" message={errorText("maxOutputTokens")} />
-        </div>
-      </div>
+      </details>
 
       <div className={cn(cardClass, "space-y-2")}>
         <Label htmlFor={FIELD_IDS.changelog}>
