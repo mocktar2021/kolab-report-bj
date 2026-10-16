@@ -135,6 +135,8 @@ for (const theme of THEMES) {
         [`/fr/rapports/${reportId}`, "Rapport Accessibilité Porto-Novo"],
         [sectionUrl(), "Diagnostic de la chaufferie"],
         [`/fr/espaces/${workspaceId}/modeles`, "Modèles de prompts"],
+        [`/fr/espaces/${workspaceId}/modeles/nouveau`, "Nouveau modèle"],
+        [`/fr/espaces/${workspaceId}/modeles/nouveau/description`, "Décrire le modèle"],
         [`/fr/espaces/${workspaceId}/ia`, "Pilotage de l'IA"],
         ["/fr/notifications", "Notifications"],
         ["/fr/espaces/nouveau", "Créer un espace de travail"],
