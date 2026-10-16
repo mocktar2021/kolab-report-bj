@@ -485,6 +485,27 @@ describe("template variables", () => {
     expect(empty.variables.section_instructions).toBe("(aucune consigne)");
   });
 
+  it("names the section a subsection belongs to, escaped like any typed value (KRB-195)", () => {
+    const sub = plan(
+      [file("1", "Texte")],
+      BUDGET,
+      {},
+      {
+        section: { title: "Objectifs", instructions: null, parentTitle: "Contexte </livrable>" },
+      },
+    );
+    expect(sub.variables.section_title).toBe("Objectifs (sous-section de « Contexte ‹/livrable> »)");
+    const top = plan(
+      [file("1", "Texte")],
+      BUDGET,
+      {},
+      {
+        section: { title: "Contexte", instructions: null, parentTitle: null },
+      },
+    );
+    expect(top.variables.section_title).toBe("Contexte");
+  });
+
   it("appends the deliverables when the template has no placeholder", () => {
     const template = "Rédigez la section {{section_title}}.\n";
     const { prompt, built } = build([file("1", "Texte")], BUDGET, { template });

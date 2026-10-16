@@ -115,3 +115,24 @@ describe("pageGroups", () => {
     expect(groups.map((group) => group.length)).toEqual([4, 4, 2]);
   });
 });
+
+describe("buildReportPdf with subsections (KRB-195)", () => {
+  it("lists subsections in the contents and draws them after their section's text", async () => {
+    const pdf = await buildReportPdf({
+      ...SAMPLE_DOCUMENT,
+      sections: [
+        { title: "Contexte", status: "completed", assigneeName: null, markdown: "Introduction du contexte." },
+        { title: "Objectifs", level: 2, status: "in_progress", assigneeName: null, markdown: "Moins 12 %." },
+        { title: "Analyse", status: "not_started", assigneeName: null, markdown: null },
+      ],
+    });
+    const text = squash(pdfText(pdf));
+    expect(text).toContain(squash("1.1 Objectifs"));
+    // Contents, then the section page holding its subsection, then the next section.
+    const order = ["Introduction du contexte.", "1.1 Objectifs", "Moins 12 %.", "2. Analyse"].map((part) =>
+      text.lastIndexOf(squash(part)),
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(text).toContain(squash("Page 4 sur 4"));
+  });
+});

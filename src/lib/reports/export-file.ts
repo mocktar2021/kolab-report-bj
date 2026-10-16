@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EXPORT_MIME_TYPES, type ExportDocument, type ExportFormat } from "@/lib/export/types";
 import { log } from "@/lib/log";
+import { outline } from "@/lib/section-outline";
 import { sectionStatusSchema } from "@/lib/sections";
 import type { Database } from "@/lib/supabase/database.types";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
@@ -23,10 +24,8 @@ export async function loadExportDocument(
   const [{ data: sections }, { data: workspace }, members] = await Promise.all([
     supabase
       .from("report_sections")
-      .select("title, status, assigned_to, content")
-      .eq("report_id", report.id)
-      .order("position", { ascending: true })
-      .order("created_at", { ascending: true }),
+      .select("id, parent_id, position, created_at, title, status, assigned_to, content")
+      .eq("report_id", report.id),
     supabase.from("workspaces").select("name").eq("id", report.workspace_id).maybeSingle(),
     getWorkspaceMembers(report.workspace_id),
   ]);
@@ -37,8 +36,12 @@ export async function loadExportDocument(
     title: report.title,
     workspaceName: workspace.name,
     generatedAt,
-    sections: sections.map((section) => ({
+    // Each section followed by its subsections (KRB-195).
+    sections: outline(
+      sections.map((section) => ({ ...section, parentId: section.parent_id, createdAt: section.created_at })),
+    ).map((section) => ({
       title: section.title,
+      level: section.level,
       status: sectionStatusSchema.catch("not_started").parse(section.status),
       assigneeName: section.assigned_to ? (names.get(section.assigned_to) ?? null) : null,
       markdown: section.content,

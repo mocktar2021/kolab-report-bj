@@ -187,6 +187,45 @@ async function readPreview<T>(
   return parsed.data;
 }
 
+const sectionPreviewSchema = z
+  .object({
+    section_id: z.string(),
+    workspace_id: z.string(),
+    report_id: z.string(),
+    parent_id: z.string().nullable(),
+    title: z.string(),
+    report_status: z.enum(["draft", "in_review", "final"]),
+    subsections: countSchema,
+    files: countSchema,
+    with_text: countSchema,
+  })
+  .transform((preview) => ({
+    sectionId: preview.section_id,
+    workspaceId: preview.workspace_id,
+    reportId: preview.report_id,
+    parentId: preview.parent_id,
+    title: preview.title,
+    reportStatus: preview.report_status,
+    subsections: preview.subsections,
+    files: preview.files,
+    withText: preview.with_text,
+  }));
+
+export type SectionDeletionPreview = z.output<typeof sectionPreviewSchema>;
+
+/**
+ * What deleting a section takes with its subsections (KRB-195), for the
+ * owners and admins of its workspace. Null for anyone else, or on error.
+ */
+export async function getSectionDeletionPreview(sectionId: string): Promise<SectionDeletionPreview | null> {
+  if (!uuidSchema.safeParse(sectionId).success) return null;
+  return readPreview(
+    "section_deletion_preview",
+    (supabase) => supabase.rpc("section_deletion_preview", { p_section_id: sectionId.toLowerCase() }),
+    sectionPreviewSchema,
+  );
+}
+
 /** What deleting the report takes, for its owners and admins. Null for anyone else, or on error. */
 export async function getReportDeletionPreview(reportId: string): Promise<ReportDeletionPreview | null> {
   if (!uuidSchema.safeParse(reportId).success) return null;

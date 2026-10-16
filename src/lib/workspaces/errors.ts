@@ -9,6 +9,7 @@ export type WorkspaceErrorKey =
   | "alreadyMember"
   | "invitationPending"
   | "reportFinal"
+  | "parentInvalid"
   | "forbidden"
   | "invalidInput"
   | "generic"
@@ -43,7 +44,8 @@ export function isBillingError(error: { code?: string | null } | null | undefine
  * Maps a Postgres error code from Supabase to a message key. KR001 and KR002
  * come from the RBAC migration, KR003 to KR007 from the invitations one,
  * KR020 from the report workflow one (a final report is frozen), KR040 to
- * KR044 from the billing limits one. A billing refusal maps to a message
+ * KR044 from the billing limits one, KR050 and KR051 from the subsections one
+ * (the parent is not a section of the report). A billing refusal maps to a message
  * without numbers here; describeWorkspaceError gives the precise one.
  */
 export function workspaceErrorKey(error: { code?: string | null } | null | undefined): WorkspaceErrorKey {
@@ -64,6 +66,9 @@ export function workspaceErrorKey(error: { code?: string | null } | null | undef
       return "alreadyMember";
     case "KR020":
       return "reportFinal";
+    case "KR050":
+    case "KR051":
+      return "parentInvalid";
     case "KR040":
     case "KR042":
       return "billingLimit";

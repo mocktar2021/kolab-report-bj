@@ -28,10 +28,13 @@ vi.mock("./actions", () => ({
 
 const WORKSPACE_ID = "0b6b9a47-0c4f-4a59-9a43-6f0a2d1c3e11";
 
-function section(id: string, title: string, content: string): ReportSection {
+function section(id: string, title: string, content: string, label = "1."): ReportSection {
   return {
     id,
     title,
+    label,
+    level: 1,
+    parentId: null,
     status: "in_progress",
     weight: 1,
     assignedTo: null,
@@ -44,8 +47,8 @@ function section(id: string, title: string, content: string): ReportSection {
 
 const SECTIONS = [
   section("11111111-1111-4111-8111-111111111111", "Contexte", "Texte du contexte"),
-  section("22222222-2222-4222-8222-222222222222", "Analyse", "Texte de l'analyse"),
-  section("33333333-3333-4333-8333-333333333333", "Annexes", "Texte des annexes"),
+  section("22222222-2222-4222-8222-222222222222", "Analyse", "Texte de l'analyse", "2."),
+  section("33333333-3333-4333-8333-333333333333", "Annexes", "Texte des annexes", "3."),
 ];
 
 function documentOf(sections: ReportSection[]) {

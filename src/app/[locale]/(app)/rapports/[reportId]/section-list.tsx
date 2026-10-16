@@ -48,6 +48,12 @@ import { addSection, updateSectionAssignment, type SectionActionState } from "./
 export type SectionRowData = {
   id: string;
   title: string;
+  /** "1." for a section, "1.2" for a subsection (src/lib/section-outline.ts). */
+  label: string;
+  /** 1 for a section, 2 for a subsection (KRB-195). */
+  level: 1 | 2;
+  /** The section a subsection belongs to; null for a section. */
+  parentId: string | null;
   status: SectionStatus;
   weight: number;
   assignedTo: string | null;
@@ -78,7 +84,11 @@ type SectionListProps = {
   reorderStatus?: ReactNode;
 };
 
-/** The table of contents: every section in report order, sortable for managers. */
+/**
+ * The table of contents: every section in report order, each followed by its
+ * subsections (KRB-195). Managers sort the sections, which take their
+ * subsections along, and the subsections within their section.
+ */
 export function SectionList({
   workspaceId,
   sections,
@@ -89,28 +99,57 @@ export function SectionList({
   reorderStatus,
 }: SectionListProps) {
   const t = useTranslations("Report");
-  const sortable = canManage && onReorder !== undefined && sections.length > 1;
+  const tops = sections.filter((section) => section.level === 1);
+  const children = new Map<string, SectionRowData[]>();
+  for (const section of sections) {
+    if (section.level === 2 && section.parentId) {
+      children.set(section.parentId, [...(children.get(section.parentId) ?? []), section]);
+    }
+  }
+  const childIds = (id: string) => (children.get(id) ?? []).map((child) => child.id);
+  const sortable = canManage && onReorder !== undefined;
+  const sortableTops = sortable && tops.length > 1;
 
-  const rows = sections.map((section, index) =>
-    sortable ? (
-      <SortableSectionRow
-        key={section.id}
-        workspaceId={workspaceId}
-        index={index}
-        section={section}
-        assignees={assignees}
-        canManage={canManage}
-        disabled={reorderBusy}
-      />
+  // Every id, in document order, as reorder_report_sections takes them.
+  const moveSections = (topIds: string[]) => onReorder?.(topIds.flatMap((id) => [id, ...childIds(id)]));
+  const moveSubsections = (parentId: string, ids: string[]) =>
+    onReorder?.(tops.flatMap((top) => [top.id, ...(top.id === parentId ? ids : childIds(top.id))]));
+
+  const rowProps = { workspaceId, assignees, canManage };
+  const subsectionList = (parent: SectionRowData) => {
+    const list = children.get(parent.id) ?? [];
+    if (list.length === 0) return null;
+    const sortableChildren = sortable && list.length > 1;
+    const rows = list.map((child) =>
+      sortableChildren ? (
+        <SortableSectionRow key={child.id} {...rowProps} section={child} disabled={reorderBusy} />
+      ) : (
+        <SectionRow key={child.id} {...rowProps} section={child} />
+      ),
+    );
+    const nested = (
+      <ol aria-label={t("subsectionsLabel", { title: parent.title })} className="divide-y border-t">
+        {rows}
+      </ol>
+    );
+    return sortableChildren ? (
+      <SortableGroup items={list} onMove={(ids) => moveSubsections(parent.id, ids)}>
+        {nested}
+      </SortableGroup>
     ) : (
-      <SectionRow
-        key={section.id}
-        workspaceId={workspaceId}
-        index={index}
-        section={section}
-        assignees={assignees}
-        canManage={canManage}
-      />
+      nested
+    );
+  };
+
+  const rows = tops.map((section) =>
+    sortableTops ? (
+      <SortableSectionRow key={section.id} {...rowProps} section={section} disabled={reorderBusy}>
+        {subsectionList(section)}
+      </SortableSectionRow>
+    ) : (
+      <SectionRow key={section.id} {...rowProps} section={section}>
+        {subsectionList(section)}
+      </SectionRow>
     ),
   );
 
@@ -124,17 +163,19 @@ export function SectionList({
           {t("tocTitle")}
         </h2>
         <span className="text-sm text-muted-foreground">{t("count", { count: sections.length })}</span>
-        {sortable ? <p className="w-full text-xs text-muted-foreground">{t("reorderHint")}</p> : null}
+        {sortable && sections.length > 1 ? (
+          <p className="w-full text-xs text-muted-foreground">{t("reorderHint")}</p>
+        ) : null}
         {reorderStatus}
       </div>
       {sections.length === 0 ? (
         <p className="px-5 py-10 text-center text-sm text-muted-foreground">
           {canManage ? t("emptyManager") : t("emptyMember")}
         </p>
-      ) : sortable && onReorder ? (
-        <SortableSections sections={sections} onReorder={onReorder}>
+      ) : sortableTops ? (
+        <SortableGroup items={tops} onMove={moveSections}>
           <ol className="divide-y">{rows}</ol>
-        </SortableSections>
+        </SortableGroup>
       ) : (
         <ol className="divide-y">{rows}</ol>
       )}
@@ -163,16 +204,19 @@ function useReducedMotion(): boolean {
 const verticalOnly: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 /**
- * Drag and drop with the pointer or the keyboard (Space to take the handle,
- * arrows to move, Space to drop, Escape to cancel), announced in French.
+ * Drag and drop of one list, the sections or the subsections of a section,
+ * with the pointer or the keyboard (Space to take the handle, arrows to move,
+ * Space to drop, Escape to cancel), announced in French. A subsection list is
+ * a group of its own inside its section's row, so nothing leaves its level.
  */
-function SortableSections({
-  sections,
-  onReorder,
+function SortableGroup({
+  items,
+  onMove,
   children,
 }: {
-  sections: SectionRowData[];
-  onReorder: (sectionIds: string[]) => void;
+  items: Pick<SectionRowData, "id" | "title">[];
+  /** The ids of this list, in the new order. */
+  onMove: (ids: string[]) => void;
   children: ReactNode;
 }) {
   const t = useTranslations("Report.reorder");
@@ -182,10 +226,9 @@ function SortableSections({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const ids = sections.map((section) => section.id);
+  const ids = items.map((item) => item.id);
 
-  const title = (sectionId: UniqueIdentifier) =>
-    sections.find((section) => section.id === sectionId)?.title ?? "";
+  const title = (sectionId: UniqueIdentifier) => items.find((item) => item.id === sectionId)?.title ?? "";
   const place = (sectionId: UniqueIdentifier) => ({
     position: ids.indexOf(String(sectionId)) + 1,
     count: ids.length,
@@ -209,7 +252,7 @@ function SortableSections({
     const from = ids.indexOf(String(active.id));
     const to = ids.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
-    onReorder(arrayMove(ids, from, to));
+    onMove(arrayMove(ids, from, to));
   }
 
   return (
@@ -230,10 +273,11 @@ function SortableSections({
 
 type SectionRowProps = {
   workspaceId: string;
-  index: number;
   section: SectionRowData;
   assignees: Assignee[];
   canManage: boolean;
+  /** The subsections of a section, under its row. */
+  children?: ReactNode;
 };
 
 function SortableSectionRow({ disabled, ...props }: SectionRowProps & { disabled: boolean }) {
@@ -271,10 +315,10 @@ function SortableSectionRow({ disabled, ...props }: SectionRowProps & { disabled
 
 function SectionRow({
   workspaceId,
-  index,
   section,
   assignees,
   canManage,
+  children,
   handle,
   rowRef,
   rowStyle,
@@ -288,47 +332,59 @@ function SectionRow({
   const t = useTranslations("Report");
   const format = useFormatter();
 
+  const sub = section.level === 2;
+
   return (
     <li
       ref={rowRef}
       style={rowStyle}
-      className={cn(
-        "flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center",
-        dragging && "relative z-10 bg-card shadow-lg ring-1 ring-border",
-      )}
+      className={cn(dragging && "relative z-10 bg-card shadow-lg ring-1 ring-border")}
     >
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        {handle}
-        <span className="mt-0.5 w-6 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
-          {index + 1}.
-        </span>
-        <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-medium leading-snug">
-            <a
-              href={`#${sectionAnchor(section.id)}`}
-              className="min-w-0 break-words rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {section.title}
-            </a>
-            {section.mine ? (
-              <span className="rounded-full bg-highlight/10 px-2 py-0.5 text-[11px] font-medium text-highlight">
-                {t("yourSection")}
-              </span>
-            ) : null}
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <StatusBadge status={section.status} />
-            {canManage ? null : (
-              <>
-                <span>{section.assigneeName ?? t("unassigned")}</span>
-                <span>{t("weightValue", { weight: format.number(section.weight) })}</span>
-              </>
+      <div
+        className={cn(
+          "flex flex-col gap-3 py-4 pr-5 lg:flex-row lg:items-center",
+          sub ? "pl-10 sm:pl-14" : "pl-5",
+        )}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {handle}
+          <span
+            className={cn(
+              "mt-0.5 shrink-0 text-right text-sm tabular-nums text-muted-foreground",
+              sub ? "w-8" : "w-6",
             )}
-            {section.canEdit ? <EditLink workspaceId={workspaceId} section={section} /> : null}
+          >
+            {section.label}
+          </span>
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 font-medium leading-snug">
+              <a
+                href={`#${sectionAnchor(section.id)}`}
+                className="min-w-0 break-words rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {section.title}
+              </a>
+              {section.mine ? (
+                <span className="rounded-full bg-highlight/10 px-2 py-0.5 text-[11px] font-medium text-highlight">
+                  {t("yourSection")}
+                </span>
+              ) : null}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <StatusBadge status={section.status} />
+              {canManage ? null : (
+                <>
+                  <span>{section.assigneeName ?? t("unassigned")}</span>
+                  <span>{t("weightValue", { weight: format.number(section.weight) })}</span>
+                </>
+              )}
+              {section.canEdit ? <EditLink workspaceId={workspaceId} section={section} /> : null}
+            </div>
           </div>
         </div>
+        {canManage ? <AssignmentForm section={section} assignees={assignees} /> : null}
       </div>
-      {canManage ? <AssignmentForm section={section} assignees={assignees} /> : null}
+      {children}
     </li>
   );
 }
@@ -463,19 +519,27 @@ function AssignmentForm({ section, assignees }: { section: SectionRowData; assig
   );
 }
 
-/** Adds a section at the end of the report. */
-export function AddSectionForm({ reportId }: { reportId: string }) {
+export type ParentOption = Pick<SectionRowData, "id" | "label" | "title">;
+
+/**
+ * Adds a section at the end of the report, or a subsection at the end of a
+ * section (KRB-195). The place stays selected, so several subsections of the
+ * same section can be typed one after the other.
+ */
+export function AddSectionForm({ reportId, parents }: { reportId: string; parents: ParentOption[] }) {
   const t = useTranslations("Report");
   const tWorkspaces = useTranslations("Workspaces");
   const [state, formAction, pending] = useActionState<SectionActionState, FormData>(addSection, {
     status: "idle",
   });
-  const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const sentTitle = useRef("");
-  const [addedTitle, setAddedTitle] = useState<string | null>(null);
+  const sent = useRef<{ title: string; parentId: string }>({ title: "", parentId: "" });
+  const [added, setAdded] = useState<{ title: string; parentId: string } | null>(null);
+  const [parentId, setParentId] = useState("");
   const titleError = state.status === "error" ? state.fieldErrors?.title : undefined;
   const formError = state.status === "error" && !state.fieldErrors ? state.error : undefined;
+  // A section deleted meanwhile: back to the end of the report.
+  const place = parents.some((parent) => parent.id === parentId) ? parentId : "";
 
   // Clear the field after each section so the next one can be typed right away.
   // The button is disabled while the section is added, so the focus goes back
@@ -484,35 +548,61 @@ export function AddSectionForm({ reportId }: { reportId: string }) {
   useEffect(() => {
     if (state.status === "idle") return;
     if (state.status === "success") {
-      formRef.current?.reset();
-      setAddedTitle(sentTitle.current);
-    } else setAddedTitle(null);
+      if (inputRef.current) inputRef.current.value = "";
+      setAdded(sent.current);
+    } else setAdded(null);
     inputRef.current?.focus();
   }, [state]);
 
+  const addedParent = added?.parentId ? parents.find((parent) => parent.id === added.parentId) : undefined;
+
   return (
     <form
-      ref={formRef}
       action={(formData) => {
-        sentTitle.current = String(formData.get("title") ?? "").trim();
+        sent.current = {
+          title: String(formData.get("title") ?? "").trim(),
+          parentId: String(formData.get("parentId") ?? ""),
+        };
         formAction(formData);
       }}
       noValidate
       className="surface-card mt-4 rounded-2xl border p-5 shadow-sm"
     >
       <input type="hidden" name="reportId" value={reportId} />
-      <Label htmlFor="new-section-title">{t("addField")}</Label>
-      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-        <Input
-          ref={inputRef}
-          id="new-section-title"
-          name="title"
-          placeholder={t("addPlaceholder")}
-          maxLength={200}
-          required
-          aria-invalid={Boolean(titleError)}
-          aria-describedby={titleError ? "new-section-error" : undefined}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <Label htmlFor="new-section-title">{t("addField")}</Label>
+          <Input
+            ref={inputRef}
+            id="new-section-title"
+            name="title"
+            placeholder={t("addPlaceholder")}
+            maxLength={200}
+            required
+            className="mt-2"
+            aria-invalid={Boolean(titleError)}
+            aria-describedby={titleError ? "new-section-error" : undefined}
+          />
+        </div>
+        {parents.length > 0 ? (
+          <div className="sm:w-64">
+            <Label htmlFor="new-section-place">{t("addPlace")}</Label>
+            <NativeSelect
+              id="new-section-place"
+              name="parentId"
+              value={place}
+              onChange={(event) => setParentId(event.target.value)}
+              className="mt-2"
+            >
+              <option value="">{t("addPlaceTop")}</option>
+              {parents.map((parent) => (
+                <option key={parent.id} value={parent.id}>
+                  {t("addPlaceUnder", { label: parent.label, title: parent.title })}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        ) : null}
         <Button type="submit" shape="pill" className="h-10 shrink-0" disabled={pending}>
           <Plus aria-hidden="true" />
           {t("addSubmit")}
@@ -525,7 +615,11 @@ export function AddSectionForm({ reportId }: { reportId: string }) {
         </p>
       ) : null}
       <p role="status" className="sr-only">
-        {addedTitle === null ? null : t("added", { title: addedTitle })}
+        {added === null
+          ? null
+          : addedParent
+            ? t("addedSub", { title: added.title, parent: addedParent.title })
+            : t("added", { title: added.title })}
       </p>
     </form>
   );

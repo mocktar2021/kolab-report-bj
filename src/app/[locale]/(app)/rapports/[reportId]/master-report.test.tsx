@@ -32,6 +32,10 @@ function section(id: string, title: string, overrides: Partial<ReportSection> = 
   return {
     id,
     title,
+    // MasterReport numbers the sections in the order it gets them.
+    label: "",
+    level: 1,
+    parentId: null,
     status: "not_started",
     weight: 1,
     assignedTo: null,
@@ -359,5 +363,70 @@ describe("MasterReport for a final report", () => {
 
     expect(screen.getByRole("form", { name: "Nouvelle section" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^Déplacer la section/ })).toHaveLength(3);
+  });
+});
+
+describe("MasterReport with subsections (KRB-195)", () => {
+  const OBJECTIVES = section("44444444-4444-4444-8444-444444444444", "Objectifs", {
+    level: 2,
+    parentId: CONTEXT.id,
+    content: "# Cible\n\nMoins 12 %.",
+  });
+  const SCOPE = section("55555555-5555-4555-8555-555555555555", "Périmètre", {
+    level: 2,
+    parentId: CONTEXT.id,
+  });
+  const NESTED = [CONTEXT, OBJECTIVES, SCOPE, ANALYSIS];
+
+  function subsectionTitles() {
+    const text = screen.getByRole("region", { name: "Texte du rapport" });
+    return within(text)
+      .getAllByRole("heading", { level: 4 })
+      .filter((heading) => heading.id.endsWith("-title"))
+      .map((heading) => heading.textContent);
+  }
+
+  it("numbers subsections under their section, in the table of contents and the text", () => {
+    renderReport({ sections: NESTED });
+    expect(tocTitles()).toEqual(["Contexte", "Objectifs", "Périmètre", "Analyse"]);
+    const nested = within(toc()).getByRole("list", { name: "Sous-sections de Contexte" });
+    expect(
+      within(nested)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([expect.stringContaining("1.1Objectifs"), expect.stringContaining("1.2Périmètre")]);
+    expect(documentTitles()).toEqual(["1. Contexte", "2. Analyse"]);
+    expect(subsectionTitles()).toEqual(["1.1 Objectifs", "1.2 Périmètre"]);
+  });
+
+  it("moves a subsection within its section and saves the whole order", async () => {
+    vi.mocked(reorderSections).mockResolvedValue({ ok: true });
+    renderReport({ sections: NESTED });
+
+    await moveWithKeyboard("Périmètre", "ArrowUp", 1);
+
+    expect(reorderSections).toHaveBeenCalledWith(REPORT_ID, [
+      CONTEXT.id,
+      SCOPE.id,
+      OBJECTIVES.id,
+      ANALYSIS.id,
+    ]);
+    expect(subsectionTitles()).toEqual(["1.1 Périmètre", "1.2 Objectifs"]);
+  });
+
+  it("moves a section with its subsections", async () => {
+    vi.mocked(reorderSections).mockResolvedValue({ ok: true });
+    renderReport({ sections: NESTED });
+
+    await moveWithKeyboard("Analyse", "ArrowUp", 1);
+
+    expect(reorderSections).toHaveBeenCalledWith(REPORT_ID, [
+      ANALYSIS.id,
+      CONTEXT.id,
+      OBJECTIVES.id,
+      SCOPE.id,
+    ]);
+    expect(documentTitles()).toEqual(["1. Analyse", "2. Contexte"]);
+    expect(subsectionTitles()).toEqual(["2.1 Objectifs", "2.2 Périmètre"]);
   });
 });

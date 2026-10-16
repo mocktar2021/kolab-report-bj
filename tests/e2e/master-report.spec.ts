@@ -220,7 +220,7 @@ test("an expert reads every section and edits only their own", async ({ page }) 
   await expect(page).toHaveURL(
     new RegExp(`/fr/espaces/${setup.workspaceId}/sections/${setup.ids.diagnosis}$`),
   );
-  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Diagnostic");
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("3. Diagnostic");
 });
 
 test("an expert's export request is refused", async ({ page }) => {

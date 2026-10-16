@@ -36,7 +36,7 @@ import {
   type Place,
   type TextRun,
 } from "./markdown";
-import type { ExportDocument, ExportSection } from "./types";
+import { numberedSections, type ExportDocument, type NumberedSection } from "./types";
 
 // The .docx export (KRB-18): a cover page, a "Sommaire" that is a real Word
 // table of contents, then one Heading 1 per section, each on a new page.
@@ -113,6 +113,8 @@ const HEADINGS = [HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.H
 class DocxBody {
   private readonly orderedReferences = new Map<number, string>();
   private instances = 0;
+  /** 1 in a subsection (KRB-195): its text's headings start one level lower. */
+  headingShift = 0;
   readonly numbering: INumberingOptions["config"][number][] = [
     {
       reference: BULLET_REFERENCE,
@@ -174,7 +176,7 @@ class DocxBody {
         }
         return [
           new Paragraph({
-            heading: HEADINGS[Math.min(block.depth, HEADINGS.length) - 1],
+            heading: HEADINGS[Math.min(block.depth + this.headingShift, HEADINGS.length) - 1],
             children: docxRuns(block.runs),
           }),
         ];
@@ -298,14 +300,25 @@ function coverPage(doc: ExportDocument, title: string): Paragraph[] {
   ];
 }
 
-function sectionChildren(section: ExportSection, index: number, body: DocxBody): FileChild[] {
+/** "1. Contexte" or "1.1 Objectifs". */
+function numberedTitle(section: NumberedSection): string {
+  return `${section.label} ${cleanLine(section.title)}`;
+}
+
+/**
+ * A section starts a new page as Heading 1; a subsection follows the text
+ * before it, as Heading 2, and its own headings start at Heading 3.
+ */
+function sectionChildren(section: NumberedSection, index: number, body: DocxBody): FileChild[] {
   const blocks = sectionBlocks(section.markdown);
+  const sub = section.level === 2;
+  body.headingShift = sub ? 1 : 0;
   return [
     new Paragraph({
-      heading: HeadingLevel.HEADING_1,
-      pageBreakBefore: true,
+      heading: sub ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_1,
+      pageBreakBefore: !sub,
       children: [
-        new Bookmark({ id: sectionAnchor(index), children: [new DocxTextRun(cleanLine(section.title))] }),
+        new Bookmark({ id: sectionAnchor(index), children: [new DocxTextRun(numberedTitle(section))] }),
       ],
     }),
     new Paragraph({
@@ -329,7 +342,8 @@ function sectionChildren(section: ExportSection, index: number, body: DocxBody):
 export async function buildReportDocx(doc: ExportDocument): Promise<Buffer> {
   const title = cleanLine(doc.title);
   const body = new DocxBody();
-  const sections = doc.sections.flatMap((section, index) => sectionChildren(section, index, body));
+  const numbered = numberedSections(doc.sections);
+  const sections = numbered.flatMap((section, index) => sectionChildren(section, index, body));
   const contents: FileChild[] = [
     new Paragraph({
       style: "TOCHeading",
@@ -339,9 +353,9 @@ export async function buildReportDocx(doc: ExportDocument): Promise<Buffer> {
     new TableOfContents(EXPORT_TEXT.contents, {
       headingStyleRange: "1-3",
       hyperlink: true,
-      cachedEntries: doc.sections.map((section, index) => ({
-        title: cleanLine(section.title),
-        level: 1,
+      cachedEntries: numbered.map((section, index) => ({
+        title: numberedTitle(section),
+        level: section.level,
         href: sectionAnchor(index),
       })),
     }),

@@ -15,6 +15,15 @@ export const sectionTitleSchema = z
   .min(1, "sectionTitleLength")
   .max(200, "sectionTitleLength");
 
+/**
+ * Instructions of a section for the AI drafts (KRB-195), as the database caps
+ * them. A form posts each line break as CRLF; it counts once, as in the field.
+ */
+export const sectionInstructionsSchema = z
+  .string()
+  .transform((text) => text.replace(/\r\n?/g, "\n"))
+  .pipe(z.string().trim().max(4000, "instructionsLength"));
+
 export const uuidSchema = z.string().uuid();
 
 /** Wizard with a new organization (create_workspace_with_owner). */
@@ -49,7 +58,12 @@ export const sectionWeightSchema = z
   .transform((value) => Number(value.replace(",", ".")))
   .pipe(z.number({ invalid_type_error: "weightRange" }).min(0.01, "weightRange").max(9999.99, "weightRange"));
 
-export type WorkspaceFieldErrorKey = "nameLength" | "titleLength" | "sectionTitleLength" | "weightRange";
+export type WorkspaceFieldErrorKey =
+  | "nameLength"
+  | "titleLength"
+  | "sectionTitleLength"
+  | "instructionsLength"
+  | "weightRange";
 
 /** First error key per field, from a zod error whose messages are WorkspaceFieldErrorKey values. */
 export function workspaceFieldErrors<T extends string>(

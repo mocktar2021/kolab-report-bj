@@ -507,6 +507,7 @@
       "nameLength": "Saisissez entre 2 et 120 caractères.",
       "titleLength": "Saisissez entre 2 et 200 caractères.",
       "sectionTitleLength": "Saisissez un titre de 200 caractères au plus.",
+      "instructionsLength": "Saisissez des consignes de 4 000 caractères au plus.",
       "weightRange": "Saisissez un nombre entre 0,01 et 9 999,99."
     },
     "errors": {
@@ -522,6 +523,7 @@
       "alreadyMember": "Cette personne est déjà membre de l'espace de travail.",
       "invitationPending": "Une invitation est déjà en attente pour cette adresse. Renvoyez-la depuis la liste.",
       "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
+      "parentInvalid": "Une sous-section se place sous une section du rapport, pas sous une autre sous-section. Rechargez la page et choisissez un autre emplacement.",
       "seatLimit": "Limite de membres atteinte : l'offre {plan} compte {max, plural, one {# membre} other {# membres}}, invitations en attente comprises. Annulez une invitation, retirez un membre ou invitez cette personne comme lecteur, les lecteurs sont gratuits.",
       "seatLimitRole": "Limite de membres atteinte : l'offre {plan} compte {max, plural, one {# membre} other {# membres}}. Cette personne peut rester lecteur, ou libérez une place.",
       "seatLimitInvitee": "L'organisation qui vous invite a atteint la limite de membres de son offre. Prévenez la personne qui vous a invité, puis rouvrez ce lien.",
@@ -648,9 +650,14 @@
     "addField": "Nouvelle section",
     "addPlaceholder": "Contexte et périmètre",
     "addSubmit": "Ajouter",
+    "addPlace": "Emplacement",
+    "addPlaceTop": "À la fin du rapport",
+    "addPlaceUnder": "Sous-section de {label} {title}",
     "added": "Section « {title} » ajoutée à la fin du rapport.",
+    "addedSub": "Sous-section « {title} » ajoutée à la fin de la section « {parent} ».",
     "tocTitle": "Sommaire",
-    "reorderHint": "Faites glisser une section par sa poignée pour changer l'ordre. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
+    "subsectionsLabel": "Sous-sections de {title}",
+    "reorderHint": "Faites glisser une section ou une sous-section par sa poignée pour changer l'ordre. Une section emporte ses sous-sections. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
     "edit": "Modifier<hidden> la section {title}</hidden>",
     "documentTitle": "Texte du rapport",
     "emptySection": "Section non rédigée.",
@@ -1078,6 +1085,17 @@
       "readOnly": "Cet espace de travail est en lecture seule : le texte n'a pas été enregistré. Copiez-le si vous voulez le garder."
     }
   },
+  "SectionManage": {
+    "edit": "Modifier le titre et les consignes",
+    "titleLabel": "Titre",
+    "instructionsLabel": "Consignes pour l'IA",
+    "instructionsHelp": "Ce que la section doit contenir, facultatif. Les brouillons de l'IA suivent ces consignes. 4 000 caractères au plus.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Titre et consignes enregistrés.",
+    "instructionsTitle": "Consignes pour l'IA",
+    "subsectionOf": "Sous-section de {label} {title}"
+  },
   "Invitation": {
     "metaTitle": "Invitation",
     "title": "Rejoindre {workspace}",
@@ -1202,6 +1220,12 @@
     "backToDashboard": "Tableau de bord",
     "backToLibrary": "Modèles de prompts",
     "newTemplate": "Nouveau modèle",
+    "plan": {
+      "notice": "L'offre {plan} de votre organisation n'inclut pas les modèles personnalisés. Vous pouvez consulter et utiliser les modèles KolabReport, mais pas créer, copier ni publier de modèles propres à l'espace. Ils sont inclus dans les offres Cabinet et Institution.",
+      "noticeNoPlan": "L'offre de votre organisation n'inclut pas les modèles personnalisés. Vous pouvez consulter et utiliser les modèles KolabReport, mais pas créer, copier ni publier de modèles propres à l'espace. Ils sont inclus dans les offres Cabinet et Institution.",
+      "offersLink": "Voir les offres",
+      "disabled": "Indisponible : l'offre de votre organisation n'inclut pas les modèles personnalisés."
+    },
     "readOnlyNote": "Vous consultez les modèles en lecture seule. Les propriétaires et les administrateurs de l'espace les créent et les publient.",
     "workspaceGroup": "Modèles de l'espace",
     "globalGroup": "Modèles globaux",
@@ -1257,15 +1281,16 @@
       "template": "Modèle",
       "outputSchema": "Type de résultat",
       "modelTier": "Modèle d'IA",
-      "temperature": "Température",
-      "maxOutputTokens": "Longueur maximale",
+      "temperature": "Liberté de formulation",
+      "maxOutputTokens": "Longueur maximale du texte",
       "changelog": "Note de version"
     },
     "actions": {
       "newVersion": "Nouvelle version",
       "publish": "Publier cette version",
       "archive": "Archiver",
-      "customize": "Personnaliser"
+      "customize": "Personnaliser",
+      "copy": "Copier"
     },
     "archiveTitle": "Archiver la version publiée ?",
     "archiveDescription": "Le modèle n'aura plus de version publiée tant que vous n'en publiez pas une autre. Toutes ses versions restent dans l'historique.",
@@ -1293,8 +1318,12 @@
       "unknown": "{count, plural, one {Variable inconnue} other {Variables inconnues}} : {names}. Utilisez les variables proposées au-dessus du modèle.",
       "unclosed": "Une variable n'est pas refermée : il manque les deux accolades fermantes.",
       "invalidHint": "Corrigez le modèle pour pouvoir l'enregistrer.",
-      "temperatureHelp": "Entre 0 et 1, par exemple 0,3. Plus la valeur est basse, plus le texte est régulier.",
-      "maxOutputTokensHelp": "Entre 256 et 8 192 jetons. Un jeton fait environ 4 caractères.",
+      "temperatureHelp": "Entre 0 et 1, par exemple 0,3. Une valeur basse donne un texte plus régulier d'un brouillon à l'autre, une valeur haute des formulations plus variées.",
+      "maxOutputTokensHelp": "En jetons, l'unité de l'IA : entre 256 et 8 192. 1 000 jetons font environ 600 mots, un peu plus d'une page.",
+      "maxOutputTokensWords": "Soit environ {words, number} mots, {pages, plural, one {à peu près # page} other {à peu près # pages}}.",
+      "advanced": "Réglages avancés",
+      "advancedHelp": "Modèle d'IA, liberté de formulation et longueur maximale du texte. Les valeurs par défaut conviennent dans la plupart des cas.",
+      "advancedChanged": "Valeurs personnalisées",
       "changelogHelp": "Ce qui change par rapport à la version précédente.",
       "changelogHelpFirst": "Ce qui distingue ce modèle, si besoin.",
       "placeholderDefault": "Par défaut",
@@ -1308,6 +1337,109 @@
       "conflictVersion": "Quelqu'un a enregistré une autre version de ce modèle pendant que vous le modifiiez. Rechargez pour enregistrer votre texte à la suite de cette version : il reste dans le formulaire.",
       "conflictNew": "Un autre modèle de l'espace a été créé avec ce titre au même moment. Changez le titre ou réessayez.",
       "reload": "Recharger"
+    },
+    "start": {
+      "metaTitle": "Nouveau modèle",
+      "title": "Nouveau modèle",
+      "subtitle": "Choisissez un point de départ. Vous relirez et modifierez le modèle avant de l'enregistrer.",
+      "describeTitle": "Décrire ce que vous attendez",
+      "describeHelp": "Répondez à quelques questions, ou décrivez le modèle en quelques phrases pour que l'IA le rédige. Vous n'écrivez pas les consignes de l'IA vous-même.",
+      "describeAction": "Décrire le modèle",
+      "globalTitle": "Copier un modèle KolabReport",
+      "globalHelp": "Les modèles fournis avec l'application. La copie devient un modèle de votre espace, l'original ne change pas.",
+      "workspaceTitle": "Copier un modèle de l'espace",
+      "workspaceHelp": "Partez d'un modèle de l'espace, publié ou en brouillon. L'original ne change pas.",
+      "workspaceEmpty": "Aucun modèle propre à l'espace pour le moment.",
+      "copy": "Copier",
+      "copyLabel": "Copier « {title} »"
+    },
+    "builder": {
+      "metaTitle": "Décrire le modèle",
+      "title": "Décrire le modèle",
+      "subtitle": "Dites ce que vous attendez de la section : l'application écrit les consignes pour l'IA. Vous relirez le texte avant de l'enregistrer.",
+      "backToStart": "Nouveau modèle",
+      "modeLegend": "Comment voulez-vous décrire le modèle ?",
+      "modeForm": "Répondre à quelques questions",
+      "modeFormHelp": "Le texte est construit à partir de vos réponses, sans IA.",
+      "modeAi": "Décrire en quelques phrases",
+      "modeAiHelp": "L'IA rédige le texte à partir de votre description.",
+      "fields": {
+        "title": "Nom du modèle",
+        "outputSchema": "Type de résultat",
+        "content": "Ce que la section doit contenir",
+        "headings": "Structure attendue",
+        "tone": "Ton",
+        "length": "Longueur",
+        "missing": "Quand une information manque dans les livrables"
+      },
+      "help": {
+        "title": "Il apparaît dans la liste des modèles et dans le choix du modèle de chaque section.",
+        "content": "Les sujets à traiter et ce que vos clients attendent, en quelques phrases.",
+        "headings": "Un intertitre par ligne, dans l'ordre. Laissez vide pour que l'IA organise le texte."
+      },
+      "tones": {
+        "professionnel": "Professionnel et précis",
+        "pedagogique": "Pédagogique, pour un lecteur non spécialiste",
+        "synthetique": "Synthétique, en phrases courtes",
+        "institutionnel": "Formel et institutionnel"
+      },
+      "lengths": {
+        "courte": "Courte, environ 300 mots",
+        "moyenne": "Moyenne, environ 600 mots",
+        "longue": "Longue, environ 1 200 mots"
+      },
+      "missingOptions": {
+        "signaler": "Le signaler dans le texte",
+        "a_completer": "Laisser un repère « [À compléter] » à l'endroit concerné",
+        "lister": "Lister ce qui manque en fin de section"
+      },
+      "submit": "Créer le texte du modèle",
+      "blank": "Vous préférez écrire les consignes vous-même ?",
+      "blankAction": "Partir d'un modèle vide",
+      "errors": {
+        "titleLength": "Saisissez un nom de 2 à 200 caractères.",
+        "contentLength": "Décrivez le contenu attendu en 10 à 1 500 caractères.",
+        "headingsTooMany": "Indiquez 12 intertitres au plus.",
+        "headingLength": "Chaque intertitre doit faire 120 caractères au plus.",
+        "invalidChoice": "Choisissez une des options proposées."
+      },
+      "review": {
+        "title": "Relire et enregistrer le modèle",
+        "fromForm": "Le texte a été construit à partir de vos réponses. Relisez-le et modifiez-le si besoin, puis enregistrez-le.",
+        "fromAi": "L'IA a rédigé ce texte à partir de votre description. Relisez-le et corrigez-le avant de l'enregistrer : rien n'est enregistré pour le moment.",
+        "blank": "Écrivez les consignes que l'IA suivra, avec les variables proposées au-dessus du texte.",
+        "back": "Revenir à la description",
+        "changelogForm": "Créé avec le formulaire « Décrire le modèle ».",
+        "changelogAi": "Premier jet rédigé avec l'IA à partir d'une description."
+      }
+    },
+    "assist": {
+      "description": "Décrivez le modèle en quelques phrases",
+      "descriptionHelp": "Par exemple : une section qui présente les fuites du réseau quartier par quartier, sur un ton factuel, avec des intertitres et la liste des points à vérifier.",
+      "count": "{count, number} sur {max, number} caractères",
+      "submit": "Rédiger avec l'IA",
+      "pending": "L'IA rédige le modèle…",
+      "quota": "Ne compte pas dans les brouillons IA du mois. {limit, plural, one {# essai} other {# essais}} par personne et par jour.",
+      "unavailable": "La rédaction avec l'IA n'est pas disponible pour le moment. Répondez aux questions pour créer le texte du modèle.",
+      "notes": {
+        "unknownVariablesRemoved": "L'IA a utilisé des variables qui n'existent pas ({names}) : elles ont été retirées du texte.",
+        "unclosedBracesFixed": "Une accolade ouverte par l'IA n'était pas refermée : elle a été séparée pour ne pas être lue comme une variable.",
+        "deliverablesAdded": "Le texte ne reprenait pas les livrables : la variable {token} a été ajoutée à la fin."
+      },
+      "errors": {
+        "forbidden": "Seuls les propriétaires et les administrateurs de l'espace créent ses modèles.",
+        "descriptionTooShort": "Décrivez le modèle en 20 caractères au moins.",
+        "descriptionTooLong": "Raccourcissez la description : 2 000 caractères au plus.",
+        "invalidInput": "Vérifiez la description et le type de résultat.",
+        "readOnly": "Cet espace de travail est en lecture seule : renouvelez l'offre de l'organisation pour créer des modèles.",
+        "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution.",
+        "aiUnavailable": "La rédaction avec l'IA n'est pas disponible pour le moment. Répondez aux questions pour créer le texte du modèle.",
+        "rateLimited": "Vous avez atteint la limite du jour pour la rédaction avec l'IA. Réessayez dans {hours, plural, one {# heure} other {# heures}}, ou répondez aux questions pour créer le texte sans IA.",
+        "invalidOutput": "L'IA n'a pas rendu un modèle utilisable. Réessayez, ou reformulez la description.",
+        "timeout": "L'IA a mis trop de temps à répondre. Réessayez dans un instant.",
+        "providerError": "Le service d'IA n'a pas répondu. Réessayez dans un instant.",
+        "generic": "La rédaction n'a pas pu aboutir. Réessayez dans un instant."
+      }
     },
     "variables": {
       "section_title": {
@@ -1441,7 +1573,8 @@
         "templatesNotIncluded": "Les modèles de prompt personnalisés sont inclus dans les offres Cabinet et Institution : le déploiement n'est pas possible avec l'offre actuelle.",
         "readOnly": "Cet espace de travail est en lecture seule : renouvelez l'offre de l'organisation pour déployer ses modèles."
       }
-    }
+    },
+    "tokensWithWords": "{count, number} jetons, environ {words, number} mots"
   },
   "AiDashboard": {
     "metaTitle": "Pilotage de l'IA",
@@ -1527,6 +1660,16 @@
       "trace": "Voir la trace",
       "traceLabel": "Voir la trace de la génération du {date} (nouvel onglet)",
       "tracingOff": "Les liens « Voir la trace » apparaissent une fois le traçage des générations configuré sur le serveur."
+    },
+    "writer": {
+      "title": "Modèles rédigés avec l'IA",
+      "description": "Les appels à « Rédiger avec l'IA » sur la page d'un nouveau modèle, sur les {days} derniers jours. Ils ne comptent pas dans les brouillons.",
+      "empty": "Aucun modèle rédigé avec l'IA sur la période.",
+      "calls": "{count, plural, one {# appel} other {# appels}}",
+      "failed": "{count, plural, =0 {aucun échec} one {# échec} other {# échecs}}",
+      "tokens": "{input, number} jetons en entrée, {output, number} en sortie",
+      "cost": "Coût estimé : {cost}",
+      "costMissing": "Coût : prix non configurés"
     }
   },
   "Billing": {
@@ -1967,6 +2110,7 @@
       "confirmation": "Le texte saisi ne correspond pas. Recopiez-le exactement pour confirmer.",
       "stale": "Un espace de travail vient d'être ajouté à l'organisation. Rechargez la page, relisez la liste, puis réessayez.",
       "paymentPending": "Un paiement est en cours ou en vérification. Attendez qu'il aboutisse, puis réessayez. S'il reste bloqué, écrivez au support à {support}.",
+      "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir avant de supprimer une section.",
       "invalidInput": "Cette demande de suppression n'est pas valide. Rechargez la page.",
       "generic": "La suppression n'a pas abouti. Réessayez dans un instant."
     },
@@ -1986,6 +2130,24 @@
       "finalNote": "Ce rapport est final : sa version finale enregistrée est supprimée aussi.",
       "typed": "Saisissez « {title} » pour confirmer",
       "confirm": "Supprimer le rapport",
+      "pending": "Suppression…"
+    },
+    "section": {
+      "zoneTitle": "Supprimer la section",
+      "zoneTitleSub": "Supprimer la sous-section",
+      "zoneDescription": "La section disparaît du rapport pour tous les membres, avec ses sous-sections, son texte et les fichiers déposés. Cette action est définitive.",
+      "zoneDescriptionSub": "La sous-section disparaît du rapport pour tous les membres, avec son texte et les fichiers déposés. Cette action est définitive.",
+      "button": "Supprimer la section",
+      "buttonSub": "Supprimer la sous-section",
+      "title": "Supprimer la section ?",
+      "titleSub": "Supprimer la sous-section ?",
+      "description": "« {title} » sera supprimée du rapport pour tous les membres. Cette action est définitive.",
+      "contentsTitle": "Seront supprimés avec elle :",
+      "subsections": "{count, plural, one {# sous-section} other {# sous-sections}}",
+      "files": "{count, plural, one {# fichier déposé} other {# fichiers déposés}}",
+      "withText": "{count, plural, one {le texte rédigé de # section} other {le texte rédigé de # sections}}",
+      "nothing": "Elle n'a encore ni texte, ni fichier, ni sous-section.",
+      "confirm": "Supprimer",
       "pending": "Suppression…"
     },
     "workspace": {

@@ -214,7 +214,7 @@ test("viewers and other experts read the section without changing anything", asy
     const page = await browser.newPage();
     await signIn(page, user);
     await page.goto(sectionUrl());
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bilan thermique");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("1. Bilan thermique");
     await expect(page.getByLabel("Statut de la section")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Choisir des fichiers" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Supprimer/ })).toHaveCount(0);

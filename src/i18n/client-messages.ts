@@ -41,7 +41,16 @@ export const CLIENT_MESSAGE_SCOPES = {
   /** /fr/compte: name, transfer and deletion forms. Auth for the password field and the captcha. */
   account: ["Account", "Auth"],
   prompts: ["Prompts"],
-  section: ["AiDraft", "Deliverables", "Prompts.outputSchemas", "SectionEditor", "SectionStatus"],
+  section: [
+    "AiDraft",
+    "Deliverables",
+    "Prompts.outputSchemas",
+    "SectionEditor",
+    "SectionManage",
+    "SectionStatus",
+    "Workspaces.errors",
+    "Workspaces.fieldErrors",
+  ],
   report: ["Report", "ReportExport", "ReportStatus", "SectionStatus", "Workspaces"],
   /** The organization's billing page, its billing details form and the payment return page. */
   billing: ["Billing.checkout", "Billing.offers", "Billing.page.details", "Billing.return"],

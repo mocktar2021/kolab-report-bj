@@ -47,3 +47,17 @@ export const PROMPT_LIMITS = {
   maxOutputTokensMin: 256,
   maxOutputTokensMax: 8192,
 } as const;
+
+/**
+ * French words the AI writes for a number of tokens, rounded to 50: about
+ * 0.6 word per token once the JSON of the answer is counted. For the hints
+ * next to "Longueur maximale du texte", never for a limit.
+ */
+export function approximateWords(tokens: number): number {
+  return Math.max(50, Math.round((tokens * 0.6) / 50) * 50);
+}
+
+/** Pages of about 500 words, at least one. */
+export function approximatePages(words: number): number {
+  return Math.max(1, Math.round(words / 500));
+}

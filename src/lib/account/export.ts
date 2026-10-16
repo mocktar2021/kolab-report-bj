@@ -27,6 +27,8 @@ export type AccountExportSources = {
   sectionsAssigned: Row[];
   deliverablesUploaded: Row[];
   aiGenerations: Row[];
+  /** "Rédiger avec l'IA" calls (KRB-198): usage only, the text is never kept. */
+  templateWriterCalls: Row[];
   reportExports: Row[];
   statusChanges: Row[];
   notifications: Row[];
@@ -49,6 +51,7 @@ export type AccountExport = {
   sections_assigned: Row[];
   deliverables_uploaded: Row[];
   ai_generations: Row[];
+  template_writer_calls: Row[];
   report_exports: Row[];
   status_changes: Row[];
   notifications: Row[];
@@ -117,6 +120,13 @@ export const EXPORT_COLUMNS = {
     accepted: "accepted",
     user_rating: "user_rating",
     feedback_comment: "feedback_comment",
+  },
+  templateWriterCalls: {
+    id: "id",
+    workspace_id: "workspace_id",
+    created_at: "created_at",
+    model: "model",
+    status: "status",
   },
   reportExports: {
     id: "id",
@@ -214,6 +224,7 @@ export function buildAccountExport(sources: AccountExportSources, exportedAt: Da
     sections_assigned: pickAll(sources.sectionsAssigned, c.sectionsAssigned),
     deliverables_uploaded: pickAll(sources.deliverablesUploaded, c.deliverablesUploaded),
     ai_generations: pickAll(sources.aiGenerations, c.aiGenerations),
+    template_writer_calls: pickAll(sources.templateWriterCalls, c.templateWriterCalls),
     report_exports: pickAll(sources.reportExports, c.reportExports),
     status_changes: pickAll(sources.statusChanges, c.statusChanges),
     notifications: pickAll(sources.notifications, c.notifications),

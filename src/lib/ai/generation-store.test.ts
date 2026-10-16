@@ -16,7 +16,7 @@ beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   vi.mocked(createAdminClient).mockReturnValue({ rpc } as unknown as ReturnType<typeof createAdminClient>);
   rpc.mockImplementation(async (name: string) =>
-    name === "claim_ai_cost_alert" ? { data: 12.5, error: null } : { data: null, error: null },
+    name === "claim_ai_daily_cost_alert" ? { data: 12.5, error: null } : { data: null, error: null },
   );
 });
 
@@ -66,7 +66,7 @@ describe("checkDailyCost", () => {
   it("sends nothing while the day is under the threshold or already claimed", async () => {
     rpc.mockResolvedValue({ data: null, error: null });
     await checkDailyCost(alert);
-    expect(rpc).toHaveBeenCalledWith("claim_ai_cost_alert", { p_threshold: 10 });
+    expect(rpc).toHaveBeenCalledWith("claim_ai_daily_cost_alert", { p_threshold: 10 });
     expect(sendEmail).not.toHaveBeenCalled();
   });
 

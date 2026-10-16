@@ -97,7 +97,8 @@ export type ContextDeliverable = {
 export type ContextInput = {
   workspaceName: string;
   report: { title: string; description: string | null };
-  section: { title: string; instructions: string | null };
+  /** parentTitle: the section a subsection belongs to (KRB-195), null for a section. */
+  section: { title: string; instructions: string | null; parentTitle?: string | null };
   deliverables: ContextDeliverable[];
 };
 

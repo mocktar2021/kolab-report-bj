@@ -316,13 +316,11 @@ test("read-only: the database refuses writes in a user's name, and deletes still
     .insert({ workspace_id: setup.workspaceId, report_id: setup.reportId, title: "À supprimer" })
     .select("id")
     .single();
-  const { data: deleted, error: deleteError } = await owner
-    .from("report_sections")
-    .delete()
-    .eq("id", added!.id)
-    .select("id");
+  const { data: deleted, error: deleteError } = await owner.rpc("delete_report_section", {
+    p_section_id: added!.id,
+  });
   expect(deleteError).toBeNull();
-  expect(deleted).toHaveLength(1);
+  expect(deleted).toMatchObject({ section_id: added!.id });
 });
 
 test("read-only: the expert reads the section and is told who can renew", async ({ page }) => {
