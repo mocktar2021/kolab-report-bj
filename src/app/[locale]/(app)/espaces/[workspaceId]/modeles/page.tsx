@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronRight, Plus, Split } from "lucide-react";
 import { ReadOnlyNotice } from "@/components/billing/read-only-notice";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { getReadOnlyReason } from "@/lib/billing/banner";
+import { getTemplatePlan, templatesBlocked } from "@/lib/prompts/plan";
 import { listActiveRollouts, type ActiveRollout } from "@/lib/prompts/rollouts";
 import { listPromptTemplates, type PromptTemplateSummary } from "@/lib/prompts/server";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +14,7 @@ import { isManager } from "@/lib/workspaces/roles";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { GlobalBadge, PromptStatusBadge } from "./prompt-badges";
+import { TemplatesPlanNotice } from "./templates-plan-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +39,16 @@ export default async function PromptLibraryPage({
   if (!access) notFound();
 
   const supabase = await createClient();
-  const [{ data: workspace }, templates, allRollouts, readOnly] = await Promise.all([
+  const [{ data: workspace }, templates, allRollouts, plan] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     listPromptTemplates(workspaceId),
     listActiveRollouts(workspaceId),
-    getReadOnlyReason(workspaceId),
+    getTemplatePlan(workspaceId),
   ]);
   if (!workspace || !templates) notFound();
+  const { readOnly } = plan;
+  // Read-only first (KRB-178), then a plan without custom templates (KRB-198).
+  const blocked = templatesBlocked(plan);
 
   // A global rollout limited to another workspace of the user doesn't reach this one.
   const rollouts: RolloutMap = new Map(
@@ -77,14 +81,14 @@ export default async function PromptLibraryPage({
             {t("subtitle", { workspace: workspace.name })}
           </p>
         </div>
-        {manager && readOnly ? (
+        {manager && blocked ? (
           <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
             <Button type="button" shape="pill" disabled aria-describedby="new-template-disabled">
               <Plus aria-hidden="true" />
               {t("newTemplate")}
             </Button>
-            <p id="new-template-disabled" className="text-xs text-muted-foreground">
-              {tErrors("readOnlyDisabled")}
+            <p id="new-template-disabled" className="max-w-xs text-xs text-muted-foreground sm:text-right">
+              {blocked === "readOnly" ? tErrors("readOnlyDisabled") : t("plan.disabled")}
             </p>
           </div>
         ) : manager ? (
@@ -96,7 +100,11 @@ export default async function PromptLibraryPage({
           </Button>
         ) : null}
       </header>
-      {readOnly ? <ReadOnlyNotice reason={readOnly} className="mt-6" /> : null}
+      {readOnly ? (
+        <ReadOnlyNotice reason={readOnly} className="mt-6" />
+      ) : blocked === "templatesNotIncluded" ? (
+        <TemplatesPlanNotice plan={plan} className="mt-6" />
+      ) : null}
 
       {manager ? null : (
         <p className="mt-6 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
