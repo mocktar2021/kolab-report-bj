@@ -299,14 +299,16 @@ create temp table day_spend as
 select
   coalesce((select sum(g.cost_estimate) from public.ai_generations g
             where g.created_at >= (now() at time zone 'utc')::date::timestamp at time zone 'utc'), 0)
+  + coalesce((select sum(c.cost_estimate) from public.prompt_assist_calls c
+              where c.created_at >= (now() at time zone 'utc')::date::timestamp at time zone 'utc'), 0)
   + coalesce((select sum(c.cost_estimate) from public.plan_import_calls c
               where c.created_at >= (now() at time zone 'utc')::date::timestamp at time zone 'utc'), 0) as spent;
-select is(public.claim_ai_cost_alert((select spent from day_spend)), null, 'at the threshold, no alert');
+select is(public.claim_ai_daily_cost_alert((select spent from day_spend)), null, 'at the threshold, no alert');
 update public.plan_import_calls set cost_estimate = 2.5 where id = pg_temp.kept_id('after_stale');
-select is(public.claim_ai_cost_alert((select spent from day_spend)), (select spent from day_spend) + 2.5,
+select is(public.claim_ai_daily_cost_alert((select spent from day_spend)), (select spent from day_spend) + 2.5,
   'a reading''s cost passes the threshold');
 select pg_temp.act_as('owner');
-select throws_ok($$select public.claim_ai_cost_alert(0)$$, '42501', null, 'only the server claims the alert');
+select throws_ok($$select public.claim_ai_daily_cost_alert(0)$$, '42501', null, 'only the server claims the alert');
 
 -- The ledger outlives the workspace ------------------------------------------------------------
 select pg_temp.act_as_server();

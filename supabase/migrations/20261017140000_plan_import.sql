@@ -15,7 +15,7 @@
 -- * plan_import_calls keeps one row per reading, with the model, tokens and
 --   estimated cost, so the AI dashboard and the daily cost alert see the
 --   spend. Neither the file nor its text is kept.
--- * claim_ai_cost_alert adds these calls to the day's spend.
+-- * claim_ai_daily_cost_alert adds these calls to the day's spend.
 --
 -- Error codes:
 --   KR052  the report would have more than 500 sections
@@ -367,9 +367,10 @@ $$;
 -- -----------------------------------------------------------------------------
 -- Daily cost alert
 -- -----------------------------------------------------------------------------
--- Same as in 20261014000000_ai_observability_rollouts.sql, with the plan
--- readings in the day's spend.
-create or replace function public.claim_ai_cost_alert(p_threshold numeric)
+-- Same as in 20261017120000_prompt_assist.sql, with the plan readings in the
+-- day's spend. The app calls this one; claim_ai_cost_alert stays as it was
+-- for the app version running during a deploy.
+create or replace function public.claim_ai_daily_cost_alert(p_threshold numeric)
 returns numeric
 language plpgsql
 security definer
@@ -382,6 +383,7 @@ declare
 begin
   select
     coalesce((select sum(g.cost_estimate) from public.ai_generations g where g.created_at >= day_from), 0)
+    + coalesce((select sum(c.cost_estimate) from public.prompt_assist_calls c where c.created_at >= day_from), 0)
     + coalesce((select sum(c.cost_estimate) from public.plan_import_calls c where c.created_at >= day_from), 0)
   into spent;
   if spent <= p_threshold then
@@ -412,5 +414,5 @@ grant execute on function public.finish_plan_import_call(uuid, uuid, text, text,
 revoke all on function public.plan_import_metrics(uuid, timestamptz) from public, anon;
 grant execute on function public.plan_import_metrics(uuid, timestamptz) to authenticated;
 
-revoke all on function public.claim_ai_cost_alert(numeric) from public, anon, authenticated;
-grant execute on function public.claim_ai_cost_alert(numeric) to service_role;
+revoke all on function public.claim_ai_daily_cost_alert(numeric) from public, anon, authenticated;
+grant execute on function public.claim_ai_daily_cost_alert(numeric) to service_role;
