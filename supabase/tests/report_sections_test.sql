@@ -26,7 +26,7 @@ select throws_ok($$insert into public.report_sections (workspace_id, report_id, 
 
 select pg_temp.act_as('owner');
 select is((select completed_at is not null from public.report_sections where id = pg_temp.id('s2')), true, 'completed sections get completed_at');
-select is(pg_temp.affected($$delete from public.report_sections where id = pg_temp.id('s3')$$), 1, 'owner can delete a section');
+select lives_ok($$select public.delete_report_section(pg_temp.id('s3'))$$, 'owner can delete a section');
 
 select pg_temp.act_as('outsider');
 select is((select count(*)::int from public.report_sections where workspace_id = pg_temp.id('w1')), 0, 'outsider cannot see w1 sections');

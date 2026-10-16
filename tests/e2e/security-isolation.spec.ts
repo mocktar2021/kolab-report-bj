@@ -242,8 +242,9 @@ test("a manager of B changes nothing of A, directly or through the functions", a
     .eq("id", a.sectionId)
     .select("id");
   expect(changed).toEqual([]);
-  const { data: removed } = await api.from("report_sections").delete().eq("id", a.sectionId).select("id");
-  expect(removed).toEqual([]);
+  // Sections are deleted through delete_report_section only (KRB-195).
+  const { error: removed } = await api.from("report_sections").delete().eq("id", a.sectionId);
+  expect(removed?.code).toBe("42501");
   const { error: added } = await api
     .from("report_sections")
     .insert({ workspace_id: a.workspaceId, report_id: a.reportId, title: "Ajout" });
@@ -258,6 +259,7 @@ test("a manager of B changes nothing of A, directly or through the functions", a
       p_expected_version: new Date().toISOString(),
     }),
     api.rpc("reorder_report_sections", { p_report_id: a.reportId, p_section_ids: [a.sectionId] }),
+    api.rpc("delete_report_section", { p_section_id: a.sectionId }),
     api.rpc("transition_report_status", { p_report_id: a.reportId, p_from: "in_review", p_to: "draft" }),
     api.rpc("accept_ai_generation", {
       p_generation_id: a.generationId,
