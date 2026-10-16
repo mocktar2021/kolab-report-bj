@@ -29,11 +29,12 @@ import type { EditorValues } from "./editor-values";
 type Field = keyof EditorValues;
 type FieldErrors = Partial<Record<string, PromptFieldErrorKey>>;
 
+// In the order of the form, so the first field in error gets the focus.
 const FIELD_IDS: Record<Field, string> = {
   title: "prompt-title",
   description: "prompt-description",
-  template: "prompt-template",
   outputSchema: "prompt-output-schema",
+  template: "prompt-template",
   modelTier: "prompt-model-tier",
   temperature: "prompt-temperature",
   maxOutputTokens: "prompt-max-output-tokens",
