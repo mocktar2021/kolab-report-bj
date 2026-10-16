@@ -2,6 +2,7 @@ import { memo } from "react";
 import { useTranslations } from "next-intl";
 import { Markdown } from "@/components/markdown";
 import { StatusBadge } from "@/components/status-badge";
+import { cn } from "@/lib/utils";
 import { EditLink, sectionAnchor, type SectionRowData } from "./section-list";
 
 export type ReportSection = SectionRowData & {
@@ -16,9 +17,10 @@ type ReportDocumentProps = {
 
 /**
  * The full text of the report, section after section, for every member.
- * Section titles are h3 under the "Texte du rapport" h2. In the text, #, ##
- * and ### become h4 (drafts use ###), deeper headings h5 and h6, as on the
- * section page.
+ * Section titles are h3 under the "Texte du rapport" h2, subsection titles h4
+ * (KRB-195). In the text of a section, #, ## and ### become h4 (drafts use
+ * ###), deeper headings h5 and h6, as on the section page; in a subsection,
+ * one level lower.
  */
 export function ReportDocument({ workspaceId, sections }: ReportDocumentProps) {
   const t = useTranslations("Report");
@@ -35,11 +37,12 @@ export function ReportDocument({ workspaceId, sections }: ReportDocumentProps) {
         </h2>
       </div>
       <div className="divide-y">
-        {sections.map((section, index) => (
+        {sections.map((section) => (
           <SectionArticle
             key={section.id}
             workspaceId={workspaceId}
-            index={index}
+            label={section.label}
+            level={section.level}
             id={section.id}
             title={section.title}
             content={section.content}
@@ -56,10 +59,9 @@ export function ReportDocument({ workspaceId, sections }: ReportDocumentProps) {
 
 type SectionArticleProps = Pick<
   ReportSection,
-  "id" | "title" | "content" | "status" | "assigneeName" | "mine" | "canEdit"
+  "id" | "title" | "label" | "level" | "content" | "status" | "assigneeName" | "mine" | "canEdit"
 > & {
   workspaceId: string;
-  index: number;
 };
 
 /**
@@ -68,7 +70,8 @@ type SectionArticleProps = Pick<
  */
 const SectionArticle = memo(function SectionArticle({
   workspaceId,
-  index,
+  label,
+  level,
   id,
   title,
   content,
@@ -80,13 +83,22 @@ const SectionArticle = memo(function SectionArticle({
   const t = useTranslations("Report");
   const anchor = sectionAnchor(id);
   const text = content?.trim() ? content : null;
+  const sub = level === 2;
+  const Title = sub ? "h4" : "h3";
 
   return (
-    <article id={anchor} aria-labelledby={`${anchor}-title`} className="px-5 py-6 sm:px-8">
+    <article
+      id={anchor}
+      aria-labelledby={`${anchor}-title`}
+      className={cn("py-6 pr-5 sm:pr-8", sub ? "pl-9 sm:pl-14" : "pl-5 sm:pl-8")}
+    >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <h3 id={`${anchor}-title`} className="min-w-0 break-words text-h3 text-foreground">
-          <span className="mr-1 tabular-nums text-muted-foreground">{index + 1}.</span> {title}
-        </h3>
+        <Title
+          id={`${anchor}-title`}
+          className={cn("min-w-0 break-words text-foreground", sub ? "text-lg font-semibold" : "text-h3")}
+        >
+          <span className="mr-1 tabular-nums text-muted-foreground">{label}</span> {title}
+        </Title>
         {canEdit ? (
           <EditLink
             workspaceId={workspaceId}
@@ -107,7 +119,7 @@ const SectionArticle = memo(function SectionArticle({
       {text ? (
         <div className="mt-4 max-w-3xl break-words text-sm leading-relaxed">
           <Markdown
-            headingLevel={4}
+            headingLevel={sub ? 5 : 4}
             headings="flatten"
             links="text"
             fallback={<p className="text-destructive">{t("contentError")}</p>}

@@ -63,7 +63,7 @@ describe("buildReportDocx", () => {
     expect(document).toContain("TOC \\h \\o &quot;1-3&quot;");
     expect(document).toMatch(/<w:fldChar w:fldCharType="begin" w:dirty="true"\/>/);
     expect(settings).toMatch(/<w:updateFields(?: w:val="(?:true|1)")?\/>/);
-    expect(text(document)).toMatch(/Sommaire\n(?:.*\n)?Contexte et périmètre/);
+    expect(text(document)).toMatch(/Sommaire\n(?:.*\n)?1\. Contexte et périmètre/);
     // Each cached entry links to the bookmark on its section heading.
     for (const anchor of ["section_1", "section_2", "section_3"]) {
       expect(document).toContain(`w:anchor="${anchor}"`);
@@ -145,5 +145,39 @@ describe("buildReportDocx", () => {
     expect(text(document)).toContain("niveau 49");
     expect(document).not.toMatch(/[\u0000-\u0008]/);
     expect(document).toContain("Rapport limite");
+  });
+});
+
+describe("buildReportDocx with subsections (KRB-195)", () => {
+  const nested: ExportDocument = {
+    ...SAMPLE_DOCUMENT,
+    sections: [
+      { title: "Contexte", status: "completed", assigneeName: null, markdown: "Introduction." },
+      {
+        title: "Objectifs",
+        level: 2,
+        status: "in_progress",
+        assigneeName: null,
+        markdown: "# Cible\n\nMoins 12 %.",
+      },
+      { title: "Analyse", status: "not_started", assigneeName: null, markdown: null },
+    ],
+  };
+
+  it("numbers sections and subsections and keeps a subsection on its section's page", async () => {
+    const { document } = await parts(nested);
+    const body = text(document);
+    expect(body).toMatch(/1\. Contexte\n(?:.*\n)*1\.1 Objectifs\n(?:.*\n)*2\. Analyse/);
+    const paragraphs = document.split("</w:p>");
+    const heading = (title: string) =>
+      paragraphs.findLast((paragraph) => text(paragraph).includes(title)) ?? "";
+    expect(heading("1. Contexte")).toContain('<w:pStyle w:val="Heading1"/>');
+    expect(heading("1. Contexte")).toContain("<w:pageBreakBefore/>");
+    expect(heading("1.1 Objectifs")).toContain('<w:pStyle w:val="Heading2"/>');
+    expect(heading("1.1 Objectifs")).not.toContain("<w:pageBreakBefore/>");
+    // The # of a subsection's text is one level below its title.
+    expect(paragraphs.find((paragraph) => text(paragraph).trim() === "Cible")).toContain(
+      '<w:pStyle w:val="Heading3"/>',
+    );
   });
 });

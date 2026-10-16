@@ -118,7 +118,9 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
   const supabase = await createClient();
   const { data: section } = await supabase
     .from("report_sections")
-    .select("id, workspace_id, title, instructions, assigned_to, report:reports(title, description, status)")
+    .select(
+      "id, workspace_id, title, instructions, assigned_to, report:reports(title, description, status), parent:parent_id(title)",
+    )
     .eq("id", id.toLowerCase())
     .maybeSingle();
   if (!section?.report) return refuse(404, "notFound");
@@ -205,7 +207,11 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
       {
         workspaceName: workspace?.name ?? "",
         report: { title: section.report.title, description: section.report.description },
-        section: { title: section.title, instructions: section.instructions },
+        section: {
+          title: section.title,
+          instructions: section.instructions,
+          parentTitle: section.parent?.title,
+        },
         deliverables,
       },
       budget,

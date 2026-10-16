@@ -8,6 +8,7 @@ export type DeletionErrorKey =
   | "confirmation"
   | "stale"
   | "paymentPending"
+  | "reportFinal"
   | "invalidInput"
   | "generic";
 
@@ -20,7 +21,8 @@ export type DeletionState =
  * Maps a Postgres error code from the delete functions to a message key:
  * 42501 not allowed, P0002 not found (or not visible), KR070 the typed title
  * or name does not match, 40001 a workspace was added to the organization
- * meanwhile, KR071 a purchase is pending or in review.
+ * meanwhile, KR071 a purchase is pending or in review, KR020 the report of a
+ * section became final (delete_report_section, KRB-195).
  */
 export function deletionErrorKey(error: { code?: string | null } | null | undefined): DeletionErrorKey {
   switch (error?.code) {
@@ -34,6 +36,8 @@ export function deletionErrorKey(error: { code?: string | null } | null | undefi
       return "stale";
     case "KR071":
       return "paymentPending";
+    case "KR020":
+      return "reportFinal";
     case "22023":
     case "22P02":
       return "invalidInput";

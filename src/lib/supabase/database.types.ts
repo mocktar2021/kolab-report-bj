@@ -1853,6 +1853,7 @@ export type Database = {
       };
       delete_organization: { Args: { p_confirmation: string; p_organization_id: string }; Returns: Json };
       delete_report: { Args: { p_confirmation?: string; p_report_id: string }; Returns: Json };
+      delete_report_section: { Args: { p_section_id: string }; Returns: Json };
       delete_workspace: { Args: { p_confirmation: string; p_workspace_id: string }; Returns: Json };
       discard_ai_generation: { Args: { p_generation_id: string }; Returns: undefined };
       end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
@@ -1925,6 +1926,7 @@ export type Database = {
         Args: { p_content: string; p_expected_version: string; p_section_id: string };
         Returns: string;
       };
+      section_deletion_preview: { Args: { p_section_id: string }; Returns: Json };
       set_prompt_rollout_percent: { Args: { p_percent: number; p_rollout_id: string }; Returns: undefined };
       start_ai_generation: {
         Args: {

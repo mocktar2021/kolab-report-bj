@@ -38,7 +38,7 @@ const HEADING_CLASSES = [
  */
 export type MarkdownHeadings = "shift" | "flatten";
 
-type HeadingLevel = 3 | 4;
+type HeadingLevel = 3 | 4 | 5;
 
 const BASE_COMPONENTS: Components = {
   p: (props) => <p {...domProps(props, "mt-2 first:mt-0")} />,
