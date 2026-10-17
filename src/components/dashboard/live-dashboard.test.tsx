@@ -35,21 +35,22 @@ const realtime = vi.hoisted(() => {
 });
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
+vi.mock("@/lib/realtime/client", () => ({
+  createRealtimeClient: () => ({
     channel: (topic: string) => {
       realtime.topic = topic;
       return realtime.channel;
     },
     removeChannel: realtime.removeChannel,
     getChannels: () => [],
-    realtime: { disconnect: vi.fn(async () => "ok"), setAuth: vi.fn(async () => {}) },
+    disconnect: vi.fn(async () => "ok"),
+    setAuth: vi.fn(async () => {}),
   }),
 }));
 
 const WORKSPACE_ID = "7d6e5f40-3b2a-4c1d-8e9f-0a1b2c3d4e5f";
 
-/** Renders the component and waits for supabase-js, which it imports lazily. */
+/** Renders the component and waits for the Realtime client, which it imports lazily. */
 async function renderLive() {
   const view = render(<LiveDashboard workspaceId={WORKSPACE_ID} />);
   await act(async () => {

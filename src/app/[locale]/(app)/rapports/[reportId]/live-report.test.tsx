@@ -37,8 +37,8 @@ const realtime = vi.hoisted(() => {
 });
 
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
+vi.mock("@/lib/realtime/client", () => ({
+  createRealtimeClient: () => ({
     channel: (topic: string) => {
       realtime.created += 1;
       realtime.topic = topic;
@@ -46,13 +46,14 @@ vi.mock("@/lib/supabase/client", () => ({
     },
     removeChannel: realtime.removeChannel,
     getChannels: () => Array.from({ length: realtime.channels }),
-    realtime: { disconnect: realtime.disconnect, setAuth: vi.fn(async () => {}) },
+    disconnect: realtime.disconnect,
+    setAuth: vi.fn(async () => {}),
   }),
 }));
 
 const REPORT_ID = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
 
-/** Renders the hook and waits for supabase-js, which it imports lazily. */
+/** Renders the hook and waits for the Realtime client, which it imports lazily. */
 async function renderLive() {
   const view = render(<LiveReport reportId={REPORT_ID} />);
   await act(async () => {
@@ -190,7 +191,7 @@ describe("LiveReport", () => {
     expect(router.refresh).not.toHaveBeenCalled();
   });
 
-  it("opens no channel when the page is left before supabase-js loads", async () => {
+  it("opens no channel when the page is left before the Realtime client loads", async () => {
     const view = render(<LiveReport reportId={REPORT_ID} />);
     view.unmount();
     await act(async () => {

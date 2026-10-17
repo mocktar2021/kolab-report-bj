@@ -8,7 +8,7 @@ next-pwa is a webpack plugin, so `npm run dev` and `npm run build` run Next.js w
 
 Each build writes a new `public/sw.js`: its precache list holds the build id and the new chunk hashes. `/sw.js` is served with `Cache-Control: no-cache, no-store`, so browsers always compare against the deployed file.
 
-1. `UpdateBanner` (`src/components/pwa/update-banner.tsx`) is mounted in the locale layout and registers the worker (`register: false` in the config, so it listens before the first event).
+1. `UpdateBanner` (`src/components/pwa/update-banner.tsx`) is mounted in the locale layout and registers the worker (`register: false` in the config, so it listens before the first event). On a page a worker already controls, it registers at once. On a first visit it waits until 5 seconds after the load event: installing the worker downloads the whole precache list (143 files and 1.3 MB compressed in October 2026), and that download must not compete with the page's own files on a slow connection (KRB-172).
 2. The browser checks for a new `sw.js` on every full page load. An open tab also checks every hour, and when it comes back into view (at most once a minute).
 3. A new worker installs in the background, then waits (`skipWaiting: false`). Open tabs keep running the code they loaded.
 4. Every open tab shows "Nouvelle version disponible" with two buttons, "Mettre à jour" and "Plus tard". The banner is a `role="status"` region, reachable with Tab, and it never takes the focus.
@@ -33,7 +33,7 @@ No step by hand and no cache clearing.
 ## Test the update flow by hand
 
 1. `npm run build`, then `npx next start -p 3400`.
-2. Open http://localhost:3400/fr in Chrome. In DevTools > Application > Service workers, wait for `sw.js` to show as activated. Leave "Update on reload" unchecked: it skips the waiting step.
+2. Open http://localhost:3400/fr in Chrome. In DevTools > Application > Service workers, wait for `sw.js` to show as activated: on a first visit it registers 5 seconds after the page has loaded. Leave "Update on reload" unchecked: it skips the waiting step.
 3. Stop the server, run `npm run build` again and start it again. A new build is enough to change `sw.js`.
 4. In the open tab, click "Update" in DevTools > Application > Service workers, or run `(await navigator.serviceWorker.getRegistration()).update()` in the console. Switching to another tab and back also works after a minute.
 5. The banner shows and DevTools lists the new worker as "waiting to activate".

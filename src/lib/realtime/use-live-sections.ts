@@ -50,16 +50,16 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
 
-    // supabase-js only loads after the page is up: no other part of the page needs it.
-    void import("@/lib/supabase/client")
-      .then(async ({ createClient }) => {
+    // The Realtime client only loads after the page is up: no other part of
+    // the page needs it.
+    void import("./client")
+      .then(async ({ createRealtimeClient }) => {
         if (stopped) return;
-        const supabase = createClient();
-        // supabase-js hands the signed-in user's token to Realtime by itself, but
-        // only once it has read the session. A channel that joins before that goes
-        // in with the anon key, and Realtime refuses the subscription since anon
+        const realtime = createRealtimeClient();
+        // A channel that joins before the client has the user's token goes in
+        // with the anon key, and Realtime refuses the subscription since anon
         // cannot read report_sections. So the token comes first.
-        await supabase.realtime.setAuth();
+        await realtime.setAuth();
         if (stopped) return;
 
         let connected = false;
@@ -71,14 +71,14 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
           removed = true;
           // With no channel left, the socket would keep retrying for about a
           // minute before closing: close it now.
-          void supabase.removeChannel(channel).then(() => {
-            if (supabase.getChannels().length === 0) void supabase.realtime.disconnect();
+          void realtime.removeChannel(channel).then(() => {
+            if (realtime.getChannels().length === 0) void realtime.disconnect();
           });
         }
 
-        // A topic of its own: supabase-js hands back a channel with the same topic
+        // A topic of its own: realtime-js hands back a channel with the same topic
         // while it is still leaving, for example when Strict Mode runs the effect twice.
-        const channel = supabase
+        const channel = realtime
           .channel(`${topic}:${Math.random().toString(36).slice(2)}`)
           .on("postgres_changes", { event: "*", schema: "public", table: "report_sections", filter }, () => {
             clearTimeout(timer);
@@ -94,7 +94,7 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
         removeChannel = () => {
           if (removed) return;
           removed = true;
-          void supabase.removeChannel(channel);
+          void realtime.removeChannel(channel);
         };
 
         // What realtime-js 2.117 does: when the socket drops, a joined channel
@@ -121,7 +121,7 @@ export function useLiveSections({ topic, filter, onChange }: LiveSectionsOptions
       })
       .catch(() => {
         // Offline, for example: the page keeps working without live updates.
-        console.debug("live-sections: could not load the Supabase client");
+        console.debug("live-sections: could not start Realtime");
       });
 
     return () => {

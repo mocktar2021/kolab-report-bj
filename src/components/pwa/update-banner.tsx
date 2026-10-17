@@ -17,6 +17,8 @@ type Workbox = Window["workbox"];
 export const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000;
 /** A tab coming back into view asks too, at most this often. */
 export const VISIBLE_CHECK_GAP = 60 * 1000;
+/** On a first visit, the worker registers this long after the page has loaded. */
+export const FIRST_REGISTER_DELAY = 5 * 1000;
 
 type Status = "hidden" | "shown" | "unsaved" | "updating";
 
@@ -99,15 +101,32 @@ export function UpdateBanner() {
     container.addEventListener("controllerchange", onControllerChange);
     document.addEventListener("visibilitychange", onVisibilityChange);
     const timer = window.setInterval(check, UPDATE_CHECK_INTERVAL);
-    void register(workbox).then((result) => {
-      registration.current = result;
-      offer(result?.waiting);
-    });
+    const start = () => {
+      void register(workbox).then((result) => {
+        registration.current = result;
+        offer(result?.waiting);
+      });
+    };
+
+    // Under a worker already, registering only looks for a new version: right
+    // away. On a first visit it installs the worker, which then downloads the
+    // whole app to precache it, about 1.3 MB: only once the page has loaded,
+    // and a few seconds more, so that download does not compete with the
+    // page's own files on a slow connection (KRB-172).
+    let firstRegister: number | undefined;
+    const startLater = () => {
+      firstRegister = window.setTimeout(start, FIRST_REGISTER_DELAY);
+    };
+    if (controlled) start();
+    else if (document.readyState === "complete") startLater();
+    else window.addEventListener("load", startLater, { once: true });
 
     return () => {
       workbox.removeEventListener("waiting", onWaiting);
       container.removeEventListener("controllerchange", onControllerChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("load", startLater);
+      window.clearTimeout(firstRegister);
       window.clearInterval(timer);
     };
   }, []);

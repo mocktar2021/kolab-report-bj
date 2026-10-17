@@ -5,6 +5,14 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      lighthouse_only:
+        # About 7 minutes instead of 25, to measure a branch before the merge
+        # (KRB-172). Only off master: on master every job runs, since a green
+        # run there deploys staging.
+        description: Lighthouse only (not on master)
+        type: boolean
+        default: false
 
 # A new push to the same pull request cancels the run that is still going.
 concurrency:
@@ -48,6 +56,7 @@ jobs:
 
   checks:
     name: Lint, typecheck, unit tests, build
+    if: ${{ !(inputs.lighthouse_only && github.ref != 'refs/heads/master') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -104,7 +113,7 @@ jobs:
     needs: changes
     # Skipped when only docs/ or Markdown files changed. Runs when the
     # changes job fails, so a broken check never skips the tests.
-    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && !(inputs.lighthouse_only && github.ref != 'refs/heads/master') }}
     runs-on: ubuntu-latest
     # 15 to 20 minutes with 151 tests on one worker, and 30% more on a slow
     # runner. Past 20 minutes on a normal runner, split the Playwright suite
@@ -209,9 +218,27 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Lighthouse CI
-        # Mobile, 3 runs on /fr/connexion and the signed-in /fr/tableau-de-bord.
-        # Fails under the KRB-25 scores (lighthouserc.cjs, docs/performance.md).
-        run: npx lhci autorun
+        # Mobile, 5 runs on /fr/connexion and 5 on the signed-in
+        # /fr/tableau-de-bord, each in its own Chrome. Fails under the KRB-25
+        # scores (lighthouserc.cjs, docs/performance.md).
+        run: sh scripts/lighthouse-ci.sh
+
+      - name: Lighthouse scores
+        # The score of every run, and what costs the most on the median run:
+        # lhci only prints the assertions that fail (KRB-172).
+        if: always()
+        run: node scripts/lighthouse-summary.mjs
+
+      - name: Dashboard trace
+        # What the long tasks of the dashboard are made of, on manual
+        # Lighthouse-only runs (KRB-172).
+        if: ${{ !cancelled() && inputs.lighthouse_only }}
+        run: |
+          npm run start > /dev/null 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/fr/connexion && break; sleep 1; done
+          profile=$(mktemp -d)
+          node scripts/lighthouse-profile.mjs "$profile"
+          LHCI_PROFILE="$profile" node scripts/lighthouse-trace.mjs http://localhost:3000/fr/tableau-de-bord
 
       - name: Keep Lighthouse reports
         if: always()

@@ -1,6 +1,6 @@
 # Performance
 
-Lighthouse checks the sign-in page and the signed-in dashboard on every push to master and on a manual run of CI (KRB-153, KRB-190). This page covers the targets, how to run Lighthouse yourself, the CI job, the budgets, and what KRB-154 changed to get there.
+Lighthouse checks the sign-in page and the signed-in dashboard on every push to master and on a manual run of CI (KRB-153, KRB-190). This page covers the targets, how to run Lighthouse yourself, the CI job, the budgets, and what KRB-154, KRB-207 and KRB-172 changed.
 
 ## Targets
 
@@ -8,12 +8,12 @@ From story KRB-25, Lighthouse mobile on the production build:
 
 | Category | Target | In CI |
 | --- | --- | --- |
-| Performance | 85 or more | error, fails the job (dashboard: 65 until KRB-172) |
+| Performance | 85 or more | error, fails the job (dashboard: 75 for now, see "Not fixed yet") |
 | Accessibility | 95 or more | error, fails the job |
 | Best practices | 95 or more | error, fails the job |
 | JavaScript and total transfer | budgets below | warning only |
 
-Each page runs 5 times and the assertion uses the median score. With 3 runs, one slow run on a CI runner was enough to fail the job (KRB-210). Lighthouse 12 and later has no PWA category: installability is checked elsewhere.
+Each page runs 5 times, each time in a new Chrome, and the assertion uses the median score. With 3 runs, one slow run on a CI runner was enough to fail the job (KRB-210). Lighthouse 12 and later has no PWA category: installability is checked elsewhere.
 
 "Mobile" is the Lighthouse default: Moto G Power screen, slow 4G and a 4x CPU slowdown. Throttling is simulated, so the score depends on the CPU of the machine that runs it. The report shows that machine's benchmark index under "CPU/Memory Power". Below about 1000, Lighthouse warns that the host is slow and the performance score drops.
 
@@ -25,16 +25,18 @@ You need the local stack with its seed (the demo user `awa.dossou@kolabreport.te
 npx supabase start
 npm run build
 npx playwright install chromium   # once
-npx lhci autorun
+sh scripts/lighthouse-ci.sh
+node scripts/lighthouse-summary.mjs
 ```
 
-`lhci autorun` starts `npm run start` on port 3000, signs in through `scripts/lighthouse-login.cjs`, runs Lighthouse 5 times per page, checks the assertions and writes the reports to `.lighthouseci/reports/`. Open the `.report.html` files in a browser.
+`scripts/lighthouse-ci.sh` starts `next start` on port 3000 and runs Lighthouse 5 times on the sign-in page. It then signs the demo user in once, in a Chrome profile (`scripts/lighthouse-profile.mjs`), and runs Lighthouse 5 times on the dashboard from that profile. Each run starts its own Chrome. The script checks the assertions, fails when a run ended on another page than the one asked for (the sign-in page, when the profile has no session), and writes the reports to `.lighthouseci/reports/` in any case. `scripts/lighthouse-summary.mjs` prints the score of every run and what cost the most on the median run. Open the `.report.html` files in a browser for the rest.
 
 | You want to | Run |
 | --- | --- |
-| Use a server you already started, on another port | `LHCI_BASE_URL=http://localhost:3200 npx lhci autorun` |
-| Use another Chrome | `CHROME_PATH=/path/to/chrome npx lhci autorun` |
-| Sign in as another seeded user | `LHCI_EMAIL=... LHCI_PASSWORD=... npx lhci autorun` |
+| Use a server you already started, on another port | `LHCI_BASE_URL=http://localhost:3200 sh scripts/lighthouse-ci.sh` |
+| Use another Chrome | `CHROME_PATH=/path/to/chrome sh scripts/lighthouse-ci.sh` |
+| Sign in as another seeded user | `LHCI_EMAIL=... LHCI_PASSWORD=... sh scripts/lighthouse-ci.sh` |
+| See what the long tasks of one load are made of | `node scripts/lighthouse-profile.mjs /tmp/lh-profile`, then `LHCI_PROFILE=/tmp/lh-profile node scripts/lighthouse-trace.mjs http://localhost:3000/fr/tableau-de-bord` |
 | Look at one page by hand | Chrome DevTools > Lighthouse > Mobile, on `npm run start` |
 
 Never measure `npm run dev`: it ships unminified code and React's development build, so the numbers mean nothing.
@@ -48,8 +50,10 @@ The `Lighthouse` job in `.github/workflows/ci.yml` runs next to the end-to-end j
 1. `npm ci`, then `npx supabase start`, which applies the migrations and `supabase/seed.sql`.
 2. `scripts/ci-env-local.sh` writes `.env.local` from `supabase status`, the same file the end-to-end job uses.
 3. `npm run build` with the `.next/cache` of the end-to-end job, and `npx playwright install --with-deps chromium`.
-4. `npx lhci autorun` with `lighthouserc.cjs`.
+4. `sh scripts/lighthouse-ci.sh` with `lighthouserc.cjs`, then `scripts/lighthouse-summary.mjs` prints the score of every run in the job log.
 5. The reports go up as the `lighthouse-reports` artifact (14 days), pass or fail.
+
+To measure a branch before the merge, run CI by hand on it with **Lighthouse only** checked (**Actions > CI > Run workflow**). The checks and the end-to-end tests are skipped, so it takes about 7 minutes instead of 25, and a last step traces one dashboard load with `scripts/lighthouse-trace.mjs`. On `master` the option is ignored: every job runs, since a green run there deploys staging.
 
 It is its own job because both jobs need about the same setup (stack, build, Chromium). Run in parallel, Lighthouse adds no wall-clock time to CI. As the last step of the end-to-end job it would add about 3.5 minutes to every run (10 Lighthouse runs and the sign-in). It also measures a freshly seeded database, while the end-to-end tests leave their own workspaces and sections behind.
 
@@ -61,7 +65,7 @@ KRB-25 mentions previews. Vercel previews sit behind Vercel Authentication and u
 
 ### When the job fails
 
-1. Download `lighthouse-reports` from the run and open the HTML report of the failing page.
+1. Read the "Lighthouse scores" step of the job: the score of every run, the metrics of the median run, its costliest scripts and its long tasks. For more, download `lighthouse-reports` and open the HTML report of the failing page.
 2. Look at the benchmark index first. A slow runner lowers performance for every page, so a score just under 85 with a low index can be the runner: run the job again once. A second failure is real.
 3. For performance, start with "Largest Contentful Paint element" and "Avoid long main-thread tasks". For accessibility and best practices, the failing audits name the element.
 
@@ -74,7 +78,7 @@ Transfer sizes, warnings only, so a bigger page shows up in the run without bloc
 | `/fr/connexion` | 164 KiB, 190 KiB | 325 KiB, 375 KiB |
 | `/fr/tableau-de-bord` | 288 KiB, 335 KiB | 499 KiB, 575 KiB |
 
-The dashboard numbers include supabase-js, which loads right after hydration for Realtime (about 70 KiB). The service worker fetches the page and its files a second time after load (see below), and the total counts that too.
+The dashboard numbers include supabase-js, which loaded right after hydration for Realtime (about 70 KiB). Since KRB-172, Realtime alone is 17 KiB and the dashboard measures 274 KiB of JavaScript. The service worker fetches the page and its files a second time after load (see below), and the total counts that too.
 
 Change a budget in `lighthouserc.cjs` when a page grows on purpose, and say why in the commit.
 
@@ -114,14 +118,32 @@ The "Mot de passe oublié ?" link of the sign-in form prefetched the reset page.
 
 The script budget of the sign-in page (190 KiB) stays a warning at 191 KiB. Before a framework upgrade, run CI by hand on its branch to see Lighthouse (`docs/ci.md`): pull requests do not run it.
 
+## What KRB-172 changed
+
+Measured on the CI runner with manual Lighthouse-only runs of CI, 5 runs per page.
+
+1. **Realtime without supabase-js.** The dashboard and the master report loaded supabase-js after hydration only for Realtime: 240 kB minified, a task of about 375 ms (simulated), 325 ms of total blocking time. `src/lib/realtime/client.ts` now uses `@supabase/realtime-js` alone (57 kB) with the access token from `/api/realtime/token`. That route returns the token of the session cookie, after `getUser()` has checked it with Supabase Auth and refreshed it when it had expired. The dashboard's JavaScript went from 326 to 274 KiB. `src/lib/supabase/client.ts` is gone, so supabase-js no longer reaches the browser.
+2. **Service worker after the load on a first visit.** Installing the worker downloads the whole precache, 143 files and 1.3 MB compressed. On a first visit it now registers 5 seconds after the load event instead of during hydration (`docs/pwa.md`).
+3. **One Chrome per Lighthouse run.** Lighthouse CI shared one Chrome between all the runs of a page, because a puppeteerScript signed in. On the runner, every run then landed in the renderer process of the run before. Two runs out of three, the garbage collection of that old heap started when the next page committed: a task of 150 to 250 ms with no measured work in it, 600 to 1,000 ms once simulated, across first paint. Those runs scored 70 to 82, the others 87 to 96, and two runs of CI on the same commit gave medians of 75 and 89. Each run now starts its own Chrome, as Lighthouse does by default, and the dashboard runs start from a Chrome profile where the demo user is signed in. The old renderer also kept the scripts it had compiled, so the runs without that collection were a little fast: a new Chrome is a first visit.
+
+| `/fr/tableau-de-bord` | CI runs | Medians | Single runs |
+| --- | --- | --- | --- |
+| Before | 3 | 79, 73, 79 | 66 to 89 |
+| Item 1 | 1 | 82 | 75 to 96 |
+| Items 1 and 2 | 3 | 75, 89, 74 | 69 to 92 |
+| Items 1 and 2, one Chrome per run | 1 | 81 | 79 to 86 |
+
+The sign-in page gives 90 to 95 with one Chrome per run (median 93), against 77 to 98 before.
+
+Also tried and dropped: `experimental.inlineCss`. The HTML of the sign-in page grew from 10 to 56 KiB compressed, and LCP did not move. Lighthouse counts a script that ran before the observed first paint as needed for LCP. On a fast machine the async chunks of Next.js run before the first frame, so LCP sits around 3 s on both pages while first paint is at 1.1 to 1.2 s.
+
 ## Not fixed yet
 
-The dashboard is still under the performance target: 67 to 71 here, against 85. Until the work below lands (KRB-172), `lighthouserc.cjs` fails the dashboard under 65 instead of 85, so the job stays green and still catches a regression. What is left, largest first:
+The dashboard is still under the performance target: median 81 with one Chrome per run (single runs 79 to 86), against 85. `lighthouserc.cjs` fails it under 75 until the work below lands. About 120 ms less total blocking time would put the median over 85. What is left, largest first:
 
 | Cost | Where | Way out |
 | --- | --- | --- |
-| supabase-js, 240 kB minified, one long task of 0.5 to 1.2 s (simulated) right after hydration | `useLiveSections` for Realtime, dashboard and master report | Subscribe with `@supabase/realtime-js` alone (58 kB) and an access token from the session, or start Realtime later. Starting it on the first idle moment after load did not help: Lighthouse still records it. |
-| Hydration of the client app shell, about 1 s (simulated) | `AppShell`, `Sidebar`, Radix dropdowns (96 kB minified) | Render the sidebar on the server with small client islands. Below `lg` the sidebar is hidden but still rendered and hydrated. |
+| Hydration of the client app shell. On the median run: a 258 ms task in the React DOM chunk, 117 ms in motion's chunk, 112 and 60 ms in the Next.js runtime (simulated) | `AppShell`, `Sidebar`, Radix dropdowns, motion's `LazyMotion` | Render the sidebar on the server with small client islands. Below `lg` the sidebar is hidden but still rendered and hydrated. |
 | Server response, about 450 ms | the layout and the page each query Supabase several times (profile, workspaces, notifications, dashboard data, reports), after `getUser` in the proxy | Fewer round trips, or one RPC for the dashboard data. |
 | A second fetch of the page and of every script and stylesheet after load | `cacheOnFrontEndNav` and `aggressiveFrontEndNavCaching` in `next.config.mjs` | The service worker fetches the current page again (a second server render on signed-in pages) and every `<script>` and `<link>` in it, including the `nomodule` polyfills (40 kB) that modern browsers never run. It runs in a worker, but it competes for the network during load. Owned by the PWA work, not changed here. |
 
@@ -135,5 +157,6 @@ Audits that stay red and do not count in the score:
 
 - Content visible on first load never starts at opacity 0. Use `fade-in-50`, or move it with a transform only.
 - A Client Component that calls `useTranslations` needs its namespace in the scope of its route (`src/i18n/client-messages.ts`). The unit test tells you which one.
-- Load large client libraries when they are used: `next/dynamic`, `import()` or `LazyMotion`. cmdk, motion's layout features, supabase-js, Sentry and the Tiptap editor of the section page (loaded when "Modifier le texte" is hovered, focused or clicked) already work this way.
+- Load large client libraries when they are used: `next/dynamic`, `import()` or `LazyMotion`. cmdk, motion's layout features, the Realtime client, Sentry and the Tiptap editor of the section page (loaded when "Modifier le texte" is hovered, focused or clicked) already work this way.
+- No supabase-js in the browser. Realtime goes through `src/lib/realtime/client.ts`, and data through Server Components, Server Actions and route handlers.
 - Keep zod out of modules that Client Components import.
