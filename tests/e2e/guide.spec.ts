@@ -67,9 +67,19 @@ test("every screenshot loads and has a French alt text", async ({ page }) => {
   const alts = new Set(Object.values(GUIDE_FIGURES).map((figure) => figure.alt));
   for (const image of await images.all()) {
     await image.scrollIntoViewIfNeeded();
-    expect(alts.has((await image.getAttribute("alt")) ?? "")).toBe(true);
+    const alt = (await image.getAttribute("alt")) ?? "";
+    expect(alts.has(alt)).toBe(true);
+    // Each screenshot loads lazily through /_next/image, which resizes it on
+    // the first request. On a slow CI runner that once took more than the
+    // default 5 s (KRB-203), so it gets 20 s, and a failure names the image.
     await expect
-      .poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0))
+      .poll(
+        () => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0),
+        {
+          message: `screenshot did not load: ${alt}`,
+          timeout: 20_000,
+        },
+      )
       .toBe(true);
   }
 });
