@@ -8,6 +8,14 @@ try {
   // No .env.local: rely on the environment.
 }
 
+// Specs that run a job over the whole database: the billing cron (reminders,
+// expiry, read-only) and the storage cleanup cron. A run can change or remove
+// what another spec set up a moment before, so these run alone, one at a
+// time, after every other spec (KRB-192). A new spec that calls a cron or
+// changes a setting of the whole app goes in this list. They wait for the
+// chromium project even when run by name: add --no-deps to run one alone.
+const ALONE = /\/(billing-reminders|deletions|storage-cleanup)\.spec\.ts$/;
+
 /**
  * End-to-end tests run against a production build and the local Supabase
  * stack (`npx supabase start`), whose Mailpit inbox receives the auth e-mails.
@@ -15,8 +23,11 @@ try {
  */
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Two spec files run side by side. The tests of one file still run in
+  // order on one worker: every spec makes its own users and workspaces, and
+  // many files share them between their tests.
   fullyParallel: false,
-  workers: 1,
+  workers: 2,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
@@ -24,7 +35,16 @@ export default defineConfig({
     locale: "fr-FR",
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: ALONE },
+    {
+      name: "alone",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: ALONE,
+      workers: 1,
+      dependencies: ["chromium"],
+    },
+  ],
   webServer: [
     {
       command: "npm run start",

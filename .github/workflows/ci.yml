@@ -209,7 +209,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Lighthouse CI
-        # Mobile, 3 runs on /fr/connexion and the signed-in /fr/tableau-de-bord.
+        # Mobile, 5 runs on /fr/connexion and the signed-in /fr/tableau-de-bord.
         # Fails under the KRB-25 scores (lighthouserc.cjs, docs/performance.md).
         run: npx lhci autorun
 
