@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import messages from "../../../messages/fr.json";
@@ -144,8 +144,8 @@ describe("screenshots", () => {
 
 describe("PDF", () => {
   it("is in public/ at the path the page links to", () => {
-    const file = path.join(PUBLIC, GUIDE_PDF_PATH);
-    expect(statSync(file).size).toBeGreaterThan(10_000);
-    expect(readFileSync(file).subarray(0, 5).toString("ascii")).toBe("%PDF-");
+    const bytes = readFileSync(path.join(PUBLIC, GUIDE_PDF_PATH));
+    expect(bytes.length).toBeGreaterThan(10_000);
+    expect(bytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
   });
 });
