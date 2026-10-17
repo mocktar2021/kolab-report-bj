@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ChevronDown, FileUp, LoaderCircle, Merge, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -269,8 +269,11 @@ function PlanPreview({
   const numbered = renumber(rows);
   const sections = rows.filter((row) => row.level === 1).length;
 
-  // The preview takes the focus when it opens, so screen readers start at its title.
-  useEffect(() => {
+  // The preview takes the focus when it opens, so screen readers start at its
+  // title. In the commit that adds it, not after the paint: no frame leaves the
+  // focus on a button that is gone, and a test that finds the title finds it
+  // focused (KRB-211).
+  useLayoutEffect(() => {
     headingRef.current?.focus();
   }, []);
 
