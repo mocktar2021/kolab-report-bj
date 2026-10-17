@@ -73,6 +73,7 @@ export const ownerPart: GuidePart = {
           caption: "La fenêtre « Nouveau rapport » sur le tableau de bord.",
         },
         "Un nouveau rapport est un **Brouillon**. Il compte parmi les rapports actifs de votre offre tant qu'il est en brouillon ou en revue. Un rapport final ne compte plus.",
+        "Pour changer le titre plus tard, cliquez sur **Renommer** à côté du titre, en haut de la page du rapport, puis sur **Enregistrer**. Un rapport final ne se renomme pas.",
         "Ajoutez ensuite ses sections une à une, ou importez le plan que vous avez déjà.",
       ],
     },
