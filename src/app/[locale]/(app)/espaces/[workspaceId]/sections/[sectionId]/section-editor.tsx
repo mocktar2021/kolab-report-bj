@@ -36,7 +36,16 @@ import { SectionContent } from "./section-content";
 // source. Both edit the same Markdown, which is what gets saved. The Texte
 // editor and its libraries load only when the editor opens.
 
-const loadRichTextEditor = () => import("./rich-text-editor");
+// Hover, focus and opening all start the load, so they share one promise.
+// Vitest also needs it: a vi.mock only applies to the first of several imports
+// of a module in flight at once. A failed load is dropped so the next try
+// starts again.
+let richTextEditorLoad: Promise<typeof import("./rich-text-editor")> | undefined;
+const loadRichTextEditor = () =>
+  (richTextEditorLoad ??= import("./rich-text-editor").catch((error: unknown) => {
+    richTextEditorLoad = undefined;
+    throw error;
+  }));
 
 const RichTextEditor = dynamic(() => loadRichTextEditor().then((module) => module.RichTextEditor), {
   ssr: false,
