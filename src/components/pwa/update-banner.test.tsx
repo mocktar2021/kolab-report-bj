@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/fr.json";
 import { reloadPage } from "@/lib/pwa/reload-page";
 import { useUnsavedWork } from "@/lib/unsaved-work";
-import { UPDATE_CHECK_INTERVAL, UpdateBanner, VISIBLE_CHECK_GAP } from "./update-banner";
+import {
+  FIRST_REGISTER_DELAY,
+  UPDATE_CHECK_INTERVAL,
+  UpdateBanner,
+  VISIBLE_CHECK_GAP,
+} from "./update-banner";
 
 vi.mock("@/lib/pwa/reload-page", () => ({ reloadPage: vi.fn() }));
 
@@ -93,6 +98,16 @@ describe("UpdateBanner", () => {
     await renderBanner();
     expect(sw.workbox.register).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("registers a first visit's worker only a while after the page has loaded", async () => {
+    const sw = fakeServiceWorker({ controlled: false });
+    await renderBanner();
+    expect(document.readyState).toBe("complete");
+    await act(async () => vi.advanceTimersByTime(FIRST_REGISTER_DELAY - 1));
+    expect(sw.workbox.register).not.toHaveBeenCalled();
+    await act(async () => vi.advanceTimersByTime(1));
+    expect(sw.workbox.register).toHaveBeenCalledTimes(1);
   });
 
   it("renders nothing when the service worker is off", async () => {
