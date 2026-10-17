@@ -184,15 +184,13 @@ const limitsSchema = z
     drafts_total: limitSchema,
     custom_templates: z.boolean(),
   })
-  .transform(
-    (limits): PlanLimits => ({
-      maxMembers: limits.max_members,
-      maxReports: limits.max_reports,
-      draftsPerMonth: limits.drafts_per_month,
-      draftsTotal: limits.drafts_total,
-      customTemplates: limits.custom_templates,
-    }),
-  );
+  .transform((limits): PlanLimits => ({
+    maxMembers: limits.max_members,
+    maxReports: limits.max_reports,
+    draftsPerMonth: limits.drafts_per_month,
+    draftsTotal: limits.drafts_total,
+    customTemplates: limits.custom_templates,
+  }));
 
 const lineFields = {
   state: stateSchema,
@@ -249,23 +247,21 @@ const purchaseSchema = z
     receipt_id: z.string().nullable(),
     receipt_number: z.string().nullable(),
   })
-  .transform(
-    (purchase): PurchaseSummary => ({
-      id: purchase.id,
-      offer: purchase.offer,
-      offerLabel: purchase.offer_label,
-      quantity: purchase.quantity,
-      workspaceId: purchase.workspace_id,
-      workspaceName: purchase.workspace_name,
-      amountXof: purchase.amount_xof,
-      status: purchase.status,
-      fedapayStatus: purchase.fedapay_status,
-      createdAt: purchase.created_at,
-      paidAt: purchase.paid_at,
-      receiptId: purchase.receipt_id,
-      receiptNumber: purchase.receipt_number,
-    }),
-  );
+  .transform((purchase): PurchaseSummary => ({
+    id: purchase.id,
+    offer: purchase.offer,
+    offerLabel: purchase.offer_label,
+    quantity: purchase.quantity,
+    workspaceId: purchase.workspace_id,
+    workspaceName: purchase.workspace_name,
+    amountXof: purchase.amount_xof,
+    status: purchase.status,
+    fedapayStatus: purchase.fedapay_status,
+    createdAt: purchase.created_at,
+    paidAt: purchase.paid_at,
+    receiptId: purchase.receipt_id,
+    receiptNumber: purchase.receipt_number,
+  }));
 
 const receiptSchema = z
   .object({
@@ -277,17 +273,15 @@ const receiptSchema = z
     environment: z.enum(["sandbox", "live", "mock", "manual"]),
     label: z.string().nullable(),
   })
-  .transform(
-    (receipt): ReceiptSummary => ({
-      id: receipt.id,
-      number: receipt.number,
-      kind: receipt.kind,
-      issuedAt: receipt.issued_at,
-      totalXof: receipt.total_xof,
-      environment: receipt.environment,
-      label: receipt.label,
-    }),
-  );
+  .transform((receipt): ReceiptSummary => ({
+    id: receipt.id,
+    number: receipt.number,
+    kind: receipt.kind,
+    issuedAt: receipt.issued_at,
+    totalXof: receipt.total_xof,
+    environment: receipt.environment,
+    label: receipt.label,
+  }));
 
 const overviewSchema = z
   .object({
@@ -322,41 +316,39 @@ const overviewSchema = z
     receipts_total: countSchema.default(0),
     workspaces: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
   })
-  .transform(
-    (overview): BillingOverview => ({
-      organizationId: overview.organization_id,
-      enforced: overview.enforced,
-      canManage: overview.can_manage,
-      subscription: {
-        ...toLine(overview.subscription),
-        usage: {
-          members: overview.subscription.usage.members,
-          invitations: overview.subscription.usage.invitations,
-          activeReports: overview.subscription.usage.active_reports,
-          workspaces: overview.subscription.usage.workspaces,
-        },
-        drafts: overview.subscription.drafts,
+  .transform((overview): BillingOverview => ({
+    organizationId: overview.organization_id,
+    enforced: overview.enforced,
+    canManage: overview.can_manage,
+    subscription: {
+      ...toLine(overview.subscription),
+      usage: {
+        members: overview.subscription.usage.members,
+        invitations: overview.subscription.usage.invitations,
+        activeReports: overview.subscription.usage.active_reports,
+        workspaces: overview.subscription.usage.workspaces,
       },
-      passes: overview.passes.map((pass) => ({
-        ...toLine(pass),
-        workspaceId: pass.workspace_id,
-        workspaceName: pass.workspace_name ?? null,
-        usage: pass.usage,
-        drafts: pass.drafts,
-      })),
-      packs: overview.packs.map((pack) => ({
-        id: pack.id,
-        drafts: pack.drafts,
-        used: pack.used,
-        expiresAt: pack.expires_at,
-      })),
-      purchases: overview.purchases,
-      purchasesTotal: overview.purchases_total,
-      receipts: overview.receipts,
-      receiptsTotal: overview.receipts_total,
-      workspaces: overview.workspaces,
-    }),
-  );
+      drafts: overview.subscription.drafts,
+    },
+    passes: overview.passes.map((pass) => ({
+      ...toLine(pass),
+      workspaceId: pass.workspace_id,
+      workspaceName: pass.workspace_name ?? null,
+      usage: pass.usage,
+      drafts: pass.drafts,
+    })),
+    packs: overview.packs.map((pack) => ({
+      id: pack.id,
+      drafts: pack.drafts,
+      used: pack.used,
+      expiresAt: pack.expires_at,
+    })),
+    purchases: overview.purchases,
+    purchasesTotal: overview.purchases_total,
+    receipts: overview.receipts,
+    receiptsTotal: overview.receipts_total,
+    workspaces: overview.workspaces,
+  }));
 
 const usageRowSchema = z.object({
   billing_mode: z.enum(["subscription", "mission"]),

@@ -99,9 +99,8 @@ function setup(
     }
     return Promise.reject(new Error(`unexpected rpc ${name}`));
   });
-  const maybeSingle = vi.fn(
-    (): Promise<{ data: unknown; error: null }> =>
-      Promise.resolve({ data: { name: "Cabinet Dossou" }, error: null }),
+  const maybeSingle = vi.fn((): Promise<{ data: unknown; error: null }> =>
+    Promise.resolve({ data: { name: "Cabinet Dossou" }, error: null }),
   );
   const from = vi.fn((table: string) => ({
     select: () => ({

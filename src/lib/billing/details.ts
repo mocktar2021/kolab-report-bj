@@ -12,12 +12,7 @@ export const BILLING_DETAILS_FIELDS = ["legalName", "address", "taxId", "billing
 export type BillingDetailsField = (typeof BILLING_DETAILS_FIELDS)[number];
 
 export type BillingDetailsErrorKey =
-  | "legalNameLength"
-  | "addressLength"
-  | "taxIdInvalid"
-  | "emailInvalid"
-  | "forbidden"
-  | "failed";
+  "legalNameLength" | "addressLength" | "taxIdInvalid" | "emailInvalid" | "forbidden" | "failed";
 
 /** Trimmed, with runs of spaces and line breaks made one space; empty becomes null. */
 function clean(value: unknown): string | null {

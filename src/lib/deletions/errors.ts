@@ -14,8 +14,7 @@ export type DeletionErrorKey =
 
 /** What a deletion action answers when it does not redirect. */
 export type DeletionState =
-  | { status: "idle" }
-  | { status: "error"; error: DeletionErrorKey; message: string };
+  { status: "idle" } | { status: "error"; error: DeletionErrorKey; message: string };
 
 /**
  * Maps a Postgres error code from the delete functions to a message key:

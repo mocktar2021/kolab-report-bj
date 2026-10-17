@@ -47,8 +47,7 @@ export type CheckoutError =
   | "unavailable";
 
 export type CheckoutResult =
-  | { ok: true; purchaseId: string; url: string }
-  | { ok: false; error: CheckoutError };
+  { ok: true; purchaseId: string; url: string } | { ok: false; error: CheckoutError };
 
 export type CheckoutDeps = ApplyDeps & {
   /** NEXT_PUBLIC_APP_URL: FedaPay sends the buyer back there. */

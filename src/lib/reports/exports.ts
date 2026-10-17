@@ -14,13 +14,7 @@ export const EXPORTS_PER_HOUR = 20;
 export const NO_STORE = { "Cache-Control": "private, no-store" };
 
 export type ExportErrorKey =
-  | "notFound"
-  | "forbidden"
-  | "invalidInput"
-  | "rateLimited"
-  | "busy"
-  | "tooLarge"
-  | "generic";
+  "notFound" | "forbidden" | "invalidInput" | "rateLimited" | "busy" | "tooLarge" | "generic";
 
 export type ReportExportRow = {
   id: string;

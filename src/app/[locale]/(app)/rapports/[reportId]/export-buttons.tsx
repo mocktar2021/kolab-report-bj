@@ -50,9 +50,7 @@ function startDownload(url: string) {
 }
 
 type ExportState =
-  | { kind: "ready"; fileName: string }
-  | { kind: "error"; error: ExportError; format: ExportFormat }
-  | null;
+  { kind: "ready"; fileName: string } | { kind: "error"; error: ExportError; format: ExportFormat } | null;
 
 type ExportButtonsProps = {
   reportId: string;

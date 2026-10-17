@@ -58,8 +58,7 @@ export type ParseMeta = {
 };
 
 export type ParseResult =
-  | { status: "parsed"; markdown: string; meta: ParseMeta }
-  | { status: "skipped"; meta: ParseMeta };
+  { status: "parsed"; markdown: string; meta: ParseMeta } | { status: "skipped"; meta: ParseMeta };
 
 /** Extensions the app reads. Everything else is stored as is. */
 export function isParsed(extension: FileExtension): boolean {

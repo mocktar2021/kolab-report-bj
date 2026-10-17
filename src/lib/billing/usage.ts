@@ -16,8 +16,7 @@ export type MembersHint = {
 
 /** Active reports, for the "Nouveau rapport" dialog. */
 export type ReportsHint =
-  | { kind: "subscription"; plan: string; count: number; max: number }
-  | { kind: "mission" };
+  { kind: "subscription"; plan: string; count: number; max: number } | { kind: "mission" };
 
 /** AI drafts left, for the draft panel. */
 export type DraftsHint = { period: "month" | "trial" | "mission"; left: number; packs: number };

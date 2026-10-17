@@ -13,8 +13,7 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 
 export type DeliverableActionResult =
-  | { ok: true }
-  | { ok: false; error: "forbidden" | "busy" | "reportFinal" | "readOnly" | "generic" };
+  { ok: true } | { ok: false; error: "forbidden" | "busy" | "reportFinal" | "readOnly" | "generic" };
 
 /**
  * A deliverable the caller can edit through its section, read with their
@@ -75,8 +74,7 @@ export async function deleteDeliverable(id: string): Promise<DeliverableActionRe
 }
 
 export type SectionStatusResult =
-  | { ok: true; status: SectionStatus }
-  | { ok: false; error?: "reportFinal" | "readOnly" };
+  { ok: true; status: SectionStatus } | { ok: false; error?: "reportFinal" | "readOnly" };
 
 /** Status of a section, for its assigned expert or a manager (RLS and the guard trigger agree). */
 export async function updateSectionStatus(sectionId: string, status: string): Promise<SectionStatusResult> {

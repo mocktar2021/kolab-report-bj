@@ -30,8 +30,7 @@ export function diffTemplates(before: string, after: string): DiffLine[] | null 
 const CONTEXT = 3;
 
 export type DiffBlock =
-  | { kind: "line"; line: DiffLine; index: number }
-  | { kind: "skip"; count: number; index: number };
+  { kind: "line"; line: DiffLine; index: number } | { kind: "skip"; count: number; index: number };
 
 /** The diff with long runs of unchanged lines folded into one "n lignes inchangées" row. */
 export function foldUnchanged(lines: DiffLine[]): DiffBlock[] {

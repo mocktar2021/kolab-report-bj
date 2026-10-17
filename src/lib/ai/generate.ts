@@ -34,8 +34,7 @@ type DraftOutcome = {
 };
 
 export type DraftResult =
-  | ({ ok: true; output: DraftOutput } & DraftOutcome)
-  | ({ ok: false; error: DraftFailure } & DraftOutcome);
+  ({ ok: true; output: DraftOutput } & DraftOutcome) | ({ ok: false; error: DraftFailure } & DraftOutcome);
 
 export type DraftCall = {
   model: LanguageModelV3;
