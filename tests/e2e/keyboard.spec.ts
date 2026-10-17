@@ -311,6 +311,7 @@ test("signed-in pages have a skip link, landmarks, French titles and visible foc
             - listitem:
               - link "Terminées"
         - link "Mon compte"
+        - link "Guide d'utilisation"
         - button /^Thème/
         - button "Se déconnecter"
         - button "Réduire le menu" [expanded]
