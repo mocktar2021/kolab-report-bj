@@ -91,10 +91,13 @@ function MemberRow({
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // A rejected change (last owner, for example) puts the select back.
-  useEffect(() => {
+  // A rejected change (last owner, for example) puts the select back. Done
+  // while rendering, once per answer, rather than in an effect.
+  const [answered, setAnswered] = useState(roleState);
+  if (roleState !== answered) {
+    setAnswered(roleState);
     if (roleState.status === "error") setRole(member.role);
-  }, [roleState, member.role]);
+  }
 
   // The current role stays in the list even when the caller cannot grant it
   // (an admin looking at their own row, for example).

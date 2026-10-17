@@ -39,6 +39,11 @@ export const maxDuration = 60;
 
 type Params = Promise<{ locale: "fr"; workspaceId: string; sectionId: string }>;
 
+/** True when a file last changed more than STALE_PARSE_MS ago. */
+function isOld(updatedAt: string): boolean {
+  return new Date(updatedAt).getTime() < Date.now() - STALE_PARSE_MS;
+}
+
 async function loadSection(workspaceId: string, sectionId: string) {
   if (!uuidSchema.safeParse(workspaceId).success || !uuidSchema.safeParse(sectionId).success) return null;
   const supabase = await createClient();
@@ -113,9 +118,8 @@ export default async function SectionPage({ params }: { params: Params }) {
   const names = new Map((members ?? []).map((member) => [member.userId, member.name]));
   const mine = section.assigned_to === access.userId;
   const status = sectionStatusSchema.catch("not_started").parse(section.status);
-  const staleBefore = Date.now() - STALE_PARSE_MS;
   const rows: DeliverableRow[] = (files ?? []).map((file) => {
-    const old = new Date(file.updated_at).getTime() < staleBefore;
+    const old = isOld(file.updated_at);
     // A claimed read this old has died. A pending file this old was never
     // claimed, for example one uploaded before files were read.
     const parseState: ParseState = file.parse_status === "processing" && old ? "stale" : file.parse_status;

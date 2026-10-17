@@ -26,7 +26,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 
 ### 2. Vercel project (KRB-131)
 
-1. Import the GitHub repository in Vercel. Framework: Next.js. Leave the build settings at their defaults.
+1. Import the GitHub repository in Vercel. Framework: Next.js. Leave the build settings at their defaults: `vercel.json` sets the build command to `npm run build`, which builds with webpack so the service worker is generated (KRB-207).
 2. `vercel.json` already turns off automatic deployments of `master` and `production`, so production only ships through `deploy.yml`. PR branches still get previews.
 3. Create a `production` branch from `master` on GitHub, then set it as the production branch in **Settings > Environments > Production > Branch Tracking**. Nobody pushes to it. Vercel refuses a Preview domain on its production branch, and the staging domain has to follow `master` (step 6).
 4. **Settings > Environment Variables**. Set each one for **Preview** with the staging values and for **Production** with the production values. Mark only the secrets as Sensitive: `deploy.yml` builds with `vercel pull`, which cannot read Sensitive values, so a Sensitive `NEXT_PUBLIC_*` variable reaches the build empty and the build stops.
@@ -256,7 +256,7 @@ Passwords need **10 characters, with at least one letter (a to z, without accent
 | `token_refresh` | `rate_limit_token_refresh` | 150 per 5 minutes, per IP | Password sign-ins and session refreshes |
 | `email_sent` | `rate_limit_email_sent` | 30 per hour, whole project | Auth e-mails. Sent only with custom SMTP, which it needs |
 
-The forms and the middleware call Supabase from the Vercel servers, so the per IP limits count many visitors behind a few Vercel addresses. That is why they stay at the Supabase defaults: lower values would block real users first, and the captcha stops scripts. If people see "Trop de tentatives" at busy times, raise `token_refresh` or `sign_in_sign_ups`. SMS, anonymous and Web3 sign-ins are off, so their limits are not pushed.
+The forms and the proxy call Supabase from the Vercel servers, so the per IP limits count many visitors behind a few Vercel addresses. That is why they stay at the Supabase defaults: lower values would block real users first, and the captcha stops scripts. If people see "Trop de tentatives" at busy times, raise `token_refresh` or `sign_in_sign_ups`. SMS, anonymous and Web3 sign-ins are off, so their limits are not pushed.
 
 ### Turnstile captcha
 

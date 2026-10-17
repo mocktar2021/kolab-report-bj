@@ -64,7 +64,7 @@ Read on master at `22f87bc`:
 - **E-mail**: `sendEmail` in `src/lib/email/send.ts` (Brevo, Resend or Mailpit), no attachments.
 - **Exports**: PDFs are drawn with `@react-pdf/renderer` and the standard Helvetica font through `toWinAnsi` (`src/lib/export/`).
 - **CSP** (`next.config.mjs`): `script-src 'self' 'unsafe-inline'`, `connect-src` limited to this origin and Supabase, `form-action 'self'`.
-- **Middleware** (`src/middleware.ts`) skips `/api`, and sends signed-out visitors to `/fr/connexion` from every page that is not in `PUBLIC_PATHS`.
+- **Proxy** (`src/proxy.ts`) skips `/api`, and sends signed-out visitors to `/fr/connexion` from every page that is not in `PUBLIC_PATHS`.
 
 ## 2. Decision summary
 
@@ -505,7 +505,7 @@ sequenceDiagram
 
 ### 8.3 Return page
 
-`/fr/organisations/[organizationId]/abonnement/retour/[purchaseId]`, dynamic, behind sign-in (the middleware sends a signed-out user to `/fr/connexion?next=...`).
+`/fr/organisations/[organizationId]/abonnement/retour/[purchaseId]`, dynamic, behind sign-in (the proxy sends a signed-out user to `/fr/connexion?next=...`).
 
 - It reads the purchase with the user's client (RLS) and ignores the `id` and `status` query parameters for anything but picking the first message. The transaction id comes from the purchase row.
 - If the purchase is still `pending` and was not checked in the last 10 seconds, it re-reads the transaction and calls `billing_apply_transaction`. Then it shows the result, and refreshes every 5 seconds for 2 minutes while pending.
@@ -513,7 +513,7 @@ sequenceDiagram
 
 ### 8.4 Webhook (`POST /api/billing/fedapay/webhook`)
 
-Route handler, Node.js runtime, wrapped in `withRequestId`. The middleware skips `/api`.
+Route handler, Node.js runtime, wrapped in `withRequestId`. The proxy skips `/api`.
 
 1. Read the raw body as text, at most 100 KB.
 2. Check `X-FEDAPAY-SIGNATURE`: it has the form `t=<unix time>,s=<hex>`. Compute HMAC-SHA256 of `<t>.<raw body>` with `FEDAPAY_WEBHOOK_SECRET`, compare with each `s` in constant time, refuse a timestamp more than 300 seconds old or ahead. This is the algorithm of FedaPay's Node SDK, written in our code (`src/lib/billing/webhook-signature.ts`). Failure: 400 and a `warn` log, no body logged.
@@ -685,7 +685,7 @@ Logs through `log` from `src/lib/log`, one fixed English message per event, ids 
 | `billing: reminder sent` / `billing: reminder skipped` | info / warn | entitlementId, kind, reason |
 | `billing: misconfigured` | error | which rule of 8.9 |
 
-Route handlers carry a request id through `withRequestId`. Server actions get it from the middleware. FedaPay's transaction id and our purchase id are in every line about a payment, so one search finds the whole story.
+Route handlers carry a request id through `withRequestId`. Server actions get it from the proxy. FedaPay's transaction id and our purchase id are in every line about a payment, so one search finds the whole story.
 
 Sentry: errors in route handlers and server actions reach it already (`onRequestError`). The grant and reconciliation code also calls `captureException` with `purchaseId` as a tag when a grant fails. Webhook signature failures are logs, not Sentry events, to avoid noise from scanners.
 

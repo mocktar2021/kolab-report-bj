@@ -435,12 +435,13 @@ function AssignmentForm({ section, assignees }: { section: SectionRowData; assig
   const dirty =
     assignedTo !== (section.assignedTo ?? "") || weight !== String(section.weight).replace(".", ",");
 
-  // A rejected change puts the saved values back.
-  useEffect(() => {
-    if (state.status === "error" && !state.fieldErrors) {
-      setAssignedTo(section.assignedTo ?? "");
-    }
-  }, [state, section.assignedTo]);
+  // A rejected change puts the saved values back. Done while rendering, once
+  // per answer, rather than in an effect.
+  const [answered, setAnswered] = useState(state);
+  if (state !== answered) {
+    setAnswered(state);
+    if (state.status === "error" && !state.fieldErrors) setAssignedTo(section.assignedTo ?? "");
+  }
 
   const assigneeId = `assignee-${section.id}`;
   const weightId = `weight-${section.id}`;

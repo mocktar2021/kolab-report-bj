@@ -6,7 +6,7 @@ import { parseWebhookEvent } from "@/lib/billing/webhook-event";
 import { verifyWebhookSignature, WEBHOOK_SIGNATURE_HEADER } from "@/lib/billing/webhook-signature";
 import { log, withRequestId } from "@/lib/log";
 
-// FedaPay webhook (ADR 001, section 8.4). The middleware skips /api, so no
+// FedaPay webhook (ADR 001, section 8.4). The proxy skips /api, so no
 // session is involved: the signature is the only proof, and even a valid
 // delivery only makes the server re-read the transaction from FedaPay's API
 // with its own key. Nothing is granted from the body.

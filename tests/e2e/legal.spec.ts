@@ -127,7 +127,7 @@ test("signed-in users open the legal pages from the app menu", async ({ page }) 
     await expect(legal.getByRole("link", { name: link, exact: true })).toHaveAttribute("href", url);
   }
   await legal.getByRole("link", { name: "Conditions d'utilisation", exact: true }).click();
-  // The middleware lets a signed-in user stay on the page.
+  // The proxy lets a signed-in user stay on the page.
   await expect(page).toHaveURL("/fr/cgu");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Conditions générales d'utilisation");
 });

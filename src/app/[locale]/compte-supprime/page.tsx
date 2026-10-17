@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ClearOfflineCaches } from "./clear-offline-caches";
 
-// Where a deleted account lands, signed out (KRB-186). Public: the middleware
+// Where a deleted account lands, signed out (KRB-186). Public: the proxy
 // lists it, since the session is gone by the time the browser gets here.
 
 export async function generateMetadata(): Promise<Metadata> {

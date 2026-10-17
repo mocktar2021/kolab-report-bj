@@ -3,7 +3,7 @@
 // LHCI calls it once per URL, before the runs of that URL, with the browser
 // Lighthouse then uses. Lighthouse clears caches and service workers between
 // runs but keeps cookies, so the session set here lasts for every run.
-// The sign-in page is measured signed out (the middleware sends signed-in
+// The sign-in page is measured signed out (the proxy sends signed-in
 // visitors to the dashboard), every other page as the seeded demo user from
 // supabase/seed.sql.
 
@@ -25,7 +25,7 @@ module.exports = async function signInForLighthouse(browser, { url }) {
     }
 
     await page.goto(`${target.origin}/fr/connexion`, { waitUntil: "networkidle0" });
-    // Already signed in: the middleware has sent us to the dashboard.
+    // Already signed in: the proxy has sent us to the dashboard.
     if (!new URL(page.url()).pathname.endsWith("/connexion")) return;
 
     await page.type("#email", EMAIL);

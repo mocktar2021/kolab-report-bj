@@ -19,7 +19,7 @@ The long texts are typed TypeScript modules in `src/content/legal/`, not entries
 | File | What it holds |
 | --- | --- |
 | `src/content/legal/publisher.ts` | Publisher facts shared by every page: name, form, address, RCCM, IFU, CNSS, e-mail, director, group company. Change them here only. |
-| `src/content/legal/pages.ts` | The five routes. The middleware makes them public and the footers link to them. |
+| `src/content/legal/pages.ts` | The five routes. The proxy makes them public and the footers link to them. |
 | `src/content/legal/<page>.ts` | One module per page: `updatedAt`, `intro` and `sections`. |
 | `src/content/legal/cgv.ts` | Also `OFFERS`, the prices and limits of KRB-173. Billing must use the same numbers. |
 | `src/content/legal/types.ts` | The block types: paragraph, list, label and value pairs, table. |

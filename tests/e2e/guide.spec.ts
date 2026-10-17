@@ -120,7 +120,7 @@ test("signed-in users open the guide from the app menu, on a computer and a phon
 
   const banner = page.getByRole("banner");
   await banner.getByRole("link", { name: "Guide d'utilisation" }).click();
-  // The middleware lets a signed-in user stay on the page.
+  // The proxy lets a signed-in user stay on the page.
   await expect(page).toHaveURL("/fr/guide");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Guide d'utilisation");
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Check, LoaderCircle } from "lucide-react";
@@ -43,7 +43,7 @@ export function MasterReport({
   const manage = canManage && !frozen;
   const [textOpen, setTextOpen] = useState(false);
   // The section a link opened the text for, to scroll to once it shows.
-  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+  const scrollTarget = useRef<string | null>(null);
 
   // A link of the table of contents: the text shows before the browser follows it.
   const openForLink = useCallback(() => flushSync(() => setTextOpen(true)), []);
@@ -54,8 +54,8 @@ export function MasterReport({
       const anchor = window.location.hash.slice(1);
       // Already on screen: the browser went to it.
       if (!anchor.startsWith(sectionAnchor("")) || document.getElementById(anchor)) return;
+      scrollTarget.current = anchor;
       setTextOpen(true);
-      setScrollTarget(anchor);
     }
     openForHash();
     window.addEventListener("hashchange", openForHash);
@@ -63,10 +63,10 @@ export function MasterReport({
   }, []);
 
   useEffect(() => {
-    if (!textOpen || !scrollTarget) return;
-    document.getElementById(scrollTarget)?.scrollIntoView();
-    setScrollTarget(null);
-  }, [textOpen, scrollTarget]);
+    if (!textOpen || !scrollTarget.current) return;
+    document.getElementById(scrollTarget.current)?.scrollIntoView();
+    scrollTarget.current = null;
+  }, [textOpen]);
 
   // A new order shows its numbers right away (1, 1.1, 2), not after the save.
   const shown = useMemo(

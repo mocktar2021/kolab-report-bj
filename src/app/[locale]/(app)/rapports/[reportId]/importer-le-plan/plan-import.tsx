@@ -274,11 +274,11 @@ function PlanPreview({
     headingRef.current?.focus();
   }, []);
 
+  // Each request is a new object, so the effect runs once per request.
   useEffect(() => {
     if (!focus) return;
     if (focus.target === "restart") restartRef.current?.focus();
     else elements.current.get(`${focus.id}:${focus.target}`)?.focus();
-    setFocus(null);
   }, [focus]);
 
   const register = (key: string) => (element: HTMLElement | null) => {

@@ -36,8 +36,8 @@ These rules catch mistakes. Still, never pass report text, file contents or a pe
 
 Every line of a request carries the same id:
 
-- **Pages and server actions**: the middleware (`src/middleware.ts`) takes Vercel's `x-vercel-id`, or makes up a UUID when it is missing (locally). It passes the id to the page in the request header `x-request-id`, which `headers()` reads, and returns it in the `x-request-id` response header.
-- **Route handlers under `/api`**: the middleware skips them. The ones that log are wrapped in `withRequestId`, which picks the id the same way and returns `x-request-id` too. Wrap any new route handler that logs.
+- **Pages and server actions**: the proxy (`src/proxy.ts`) takes Vercel's `x-vercel-id`, or makes up a UUID when it is missing (locally). It passes the id to the page in the request header `x-request-id`, which `headers()` reads, and returns it in the `x-request-id` response header.
+- **Route handlers under `/api`**: the proxy skips them. The ones that log are wrapped in `withRequestId`, which picks the id the same way and returns `x-request-id` too. Wrap any new route handler that logs.
 - **Work after the answer**: `after()`, the AI draft stream and the parse worker keep the id of the request that started them.
 
 `getRequestId()` from `src/lib/log` returns the id, for example to tag an error report.
@@ -75,7 +75,7 @@ The Better Stack source token is a secret: keep it in your password manager with
 
 ## Sentry
 
-Sentry gets the errors of the browser, server components, route handlers, server actions and the middleware (KRB-136). Each event carries the release (the git commit SHA), the environment and the Supabase user id, and its stack trace is readable thanks to the source maps uploaded during the build. Sentry is off until `NEXT_PUBLIC_SENTRY_DSN` is set: without it nothing initializes and nothing is sent.
+Sentry gets the errors of the browser, server components, route handlers, server actions and the proxy (KRB-136). Each event carries the release (the git commit SHA), the environment and the Supabase user id, and its stack trace is readable thanks to the source maps uploaded during the build. Sentry is off until `NEXT_PUBLIC_SENTRY_DSN` is set: without it nothing initializes and nothing is sent.
 
 ### What it sends
 
@@ -102,7 +102,7 @@ The SDK collects as little as it can (`dataCollection` in `src/lib/monitoring/op
 | `src/lib/supabase/user.ts`, `src/components/monitoring/monitoring-user.tsx` | Set the user id on the server (`getCurrentUser`) and in the browser (signed-in layout) |
 | `next.config.mjs` | `withSentryConfig`: tunnel, source map upload, release |
 
-- **Tunnel**: the browser posts events to `/monitoring` on our own origin and Next.js passes them on to Sentry's EU ingest host. The CSP keeps `connect-src` to `'self'` and Supabase, and ad blockers don't drop the events. `src/middleware.ts` skips `/monitoring`. The server sends its events to Sentry directly.
+- **Tunnel**: the browser posts events to `/monitoring` on our own origin and Next.js passes them on to Sentry's EU ingest host. The CSP keeps `connect-src` to `'self'` and Supabase, and ad blockers don't drop the events. `src/proxy.ts` skips `/monitoring`. The server sends its events to Sentry directly.
 - **OpenTelemetry**: Sentry runs with `enableOpenTelemetrySetup: false` and no server tracing, so it registers no tracer provider. The AI tracing (`AI_TRACING=true`, `docs/ai-evaluation.md`) keeps its own and still exports its spans.
 - **Source maps**: the build uploads them only when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are all set, then deletes the browser ones so they never ship. A failed upload prints a warning and the build goes on. CI and local builds have none of the three and skip the upload without a word.
 - **Release**: the commit SHA from `SENTRY_RELEASE`, `VERCEL_GIT_COMMIT_SHA` or `GITHUB_SHA`, the first one set. `deploy.yml` sets `SENTRY_RELEASE` on staging, where `GITHUB_SHA` is the tip of `master` rather than the commit it deploys.
@@ -154,7 +154,7 @@ Goal (KRB-139, story KRB-23): when production is unavailable for more than 2 min
 
 ### What to check
 
-`GET https://kolabreport.com/api/health`. The route is public, never cached (`Cache-Control: no-store`) and skipped by the middleware. It calls `public.health_check()` through the Supabase API with the anon key:
+`GET https://kolabreport.com/api/health`. The route is public, never cached (`Cache-Control: no-store`) and skipped by the proxy. It calls `public.health_check()` through the Supabase API with the anon key:
 
 | Situation | Status | Body |
 | --- | --- | --- |

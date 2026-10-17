@@ -66,15 +66,16 @@ export function WorkspaceWizard({ organizations, defaultOrganizationId }: Worksp
   // With an existing organization, the first step has no field to fill.
   const showField = step.key !== "organization" || newOrganization;
 
-  // A field rejected by the server sends the user back to its step.
-  useEffect(() => {
-    if (state.status !== "error" || !state.fieldErrors) return;
-    const index = STEPS.findIndex((item) => state.fieldErrors?.[item.field]);
-    if (index >= 0) {
-      focusChoice.current = false;
-      setStepIndex(index);
-    }
-  }, [state]);
+  // A field rejected by the server sends the user back to its step. Done while
+  // rendering, once per answer, rather than in an effect. The focus then goes
+  // to the field: onSubmit cleared focusChoice.
+  const [answered, setAnswered] = useState(state);
+  if (state !== answered) {
+    setAnswered(state);
+    const rejected = state.status === "error" ? state.fieldErrors : undefined;
+    const index = rejected ? STEPS.findIndex((item) => rejected[item.field]) : -1;
+    if (index >= 0) setStepIndex(index);
+  }
 
   // Move focus to the field of the new step, but not on the first render.
   useEffect(() => {
@@ -160,6 +161,7 @@ export function WorkspaceWizard({ organizations, defaultOrganizationId }: Worksp
             return;
           }
           if (!stepIsValid()) event.preventDefault();
+          else focusChoice.current = false;
         }}
       >
         <p className="text-xs font-medium text-muted-foreground">

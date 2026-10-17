@@ -6,9 +6,9 @@ import { forwardedRequestId, incomingRequestId, REQUEST_ID_HEADER } from "./requ
 
 // Server logs (KRB-138). Every line of a request carries the same request
 // id, so the id a user quotes finds all of them in the Vercel logs:
-// - pages and server actions: the id the middleware passes in x-request-id,
+// - pages and server actions: the id the proxy passes in x-request-id,
 //   read with headers();
-// - route handlers, which the middleware skips: the id withRequestId gives.
+// - route handlers, which the proxy skips: the id withRequestId gives.
 // What reaches a line, and what never does, is in ./format.ts.
 
 export type { LogFields, Logger } from "./format";
@@ -30,7 +30,7 @@ function currentRequestId(): string | null | Promise<string | null> {
 }
 
 /**
- * The id of the request being served: the one the middleware set for pages
+ * The id of the request being served: the one the proxy set for pages
  * and server actions, the one withRequestId set for route handlers. Null
  * outside a request. Like headers(), calling it (or logging) while a page
  * renders makes that page dynamic.

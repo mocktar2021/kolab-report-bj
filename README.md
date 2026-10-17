@@ -62,8 +62,8 @@ The seeded rows have fixed ids starting with `5eed0000`. The pgTAP and Playwrigh
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Development server |
-| `npm run build` | Production build (also generates `public/sw.js`) |
+| `npm run dev` | Development server, with webpack (`docs/pwa.md`) |
+| `npm run build` | Production build with webpack (also generates `public/sw.js`) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript without emitting |
 | `npm run db:reset` | Recreate the local database from migrations |
@@ -82,7 +82,7 @@ The seeded rows have fixed ids starting with `5eed0000`. The pgTAP and Playwrigh
 messages/fr.json                 French UI strings
 public/manifest.webmanifest      PWA manifest
 public/icons/                    App icons (192, 512, maskable, Apple touch)
-src/middleware.ts                Locale routing, session refresh, auth guard
+src/proxy.ts                     Locale routing, session refresh, auth guard
 src/i18n/                        next-intl routing and request config
 src/lib/supabase/                Browser, server, middleware and service-role clients
 src/app/[locale]/                Localized routes (connexion, tableau-de-bord, hors-ligne)
@@ -92,7 +92,7 @@ docs/jira/                       Product backlog and Jira import file
 
 ## Routing and localization
 
-French is the only locale. Every page lives under `/fr`, and `/` redirects there. Unauthenticated visitors are redirected to `/fr/connexion?next=...`. Public routes are listed in `src/middleware.ts`. Signed-in pages live in the `src/app/[locale]/(app)` route group, which adds the app shell:
+French is the only locale. Every page lives under `/fr`, and `/` redirects there. Unauthenticated visitors are redirected to `/fr/connexion?next=...`. Public routes are listed in `src/proxy.ts`. Signed-in pages live in the `src/app/[locale]/(app)` route group, which adds the app shell:
 
 | Route | Page |
 | --- | --- |
@@ -108,7 +108,7 @@ French is the only locale. Every page lives under `/fr`, and `/` redirects there
 | `/fr/espaces/{id}/modeles/nouveau/description` | "Décrire le modèle": a short form that `src/lib/prompts/builder.ts` turns into the template text without the AI, or a few sentences for "Rédiger avec l'IA". Both open the editor on the result, nothing is saved before |
 | `/fr/espaces/{id}/modeles/{id}/modifier` | Editor for the next version of a workspace template (owners and admins) |
 
-Route handlers under `src/app/api` (not localized, skipped by the middleware, so each one checks the session itself):
+Route handlers under `src/app/api` (not localized, skipped by the proxy, so each one checks the session itself):
 
 | Route | Purpose |
 | --- | --- |

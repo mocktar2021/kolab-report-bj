@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { SIDEBAR_COLLAPSED as COLLAPSED, SIDEBAR_STORAGE_KEY as STORAGE_KEY } from "./sidebar-script";
 
 function readStored(): boolean {
@@ -31,23 +31,39 @@ function applyToDocument(collapsed: boolean) {
   }
 }
 
+// The choice made since the page loaded, which still counts when storage is
+// unavailable. The hooks of this page are told when it changes.
+let chosen: boolean | null = null;
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function current(): boolean {
+  return chosen ?? readStored();
+}
+
 /** Collapsed state of the desktop sidebar, kept in localStorage. */
 export function useSidebarCollapsed() {
-  const [collapsed, setCollapsed] = useState(false);
+  // Open on the server and while hydrating, then the stored choice.
+  const collapsed = useSyncExternalStore(subscribe, current, () => false);
 
   // Also runs after client-side navigation, where the inline script does not.
   useEffect(() => {
-    const stored = readStored();
-    applyToDocument(stored);
-    setCollapsed(stored);
+    applyToDocument(current());
   }, []);
 
   const toggle = useCallback(() => {
-    const next = !collapsed;
+    const next = !current();
+    chosen = next;
     applyToDocument(next);
     persist(next);
-    setCollapsed(next);
-  }, [collapsed]);
+    listeners.forEach((listener) => listener());
+  }, []);
 
   return { collapsed, toggle };
 }

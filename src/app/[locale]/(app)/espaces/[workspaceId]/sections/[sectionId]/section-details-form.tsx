@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, PenLine } from "lucide-react";
 import { FieldError } from "@/components/auth/field-error";
@@ -42,11 +42,14 @@ export function SectionDetailsForm({
   const formError = state.status === "error" && !state.fieldErrors ? state.error : undefined;
   const dirty = draftTitle !== title || draftInstructions !== (instructions ?? "");
 
-  // After a save, the page brings the new values: start from them.
-  useEffect(() => {
+  // After a save, the page brings the new values: start from them. Done while
+  // rendering, rather than in an effect.
+  const [saved, setSaved] = useState({ title, instructions });
+  if (saved.title !== title || saved.instructions !== instructions) {
+    setSaved({ title, instructions });
     setDraftTitle(title);
     setDraftInstructions(instructions ?? "");
-  }, [title, instructions]);
+  }
 
   return (
     <details className="group mt-4 rounded-xl border px-4 py-3">

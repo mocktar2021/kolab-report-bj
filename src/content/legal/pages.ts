@@ -1,5 +1,5 @@
 // Routes of the legal pages (KRB-159), without the locale prefix. Kept apart
-// from the texts: the middleware and the footers import only these paths.
+// from the texts: the proxy and the footers import only these paths.
 export const LEGAL_PAGES = {
   mentionsLegales: "/mentions-legales",
   confidentialite: "/confidentialite",
