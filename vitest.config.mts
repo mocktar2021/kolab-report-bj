@@ -8,7 +8,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 const ALONE = ["src/lib/deliverables/parse-job.test.ts"];
 
 export default defineConfig({
-  esbuild: { jsx: "automatic" },
+  oxc: { jsx: { runtime: "automatic" } },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
