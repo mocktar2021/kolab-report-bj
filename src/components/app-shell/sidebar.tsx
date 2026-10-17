@@ -35,6 +35,8 @@ type SidebarProps = {
   /** The organization whose billing page the "Abonnement" link opens, if any. */
   billingOrganizationId: string | null;
   onOpenPalette: () => void;
+  /** Opens the palette on the workspace search (KRB-206). */
+  onSearchWorkspaces: () => void;
 };
 
 /**
@@ -49,6 +51,7 @@ export function Sidebar({
   unreadNotifications,
   billingOrganizationId,
   onOpenPalette,
+  onSearchWorkspaces,
 }: SidebarProps) {
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
@@ -70,7 +73,12 @@ export function Sidebar({
       </div>
 
       <div className="space-y-3 px-3">
-        <WorkspaceSwitcher workspaces={workspaces} currentWorkspaceId={currentWorkspaceId} collapsible />
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          currentWorkspaceId={currentWorkspaceId}
+          collapsible
+          onSearch={onSearchWorkspaces}
+        />
         <SearchTrigger onOpen={onOpenPalette} collapsible />
       </div>
 

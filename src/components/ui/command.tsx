@@ -1,17 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { Command as CommandPrimitive } from "cmdk";
+import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import { Search } from "lucide-react";
+import { foldForSearch } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./dialog";
+
+/** cmdk's own ranking, without accents or case: "energie" finds "Énergie". */
+function foldedFilter(value: string, search: string, keywords?: string[]) {
+  return defaultFilter(foldForSearch(value), foldForSearch(search), keywords?.map(foldForSearch));
+}
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({ className, ...props }, ref) => (
+>(({ className, filter = foldedFilter, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
+    filter={filter}
     className={cn("flex h-full w-full flex-col overflow-hidden text-popover-foreground", className)}
     {...props}
   />
