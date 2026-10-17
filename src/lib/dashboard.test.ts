@@ -42,9 +42,7 @@ function section(
   status: "not_started" | "in_progress" | "completed",
   assignedTo: string | null,
   assignee:
-    | { full_name: string | null; email: string }
-    | { full_name: string | null; email: string }[]
-    | null,
+    { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null,
   weight = 1,
 ) {
   return { report_id: AUDIT, status, weight, assigned_to: assignedTo, assignee };

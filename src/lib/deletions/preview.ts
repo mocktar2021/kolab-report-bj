@@ -35,27 +35,25 @@ const billingTimeLeftSchema = z
     ),
     packs: z.array(z.object({ pack_id: z.string(), drafts_left: countSchema, expires_at: z.string() })),
   })
-  .transform(
-    (left): BillingTimeLeft => ({
-      subscription: left.subscription.map((period) => ({
-        entitlementId: period.entitlement_id,
-        plan: period.plan,
-        startsAt: period.starts_at,
-        endsAt: period.ends_at,
-      })),
-      passes: left.passes.map((pass) => ({
-        entitlementId: pass.entitlement_id,
-        workspaceId: pass.workspace_id,
-        startsAt: pass.starts_at,
-        endsAt: pass.ends_at,
-      })),
-      packs: left.packs.map((pack) => ({
-        packId: pack.pack_id,
-        draftsLeft: pack.drafts_left,
-        expiresAt: pack.expires_at,
-      })),
-    }),
-  );
+  .transform((left): BillingTimeLeft => ({
+    subscription: left.subscription.map((period) => ({
+      entitlementId: period.entitlement_id,
+      plan: period.plan,
+      startsAt: period.starts_at,
+      endsAt: period.ends_at,
+    })),
+    passes: left.passes.map((pass) => ({
+      entitlementId: pass.entitlement_id,
+      workspaceId: pass.workspace_id,
+      startsAt: pass.starts_at,
+      endsAt: pass.ends_at,
+    })),
+    packs: left.packs.map((pack) => ({
+      packId: pack.pack_id,
+      draftsLeft: pack.drafts_left,
+      expiresAt: pack.expires_at,
+    })),
+  }));
 
 const reportPreviewSchema = z
   .object({

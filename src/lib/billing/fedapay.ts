@@ -240,21 +240,19 @@ const transactionSchema = z
     currency: z.unknown().optional(),
     currency_id: z.number().int().nullish(),
   })
-  .transform(
-    (raw): FedapayTransaction => ({
-      id: raw.id,
-      reference: raw.reference,
-      status: raw.status,
-      amountXof: raw.amount,
-      feesXof: raw.fees == null ? null : Math.round(raw.fees),
-      mode: raw.mode,
-      merchantReference: raw.merchant_reference,
-      customMetadata: isRecord(raw.custom_metadata) ? raw.custom_metadata : null,
-      approvedAt: raw.approved_at,
-      currencyIso: currencyIso(raw.currency),
-      currencyId: raw.currency_id ?? null,
-    }),
-  );
+  .transform((raw): FedapayTransaction => ({
+    id: raw.id,
+    reference: raw.reference,
+    status: raw.status,
+    amountXof: raw.amount,
+    feesXof: raw.fees == null ? null : Math.round(raw.fees),
+    mode: raw.mode,
+    merchantReference: raw.merchant_reference,
+    customMetadata: isRecord(raw.custom_metadata) ? raw.custom_metadata : null,
+    approvedAt: raw.approved_at,
+    currencyIso: currencyIso(raw.currency),
+    currencyId: raw.currency_id ?? null,
+  }));
 
 const tokenSchema = z.object({
   token: z.string().min(1),

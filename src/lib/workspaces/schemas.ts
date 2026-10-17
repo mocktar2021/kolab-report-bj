@@ -59,11 +59,7 @@ export const sectionWeightSchema = z
   .pipe(z.number({ invalid_type_error: "weightRange" }).min(0.01, "weightRange").max(9999.99, "weightRange"));
 
 export type WorkspaceFieldErrorKey =
-  | "nameLength"
-  | "titleLength"
-  | "sectionTitleLength"
-  | "instructionsLength"
-  | "weightRange";
+  "nameLength" | "titleLength" | "sectionTitleLength" | "instructionsLength" | "weightRange";
 
 /** First error key per field, from a zod error whose messages are WorkspaceFieldErrorKey values. */
 export function workspaceFieldErrors<T extends string>(

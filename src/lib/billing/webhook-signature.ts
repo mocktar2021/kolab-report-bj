@@ -33,8 +33,7 @@ export type WebhookSignatureFailure =
   | "no_secret";
 
 export type WebhookSignatureResult =
-  | { ok: true; timestamp: number }
-  | { ok: false; reason: WebhookSignatureFailure };
+  { ok: true; timestamp: number } | { ok: false; reason: WebhookSignatureFailure };
 
 export type ParsedSignatureHeader = { timestamp: number; signatures: string[] };
 

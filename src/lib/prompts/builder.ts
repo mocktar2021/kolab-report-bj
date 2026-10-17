@@ -52,11 +52,7 @@ export const DEFAULT_BUILDER_ANSWERS: BuilderAnswers = {
 
 /** Keys under Prompts.builder.errors in messages/fr.json. */
 export type BuilderErrorKey =
-  | "titleLength"
-  | "contentLength"
-  | "headingsTooMany"
-  | "headingLength"
-  | "invalidChoice";
+  "titleLength" | "contentLength" | "headingsTooMany" | "headingLength" | "invalidChoice";
 
 /** Characters as Postgres counts them: an emoji is one, not two. */
 const characters = (value: string) => [...value].length;

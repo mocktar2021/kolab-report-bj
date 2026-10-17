@@ -660,7 +660,7 @@ export function docToMarkdown(doc: PmNode, origin: MarkdownOrigin | null = null)
   });
 
   // A kept block is written anew when its new neighbor would change how it reads.
-  for (let changed = true; changed; ) {
+  for (let changed = true; changed;) {
     changed = false;
     for (let index = 1; index < units.length; index++) {
       const left = units[index - 1]!;

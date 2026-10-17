@@ -13,14 +13,7 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 // limits ratings to the person who asked for the draft.
 
 export type DraftDecisionError =
-  | "forbidden"
-  | "notFound"
-  | "decided"
-  | "conflict"
-  | "reportFinal"
-  | "readOnly"
-  | "invalidInput"
-  | "generic";
+  "forbidden" | "notFound" | "decided" | "conflict" | "reportFinal" | "readOnly" | "invalidInput" | "generic";
 
 export type DraftDecisionResult = { ok: true } | { ok: false; error: DraftDecisionError };
 
