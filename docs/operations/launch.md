@@ -10,7 +10,7 @@ The product owner took every proposal on 2026-10-17. Change a line here when a d
 | --- | --- | --- |
 | Support channel | `support@mocktar.com`, the address the legal pages and the error messages already give. A WhatsApp Business number as a second channel, if customers ask for one | 2026-10-17 |
 | Support hours during hypercare | Monday to Saturday, 08:00 to 20:00 in Cotonou (07:00 to 19:00 UTC) | 2026-10-17 |
-| Who is on call | The product owner, with Olakounle Akinotcho as backup. She has access to Vercel (rollback) and Sentry | 2026-10-17 |
+| Who is on call | The product owner, with Olakounle Akinotcho as backup. She has Vercel access for a rollback. Her Sentry access is checked before the launch day | 2026-10-17 |
 | Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done | 2026-10-17 |
 | Who tags the release | The product owner | 2026-10-17 |
 | Auth e-mails per hour | `email_sent` in `supabase/config.toml` goes from 30 to 100 for the launch (next section) | 2026-10-17 |
@@ -31,7 +31,7 @@ Every line is checked the day before, and again on the morning of the launch for
 | The accountant's answers on VAT, e-MECeF and the receipt mentions | ADR 001, A1 to A6 | KRB-26 |
 | `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` and the `AI_PRICE_*` variables on Production | [AI evaluation](../ai-evaluation.md#cost-alert-and-fallback-model) | KRB-160 |
 | Eval baseline on the production model passed, then `AI_DRAFTS_ENABLED=true` | [AI evaluation](../ai-evaluation.md) | KRB-160 |
-| Sentry alert rules for `production`: new issue, regression, spike | [Monitoring](monitoring.md#alert-rules) | KRB-23 |
+| Sentry alert rules for `production`: new issue, regression, spike, sent to the product owner and the on-call backup. The backup is a member of the Sentry organization | [Monitoring](monitoring.md#alert-rules) | KRB-23 |
 | Uptime check on `https://kolabreport.com/api/health` with the `kolabreport-ops` contact point | [Monitoring](monitoring.md#uptime) | KRB-23 |
 | Nightly dump and Storage copy set up for production | [Backups](backups.md#setup) | KRB-23 |
 | Smoke account and workspace created on production | [Smoke tests](smoke-tests.md#setup-once-per-environment) | KRB-161 |
