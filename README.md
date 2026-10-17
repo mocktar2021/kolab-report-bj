@@ -73,6 +73,8 @@ The seeded rows have fixed ids starting with `5eed0000`. The pgTAP and Playwrigh
 | `npm run test:db` | pgTAP RLS tests (needs the local Supabase stack) |
 | `npm run test:e2e` | Playwright end-to-end tests (needs a build and the local Supabase stack) |
 | `npm run format` | Format with Prettier (`format:check` to only check) |
+| `npm run guide:screenshots` | Screenshots of the user guide on demo data (needs a build and the local Supabase stack) |
+| `npm run guide:pdf` | PDF of the user guide, printed from `/fr/guide` (needs a build) |
 
 ## Project layout
 
@@ -116,6 +118,32 @@ Route handlers under `src/app/api` (not localized, skipped by the middleware, so
 | `POST /api/ai/sections/{id}/draft` | Streams an AI draft of a section from a published template, as NDJSON events (assigned expert or manager) |
 
 The workspace picked in the sidebar switcher is kept in the `kr-espace` cookie. The server checks the membership each time it reads it. To add a locale later, extend `routing.locales` in `src/i18n/routing.ts` and add `messages/<locale>.json`.
+
+## User guide
+
+`/fr/guide` is the user guide in French (KRB-199). It is public like the legal pages, and linked from the app menu ("Guide d'utilisation", desktop sidebar and phone menu) and from the footer of the public pages. It has one part per role, owner and admin then expert, and a short FAQ, with screenshots. "Télécharger le guide en PDF" downloads the same page printed as a PDF.
+
+| File | What it holds |
+| --- | --- |
+| `src/content/guide/owner.ts`, `expert.ts`, `faq.ts` | The text, as typed blocks like the legal pages (see `docs/legal.md`), plus numbered steps and screenshots |
+| `src/content/guide/plan-limits.ts` | The limits table of the FAQ, read from `src/lib/billing/catalog.ts` like `/fr/tarifs` |
+| `src/content/guide/figures.ts` | The screenshots: file name, size and French alt text |
+| `src/components/guide/` | The page, laid out like the legal pages, and its blocks |
+| `public/guide/` | The screenshots (WebP, 1280 x 800, 150 KB at most) and `guide-kolabreport.pdf`. The service worker does not precache them |
+| `tests/guide/` | The spec that seeds the demo data and takes the screenshots (`playwright.guide.config.ts`, not part of `test:e2e`) |
+| `scripts/guide-pdf.mjs` | Prints the page to the PDF with Chromium |
+
+Labels in bold in the text are the exact labels of the app, from `messages/fr.json`. When a screen or a label changes, update the text and set `updatedAt` in `src/content/guide/index.ts`, then take the screenshots and the PDF again:
+
+```bash
+npm run build
+npm run guide:screenshots   # demo data in the local stack, then public/guide/*.webp
+npm run guide:pdf           # starts next start on port 3900 and prints /fr/guide
+npx vitest run src/content/guide
+npx playwright test tests/e2e/guide.spec.ts
+```
+
+`guide:screenshots` needs the local Supabase stack and the `.env.local` of the end-to-end tests, with `AI_PROVIDER=mock` and `AI_DRAFTS_ENABLED=true` for the AI draft. It deletes then recreates the demo accounts ending in `@demo.kolabreport.test` and their organization "Cabinet Lagune Études", so never point it at staging or production. The names, the organization and the reports are invented. A screenshot over 150 KB fails the run. `guide:pdf` needs no database: set `GUIDE_BASE_URL` to print from a server you already run, or `GUIDE_PDF_PORT` to use another port.
 
 ## Authentication
 
