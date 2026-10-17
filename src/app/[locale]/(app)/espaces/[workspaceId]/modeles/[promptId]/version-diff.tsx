@@ -4,12 +4,7 @@ import type { PromptVersionRow } from "@/lib/prompts/server";
 import { cn } from "@/lib/utils";
 
 type ChangedField =
-  | "title"
-  | "description"
-  | "outputSchema"
-  | "modelTier"
-  | "temperature"
-  | "maxOutputTokens";
+  "title" | "description" | "outputSchema" | "modelTier" | "temperature" | "maxOutputTokens";
 
 type VersionDiffProps = {
   version: PromptVersionRow;

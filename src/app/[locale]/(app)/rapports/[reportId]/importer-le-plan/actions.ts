@@ -14,12 +14,7 @@ import { sectionInstructionsSchema, sectionTitleSchema, uuidSchema } from "@/lib
 // workspace.
 
 export type ImportPlanErrorKey =
-  | "invalidInput"
-  | "forbidden"
-  | "reportFinal"
-  | "readOnly"
-  | "tooManySections"
-  | "generic";
+  "invalidInput" | "forbidden" | "reportFinal" | "readOnly" | "tooManySections" | "generic";
 
 export type ImportPlanResult = { ok: true; count: number } | { ok: false; error: ImportPlanErrorKey };
 

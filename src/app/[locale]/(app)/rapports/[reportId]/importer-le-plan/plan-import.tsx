@@ -242,8 +242,7 @@ function PlanSourceForm({
 }
 
 type Focus =
-  | { id: string; target: "title" | "up" | "down" | "instructions" }
-  | { id: "restart"; target: "restart" };
+  { id: string; target: "title" | "up" | "down" | "instructions" } | { id: "restart"; target: "restart" };
 
 function PlanPreview({
   reportId,

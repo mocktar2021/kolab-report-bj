@@ -104,9 +104,7 @@ export const POST = withRequestId(async (request: Request) => {
     return answer(500, { error: "retry" });
   }
   const found = (Array.isArray(data) ? data[0] : data) as
-    | { purchase_id: string; event_seen: boolean }
-    | undefined
-    | null;
+    { purchase_id: string; event_seen: boolean } | undefined | null;
   // The FedaPay account may serve other products: not ours, nothing to do.
   if (!found) {
     log.info("billing: webhook for an unknown transaction", {

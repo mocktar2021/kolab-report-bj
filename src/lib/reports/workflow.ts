@@ -20,9 +20,7 @@ export type ReportStatusChange = {
 };
 
 export type FinalSnapshot =
-  | { state: "ready"; url: string; fileName: string }
-  | { state: "pending" }
-  | { state: "missing" };
+  { state: "ready"; url: string; fileName: string } | { state: "pending" } | { state: "missing" };
 
 export type ReportWorkflow = {
   lastChange: ReportStatusChange | null;

@@ -11,8 +11,7 @@ import type { TokenUsage } from "@/lib/ai/generate";
 export type PlanCallRefusal = "forbidden" | "reportFinal" | "rateLimited" | "readOnly" | "quotaExceeded";
 
 export type PlanCallStart =
-  | { ok: true; id: string }
-  | { ok: false; refusal: PlanCallRefusal | "generic"; retryAfter: number | null };
+  { ok: true; id: string } | { ok: false; refusal: PlanCallRefusal | "generic"; retryAfter: number | null };
 
 const REFUSALS = new Set<string>(["forbidden", "reportFinal", "rateLimited", "readOnly", "quotaExceeded"]);
 

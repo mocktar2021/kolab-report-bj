@@ -3,12 +3,7 @@
 // a year at the start of a sentence ("2024. Le projet...") is not one.
 
 export type NumberingFamily =
-  | "decimal"
-  | "dotted"
-  | "upper-roman"
-  | "lower-roman"
-  | "upper-letter"
-  | "lower-letter";
+  "decimal" | "dotted" | "upper-roman" | "lower-roman" | "upper-letter" | "lower-letter";
 
 export type Numbering = {
   family: NumberingFamily;

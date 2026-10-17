@@ -24,9 +24,7 @@ import { CURRENT_WORKSPACE_COOKIE } from "@/lib/workspaces/server";
 // ---------------------------------------------------------------------------
 
 export type NameState =
-  | { status: "idle" }
-  | { status: "saved" }
-  | { status: "error"; error: "nameRequired" | "generic" };
+  { status: "idle" } | { status: "saved" } | { status: "error"; error: "nameRequired" | "generic" };
 
 const fullNameSchema = z.string().trim().min(1).max(120);
 
@@ -117,8 +115,7 @@ export type DeleteAccountError =
 
 /** `email` refills the field after a refusal; the password is typed again. */
 export type DeleteAccountState =
-  | { status: "idle" }
-  | { status: "error"; error: DeleteAccountError; email: string };
+  { status: "idle" } | { status: "error"; error: DeleteAccountError; email: string };
 
 const deleteSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
