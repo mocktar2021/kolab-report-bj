@@ -2,9 +2,11 @@
 // docs/performance.md.
 //
 // Lighthouse mobile, its default: Moto G Power screen, slow 4G and a 4x CPU
-// slowdown, all simulated. Three runs per page on the production build, the
+// slowdown, all simulated. Five runs per page on the production build, the
 // sign-in page signed out and the dashboard as the seeded demo user. The job
 // fails when the median score of a category drops below the KRB-25 targets.
+// With three runs, one slow run on a CI runner was enough to move the median
+// under the line (KRB-210).
 
 // LHCI only reads CommonJS config files.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -36,7 +38,7 @@ module.exports = {
   ci: {
     collect: {
       url: [`${baseUrl}/fr/connexion`, `${baseUrl}/fr/tableau-de-bord`],
-      numberOfRuns: 3,
+      numberOfRuns: 5,
       startServerCommand: process.env.LHCI_BASE_URL ? undefined : "npm run start",
       startServerReadyPattern: "Ready in",
       startServerReadyTimeout: 60000,
