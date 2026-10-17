@@ -118,7 +118,9 @@ describe("ReportTitle", () => {
     await user.clear(field);
     await user.type(field, "Bilan de mission 2026{Enter}");
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Titre enregistré.");
+    // The status region is always there: wait for the message, not the region.
+    await screen.findByText("Titre enregistré.");
+    expect(screen.getByRole("status")).toHaveTextContent("Titre enregistré.");
     expect(screen.queryByLabelText("Titre du rapport")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Renommer le rapport" })).toHaveFocus();
     expect(sent()).toEqual({ reportId: REPORT_ID, title: "Bilan de mission 2026" });
