@@ -29,6 +29,29 @@ export const faqPart: GuidePart = {
       ],
     },
     {
+      id: "installer-l-application",
+      title: "Comment installer KolabReport sur mon téléphone ?",
+      body: [
+        "KolabReport s'installe comme une application, sans passer par un store. Il s'ouvre depuis l'écran d'accueil, dans sa propre fenêtre, et les mises à jour arrivent sans rien réinstaller.",
+        "**Sur Android** (Chrome, Edge ou Samsung Internet) **et sur ordinateur** (Chrome ou Edge) :",
+        {
+          steps: [
+            "Dans le menu, cliquez sur **Installer l'application**, sous **Guide d'utilisation**.",
+            "Confirmez dans la fenêtre du navigateur. L'icône KolabReport arrive sur l'écran d'accueil ou parmi vos applications.",
+          ],
+        },
+        "**Sur iPhone et iPad**, ouvrez KolabReport dans Safari :",
+        {
+          steps: [
+            "Touchez le bouton **Partager**, un carré avec une flèche vers le haut. Sur les iPhone récents, il se trouve dans le menu « … » de Safari.",
+            "Choisissez **Sur l'écran d'accueil**.",
+            "Touchez **Ajouter**.",
+          ],
+        },
+        "Sur iPhone et iPad, **Installer l'application** rappelle ces étapes. Le bouton n'apparaît plus une fois l'application installée, ni dans un navigateur qui ne sait pas l'installer : ouvrez alors KolabReport dans Chrome, Edge ou Safari.",
+      ],
+    },
+    {
       id: "roles",
       title: "Quels sont les rôles ?",
       body: [

@@ -12,10 +12,11 @@ const PARTS = ["1. Propriétaire et administrateur", "2. Expert", "3. Questions 
 
 const QUESTIONS = [
   "3.1 J'ai oublié mon mot de passe",
-  "3.2 Quels sont les rôles ?",
-  "3.3 Où sont mes données et qui peut les voir ?",
-  "3.4 Que fait l'IA, et que ne fait-elle pas ?",
-  "3.5 Quelles sont les limites de chaque offre ?",
+  "3.2 Comment installer KolabReport sur mon téléphone ?",
+  "3.3 Quels sont les rôles ?",
+  "3.4 Où sont mes données et qui peut les voir ?",
+  "3.5 Que fait l'IA, et que ne fait-elle pas ?",
+  "3.6 Quelles sont les limites de chaque offre ?",
 ];
 
 test("/fr/guide opens signed out with its parts, its questions and a table of contents", async ({ page }) => {

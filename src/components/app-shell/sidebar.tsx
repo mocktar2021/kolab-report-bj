@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { BookOpen, LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LegalLinks } from "@/components/legal/legal-links";
+import { InstallAppButton } from "@/components/pwa/install-app";
 import { GUIDE_PATH } from "@/content/guide/pages";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -126,6 +127,7 @@ export function Sidebar({
           <BookOpen className="size-4 shrink-0" aria-hidden="true" />
           <span className="sidebar-collapsed:sr-only">{t("guide")}</span>
         </Link>
+        <InstallAppButton className={footerButtonClass} collapsible />
         <ThemeToggle variant="row" collapsible side="right" align="end" />
         <form action={signOut} onSubmit={clearOfflineCaches}>
           <button type="submit" className={footerButtonClass} aria-label={tCommon("signOut")}>

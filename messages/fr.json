@@ -290,7 +290,17 @@
     "aiDashboard": "Pilotage de l'IA",
     "billing": "Abonnement",
     "account": "Mon compte",
-    "guide": "Guide d'utilisation"
+    "guide": "Guide d'utilisation",
+    "install": {
+      "button": "Installer l'application",
+      "title": "Installer KolabReport",
+      "description": "Sur iPhone et iPad, l'installation se fait depuis Safari, en trois gestes.",
+      "share": "Touchez le bouton <b>Partager</b> <icon></icon>, un carré avec une flèche vers le haut.",
+      "addToHome": "Choisissez <b>Sur l'écran d'accueil</b>.",
+      "add": "Touchez <b>Ajouter</b> : l'icône KolabReport arrive sur l'écran d'accueil.",
+      "hint": "Partager n'apparaît pas ? Sur les iPhone récents, il se trouve dans le menu « … » de Safari. Depuis iOS 16.4, Chrome et Edge proposent aussi « Sur l'écran d'accueil » dans leur menu de partage.",
+      "close": "Fermer"
+    }
   },
   "Notifications": {
     "title": "Notifications",
