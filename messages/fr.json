@@ -699,7 +699,15 @@
       }
     },
     "importPlan": "Importer le plan",
-    "importPlanHint": "Vous avez déjà un plan ? Importez-le depuis un fichier Word, texte ou PDF, ou collez-le."
+    "importPlanHint": "Vous avez déjà un plan ? Importez-le depuis un fichier Word, texte ou PDF, ou collez-le.",
+    "rename": {
+      "button": "Renommer<hidden> le rapport</hidden>",
+      "label": "Titre du rapport",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "saved": "Titre enregistré."
+    }
   },
   "ReportExport": {
     "docx": "Exporter en .docx",
