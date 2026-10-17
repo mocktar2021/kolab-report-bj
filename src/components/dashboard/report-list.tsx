@@ -9,7 +9,7 @@ import { SECTION_STATUSES } from "@/lib/sections";
 import { cn } from "@/lib/utils";
 
 /** Width of a bar fill, kept between 0 and 100 %. */
-function fillWidth(percent: number) {
+export function fillWidth(percent: number) {
   return `${Math.min(100, Math.max(0, percent))}%`;
 }
 

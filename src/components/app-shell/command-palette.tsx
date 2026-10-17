@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { selectWorkspace } from "@/lib/workspaces/actions";
 import { groupByOrganization } from "@/lib/workspaces/group";
 import type { MyWorkspace } from "@/lib/workspaces/types";
-import { WorkspaceMark } from "./workspace-switcher";
+import { WorkspaceMark } from "./workspace-mark";
 
 // Other words people search with, so "a faire" or "deconnexion" match. The
 // search itself ignores accents and case (components/ui/command.tsx).

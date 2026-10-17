@@ -53,11 +53,16 @@ beforeAll(() => {
 });
 beforeEach(() => selectWorkspace.mockReset());
 
-async function openSwitcher(workspaces = WORKSPACES, onSearch?: () => void) {
+async function openSwitcher(workspaces = WORKSPACES, onSearch?: () => void, onNavigate?: () => void) {
   const user = userEvent.setup();
   render(
     <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
-      <WorkspaceSwitcher workspaces={workspaces} currentWorkspaceId={WORKSPACES[0]!.id} onSearch={onSearch} />
+      <WorkspaceSwitcher
+        workspaces={workspaces}
+        currentWorkspaceId={WORKSPACES[0]!.id}
+        onSearch={onSearch}
+        onNavigate={onNavigate}
+      />
     </NextIntlClientProvider>,
   );
   const trigger = screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
@@ -106,5 +111,38 @@ describe("WorkspaceSwitcher (KRB-206)", () => {
     const { menu } = await openSwitcher([WORKSPACES[0]!], vi.fn());
     expect(within(menu).queryByRole("menuitem", { name: "Rechercher un espace" })).not.toBeInTheDocument();
     expect(within(menu).getByRole("group", { name: "Cabinet Zinsou" })).toBeVisible();
+  });
+});
+
+describe("WorkspaceSwitcher organization names (KRB-208)", () => {
+  it("links each organization name to its reports", async () => {
+    const { menu } = await openSwitcher();
+    const agence = within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou : voir les rapports" });
+    const zinsou = within(menu).getByRole("menuitem", { name: "Cabinet Zinsou : voir les rapports" });
+    expect(agence).toHaveAttribute("href", "/organisations/o-agence/rapports");
+    expect(zinsou).toHaveAttribute("href", "/organisations/o-zinsou/rapports");
+    expect(zinsou).toHaveTextContent("Cabinet ZinsouRapports");
+  });
+
+  it("reaches an organization name with the arrow keys, before its workspaces", async () => {
+    const { user, menu } = await openSwitcher(WORKSPACES, vi.fn());
+    expect(within(menu).getByRole("menuitem", { name: "Rechercher un espace" })).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(
+      within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou : voir les rapports" }),
+    ).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(within(menu).getByRole("menuitemradio", { name: /Énergie Bénin/ })).toHaveFocus();
+  });
+
+  it("closes the mobile menu when it opens the reports", async () => {
+    const onNavigate = vi.fn();
+    const { user, menu } = await openSwitcher(WORKSPACES, undefined, onNavigate);
+    const link = within(menu).getByRole("menuitem", { name: "Cabinet Zinsou : voir les rapports" });
+    // jsdom cannot follow a link: the test stops at the click.
+    link.addEventListener("click", (event) => event.preventDefault());
+    await user.click(link);
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(selectWorkspace).not.toHaveBeenCalled();
   });
 });
