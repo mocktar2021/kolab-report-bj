@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/fr.json";
@@ -51,10 +51,15 @@ const SECTIONS = [
   section("33333333-3333-4333-8333-333333333333", "Annexes", "Texte des annexes", "3."),
 ];
 
-function documentOf(sections: ReportSection[]) {
+function documentOf(sections: ReportSection[], open = true, onOpenChange = () => {}) {
   return (
     <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
-      <ReportDocument workspaceId={WORKSPACE_ID} sections={sections} />
+      <ReportDocument
+        workspaceId={WORKSPACE_ID}
+        sections={sections}
+        open={open}
+        onOpenChange={onOpenChange}
+      />
     </NextIntlClientProvider>
   );
 }
@@ -62,6 +67,36 @@ function documentOf(sections: ReportSection[]) {
 describe("ReportDocument", () => {
   beforeEach(() => {
     drawn.length = 0;
+  });
+
+  it("shows the text with Aperçu and hides it again", () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(documentOf(SECTIONS, false, onOpenChange));
+    expect(screen.getByRole("heading", { level: 2, name: "Texte du rapport" })).toBeVisible();
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    expect(drawn).toEqual([]);
+
+    const show = screen.getByRole("button", { name: "Aperçu du texte du rapport" });
+    expect(show).toHaveTextContent("Aperçu");
+    expect(show).toHaveAttribute("aria-expanded", "false");
+    const body = document.getElementById(show.getAttribute("aria-controls") ?? "");
+    expect(body).not.toBeNull();
+    expect(body).not.toBeVisible();
+    fireEvent.click(show);
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+
+    rerender(documentOf(SECTIONS, true, onOpenChange));
+    const hide = screen.getByRole("button", { name: "Masquer l'aperçu du texte du rapport" });
+    expect(hide).toHaveTextContent("Masquer l'aperçu");
+    expect(hide).toHaveAttribute("aria-expanded", "true");
+    expect(body).toBeVisible();
+    expect(screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      "1. Contexte",
+      "2. Analyse",
+      "3. Annexes",
+    ]);
+    fireEvent.click(hide);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
   });
 
   it("draws again only the sections a refresh changed", () => {

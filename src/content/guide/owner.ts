@@ -191,7 +191,7 @@ export const ownerPart: GuidePart = {
       id: "rapport-final-et-exports",
       title: "Rapport final et exports",
       body: [
-        "La page du rapport montre toutes les sections dans l'ordre, avec leur texte, sous **Texte du rapport**. C'est le rapport final en train de se construire.",
+        "La page du rapport montre toutes les sections dans l'ordre, avec leur texte, sous **Texte du rapport**. C'est le rapport final en train de se construire. Le texte est replié : cliquez sur **Aperçu** pour l'afficher, ou sur le titre d'une section dans le **Sommaire** pour aller directement à elle.",
         {
           steps: [
             "Quand les sections sont prêtes, cliquez sur **Soumettre pour revue** dans le cadre **Revue et finalisation**. Le rapport passe **En revue** et les membres concernés sont prévenus. Pour reprendre la rédaction, cliquez sur **Repasser en brouillon**.",

@@ -64,12 +64,14 @@ const ANALYSIS = section("22222222-2222-4222-8222-222222222222", "Analyse", {
 const APPENDIX = section("33333333-3333-4333-8333-333333333333", "Annexes", { canEdit: false });
 const SECTIONS = [CONTEXT, ANALYSIS, APPENDIX];
 
+/** `open`: shows the text with Aperçu (KRB-201), as most tests read it. */
 function renderReport({
   sections = SECTIONS,
   canManage = true,
   frozen = false,
-}: { sections?: ReportSection[]; canManage?: boolean; frozen?: boolean } = {}) {
-  return render(
+  open = true,
+}: { sections?: ReportSection[]; canManage?: boolean; frozen?: boolean; open?: boolean } = {}) {
+  const view = render(
     <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
       <MasterReport
         reportId={REPORT_ID}
@@ -82,6 +84,12 @@ function renderReport({
       />
     </NextIntlClientProvider>,
   );
+  if (open && sections.length > 0) fireEvent.click(previewButton());
+  return view;
+}
+
+function previewButton() {
+  return screen.getByRole("button", { name: "Aperçu du texte du rapport" });
 }
 
 function toc() {
@@ -162,6 +170,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.mocked(reorderSections).mockReset();
   router.refresh.mockReset();
+  window.history.replaceState(null, "", window.location.pathname);
 });
 
 describe("MasterReport for a manager", () => {
@@ -428,5 +437,78 @@ describe("MasterReport with subsections (KRB-195)", () => {
     ]);
     expect(documentTitles()).toEqual(["1. Analyse", "2. Contexte"]);
     expect(subsectionTitles()).toEqual(["2.1 Objectifs", "2.2 Périmètre"]);
+  });
+});
+
+describe("MasterReport text preview (KRB-201)", () => {
+  const scrollIntoView = vi.fn();
+
+  beforeEach(() => {
+    // jsdom has no scrolling.
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  afterEach(() => {
+    scrollIntoView.mockReset();
+  });
+
+  function textHeadings() {
+    return within(screen.getByRole("region", { name: "Texte du rapport" })).queryAllByRole("heading", {
+      level: 3,
+    });
+  }
+
+  it("hides the text until Aperçu, and hides it again", () => {
+    renderReport({ open: false });
+    expect(textHeadings()).toHaveLength(0);
+    expect(previewButton()).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(previewButton());
+    expect(documentTitles()).toEqual(["1. Contexte", "2. Analyse", "3. Annexes"]);
+    const hide = screen.getByRole("button", { name: "Masquer l'aperçu du texte du rapport" });
+    expect(hide).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(hide);
+    expect(textHeadings()).toHaveLength(0);
+  });
+
+  it("shows the text before the browser follows a link of the table of contents", () => {
+    renderReport({ open: false });
+    const anchor = `section-${ANALYSIS.id}`;
+    // Runs after React's handler, as the browser's own scroll to the anchor does.
+    let target: HTMLElement | null = null;
+    const findTarget = () => {
+      target = document.getElementById(anchor);
+    };
+    document.addEventListener("click", findTarget);
+    fireEvent.click(within(toc()).getByRole("link", { name: "Analyse" }));
+    document.removeEventListener("click", findTarget);
+
+    expect(target).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Masquer l'aperçu du texte du rapport" })).toBeVisible();
+  });
+
+  it("opens on a link to a section and scrolls to it", () => {
+    window.history.replaceState(null, "", `#section-${APPENDIX.id}`);
+    renderReport({ open: false });
+    expect(documentTitles()).toEqual(["1. Contexte", "2. Analyse", "3. Annexes"]);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById(`section-${APPENDIX.id}`));
+  });
+
+  it("opens when the address changes to a section later, and not for another anchor", () => {
+    renderReport({ open: false });
+    act(() => {
+      window.history.replaceState(null, "", "#contenu");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(textHeadings()).toHaveLength(0);
+
+    act(() => {
+      window.history.replaceState(null, "", `#section-${CONTEXT.id}`);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(documentTitles()).toEqual(["1. Contexte", "2. Analyse", "3. Annexes"]);
+    expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById(`section-${CONTEXT.id}`));
   });
 });
