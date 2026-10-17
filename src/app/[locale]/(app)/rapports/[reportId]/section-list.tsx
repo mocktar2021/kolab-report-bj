@@ -82,6 +82,8 @@ type SectionListProps = {
   reorderBusy?: boolean;
   /** What happened to the last new order, under the title. */
   reorderStatus?: ReactNode;
+  /** A link to a section of the text was clicked: the text shows first (KRB-201). */
+  onSectionLink?: () => void;
 };
 
 /**
@@ -97,6 +99,7 @@ export function SectionList({
   onReorder,
   reorderBusy = false,
   reorderStatus,
+  onSectionLink,
 }: SectionListProps) {
   const t = useTranslations("Report");
   const tops = sections.filter((section) => section.level === 1);
@@ -115,7 +118,7 @@ export function SectionList({
   const moveSubsections = (parentId: string, ids: string[]) =>
     onReorder?.(tops.flatMap((top) => [top.id, ...(top.id === parentId ? ids : childIds(top.id))]));
 
-  const rowProps = { workspaceId, assignees, canManage };
+  const rowProps = { workspaceId, assignees, canManage, onSectionLink };
   const subsectionList = (parent: SectionRowData) => {
     const list = children.get(parent.id) ?? [];
     if (list.length === 0) return null;
@@ -276,6 +279,7 @@ type SectionRowProps = {
   section: SectionRowData;
   assignees: Assignee[];
   canManage: boolean;
+  onSectionLink?: () => void;
   /** The subsections of a section, under its row. */
   children?: ReactNode;
 };
@@ -318,6 +322,7 @@ function SectionRow({
   section,
   assignees,
   canManage,
+  onSectionLink,
   children,
   handle,
   rowRef,
@@ -360,6 +365,7 @@ function SectionRow({
             <p className="flex flex-wrap items-center gap-2 font-medium leading-snug">
               <a
                 href={`#${sectionAnchor(section.id)}`}
+                onClick={onSectionLink}
                 className="min-w-0 break-words rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {section.title}

@@ -71,7 +71,7 @@ export const GUIDE_FIGURES = {
   ),
   section: figure(
     "section.webp",
-    "Page d'une section attribuée à l'experte : le menu « Statut de la section » sur En cours, les consignes pour l'IA, puis le texte de la section avec le bouton « Modifier le texte ».",
+    "Page d'une section attribuée à l'experte : le menu « Statut de la section » sur En cours, les consignes pour l'IA, puis le texte de la section, ouvert avec « Aperçu », et le bouton « Modifier le texte ».",
   ),
   livrables: figure(
     "livrables.webp",

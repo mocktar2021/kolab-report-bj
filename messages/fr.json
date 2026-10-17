@@ -672,6 +672,10 @@
     "reorderHint": "Faites glisser une section ou une sous-section par sa poignée pour changer l'ordre. Une section emporte ses sous-sections. Au clavier : Espace pour la prendre, les flèches pour la déplacer, Espace pour la déposer.",
     "edit": "Modifier<hidden> la section {title}</hidden>",
     "documentTitle": "Texte du rapport",
+    "documentPreview": "Aperçu",
+    "documentHide": "Masquer l'aperçu",
+    "documentPreviewLabel": "Aperçu du texte du rapport",
+    "documentHideLabel": "Masquer l'aperçu du texte du rapport",
     "emptySection": "Section non rédigée.",
     "contentError": "Le texte de cette section n'a pas pu être affiché.",
     "reorder": {
@@ -695,7 +699,15 @@
       }
     },
     "importPlan": "Importer le plan",
-    "importPlanHint": "Vous avez déjà un plan ? Importez-le depuis un fichier Word, texte ou PDF, ou collez-le."
+    "importPlanHint": "Vous avez déjà un plan ? Importez-le depuis un fichier Word, texte ou PDF, ou collez-le.",
+    "rename": {
+      "button": "Renommer<hidden> le rapport</hidden>",
+      "label": "Titre du rapport",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "saved": "Titre enregistré."
+    }
   },
   "ReportExport": {
     "docx": "Exporter en .docx",
@@ -897,6 +909,10 @@
   },
   "AiDraft": {
     "contentTitle": "Contenu de la section",
+    "contentPreview": "Aperçu",
+    "contentHide": "Masquer l'aperçu",
+    "contentPreviewLabel": "Aperçu du contenu de la section",
+    "contentHideLabel": "Masquer l'aperçu du contenu de la section",
     "contentEmpty": "Aucun contenu pour l'instant.",
     "contentEmptyEditor": "Générez un brouillon ci-dessous à partir des livrables pour commencer.",
     "contentError": "Ce contenu n'a pas pu être affiché. Rechargez la page.",

@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useId } from "react";
 import { useTranslations } from "next-intl";
 import { Markdown } from "@/components/markdown";
+import { PreviewToggle } from "@/components/preview-toggle";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 import { EditLink, sectionAnchor, type SectionRowData } from "./section-list";
@@ -13,6 +14,9 @@ export type ReportSection = SectionRowData & {
 type ReportDocumentProps = {
   workspaceId: string;
   sections: ReportSection[];
+  /** The text shows with "Aperçu" (KRB-201). The table of contents opens it too. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 /**
@@ -22,8 +26,9 @@ type ReportDocumentProps = {
  * ###), deeper headings h5 and h6, as on the section page; in a subsection,
  * one level lower.
  */
-export function ReportDocument({ workspaceId, sections }: ReportDocumentProps) {
+export function ReportDocument({ workspaceId, sections, open, onOpenChange }: ReportDocumentProps) {
   const t = useTranslations("Report");
+  const bodyId = useId();
   if (sections.length === 0) return null;
 
   return (
@@ -31,27 +36,45 @@ export function ReportDocument({ workspaceId, sections }: ReportDocumentProps) {
       aria-labelledby="document-title"
       className="surface-card mt-8 overflow-hidden rounded-2xl border shadow-sm"
     >
-      <div className="border-b px-5 py-4">
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-4",
+          open && "border-b",
+        )}
+      >
         <h2 id="document-title" className="font-medium">
           {t("documentTitle")}
         </h2>
+        <PreviewToggle
+          open={open}
+          onOpenChange={onOpenChange}
+          controls={bodyId}
+          labels={{
+            show: t("documentPreview"),
+            hide: t("documentHide"),
+            showName: t("documentPreviewLabel"),
+            hideName: t("documentHideLabel"),
+          }}
+        />
       </div>
-      <div className="divide-y">
-        {sections.map((section) => (
-          <SectionArticle
-            key={section.id}
-            workspaceId={workspaceId}
-            label={section.label}
-            level={section.level}
-            id={section.id}
-            title={section.title}
-            content={section.content}
-            status={section.status}
-            assigneeName={section.assigneeName}
-            mine={section.mine}
-            canEdit={section.canEdit}
-          />
-        ))}
+      <div id={bodyId} hidden={!open} className="divide-y">
+        {open
+          ? sections.map((section) => (
+              <SectionArticle
+                key={section.id}
+                workspaceId={workspaceId}
+                label={section.label}
+                level={section.level}
+                id={section.id}
+                title={section.title}
+                content={section.content}
+                status={section.status}
+                assigneeName={section.assigneeName}
+                mine={section.mine}
+                canEdit={section.canEdit}
+              />
+            ))
+          : null}
       </div>
     </section>
   );
