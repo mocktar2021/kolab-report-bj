@@ -4,8 +4,8 @@ import { adminClient, createTestUser, createWorkspaceFor, setPlan, type TestUser
 
 // KRB-206: the workspace switcher groups the workspaces by organization, and
 // the workspace search (from the switcher or Ctrl+K) finds one by its name or
-// its organization's, without accents or capitals. KRB-208: the name of an
-// organization opens the reports of that organization.
+// its organization's, without accents or capitals. KRB-208: each organization
+// links to its reports. KRB-209: only the current organization is open.
 test.describe.configure({ mode: "serial" });
 
 let user: TestUser;
@@ -45,6 +45,18 @@ test("the switcher groups the workspaces by organization", async ({ page }) => {
   await signIn(page, user);
   await switcher(page, "Mission Parakou").click();
   const menu = page.getByRole("menu", { name: /^Espace de travail actuel/ });
+  // Only the current workspace's organization is open (KRB-209).
+  const agence = menu.getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
+  await expect(agence).toHaveAttribute("aria-expanded", "false");
+  await expect(menu.getByRole("menuitem", { name: "Cabinet Zinsou, 2 espaces" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(menu.getByRole("group", { name: "Agence Ahouandjinou" })).toHaveCount(0);
+  await expectNoAxeViolations(page, "the workspace menu, one organization closed");
+
+  await agence.click();
+  await expect(agence).toHaveAttribute("aria-expanded", "true");
   await expect(
     menu.getByRole("group", { name: "Agence Ahouandjinou" }).getByRole("menuitemradio"),
   ).toHaveText([/^Énergie Kandi/]);
@@ -106,14 +118,21 @@ test("closing the search gives the focus back to the switcher", async ({ page })
   await expect(trigger).toBeFocused();
 });
 
-test("with the keyboard, an organization name opens the reports of that organization", async ({ page }) => {
+test("with the keyboard, an organization opens and leads to its reports", async ({ page }) => {
   await signIn(page, user);
   await switcher(page, "Mission Parakou").focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("menuitem", { name: "Rechercher un espace" })).toBeFocused();
-  // The first organization by name comes right after the search.
+  // The first organization by name comes right after the search, closed.
   await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("menuitem", { name: "Agence Ahouandjinou : voir les rapports" })).toBeFocused();
+  const agence = page.getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
+  await expect(agence).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(agence).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitemradio", { name: /Énergie Kandi/ })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "Tous les rapports : Agence Ahouandjinou" })).toBeFocused();
   await page.keyboard.press("Enter");
 
   const main = page.getByRole("main");
@@ -126,7 +145,7 @@ test("with the keyboard, an organization name opens the reports of that organiza
 test("the reports of an organization list each of its workspaces and open a report", async ({ page }) => {
   await signIn(page, user);
   await switcher(page, "Mission Parakou").click();
-  await page.getByRole("menuitem", { name: "Cabinet Zinsou : voir les rapports" }).click();
+  await page.getByRole("menuitem", { name: "Tous les rapports : Cabinet Zinsou" }).click();
   await expect(page).toHaveURL(`/fr/organisations/${zinsouId}/rapports`);
   await expect(page).toHaveTitle("Rapports de l'organisation Cabinet Zinsou · KolabReport");
 

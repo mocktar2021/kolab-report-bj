@@ -162,6 +162,9 @@ test("owners assign sections, admins leave owners alone, experts and viewers onl
   // The owner switches to the other workspace from the sidebar.
   await ownerPage.goto("/fr/tableau-de-bord");
   await ownerPage.getByRole("button", { name: /Espace de travail actuel : Audit Koffi/ }).click();
+  // Each workspace came with its own organization, both named Cabinet Koffi:
+  // the other one starts closed (KRB-209).
+  await ownerPage.getByRole("menuitem", { name: "Cabinet Koffi, 1 espace", expanded: false }).click();
   await ownerPage.getByRole("menuitemradio", { name: /Mission Cotonou/ }).click();
   await expect(ownerPage.getByText("Avancement des sections de l'espace Mission Cotonou.")).toBeVisible();
 });
