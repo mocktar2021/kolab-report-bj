@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { Fragment, useId, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { BookText, Building2, ChevronsUpDown, Gauge, Plus, Settings, Users } from "lucide-react";
+import { BookText, Building2, ChevronsUpDown, Gauge, Plus, Search, Settings, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "@/i18n/navigation";
 import { selectWorkspace } from "@/lib/workspaces/actions";
+import { groupByOrganization } from "@/lib/workspaces/group";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,8 @@ type WorkspaceSwitcherProps = {
   /** Hide the text while the desktop sidebar is collapsed. */
   collapsible?: boolean;
   onNavigate?: () => void;
+  /** Opens the workspace search of the command palette (KRB-206). */
+  onSearch?: () => void;
 };
 
 /** Square with the workspace initials, used in the switcher and the workspace list. */
@@ -47,18 +50,23 @@ export function WorkspaceMark({ name, className }: { name: string; className?: s
 /**
  * Menu to switch the current workspace, open its members, prompt templates or
  * AI dashboard, its settings (owners) and its organization (the organization
- * owner), or create a new one.
+ * owner), or create a new one. Workspaces are grouped by organization, and
+ * "Rechercher un espace" opens the search of the command palette (KRB-206).
  */
 export function WorkspaceSwitcher({
   workspaces,
   currentWorkspaceId,
   collapsible = false,
   onNavigate,
+  onSearch,
 }: WorkspaceSwitcherProps) {
   const t = useTranslations("Workspaces");
   const tShell = useTranslations("AppShell");
   const [pending, startTransition] = useTransition();
+  const labelId = useId();
+  const searchChosen = useRef(false);
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId) ?? null;
+  const groups = groupByOrganization(workspaces, t("noOrganizationName"));
 
   if (!current) {
     return (
@@ -101,26 +109,55 @@ export function WorkspaceSwitcher({
           />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>{t("listTitle")}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={current.id}
-          onValueChange={(id) => {
-            onNavigate?.();
-            startTransition(() => selectWorkspace(id));
-          }}
-        >
-          {workspaces.map((workspace) => (
-            <DropdownMenuRadioItem key={workspace.id} value={workspace.id} className="h-auto py-2">
-              <span className="min-w-0">
-                <span className="block truncate">{workspace.name}</span>
-                <span className="block truncate text-xs font-normal text-muted-foreground">
-                  {t(`roles.${workspace.role}`)}
-                </span>
-              </span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+      <DropdownMenuContent
+        align="start"
+        className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-64 overflow-y-auto"
+        onCloseAutoFocus={() => {
+          if (!searchChosen.current) return;
+          searchChosen.current = false;
+          // Once the menu has given the focus back to its button, so the
+          // search gives it back there when it closes.
+          setTimeout(() => onSearch?.(), 0);
+        }}
+      >
+        {onSearch && workspaces.length > 1 ? (
+          <>
+            <DropdownMenuItem onSelect={() => (searchChosen.current = true)}>
+              <Search aria-hidden="true" />
+              {t("searchWorkspaces")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        {groups.map((group, index) => {
+          const id = `${labelId}-${index}`;
+          return (
+            <Fragment key={group.organizationId}>
+              <DropdownMenuLabel id={id} className="truncate">
+                {group.organizationName ?? t("noOrganizationName")}
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                aria-labelledby={id}
+                value={current.id}
+                onValueChange={(workspaceId) => {
+                  onNavigate?.();
+                  startTransition(() => selectWorkspace(workspaceId));
+                }}
+              >
+                {group.workspaces.map((workspace) => (
+                  <DropdownMenuRadioItem key={workspace.id} value={workspace.id} className="h-auto py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate">{workspace.name}</span>
+                      <span className="block truncate text-xs font-normal text-muted-foreground">
+                        {t(`roles.${workspace.role}`)}
+                      </span>
+                    </span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </Fragment>
+          );
+        })}
         <DropdownMenuSeparator />
         {isManager(current.role) ? (
           <DropdownMenuItem asChild>

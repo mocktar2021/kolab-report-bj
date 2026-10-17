@@ -331,13 +331,23 @@
   },
   "CommandPalette": {
     "title": "Palette de commandes",
-    "description": "Recherchez une page, un filtre ou une action, puis validez avec Entrée.",
-    "placeholder": "Rechercher une action…",
-    "inputLabel": "Rechercher une action",
+    "description": "Recherchez une page, un espace de travail, un filtre ou une action, puis validez avec Entrée.",
+    "placeholder": "Rechercher une action ou un espace…",
+    "inputLabel": "Rechercher une action ou un espace",
     "empty": "Aucune action ne correspond à votre recherche.",
     "listLabel": "Actions proposées",
     "navigation": "Navigation",
     "goToDashboard": "Aller au tableau de bord",
+    "workspaces": "Espaces de travail",
+    "currentWorkspace": "Espace actuel",
+    "workspaceSearch": {
+      "title": "Rechercher un espace de travail",
+      "description": "Tapez le nom d'un espace de travail ou de son organisation, puis validez avec Entrée.",
+      "placeholder": "Nom d'un espace ou d'une organisation…",
+      "inputLabel": "Rechercher un espace de travail",
+      "empty": "Aucun espace ne correspond à votre recherche.",
+      "listLabel": "Espaces de travail proposés"
+    },
     "filtersHeading": "Filtrer les sections",
     "filters": {
       "not_started": "Sections non commencées",
@@ -514,6 +524,8 @@
     "create": "Nouvel espace de travail",
     "listTitle": "Espaces de travail",
     "switcherLabel": "Espace de travail actuel : {name}. Changer d'espace",
+    "searchWorkspaces": "Rechercher un espace",
+    "noOrganizationName": "Organisation sans nom",
     "manageMembers": "Gérer les membres",
     "fieldErrors": {
       "nameLength": "Saisissez entre 2 et 120 caractères.",
