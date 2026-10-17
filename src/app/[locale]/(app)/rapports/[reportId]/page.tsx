@@ -26,6 +26,7 @@ import { MasterReport } from "./master-report";
 import { RecentExports } from "./recent-exports";
 import type { ReportSection } from "./report-document";
 import { ReportStatusControls } from "./report-status-controls";
+import { ReportTitle } from "./report-title";
 import { AddSectionForm } from "./section-list";
 import { DeleteReport } from "./delete-report";
 
@@ -57,8 +58,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 /**
  * The master report (Story KRB-18): every section in order, with its text.
  * Members read it all and edit their own sections from it; owners and admins
- * also assign, weigh and reorder the sections, and export the report. Owners
- * and admins move it through review; once final, nobody edits it (KRB-20).
+ * also rename it (KRB-202), assign, weigh and reorder the sections, and export
+ * the report. Owners and admins move it through review; once final, nobody
+ * edits it (KRB-20).
  */
 export default async function ReportPage({ params }: { params: Params }) {
   const { locale, reportId } = await params;
@@ -130,9 +132,9 @@ export default async function ReportPage({ params }: { params: Params }) {
       </Link>
 
       <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 sm:flex-1">
           <p className="truncate text-sm text-muted-foreground">{report.workspace?.name}</p>
-          <h1 className="mt-1 break-words text-h2 text-foreground">{report.title}</h1>
+          <ReportTitle reportId={report.id} title={report.title} canRename={manager && !locked} />
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <ReportStatusBadge status={report.status} />
             <p className="text-small text-muted-foreground">
