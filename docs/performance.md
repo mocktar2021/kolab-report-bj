@@ -1,6 +1,6 @@
 # Performance
 
-Lighthouse checks the sign-in page and the signed-in dashboard on every pull request (KRB-153). This page covers the targets, how to run Lighthouse yourself, the CI job, the budgets, and what KRB-154 changed to get there.
+Lighthouse checks the sign-in page and the signed-in dashboard on every push to master and on a manual run of CI (KRB-153, KRB-190). This page covers the targets, how to run Lighthouse yourself, the CI job, the budgets, and what KRB-154 changed to get there.
 
 ## Targets
 
@@ -13,7 +13,7 @@ From story KRB-25, Lighthouse mobile on the production build:
 | Best practices | 95 or more | error, fails the job |
 | JavaScript and total transfer | budgets below | warning only |
 
-Each page runs 3 times and the assertion uses the median score. Lighthouse 12 and later has no PWA category: installability is checked elsewhere.
+Each page runs 5 times and the assertion uses the median score. With 3 runs, one slow run on a CI runner was enough to fail the job (KRB-210). Lighthouse 12 and later has no PWA category: installability is checked elsewhere.
 
 "Mobile" is the Lighthouse default: Moto G Power screen, slow 4G and a 4x CPU slowdown. Throttling is simulated, so the score depends on the CPU of the machine that runs it. The report shows that machine's benchmark index under "CPU/Memory Power". Below about 1000, Lighthouse warns that the host is slow and the performance score drops.
 
@@ -28,7 +28,7 @@ npx playwright install chromium   # once
 npx lhci autorun
 ```
 
-`lhci autorun` starts `npm run start` on port 3000, signs in through `scripts/lighthouse-login.cjs`, runs Lighthouse 3 times per page, checks the assertions and writes the reports to `.lighthouseci/reports/`. Open the `.report.html` files in a browser.
+`lhci autorun` starts `npm run start` on port 3000, signs in through `scripts/lighthouse-login.cjs`, runs Lighthouse 5 times per page, checks the assertions and writes the reports to `.lighthouseci/reports/`. Open the `.report.html` files in a browser.
 
 | You want to | Run |
 | --- | --- |
@@ -51,7 +51,7 @@ The `Lighthouse` job in `.github/workflows/ci.yml` runs next to the end-to-end j
 4. `npx lhci autorun` with `lighthouserc.cjs`.
 5. The reports go up as the `lighthouse-reports` artifact (14 days), pass or fail.
 
-It is its own job because both jobs need about the same setup (stack, build, Chromium). Run in parallel, Lighthouse adds no wall-clock time to CI. As the last step of the end-to-end job it would add about 2.5 minutes to every run (6 Lighthouse runs and the sign-in). It also measures a freshly seeded database, while the end-to-end tests leave their own workspaces and sections behind.
+It is its own job because both jobs need about the same setup (stack, build, Chromium). Run in parallel, Lighthouse adds no wall-clock time to CI. As the last step of the end-to-end job it would add about 3.5 minutes to every run (10 Lighthouse runs and the sign-in). It also measures a freshly seeded database, while the end-to-end tests leave their own workspaces and sections behind.
 
 The reports never go to `temporary-public-storage`: that is a public URL, and the dashboard report shows workspace and section names. They stay in the run as an artifact.
 
