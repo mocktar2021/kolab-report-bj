@@ -40,7 +40,7 @@ const usedFigures = blocks.flatMap((block) =>
 
 /**
  * Pages a signed-out reader can open from the guide (public in
- * src/middleware.ts), with the anchors of the legal pages.
+ * src/proxy.ts), with the anchors of the legal pages.
  */
 const PUBLIC_PAGES = new Map<string, Set<string> | null>([
   ["/inscription", null],

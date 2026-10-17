@@ -12,7 +12,7 @@ import { WorkspaceBento } from "@/components/landing/workspace-bento";
 
 // Public landing page. It reads no cookies or search params, so it is
 // prerendered at build time. Signed-in visitors are sent to the dashboard by
-// the middleware before they reach it.
+// the proxy before they reach it.
 export async function generateMetadata({ params }: { params: Promise<{ locale: "fr" }> }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Landing" });

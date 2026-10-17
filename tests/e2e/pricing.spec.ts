@@ -93,7 +93,7 @@ test("signed-in users can read the pricing page", async ({ page }) => {
   const user = await createTestUser("Prisca Tarifs");
   await signIn(page, user);
   await page.goto("/fr/tarifs");
-  // The middleware does not send them to the dashboard.
+  // The proxy does not send them to the dashboard.
   await expect(page).toHaveURL("/fr/tarifs");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Des offres claires, en FCFA");
 });

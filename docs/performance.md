@@ -109,7 +109,7 @@ The dashboard is still under the performance target: 67 to 71 here, against 85. 
 | --- | --- | --- |
 | supabase-js, 240 kB minified, one long task of 0.5 to 1.2 s (simulated) right after hydration | `useLiveSections` for Realtime, dashboard and master report | Subscribe with `@supabase/realtime-js` alone (58 kB) and an access token from the session, or start Realtime later. Starting it on the first idle moment after load did not help: Lighthouse still records it. |
 | Hydration of the client app shell, about 1 s (simulated) | `AppShell`, `Sidebar`, Radix dropdowns (96 kB minified) | Render the sidebar on the server with small client islands. Below `lg` the sidebar is hidden but still rendered and hydrated. |
-| Server response, about 450 ms | the layout and the page each query Supabase several times (profile, workspaces, notifications, dashboard data, reports), after `getUser` in the middleware | Fewer round trips, or one RPC for the dashboard data. |
+| Server response, about 450 ms | the layout and the page each query Supabase several times (profile, workspaces, notifications, dashboard data, reports), after `getUser` in the proxy | Fewer round trips, or one RPC for the dashboard data. |
 | A second fetch of the page and of every script and stylesheet after load | `cacheOnFrontEndNav` and `aggressiveFrontEndNavCaching` in `next.config.mjs` | The service worker fetches the current page again (a second server render on signed-in pages) and every `<script>` and `<link>` in it, including the `nomodule` polyfills (40 kB) that modern browsers never run. It runs in a worker, but it competes for the network during load. Owned by the PWA work, not changed here. |
 
 Audits that stay red and do not count in the score:

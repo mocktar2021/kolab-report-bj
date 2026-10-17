@@ -160,6 +160,9 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // next dev would write an AGENTS.md pointing agents at the docs in
+  // node_modules/next/dist/docs. CLAUDE.md says it instead.
+  agentRules: false,
   // Read by src/lib/monitoring/options.ts.
   env: {
     NEXT_PUBLIC_SENTRY_RELEASE: sentry.release ?? "",
@@ -256,7 +259,7 @@ const sentryBuildOptions = {
   authToken: process.env.SENTRY_AUTH_TOKEN,
   // Browser events go to /monitoring on this origin, which passes them on to
   // Sentry: the CSP only allows 'self' and Supabase in connect-src, and ad
-  // blockers block sentry.io. src/middleware.ts skips this path.
+  // blockers block sentry.io. src/proxy.ts skips this path.
   tunnelRoute: "/monitoring",
   // Upload logs in CI only, and nothing at all when there is no upload.
   silent: !process.env.CI || !sentry.uploadSourceMaps,

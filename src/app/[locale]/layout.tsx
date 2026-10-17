@@ -86,6 +86,9 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       className={`${interTight.variable} ${instrumentSans.variable}`}
+      // Smooth scrolling is for anchors on the page (globals.css). Next.js
+      // turns it off during a navigation only when this attribute is set.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className="min-h-dvh">

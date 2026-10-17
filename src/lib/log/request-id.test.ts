@@ -22,7 +22,7 @@ describe("incomingRequestId", () => {
 });
 
 describe("forwardedRequestId", () => {
-  it("prefers the middleware's id, then Vercel's, then nothing", () => {
+  it("prefers the proxy's id, then Vercel's, then nothing", () => {
     expect(forwardedRequestId(new Headers({ "x-request-id": "mw-1", "x-vercel-id": VERCEL_ID }))).toBe(
       "mw-1",
     );

@@ -28,7 +28,7 @@ test("Vercel's id is reused, and an id sent by the client is not", async ({ requ
   expect(api.headers()["x-request-id"]).toBe(VERCEL_ID);
 });
 
-test("the Sentry tunnel route skips the middleware", async ({ request }) => {
+test("the Sentry tunnel route skips the proxy", async ({ request }) => {
   const response = await request.get("/monitoring", { maxRedirects: 0 });
   expect(response.headers()["x-request-id"]).toBeUndefined();
 });

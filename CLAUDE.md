@@ -14,6 +14,10 @@ Use the `write-like-mocktar` skill (`.claude/skills/write-like-mocktar`) for eve
 
 Run before pushing: `npm run lint`, `npm run typecheck`, `npm run build`. For auth or routing changes, also run `npm run test:e2e` with `npx supabase start` running.
 
+## Next.js
+
+Next.js 16 (KRB-207). APIs and conventions changed since 15: read the guide for your task in `node_modules/next/dist/docs/` before writing Next.js code. `npm run dev` and `npm run build` use webpack (`--webpack`) because next-pwa is a webpack plugin. The proxy (`src/proxy.ts`, formerly middleware) runs on Node.js.
+
 ## Project rules
 
 - UI text is French and lives in `messages/fr.json`. Routes are under `/fr`.

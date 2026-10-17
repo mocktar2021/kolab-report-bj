@@ -7,8 +7,8 @@
     "node": ">=20.19.0"
   },
   "scripts": {
-    "dev": "npm run build:worker && next dev",
-    "build": "npm run build:worker && next build && node scripts/check-pdf-fonts.mjs",
+    "dev": "npm run build:worker && next dev --webpack",
+    "build": "npm run build:worker && next build --webpack && node scripts/check-pdf-fonts.mjs",
     "build:worker": "node scripts/build-parse-worker.mjs",
     "eval": "npm run eval:build --silent && node build/evals.mjs",
     "eval:build": "node scripts/build-evals.mjs",
@@ -86,7 +86,7 @@
     "mdast-util-gfm-task-list-item": "^2.0.0",
     "mdast-util-to-markdown": "^2.2.0",
     "motion": "^13.5.1",
-    "next": "^15.5.4",
+    "next": "^16.4.2",
     "next-intl": "^4.3.12",
     "next-themes": "^0.4.6",
     "react": "^19.1.1",
@@ -102,7 +102,6 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
-    "@eslint/eslintrc": "^3.3.1",
     "@lhci/cli": "0.15.1",
     "@playwright/test": "^1.64.0",
     "@testing-library/jest-dom": "^6.10.0",
@@ -114,8 +113,8 @@
     "@types/react-dom": "^19.1.9",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.2",
-    "eslint": "^9.36.0",
-    "eslint-config-next": "^15.5.4",
+    "eslint": "^10.13.0",
+    "eslint-config-next": "^16.4.2",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.6",

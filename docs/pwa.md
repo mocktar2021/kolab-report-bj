@@ -2,6 +2,8 @@
 
 KolabReport ships a service worker built by `@ducanh2912/next-pwa` (Workbox). The options live in the `withPWAInit` block of `next.config.mjs`. The worker is off in `npm run dev`.
 
+next-pwa is a webpack plugin, so `npm run dev` and `npm run build` run Next.js with `--webpack`. A Turbopack build, the default since Next.js 16, writes no `public/sw.js` (KRB-207).
+
 ## How an update reaches users (KRB-156)
 
 Each build writes a new `public/sw.js`: its precache list holds the build id and the new chunk hashes. `/sw.js` is served with `Cache-Control: no-cache, no-store`, so browsers always compare against the deployed file.

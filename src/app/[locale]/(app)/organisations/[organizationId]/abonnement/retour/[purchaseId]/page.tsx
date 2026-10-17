@@ -30,6 +30,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const RECHECK_AFTER_MS = 10_000;
 
+/** True when the last check with FedaPay is old enough to check again. */
+function dueForCheck(lastCheckedAt: string | null): boolean {
+  const lastChecked = lastCheckedAt ? new Date(lastCheckedAt).getTime() : 0;
+  return Date.now() - lastChecked > RECHECK_AFTER_MS;
+}
+
 const PURCHASE_COLUMNS =
   "id, organization_id, workspace_id, offer, offer_label, quantity, amount_xof, status, fedapay_status, last_checked_at";
 
@@ -59,8 +65,7 @@ export default async function PaymentReturnPage({
   let { data: purchase } = await read();
   if (!purchase || purchase.organization_id !== organizationId) notFound();
 
-  const lastChecked = purchase.last_checked_at ? new Date(purchase.last_checked_at).getTime() : 0;
-  if (purchase.status === "pending" && Date.now() - lastChecked > RECHECK_AFTER_MS) {
+  if (purchase.status === "pending" && dueForCheck(purchase.last_checked_at)) {
     const settings = getBillingSettings();
     if (settings.api) {
       const deps = applyDeps(settings, settings.api);

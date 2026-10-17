@@ -25,7 +25,7 @@ describe("getRequestId in pages and server actions", () => {
     expect(await getRequestId()).toBeNull();
   });
 
-  it("reads the id the middleware passed, else Vercel's", async () => {
+  it("reads the id the proxy passed, else Vercel's", async () => {
     incoming.headers = new Headers({ "x-request-id": "mw-1", "x-vercel-id": VERCEL_ID });
     expect(await getRequestId()).toBe("mw-1");
 

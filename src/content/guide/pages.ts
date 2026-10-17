@@ -1,5 +1,5 @@
 // Route of the user guide (KRB-199) and of its PDF, without the locale
-// prefix. Kept apart from the text: the middleware, the menus and the
+// prefix. Kept apart from the text: the proxy, the menus and the
 // footers import only these paths.
 
 /** The guide page, public: /fr/guide. */

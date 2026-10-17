@@ -54,7 +54,7 @@ const SIGNED_IN_REDIRECT_PATHS = ["/", "/connexion", "/inscription"];
 // the Next.js way to pass request headers on, so the id set here is what
 // headers() returns in server components and actions (src/lib/log). The
 // response carries it too, so a user can quote it.
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const requestId = incomingRequestId(request.headers);
   request.headers.set(REQUEST_ID_HEADER, requestId);
   const response = await handle(request);

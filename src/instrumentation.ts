@@ -18,7 +18,7 @@ export async function register() {
 }
 
 // Errors of server components, route handlers, server actions and the
-// middleware, tagged with the request id their log lines carry (KRB-138).
+// proxy, tagged with the request id their log lines carry (KRB-138).
 // Does nothing while Sentry is off.
 export const onRequestError: typeof Sentry.captureRequestError = (error, request, context) => {
   const requestId = forwardedRequestId({

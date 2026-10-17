@@ -18,7 +18,7 @@ import { CURRENT_WORKSPACE_COOKIE, getCurrentWorkspace, getMyWorkspaces } from "
 // Every page under (app) depends on the session and the workspace cookie.
 export const dynamic = "force-dynamic";
 
-// App shell for signed-in pages. The middleware already sends visitors
+// App shell for signed-in pages. The proxy already sends visitors
 // without a session to /fr/connexion; the redirect here is a second check.
 export default async function AppLayout({
   children,
