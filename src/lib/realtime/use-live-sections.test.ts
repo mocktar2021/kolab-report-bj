@@ -46,8 +46,8 @@ const realtime = vi.hoisted(() => {
   return state;
 });
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
+vi.mock("./client", () => ({
+  createRealtimeClient: () => ({
     channel: (topic: string) => {
       realtime.topics.push(topic);
       realtime.calls.push("channel");
@@ -55,7 +55,8 @@ vi.mock("@/lib/supabase/client", () => ({
     },
     removeChannel: realtime.removeChannel,
     getChannels: () => Array.from({ length: realtime.channels }),
-    realtime: { disconnect: realtime.disconnect, setAuth: realtime.setAuth },
+    disconnect: realtime.disconnect,
+    setAuth: realtime.setAuth,
   }),
 }));
 
@@ -63,7 +64,7 @@ const REPORT_ID = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
 const TOPIC = `report-sections:${REPORT_ID}`;
 const FILTER = `report_id=eq.${REPORT_ID}`;
 
-/** Waits for supabase-js, which the hook imports lazily. */
+/** Waits for the Realtime client, which the hook imports lazily. */
 async function settle() {
   await act(async () => {
     await vi.dynamicImportSettled();
@@ -318,7 +319,7 @@ describe("useLiveSections", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("opens no channel when unmounted before supabase-js loads", async () => {
+  it("opens no channel when unmounted before the Realtime client loads", async () => {
     const view = renderHook(() => useLiveSections({ topic: TOPIC, filter: FILTER, onChange: vi.fn() }));
     view.unmount();
     await settle();
