@@ -33,9 +33,9 @@ What runs where (KRB-190):
 
 The job takes 15 to 20 minutes: about 5 to start the stack and build, the rest for the Playwright suite on one worker. A slow runner adds about 30%, so the job stops at 35 minutes. When the suite alone passes 20 minutes on a normal runner, split it in two shards rather than raising the limit again (KRB-188).
 
-**Lighthouse** (KRB-153) starts the same local stack, writes the same `.env.local` and builds the same way, then runs `npx lhci autorun`: Lighthouse mobile, 3 runs on `/fr/connexion` and 3 on `/fr/tableau-de-bord` signed in as the seeded demo user. It fails when a median score is under the KRB-25 targets: performance 85, accessibility 95, best practices 95. The dashboard's performance floor is 65 until KRB-172 brings it to 85. The HTML and JSON reports are kept as the `lighthouse-reports` artifact for 14 days. It runs next to the end-to-end job, so it adds no wall-clock time to CI. Thresholds, budgets and how to run it locally: `docs/performance.md`.
+**Lighthouse** (KRB-153) starts the same local stack, writes the same `.env.local` and builds the same way, then runs `scripts/lighthouse-ci.sh`: Lighthouse mobile, 5 runs on `/fr/connexion` and 5 on `/fr/tableau-de-bord` signed in as the seeded demo user, each run in its own Chrome (KRB-172). It fails when a median score is under the KRB-25 targets: performance 85, accessibility 95, best practices 95. The dashboard's performance floor is 75 until the app shell hydrates faster. The "Lighthouse scores" step prints the score of every run and what cost the most on the median run. The HTML and JSON reports are kept as the `lighthouse-reports` artifact for 14 days. It runs next to the end-to-end job, so it adds no wall-clock time to CI. Thresholds, budgets and how to run it locally: `docs/performance.md`.
 
-Lighthouse does not run on PRs. On `master` it runs after each merge, and a score under target fails CI there, which stops the staging deploy. To check a PR that may change the scores (a heavy page, a new dependency, images), run CI by hand on its branch before the merge: **Actions > CI > Run workflow**, pick the branch. The results show on the PR's last commit.
+Lighthouse does not run on PRs. On `master` it runs after each merge, and a score under target fails CI there, which stops the staging deploy. To check a PR that may change the scores (a heavy page, a new dependency, images), run CI by hand on its branch before the merge: **Actions > CI > Run workflow**, pick the branch. The results show on the PR's last commit. Check **Lighthouse only** to skip the checks and the end-to-end tests: about 7 minutes instead of 25, and a last step traces one dashboard load. The option is ignored on `master`, where a green run deploys staging.
 
 The jobs are skipped with an `if:` on the job, never with `paths` or `paths-ignore` on the workflow. A skipped job counts as passed for a required check, so a docs-only PR can still merge. A workflow that never starts leaves its required checks pending, and the PR cannot merge.
 
@@ -124,5 +124,5 @@ npx supabase start
 npx supabase db reset && npx supabase test db
 npm run db:types && git diff --exit-code src/lib/supabase/database.types.ts
 npm run test:e2e
-npx lhci autorun
+sh scripts/lighthouse-ci.sh
 ```

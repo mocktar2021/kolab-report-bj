@@ -1,5 +1,5 @@
 // Prints what Lighthouse CI measured, from the reports it writes to
-// .lighthouseci/reports (KRB-172). `lhci autorun` only prints the assertions
+// .lighthouseci/reports (KRB-172). `lhci assert` only prints the assertions
 // that fail, and the report artifact is a download away. This puts in the
 // job log, for each page: the performance score of every run and their
 // median, then for the run Lighthouse CI picked as the median: the main

@@ -67,9 +67,10 @@ module.exports = {
         },
         {
           matchingUrlPattern: "/fr/tableau-de-bord",
-          // The dashboard scores 67 to 71 for now. This floor catches a
-          // regression until KRB-172 brings it to 85, then the default applies.
-          assertions: { ...categories({ performance: 0.65 }), ...budgets({ script: 335, total: 575 }) },
+          // The dashboard scores 79 to 86 for now (KRB-172). This floor catches
+          // a regression until the app shell hydrates faster, then the default
+          // of 85 applies (docs/performance.md, "Not fixed yet").
+          assertions: { ...categories({ performance: 0.75 }), ...budgets({ script: 335, total: 575 }) },
         },
       ],
     },
