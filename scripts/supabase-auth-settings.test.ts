@@ -128,7 +128,7 @@ describe("rateLimitFields", () => {
       rate_limit_otp: 30,
       rate_limit_verify: 30,
       rate_limit_token_refresh: 150,
-      rate_limit_email_sent: 30,
+      rate_limit_email_sent: 100,
     });
   });
 

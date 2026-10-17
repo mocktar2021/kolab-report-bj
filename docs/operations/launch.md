@@ -4,16 +4,16 @@ Runbook for the first production release (KRB-26, KRB-162): what must be true be
 
 ## Decisions for the product owner
 
-The rest of this page uses the proposals below until they are decided. Update this table when they are.
+The product owner took every proposal on 2026-10-17. Change a line here when a decision changes.
 
-| Decision | Proposal | Decided |
+| Decision | Choice | Decided |
 | --- | --- | --- |
-| Support channel | `support@mocktar.com`, the address the legal pages and the error messages already give. A WhatsApp Business number as a second channel, if customers ask for one | |
-| Support hours during hypercare | Monday to Saturday, 08:00 to 20:00 in Cotonou (07:00 to 19:00 UTC) | |
-| Who is on call | The product owner, with a named backup who can roll back in Vercel and read Sentry | |
-| Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday | |
-| Who tags the release | The product owner | |
-| Auth e-mails per hour | Raise `email_sent` in `supabase/config.toml` from 30 to 100 for the launch week (next section) | |
+| Support channel | `support@mocktar.com`, the address the legal pages and the error messages already give. A WhatsApp Business number as a second channel, if customers ask for one | 2026-10-17 |
+| Support hours during hypercare | Monday to Saturday, 08:00 to 20:00 in Cotonou (07:00 to 19:00 UTC) | 2026-10-17 |
+| Who is on call | The product owner, with a named backup who can roll back in Vercel and read Sentry. The backup is named before the launch day | 2026-10-17 |
+| Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done | 2026-10-17 |
+| Who tags the release | The product owner | 2026-10-17 |
+| Auth e-mails per hour | `email_sent` in `supabase/config.toml` goes from 30 to 100 for the launch (next section) | 2026-10-17 |
 
 ## Before the tag
 
@@ -37,7 +37,7 @@ Every line is checked the day before, and again on the morning of the launch for
 | Smoke account and workspace created on production | [Smoke tests](smoke-tests.md#setup-once-per-environment) | KRB-161 |
 | `master` green, staging deployed from it, smoke tests green on staging, no open P1 | GitHub Actions | |
 
-**Auth e-mails.** With a custom SMTP sender, Supabase sends at most `email_sent` auth e-mails per hour, 30 today. Sign-up confirmations and password resets share it. An announcement can bring more than 30 sign-ups in an hour, and the next ones get no confirmation e-mail. Raising it is a change to `supabase/config.toml`, merged before the tag, then the Auth settings workflow for production.
+**Auth e-mails.** With a custom SMTP sender, Supabase sends at most `email_sent` auth e-mails per hour for the whole project. Sign-up confirmations and password resets share it. At 30, an announcement could bring more sign-ups in an hour than that, and the next ones would get no confirmation e-mail. It is 100 since KRB-162: the merge to `master` pushed it to staging, and the Auth settings workflow for production applies it there.
 
 ## Launch day
 
@@ -139,6 +139,7 @@ order by 1 desc;
 - no P1 is open and every P2 has a planned fix;
 - the Sentry spike threshold is set from the real error rate;
 - the p95 cost per draft stays under 60 FCFA, about 0.10 USD (ADR 001, Q13), or the Pack IA price is looked at again;
+- `email_sent` stays at 100 or goes back down, from the auth e-mails sent per hour during the week;
 - the daily check becomes a weekly one, on Monday morning.
 
 Then close acceptance criterion 3 of KRB-26.
