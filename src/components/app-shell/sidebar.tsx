@@ -1,9 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
+import { BookOpen, LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LegalLinks } from "@/components/legal/legal-links";
+import { GUIDE_PATH } from "@/content/guide/pages";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Link, usePathname } from "@/i18n/navigation";
 import { signOut } from "@/lib/auth/actions";
@@ -111,6 +112,11 @@ export function Sidebar({
         >
           <UserRound className="size-4 shrink-0" aria-hidden="true" />
           <span className="sidebar-collapsed:sr-only">{t("account")}</span>
+        </Link>
+        {/* The user guide (KRB-199), a public page: it opens without the app shell. */}
+        <Link href={GUIDE_PATH} prefetch={false} className={footerButtonClass} aria-label={t("guide")}>
+          <BookOpen className="size-4 shrink-0" aria-hidden="true" />
+          <span className="sidebar-collapsed:sr-only">{t("guide")}</span>
         </Link>
         <ThemeToggle variant="row" collapsible side="right" align="end" />
         <form action={signOut} onSubmit={clearOfflineCaches}>

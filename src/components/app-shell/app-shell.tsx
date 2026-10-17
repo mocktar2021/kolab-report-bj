@@ -3,9 +3,10 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { LogOut, Menu, Search, UserRound } from "lucide-react";
+import { BookOpen, LogOut, Menu, Search, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LegalLinks } from "@/components/legal/legal-links";
+import { GUIDE_PATH } from "@/content/guide/pages";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
@@ -173,6 +174,15 @@ export function AppShell({
             >
               <UserRound className="size-4" aria-hidden="true" />
               {t("account")}
+            </Link>
+            <Link
+              href={GUIDE_PATH}
+              prefetch={false}
+              onClick={() => setMenuOpen(false)}
+              className="flex h-10 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <BookOpen className="size-4" aria-hidden="true" />
+              {t("guide")}
             </Link>
             <ThemeToggle variant="row" side="top" align="start" />
             <form action={signOut} onSubmit={clearOfflineCaches}>

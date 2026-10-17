@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { GUIDE_PATH } from "@/content/guide/pages";
 import { LEGAL_PAGES, LEGAL_PAGE_KEYS } from "@/content/legal/pages";
 import { Link } from "@/i18n/navigation";
 
@@ -18,7 +19,7 @@ export function SiteFooter({ sectionBase = "" }: { sectionBase?: string }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t">
+    <footer className="border-t print:hidden">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 md:grid-cols-[1.5fr_auto_auto] md:gap-16 lg:py-16">
         <div className="sm:col-span-2 md:col-span-1">
           <Logo />
@@ -42,6 +43,11 @@ export function SiteFooter({ sectionBase = "" }: { sectionBase?: string }) {
             <li>
               <Link href="/tarifs" className={footerLinkClass}>
                 {t("pricing")}
+              </Link>
+            </li>
+            <li>
+              <Link href={GUIDE_PATH} prefetch={false} className={footerLinkClass}>
+                {t("guide")}
               </Link>
             </li>
             <li>

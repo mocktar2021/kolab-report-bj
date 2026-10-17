@@ -210,6 +210,7 @@
       "features": "Fonctionnalités",
       "faq": "Questions fréquentes",
       "pricing": "Tarifs",
+      "guide": "Guide d'utilisation",
       "signIn": "Connexion",
       "madeBy": "Conçu par <link>Mocktar Technologies</link>",
       "newTab": "(nouvel onglet)",
@@ -288,7 +289,8 @@
     "promptLibrary": "Modèles de prompts",
     "aiDashboard": "Pilotage de l'IA",
     "billing": "Abonnement",
-    "account": "Mon compte"
+    "account": "Mon compte",
+    "guide": "Guide d'utilisation"
   },
   "Notifications": {
     "title": "Notifications",
@@ -476,6 +478,16 @@
         "description": "Engagements de Mocktar Technologies comme sous-traitant des données que votre organisation dépose dans KolabReport."
       }
     }
+  },
+  "Guide": {
+    "metaTitle": "Guide d'utilisation",
+    "metaDescription": "Comment utiliser KolabReport, rôle par rôle : espaces de travail, invitations, plan du rapport, sections, modèles de prompts, brouillons IA, éditeur, exports et abonnement. Avec les questions fréquentes et une version PDF.",
+    "eyebrow": "Aide",
+    "title": "Guide d'utilisation",
+    "updatedAt": "Dernière mise à jour : <time>{date}</time>",
+    "toc": "Sommaire",
+    "pdf": "Télécharger le guide en PDF",
+    "pdfHint": "Le même guide, à imprimer ou à partager."
   },
   "Pwa": {
     "updateTitle": "Nouvelle version disponible",

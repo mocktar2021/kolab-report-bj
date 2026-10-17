@@ -59,7 +59,8 @@ export function Rich({ text }: { text: RichText }) {
   });
 }
 
-function Block({ block }: { block: LegalBlock }) {
+/** One block of a legal text. The user guide renders its own blocks with it too. */
+export function LegalBlockView({ block }: { block: LegalBlock }) {
   if (typeof block === "string") {
     return (
       <p>
@@ -147,7 +148,7 @@ export function LegalBlocks({ blocks }: { blocks: LegalBlock[] }) {
   return (
     <div className="space-y-4">
       {blocks.map((block, index) => (
-        <Block key={index} block={block} />
+        <LegalBlockView key={index} block={block} />
       ))}
     </div>
   );

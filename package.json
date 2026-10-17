@@ -24,6 +24,8 @@
     "db:types": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts && prettier --write src/lib/supabase/database.types.ts",
     "test:e2e": "playwright test",
     "test:smoke": "playwright test -c playwright.smoke.config.ts",
+    "guide:screenshots": "playwright test -c playwright.guide.config.ts",
+    "guide:pdf": "node scripts/guide-pdf.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "supabase test db",
