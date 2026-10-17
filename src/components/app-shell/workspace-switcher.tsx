@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useId, useRef, useTransition } from "react";
+import { Fragment, useId, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import {
   BookText,
@@ -17,6 +17,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -26,6 +27,7 @@ import { Link } from "@/i18n/navigation";
 import { selectWorkspace } from "@/lib/workspaces/actions";
 import { groupByOrganization } from "@/lib/workspaces/group";
 import { isManager } from "@/lib/workspaces/roles";
+import type { OrganizationGroup } from "@/lib/workspaces/group";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceMark } from "./workspace-mark";
@@ -45,7 +47,7 @@ type WorkspaceSwitcherProps = {
  * AI dashboard, its settings (owners) and its organization (the organization
  * owner), or create a new one. Workspaces are grouped by organization, and
  * "Rechercher un espace" opens the search of the command palette (KRB-206).
- * Each organization name opens the reports of that organization (KRB-208).
+ * Only the current organization is open; the others open on a click (KRB-209).
  */
 export function WorkspaceSwitcher({
   workspaces,
@@ -57,7 +59,6 @@ export function WorkspaceSwitcher({
   const t = useTranslations("Workspaces");
   const tShell = useTranslations("AppShell");
   const [pending, startTransition] = useTransition();
-  const labelId = useId();
   const searchChosen = useRef(false);
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId) ?? null;
   const groups = groupByOrganization(workspaces, t("noOrganizationName"));
@@ -123,50 +124,15 @@ export function WorkspaceSwitcher({
             <DropdownMenuSeparator />
           </>
         ) : null}
-        {groups.map((group, index) => {
-          const id = `${labelId}-${index}`;
-          return (
-            <Fragment key={group.organizationId}>
-              {/* The organization name opens its reports (KRB-208) and still names its group. */}
-              <DropdownMenuItem asChild className="h-8 text-xs font-medium text-muted-foreground">
-                <Link
-                  href={`/organisations/${group.organizationId}/rapports`}
-                  aria-label={t("organizationReportsLabel", {
-                    organization: group.organizationName ?? t("noOrganizationName"),
-                  })}
-                  onClick={onNavigate}
-                >
-                  <span id={id} className="min-w-0 truncate">
-                    {group.organizationName ?? t("noOrganizationName")}
-                  </span>
-                  <span className="ml-auto flex shrink-0 items-center gap-0.5 font-normal">
-                    {t("organizationReports")}
-                    <ChevronRight aria-hidden="true" />
-                  </span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuRadioGroup
-                aria-labelledby={id}
-                value={current.id}
-                onValueChange={(workspaceId) => {
-                  onNavigate?.();
-                  startTransition(() => selectWorkspace(workspaceId));
-                }}
-              >
-                {group.workspaces.map((workspace) => (
-                  <DropdownMenuRadioItem key={workspace.id} value={workspace.id} className="h-auto py-2">
-                    <span className="min-w-0">
-                      <span className="block truncate">{workspace.name}</span>
-                      <span className="block truncate text-xs font-normal text-muted-foreground">
-                        {t(`roles.${workspace.role}`)}
-                      </span>
-                    </span>
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </Fragment>
-          );
-        })}
+        <WorkspaceGroups
+          groups={groups}
+          current={current}
+          onNavigate={onNavigate}
+          onSelectWorkspace={(workspaceId) => {
+            onNavigate?.();
+            startTransition(() => selectWorkspace(workspaceId));
+          }}
+        />
         <DropdownMenuSeparator />
         {isManager(current.role) ? (
           <DropdownMenuItem asChild>
@@ -215,4 +181,118 @@ export function WorkspaceSwitcher({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+/**
+ * The workspaces by organization (KRB-206). With several organizations, each
+ * one is a row that opens or closes its workspaces without closing the menu,
+ * and only the current workspace's organization is open when the menu opens
+ * (KRB-209): the menu unmounts when closed, so the state starts over. An open
+ * group ends with the link to the reports of its organization (KRB-208).
+ */
+function WorkspaceGroups({
+  groups,
+  current,
+  onNavigate,
+  onSelectWorkspace,
+}: {
+  groups: OrganizationGroup[];
+  current: MyWorkspace;
+  onNavigate?: () => void;
+  onSelectWorkspace: (workspaceId: string) => void;
+}) {
+  const t = useTranslations("Workspaces");
+  const baseId = useId();
+  const collapsible = groups.length > 1;
+  const [open, setOpen] = useState(() => new Set([current.organizationId]));
+
+  function toggle(organizationId: string, expand: boolean) {
+    setOpen((previous) => {
+      const next = new Set(previous);
+      if (expand) next.add(organizationId);
+      else next.delete(organizationId);
+      return next;
+    });
+  }
+
+  return groups.map((group, index) => {
+    const labelId = `${baseId}-${index}`;
+    const name = group.organizationName ?? t("noOrganizationName");
+    const expanded = !collapsible || open.has(group.organizationId);
+    return (
+      <Fragment key={group.organizationId}>
+        {collapsible ? (
+          <DropdownMenuItem
+            aria-expanded={expanded}
+            aria-label={t("organizationToggleLabel", { organization: name, count: group.workspaces.length })}
+            className="h-8 text-xs font-medium text-muted-foreground"
+            // The menu stays open: the click only opens or closes the group.
+            onSelect={(event) => {
+              event.preventDefault();
+              toggle(group.organizationId, !expanded);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight" && !expanded) {
+                event.preventDefault();
+                toggle(group.organizationId, true);
+              } else if (event.key === "ArrowLeft" && expanded) {
+                event.preventDefault();
+                toggle(group.organizationId, false);
+              }
+            }}
+          >
+            <ChevronRight
+              aria-hidden="true"
+              className={cn("transition-transform motion-reduce:transition-none", expanded && "rotate-90")}
+            />
+            <span id={labelId} className="min-w-0 truncate">
+              {name}
+            </span>
+            <span className="ml-auto shrink-0 font-normal tabular-nums">{group.workspaces.length}</span>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuLabel id={labelId} className="truncate">
+            {name}
+          </DropdownMenuLabel>
+        )}
+        {expanded ? (
+          <>
+            <DropdownMenuRadioGroup
+              aria-labelledby={labelId}
+              value={current.id}
+              onValueChange={onSelectWorkspace}
+            >
+              {group.workspaces.map((workspace) => (
+                <DropdownMenuRadioItem
+                  key={workspace.id}
+                  value={workspace.id}
+                  className={cn("h-auto py-2", collapsible && "pl-9")}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate">{workspace.name}</span>
+                    <span className="block truncate text-xs font-normal text-muted-foreground">
+                      {t(`roles.${workspace.role}`)}
+                    </span>
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+            <DropdownMenuItem
+              asChild
+              className={cn("h-8 text-xs text-muted-foreground", collapsible && "pl-9")}
+            >
+              <Link
+                href={`/organisations/${group.organizationId}/rapports`}
+                aria-label={t("organizationReportsLabel", { organization: name })}
+                onClick={onNavigate}
+              >
+                {t("organizationReports")}
+                <ChevronRight aria-hidden="true" className="ml-auto" />
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </Fragment>
+    );
+  });
 }
