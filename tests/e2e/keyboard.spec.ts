@@ -242,8 +242,10 @@ test("sign-in works from the keyboard and announces errors next to the fields", 
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL("/fr/tableau-de-bord");
   await expect(page).toHaveTitle("Tableau de bord · KolabReport");
-  // Next.js reads the new page title to screen readers after a client navigation.
-  await expect(page.locator("#__next-route-announcer__")).toHaveText("Tableau de bord · KolabReport");
+  // Next.js reads the new page name to screen readers after a client navigation:
+  // the title, or the h1 when the title is not set yet. Next.js 16 often sets
+  // the title after it checks, so the h1 is read (KRB-207).
+  await expect(page.locator("#__next-route-announcer__")).toHaveText(/^Tableau de bord( · KolabReport)?$/);
 });
 
 test("sign-up and password reset put the focus on the field to fix", async ({ page }) => {
