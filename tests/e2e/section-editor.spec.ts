@@ -140,7 +140,9 @@ test("the assigned expert writes the text, saves it, and the section moves to in
   await expect(main.getByLabel("Statut de la section")).toHaveValue("in_progress");
   expect(await sectionRow(setup.sectionA)).toMatchObject({ content: FIRST_TEXT, status: "in_progress" });
 
+  // After a reload the text shows with "Aperçu" (KRB-201).
   await page.reload();
+  await main.getByRole("button", { name: "Aperçu du contenu de la section" }).click();
   await expect(main.getByText("Le bâtiment administratif consomme 412 MWh par an.")).toBeVisible();
 });
 
@@ -230,6 +232,7 @@ test("viewers and experts of other sections read the text without an editor", as
     await signIn(page, user);
     await page.goto(sectionUrl(setup.sectionA));
     const main = page.getByRole("main");
+    await main.getByRole("button", { name: "Aperçu du contenu de la section" }).click();
     await expect(main.getByText("Consommation stable en 2026.")).toBeVisible();
     await expect(main.getByRole("button", { name: "Modifier le texte" })).toHaveCount(0);
     await expect(main.getByLabel(EDITOR_LABEL)).toHaveCount(0);

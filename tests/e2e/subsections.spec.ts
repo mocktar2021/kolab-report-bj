@@ -61,6 +61,11 @@ function regions(page: Page) {
   };
 }
 
+/** The text of the report shows with "Aperçu" (KRB-201). */
+async function showText(page: Page) {
+  await page.getByRole("main").getByRole("button", { name: "Aperçu du texte du rapport" }).click();
+}
+
 async function subsections() {
   const { data, error } = await adminClient()
     .from("report_sections")
@@ -87,6 +92,7 @@ test("an owner adds two subsections under a section", async ({ page }) => {
 
   const nested = toc.getByRole("list", { name: "Sous-sections de Contexte" });
   await expect(nested.getByRole("listitem")).toContainText(["1.1Objectifs", "1.2Périmètre"]);
+  await showText(page);
   await expect(text.getByRole("heading", { level: 3 })).toHaveText(["1. Contexte", "2. Analyse"]);
   await expect(text.getByRole("heading", { level: 4, name: /^1\.\d / })).toHaveText([
     "1.1 Objectifs",
@@ -101,6 +107,7 @@ test("an owner moves a subsection up within its section", async ({ page }) => {
   await signIn(page, setup.owner);
   await page.goto(`/fr/rapports/${setup.reportId}`);
   const { main, toc, text } = regions(page);
+  await showText(page);
 
   const handle = toc.getByRole("button", { name: "Déplacer la section Périmètre" });
   await handle.focus();
@@ -153,6 +160,7 @@ test("an expert sees the numbers but cannot add, rename or delete", async ({ pag
   await signIn(page, setup.expert);
   await page.goto(`/fr/rapports/${setup.reportId}`);
   const { main, text } = regions(page);
+  await showText(page);
   await expect(text.getByRole("heading", { level: 4, name: /^1\.\d / })).toHaveText([
     "1.1 Périmètre du siège",
     "1.2 Objectifs",
@@ -192,6 +200,7 @@ test("an owner deletes a section with its subsections", async ({ page }) => {
 
   await page.waitForURL(new RegExp(`/fr/rapports/${setup.reportId}$`));
   const { toc, text } = regions(page);
+  await showText(page);
   await expect(text.getByRole("heading", { level: 3 })).toHaveText(["1. Analyse"]);
   await expect(toc.getByRole("listitem")).toHaveCount(1);
 

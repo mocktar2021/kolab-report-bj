@@ -149,6 +149,14 @@ for (const theme of THEMES) {
           await expectNoAxeViolations(page, `${url} (${theme})`);
         });
       }
+
+      await test.step("report text shown with Aperçu", async () => {
+        await visit(page, `/fr/rapports/${reportId}`, "Rapport Accessibilité Porto-Novo");
+        const main = page.getByRole("main");
+        await main.getByRole("button", { name: "Aperçu du texte du rapport" }).click();
+        await expect(main.getByRole("article").first()).toBeVisible();
+        await expectNoAxeViolations(page, `report text (${theme})`);
+      });
     });
 
     test("the section page's interactive states have no axe violations", async ({ page }) => {
@@ -156,6 +164,12 @@ for (const theme of THEMES) {
       await visit(page, sectionUrl(), "1. Diagnostic de la chaufferie");
       const main = page.getByRole("main");
       const files = main.getByRole("region", { name: "Livrables", exact: true });
+
+      await test.step("section text shown with Aperçu", async () => {
+        await main.getByRole("button", { name: "Aperçu du contenu de la section" }).click();
+        await expect(main.getByText("La chaufferie date de 1998.")).toBeVisible();
+        await expectNoAxeViolations(page, `section text (${theme})`);
+      });
 
       await test.step("deliverable preview open", async () => {
         await files.getByRole("button", { name: `Aperçu de ${setup.fileName}` }).click();

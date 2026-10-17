@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Check, LoaderCircle } from "lucide-react";
 import { renumber } from "@/lib/section-outline";
 import type { ReorderResult } from "./actions";
 import { ReportDocument, type ReportSection } from "./report-document";
-import { SectionList, type Assignee } from "./section-list";
+import { SectionList, sectionAnchor, type Assignee } from "./section-list";
 import { useSectionOrder } from "./use-section-order";
 
 type MasterReportProps = {
@@ -26,7 +27,8 @@ type MasterReportProps = {
 
 /**
  * The table of contents and the text of the report, in the same order. A
- * manager's new order shows in both right away, while it is saved.
+ * manager's new order shows in both right away, while it is saved. The text
+ * stays hidden until "Aperçu" or a link to one of its sections (KRB-201).
  */
 export function MasterReport({
   reportId,
@@ -39,6 +41,33 @@ export function MasterReport({
 }: MasterReportProps) {
   const order = useSectionOrder(reportId, sections);
   const manage = canManage && !frozen;
+  const [textOpen, setTextOpen] = useState(false);
+  // The section a link opened the text for, to scroll to once it shows.
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+
+  // A link of the table of contents: the text shows before the browser follows it.
+  const openForLink = useCallback(() => flushSync(() => setTextOpen(true)), []);
+
+  // A link to a section from elsewhere (#section-…), when the page loads or later.
+  useEffect(() => {
+    function openForHash() {
+      const anchor = window.location.hash.slice(1);
+      // Already on screen: the browser went to it.
+      if (!anchor.startsWith(sectionAnchor("")) || document.getElementById(anchor)) return;
+      setTextOpen(true);
+      setScrollTarget(anchor);
+    }
+    openForHash();
+    window.addEventListener("hashchange", openForHash);
+    return () => window.removeEventListener("hashchange", openForHash);
+  }, []);
+
+  useEffect(() => {
+    if (!textOpen || !scrollTarget) return;
+    document.getElementById(scrollTarget)?.scrollIntoView();
+    setScrollTarget(null);
+  }, [textOpen, scrollTarget]);
+
   // A new order shows its numbers right away (1, 1.1, 2), not after the save.
   const shown = useMemo(
     () =>
@@ -56,9 +85,10 @@ export function MasterReport({
         onReorder={manage ? order.reorder : undefined}
         reorderBusy={order.saving}
         reorderStatus={manage ? <ReorderStatus saving={order.saving} result={order.result} /> : undefined}
+        onSectionLink={openForLink}
       />
       {manage ? addSectionForm : null}
-      <ReportDocument workspaceId={workspaceId} sections={shown} />
+      <ReportDocument workspaceId={workspaceId} sections={shown} open={textOpen} onOpenChange={setTextOpen} />
     </>
   );
 }
