@@ -10,7 +10,7 @@ The product owner took every proposal on 2026-10-17. Change a line here when a d
 | --- | --- | --- |
 | Support channel | `support@mocktar.com`, the address the legal pages and the error messages already give. A WhatsApp Business number as a second channel, if customers ask for one | 2026-10-17 |
 | Support hours during hypercare | Monday to Saturday, 08:00 to 20:00 in Cotonou (07:00 to 19:00 UTC) | 2026-10-17 |
-| Who is on call | The product owner, with a named backup who can roll back in Vercel and read Sentry. The backup is named before the launch day | 2026-10-17 |
+| Who is on call | The product owner, with Olakounle Akinotcho as backup. She has access to Vercel (rollback) and Sentry | 2026-10-17 |
 | Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done | 2026-10-17 |
 | Who tags the release | The product owner | 2026-10-17 |
 | Auth e-mails per hour | `email_sent` in `supabase/config.toml` goes from 30 to 100 for the launch (next section) | 2026-10-17 |
