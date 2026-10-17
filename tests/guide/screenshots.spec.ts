@@ -98,6 +98,9 @@ test("the expert's screens: section, deliverables, AI draft and editor", async (
   await expect(main.getByText("Brouillon accepté.", { exact: false })).toBeVisible();
   await page.reload();
   await heading(page, /Diagnostic des ouvrages/);
+  // The text shows with "Aperçu" (KRB-201).
+  await main.getByRole("button", { name: "Aperçu du contenu de la section" }).click();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await capture(page, "section");
 

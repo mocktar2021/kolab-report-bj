@@ -73,6 +73,7 @@ export const ownerPart: GuidePart = {
           caption: "La fenêtre « Nouveau rapport » sur le tableau de bord.",
         },
         "Un nouveau rapport est un **Brouillon**. Il compte parmi les rapports actifs de votre offre tant qu'il est en brouillon ou en revue. Un rapport final ne compte plus.",
+        "Pour changer le titre plus tard, cliquez sur **Renommer** à côté du titre, en haut de la page du rapport, puis sur **Enregistrer**. Un rapport final ne se renomme pas.",
         "Ajoutez ensuite ses sections une à une, ou importez le plan que vous avez déjà.",
       ],
     },
@@ -191,7 +192,7 @@ export const ownerPart: GuidePart = {
       id: "rapport-final-et-exports",
       title: "Rapport final et exports",
       body: [
-        "La page du rapport montre toutes les sections dans l'ordre, avec leur texte, sous **Texte du rapport**. C'est le rapport final en train de se construire.",
+        "La page du rapport montre toutes les sections dans l'ordre, avec leur texte, sous **Texte du rapport**. C'est le rapport final en train de se construire. Le texte est replié : cliquez sur **Aperçu** pour l'afficher, ou sur le titre d'une section dans le **Sommaire** pour aller directement à elle.",
         {
           steps: [
             "Quand les sections sont prêtes, cliquez sur **Soumettre pour revue** dans le cadre **Revue et finalisation**. Le rapport passe **En revue** et les membres concernés sont prévenus. Pour reprendre la rédaction, cliquez sur **Repasser en brouillon**.",

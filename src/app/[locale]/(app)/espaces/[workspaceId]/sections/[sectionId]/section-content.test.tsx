@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it } from "vitest";
 import messages from "../../../../../../../../messages/fr.json";
@@ -12,12 +12,66 @@ function renderContent(content: string | null, draftHint = false) {
   );
 }
 
+/** The text shows with "Aperçu" (KRB-201). */
+function renderShown(content: string) {
+  const result = renderContent(content);
+  fireEvent.click(screen.getByRole("button", { name: "Aperçu du contenu de la section" }));
+  return result;
+}
+
 describe("SectionContent", () => {
+  it("hides the text until Aperçu, and hides it again", () => {
+    renderContent("Texte de la section");
+    expect(screen.getByRole("heading", { level: 2, name: "Contenu de la section" })).toBeVisible();
+    expect(screen.queryByText("Texte de la section")).toBeNull();
+
+    const show = screen.getByRole("button", { name: "Aperçu du contenu de la section" });
+    expect(show).toHaveTextContent("Aperçu");
+    expect(show).toHaveAttribute("aria-expanded", "false");
+    const body = document.getElementById(show.getAttribute("aria-controls") ?? "");
+    expect(body).not.toBeVisible();
+
+    fireEvent.click(show);
+    const hide = screen.getByRole("button", { name: "Masquer l'aperçu du contenu de la section" });
+    expect(hide).toHaveAttribute("aria-expanded", "true");
+    expect(body).toBeVisible();
+    expect(screen.getByText("Texte de la section")).toBeVisible();
+
+    fireEvent.click(hide);
+    expect(screen.queryByText("Texte de la section")).toBeNull();
+    expect(screen.getByRole("button", { name: "Aperçu du contenu de la section" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("shows the text when its title takes the focus, after a save or an accepted draft", () => {
+    renderContent("Texte accepté");
+    act(() => document.getElementById("section-content-title")?.focus());
+    expect(screen.getByText("Texte accepté")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Masquer l'aperçu du contenu de la section" })).toBeVisible();
+  });
+
+  it("has no Aperçu while the editor takes the place of the text", () => {
+    render(
+      <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
+        <SectionContent content="Texte" draftHint={false} actions={<button type="button">Modifier</button>}>
+          <p>Éditeur</p>
+        </SectionContent>
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByText("Éditeur")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Aperçu/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Modifier" })).toBeVisible();
+  });
+
   it("shows an empty state, with a hint for editors who can ask for a draft", () => {
     const { rerender } = renderContent(null, true);
     expect(screen.getByRole("heading", { level: 2, name: "Contenu de la section" })).toBeVisible();
     expect(screen.getByText("Aucun contenu pour l'instant.")).toBeVisible();
     expect(screen.getByText(/Générez un brouillon ci-dessous/)).toBeVisible();
+    // Nothing to show or hide.
+    expect(screen.queryByRole("button", { name: /Aperçu/ })).toBeNull();
 
     rerender(
       <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
@@ -29,7 +83,7 @@ describe("SectionContent", () => {
   });
 
   it("renders Markdown with tables, links as text, and no images or raw HTML", () => {
-    const { container } = renderContent(
+    const { container } = renderShown(
       [
         "### Contexte",
         "",
@@ -56,7 +110,7 @@ describe("SectionContent", () => {
   });
 
   it("puts the top Markdown headings under the block's title", () => {
-    renderContent("# Un\n\n## Deux\n\n### Trois\n\n#### Quatre");
+    renderShown("# Un\n\n## Deux\n\n### Trois\n\n#### Quatre");
     expect(screen.getByRole("heading", { name: "Un" }).tagName).toBe("H3");
     expect(screen.getByRole("heading", { name: "Deux" }).tagName).toBe("H3");
     expect(screen.getByRole("heading", { name: "Trois" }).tagName).toBe("H3");

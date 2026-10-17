@@ -51,6 +51,7 @@ function renderEditor(props: Props = { content: "Texte initial.", version: V1 })
 const saveMock = () => vi.mocked(saveSectionContent);
 const textarea = () => screen.getByLabelText("Texte de la section (Markdown)") as HTMLTextAreaElement;
 const openButton = () => screen.getByRole("button", { name: "Modifier le texte" });
+const previewButton = () => screen.getByRole("button", { name: "Aperçu du contenu de la section" });
 const saveButton = () => screen.getByRole("button", { name: "Enregistrer" });
 
 async function openAndWrite(user: ReturnType<typeof userEvent.setup>, value: string) {
@@ -67,9 +68,13 @@ describe("SectionEditor in Markdown mode", () => {
   it("opens on the current text with the focus in it, and cancel goes back to the text", async () => {
     const { user } = renderEditor();
     expect(screen.getByRole("heading", { level: 2, name: "Contenu de la section" })).toBeVisible();
+    // The text shows with Aperçu (KRB-201).
+    expect(screen.queryByText("Texte initial.")).toBeNull();
+    await user.click(previewButton());
     expect(screen.getByText("Texte initial.")).toBeVisible();
 
     await user.click(openButton());
+    expect(screen.queryByRole("button", { name: "Masquer l'aperçu du contenu de la section" })).toBeNull();
     expect(textarea()).toHaveValue("Texte initial.");
     expect(textarea()).toHaveFocus();
     expect(screen.queryByRole("button", { name: "Modifier le texte" })).toBeNull();
@@ -241,6 +246,7 @@ describe("SectionEditor in Markdown mode", () => {
 
     // Closed: an accepted draft replaces the text.
     rerender({ content: "Brouillon accepté.", version: V2 });
+    await user.click(previewButton());
     expect(screen.getByText("Brouillon accepté.")).toBeVisible();
 
     // Open without changes: the editor follows.

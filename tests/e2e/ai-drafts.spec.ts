@@ -239,6 +239,8 @@ test("the expert discards a draft and the section keeps its text", async ({ page
   await expect(main.getByText("Brouillon rejeté.", { exact: false })).toBeVisible();
 
   expect(await latestGeneration()).toMatchObject({ accepted: false, edit_distance: null });
+  // The text shows with "Aperçu" (KRB-201).
+  await main.getByRole("button", { name: "Aperçu du contenu de la section" }).click();
   await expect(main.getByText("Paragraphe ajouté par l'expert.")).toBeVisible();
 });
 
@@ -246,6 +248,7 @@ test("a viewer reads the section text without the draft tools", async ({ page })
   await signIn(page, setup.viewer);
   await page.goto(sectionUrl());
   const main = page.getByRole("main");
+  await main.getByRole("button", { name: "Aperçu du contenu de la section" }).click();
   await expect(main.getByText("Paragraphe ajouté par l'expert.")).toBeVisible();
   await expect(main.getByRole("button", { name: "Générer un brouillon" })).toHaveCount(0);
   await expect(main.getByRole("heading", { name: "Brouillon proposé" })).toHaveCount(0);
