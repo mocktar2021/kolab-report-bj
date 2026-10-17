@@ -536,8 +536,9 @@
     "switcherLabel": "Espace de travail actuel : {name}. Changer d'espace",
     "searchWorkspaces": "Rechercher un espace",
     "noOrganizationName": "Organisation sans nom",
-    "organizationReports": "Rapports",
-    "organizationReportsLabel": "{organization} : voir les rapports",
+    "organizationReports": "Tous les rapports",
+    "organizationReportsLabel": "Tous les rapports : {organization}",
+    "organizationToggleLabel": "{organization}, {count, plural, one {# espace} other {# espaces}}",
     "manageMembers": "Gérer les membres",
     "fieldErrors": {
       "nameLength": "Saisissez entre 2 et 120 caractères.",

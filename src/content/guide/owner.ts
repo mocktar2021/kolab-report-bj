@@ -33,7 +33,7 @@ export const ownerPart: GuidePart = {
           caption: "L'assistant de création d'un espace de travail, à l'étape de l'organisation.",
         },
         "Le même sélecteur mène aux autres pages de l'espace. **Paramètres de l'espace** est réservé à ses propriétaires. **Gérer l'organisation** est réservé au propriétaire de l'organisation : la page liste ses espaces de travail, permet d'en ajouter et de les supprimer. Pour confier l'organisation à quelqu'un d'autre, ouvrez **Mon compte**, puis **Transférer une organisation**.",
-        "Le sélecteur range vos espaces par organisation. Quand vous en avez beaucoup, choisissez **Rechercher un espace**, tapez le nom d'un espace ou de son organisation, puis validez avec Entrée. Depuis n'importe quelle page, Ctrl+K (Cmd+K sur Mac) retrouve aussi un espace. Cliquez sur le nom d'une organisation pour voir tous ses rapports, espace par espace.",
+        "Le sélecteur range vos espaces par organisation, avec leur nombre à côté de chaque nom. Seule l'organisation de l'espace actuel est ouverte : cliquez sur le nom d'une autre organisation pour voir ses espaces, et cliquez à nouveau pour la refermer. **Tous les rapports**, en bas de chaque organisation ouverte, montre tous ses rapports, espace par espace. Quand vous avez beaucoup d'espaces, choisissez **Rechercher un espace**, tapez le nom d'un espace ou de son organisation, puis validez avec Entrée. Depuis n'importe quelle page, Ctrl+K (Cmd+K sur Mac) retrouve aussi un espace.",
       ],
     },
     {

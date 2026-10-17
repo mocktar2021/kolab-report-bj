@@ -19,7 +19,7 @@ export const expertPart: GuidePart = {
       body: [
         "Vous recevez une invitation par e-mail. Ouvrez le lien et cliquez sur **Rejoindre l'espace**. Si vous n'avez pas encore de compte, cliquez sur **Créer mon compte** et utilisez l'adresse qui a reçu l'invitation.",
         "Le **Tableau de bord** liste les rapports de l'espace et leurs sections, avec leur expert et leur statut. Ouvrez un rapport : vos sections portent la mention **Votre section** et un lien **Modifier**, qui ouvre la page de la section.",
-        "Si vous travaillez pour plusieurs cabinets, le sélecteur d'espace en haut du menu range vos espaces par organisation. **Rechercher un espace** retrouve un espace par son nom ou par celui de son organisation, et le nom d'une organisation ouvre tous ses rapports.",
+        "Si vous travaillez pour plusieurs cabinets, le sélecteur d'espace en haut du menu range vos espaces par organisation. Seule l'organisation de votre espace actuel est ouverte : cliquez sur le nom d'une autre pour voir ses espaces, puis sur **Tous les rapports** pour voir tous ses rapports. **Rechercher un espace** retrouve un espace par son nom ou par celui de son organisation.",
         "En haut de la page de la section, vous trouvez son statut, son expert et les **Consignes pour l'IA** écrites par le coordinateur. Lisez-les avant de commencer : elles disent ce que la section doit contenir.",
         "Le texte déjà écrit est replié sous **Contenu de la section**. Cliquez sur **Aperçu** pour le lire, et sur **Masquer l'aperçu** pour le replier. Après un enregistrement ou un brouillon accepté, il s'affiche tout seul.",
         {

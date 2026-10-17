@@ -71,9 +71,15 @@ async function openSwitcher(workspaces = WORKSPACES, onSearch?: () => void, onNa
   return { user, menu: await screen.findByRole("menu"), trigger };
 }
 
+const agenceRow = (menu: HTMLElement) =>
+  within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
+const zinsouRow = (menu: HTMLElement) =>
+  within(menu).getByRole("menuitem", { name: "Cabinet Zinsou, 2 espaces" });
+
 describe("WorkspaceSwitcher (KRB-206)", () => {
   it("groups the workspaces under their organization, both sorted by name", async () => {
-    const { menu } = await openSwitcher();
+    const { user, menu } = await openSwitcher();
+    await user.click(agenceRow(menu));
     const agence = within(menu).getByRole("group", { name: "Agence Ahouandjinou" });
     const zinsou = within(menu).getByRole("group", { name: "Cabinet Zinsou" });
     expect(
@@ -94,6 +100,7 @@ describe("WorkspaceSwitcher (KRB-206)", () => {
 
   it("switches to the workspace chosen", async () => {
     const { user, menu } = await openSwitcher();
+    await user.click(agenceRow(menu));
     await user.click(within(menu).getByRole("menuitemradio", { name: /Énergie Bénin/ }));
     expect(selectWorkspace).toHaveBeenCalledWith(WORKSPACES[1]!.id);
   });
@@ -114,31 +121,81 @@ describe("WorkspaceSwitcher (KRB-206)", () => {
   });
 });
 
-describe("WorkspaceSwitcher organization names (KRB-208)", () => {
-  it("links each organization name to its reports", async () => {
+describe("WorkspaceSwitcher organizations (KRB-209)", () => {
+  it("opens only the current workspace's organization, and shows a count for each", async () => {
     const { menu } = await openSwitcher();
-    const agence = within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou : voir les rapports" });
-    const zinsou = within(menu).getByRole("menuitem", { name: "Cabinet Zinsou : voir les rapports" });
-    expect(agence).toHaveAttribute("href", "/organisations/o-agence/rapports");
-    expect(zinsou).toHaveAttribute("href", "/organisations/o-zinsou/rapports");
-    expect(zinsou).toHaveTextContent("Cabinet ZinsouRapports");
+    expect(zinsouRow(menu)).toHaveAttribute("aria-expanded", "true");
+    expect(zinsouRow(menu)).toHaveTextContent("Cabinet Zinsou2");
+    expect(agenceRow(menu)).toHaveAttribute("aria-expanded", "false");
+    expect(agenceRow(menu)).toHaveTextContent("Agence Ahouandjinou1");
+    expect(within(menu).queryByRole("group", { name: "Agence Ahouandjinou" })).not.toBeInTheDocument();
+    expect(within(menu).getAllByRole("menuitemradio")).toHaveLength(2);
   });
 
-  it("reaches an organization name with the arrow keys, before its workspaces", async () => {
+  it("opens and closes an organization on a click, and the menu stays open", async () => {
+    const { user, menu } = await openSwitcher();
+    await user.click(agenceRow(menu));
+    expect(agenceRow(menu)).toHaveAttribute("aria-expanded", "true");
+    expect(within(menu).getByRole("menuitemradio", { name: /Énergie Bénin/ })).toBeVisible();
+    await user.click(zinsouRow(menu));
+    expect(zinsouRow(menu)).toHaveAttribute("aria-expanded", "false");
+    expect(within(menu).queryByRole("menuitemradio", { name: /Mission Parakou/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("menu")).toBeVisible();
+    expect(selectWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("opens with the right arrow and closes with the left arrow", async () => {
     const { user, menu } = await openSwitcher(WORKSPACES, vi.fn());
     expect(within(menu).getByRole("menuitem", { name: "Rechercher un espace" })).toHaveFocus();
     await user.keyboard("{ArrowDown}");
-    expect(
-      within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou : voir les rapports" }),
-    ).toHaveFocus();
+    expect(agenceRow(menu)).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(agenceRow(menu)).toHaveAttribute("aria-expanded", "true");
     await user.keyboard("{ArrowDown}");
     expect(within(menu).getByRole("menuitemradio", { name: /Énergie Bénin/ })).toHaveFocus();
+    await user.keyboard("{ArrowUp}{ArrowLeft}");
+    expect(agenceRow(menu)).toHaveAttribute("aria-expanded", "false");
+    expect(agenceRow(menu)).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(agenceRow(menu)).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("starts over each time the menu opens", async () => {
+    const { user, menu, trigger } = await openSwitcher();
+    await user.click(agenceRow(menu));
+    await user.keyboard("{Escape}");
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    expect(agenceRow(await screen.findByRole("menu"))).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("does not fold a single organization", async () => {
+    const { menu } = await openSwitcher([WORKSPACES[0]!, WORKSPACES[2]!]);
+    expect(within(menu).queryByRole("menuitem", { expanded: false })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { expanded: true })).not.toBeInTheDocument();
+    expect(within(menu).getAllByRole("menuitemradio")).toHaveLength(2);
+  });
+});
+
+describe("WorkspaceSwitcher reports of an organization (KRB-208)", () => {
+  it("ends each open organization with a link to its reports", async () => {
+    const { user, menu } = await openSwitcher();
+    const zinsou = within(menu).getByRole("menuitem", { name: "Tous les rapports : Cabinet Zinsou" });
+    expect(zinsou).toHaveAttribute("href", "/organisations/o-zinsou/rapports");
+    expect(zinsou).toHaveTextContent("Tous les rapports");
+    expect(
+      within(menu).queryByRole("menuitem", { name: "Tous les rapports : Agence Ahouandjinou" }),
+    ).not.toBeInTheDocument();
+    await user.click(agenceRow(menu));
+    expect(
+      within(menu).getByRole("menuitem", { name: "Tous les rapports : Agence Ahouandjinou" }),
+    ).toHaveAttribute("href", "/organisations/o-agence/rapports");
   });
 
   it("closes the mobile menu when it opens the reports", async () => {
     const onNavigate = vi.fn();
     const { user, menu } = await openSwitcher(WORKSPACES, undefined, onNavigate);
-    const link = within(menu).getByRole("menuitem", { name: "Cabinet Zinsou : voir les rapports" });
+    const link = within(menu).getByRole("menuitem", { name: "Tous les rapports : Cabinet Zinsou" });
     // jsdom cannot follow a link: the test stops at the click.
     link.addEventListener("click", (event) => event.preventDefault());
     await user.click(link);
