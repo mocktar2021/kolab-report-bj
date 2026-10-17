@@ -36,7 +36,7 @@ export function SiteHeader({ sectionBase = "" }: { sectionBase?: string }) {
   return (
     <header
       data-scrolled={scrolled ? "" : undefined}
-      className="sticky top-0 z-50 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-border/70 data-[scrolled]:bg-background/75 data-[scrolled]:backdrop-blur-md"
+      className="sticky top-0 z-50 border-b border-transparent transition-[background-color,border-color] duration-300 data-[scrolled]:border-border/70 data-[scrolled]:bg-background/75 data-[scrolled]:backdrop-blur-md print:hidden"
     >
       <nav
         aria-label={t("label")}

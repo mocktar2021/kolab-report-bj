@@ -1,5 +1,6 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
+import { GUIDE_PATH } from "@/content/guide/pages";
 import { LEGAL_PAGES } from "@/content/legal/pages";
 import { routing } from "@/i18n/routing";
 import { incomingRequestId, REQUEST_ID_HEADER } from "@/lib/log/request-id";
@@ -29,6 +30,8 @@ const PUBLIC_PATHS = [
   // Mentions légales, privacy policy, CGU, CGV and data processing agreement.
   // Signed-in users read them too: they are not in SIGNED_IN_REDIRECT_PATHS.
   ...Object.values(LEGAL_PAGES),
+  // The user guide (KRB-199), linked from the public footer and the app menu.
+  GUIDE_PATH,
 ];
 
 const LOCALE_PREFIX = new RegExp(`^/(${routing.locales.join("|")})(?=/|$)`);

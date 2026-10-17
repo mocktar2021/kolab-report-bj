@@ -102,6 +102,9 @@ const withPWA = withPWAInit({
     // Served when a navigation fails and the page is not in cache.
     document: "/fr/hors-ligne",
   },
+  // Every file of public/ is precached by default. The screenshots and the
+  // PDF of the user guide (KRB-199) are only fetched by people who open it.
+  publicExcludes: ["!noprecache/**/*", "!guide/**/*"],
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     disableDevLogs: true,
