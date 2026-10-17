@@ -2,7 +2,9 @@
 // Lighthouse run (KRB-172). The Lighthouse report says how long each long
 // task is, and "Unattributable" when no script is on its stack. This prints
 // what those tasks are made of: style and layout, paint, parsing, garbage
-// collection or script, each with its time.
+// collection or script, each with its time. For a task with nothing measured
+// inside, it lists every trace event of the renderer during it, then when
+// each chunk of the HTML arrived.
 //
 //   node scripts/lighthouse-trace.mjs <url>
 //
@@ -86,6 +88,57 @@ for (const task of tasks.filter((t) => !t.parent && t.duration >= 20)) {
   const script = task.attributableURLs.length ? short(task.attributableURLs[0]) : "Unattributable";
   console.log(`  ${ms(task.startTime)} ${ms(task.duration)}  ${script}`);
   for (const [name, time] of partsOf(task).slice(0, 8)) console.log(`             ${ms(time)}  ${name}`);
+}
+
+// A long task with nothing measured inside: every trace event of the
+// renderer during it, on any thread, to see what the main thread waits for.
+const threadNames = new Map();
+for (const event of artifacts.Trace.traceEvents) {
+  if (event.ph === "M" && event.name === "thread_name")
+    threadNames.set(`${event.pid}:${event.tid}`, event.args.name);
+}
+const { pid } = processed.mainThreadEvents[0];
+for (const task of tasks.filter((t) => !t.parent && t.duration >= 50 && !t.attributableURLs.length)) {
+  const from = origin + task.startTime * 1000;
+  const to = origin + task.endTime * 1000;
+  const seen = new Map();
+  for (const event of artifacts.Trace.traceEvents) {
+    if (event.pid !== pid || event.ts < from || event.ts > to || event.ph === "M") continue;
+    const key = `${threadNames.get(`${event.pid}:${event.tid}`) ?? event.tid} ${event.ph} ${event.name}`;
+    const entry = seen.get(key) ?? { count: 0, first: event.ts, time: 0 };
+    entry.count += 1;
+    entry.time += (event.dur ?? 0) / 1000;
+    seen.set(key, entry);
+  }
+  console.log(
+    `  events during the task at ${ms(task.startTime)} (thread, phase, name: count, first at, time):`,
+  );
+  for (const [key, entry] of [...seen].sort((a, b) => a[1].first - b[1].first).slice(0, 40)) {
+    console.log(`    ${key}: ${entry.count}, ${ms((entry.first - origin) / 1000)}, ${ms(entry.time)}`);
+  }
+}
+
+// When the HTML arrived: a streamed page comes in several chunks.
+const log = artifacts.DevtoolsLog;
+const documentRequest = log.find(
+  (entry) => entry.method === "Network.requestWillBeSent" && entry.params.type === "Document",
+);
+if (documentRequest) {
+  const id = documentRequest.params.requestId;
+  const at = (seconds) => ms(seconds * 1000 - origin / 1000);
+  console.log("  the HTML document (ms after navigation start):");
+  for (const entry of log) {
+    if (entry.params?.requestId !== id) continue;
+    if (entry.method === "Network.responseReceived") {
+      console.log(`  ${at(entry.params.timestamp)}  response headers`);
+    } else if (entry.method === "Network.dataReceived") {
+      console.log(`  ${at(entry.params.timestamp)}  ${entry.params.dataLength} bytes`);
+    } else if (entry.method === "Network.loadingFinished") {
+      console.log(
+        `  ${at(entry.params.timestamp)}  done, ${entry.params.encodedDataLength} bytes on the wire`,
+      );
+    }
+  }
 }
 
 // When each script of the page ran, against the first paint: Lighthouse counts
