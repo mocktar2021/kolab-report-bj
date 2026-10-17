@@ -102,6 +102,11 @@ function regions(page: Page) {
   };
 }
 
+/** The text of the report shows with "Aperçu" (KRB-201). */
+async function showText(page: Page) {
+  await page.getByRole("main").getByRole("button", { name: "Aperçu du texte du rapport" }).click();
+}
+
 async function positions() {
   const { data, error } = await adminClient()
     .from("report_sections")
@@ -117,6 +122,15 @@ test("an owner reads the sections in order, with their text, assignee and status
   await page.goto(reportUrl());
   const { main, toc, text } = regions(page);
   await expect(main.getByRole("heading", { level: 1 })).toHaveText("Rapport Synthèse Cotonou");
+  // The text stays hidden until "Aperçu" (KRB-201).
+  const show = main.getByRole("button", { name: "Aperçu du texte du rapport" });
+  await expect(show).toHaveAttribute("aria-expanded", "false");
+  await expect(text.getByRole("article")).toHaveCount(0);
+  await show.click();
+  await expect(main.getByRole("button", { name: "Masquer l'aperçu du texte du rapport" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
 
   await expect(toc.getByRole("listitem")).toHaveCount(3);
   await expect(toc.getByRole("listitem")).toContainText(["Contexte", "Diagnostic", "Recommandations"]);
@@ -147,9 +161,15 @@ test("an owner reads the sections in order, with their text, assignee and status
   await expect(recommendations.getByText("Section non rédigée.")).toBeVisible();
   await expect(recommendations.getByText("Non attribuée")).toBeVisible();
 
-  // The table of contents jumps to the section in the text.
+  // The table of contents shows the hidden text and jumps to the section.
+  await main.getByRole("button", { name: "Masquer l'aperçu du texte du rapport" }).click();
+  await expect(text.getByRole("article")).toHaveCount(0);
   await toc.getByRole("link", { name: "Recommandations", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`#section-${setup.ids.recommendations}$`));
+  await expect(recommendations).toBeInViewport();
+
+  // So does a link to the section from elsewhere.
+  await page.reload();
   await expect(recommendations).toBeInViewport();
 });
 
@@ -157,6 +177,7 @@ test("an owner moves the last section to the top with the keyboard", async ({ pa
   await signIn(page, setup.owner);
   await page.goto(reportUrl());
   const { main, toc, text } = regions(page);
+  await showText(page);
 
   const handle = toc.getByRole("button", { name: "Déplacer la section Recommandations" });
   await handle.focus();
@@ -184,6 +205,7 @@ test("an owner moves the last section to the top with the keyboard", async ({ pa
 
   await page.reload();
   await expect(toc.getByRole("listitem")).toContainText(["Recommandations", "Contexte", "Diagnostic"]);
+  await showText(page);
   await expect(text.getByRole("heading", { level: 3 })).toHaveText([
     "1. Recommandations",
     "2. Contexte",
@@ -195,6 +217,7 @@ test("an expert reads every section and edits only their own", async ({ page }) 
   await signIn(page, setup.expert);
   await page.goto(reportUrl());
   const { main, toc, text } = regions(page);
+  await showText(page);
 
   await expect(text.getByRole("article")).toHaveCount(3);
   await expect(text.getByRole("article", { name: /Contexte$/ }).getByText("3 bâtiments")).toBeVisible();
