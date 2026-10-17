@@ -858,6 +858,99 @@ export type Database = {
         };
         Relationships: [];
       };
+      plan_import_calls: {
+        Row: {
+          completed_at: string | null;
+          cost_estimate: number | null;
+          created_at: string;
+          error_code: string | null;
+          id: string;
+          input_chars: number;
+          input_tokens: number | null;
+          items: number | null;
+          latency_ms: number | null;
+          model: string;
+          output_tokens: number | null;
+          pages: number;
+          provider: string;
+          report_id: string | null;
+          status: string;
+          total_tokens: number | null;
+          user_id: string | null;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          completed_at?: string | null;
+          cost_estimate?: number | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          input_chars: number;
+          input_tokens?: number | null;
+          items?: number | null;
+          latency_ms?: number | null;
+          model: string;
+          output_tokens?: number | null;
+          pages: number;
+          provider: string;
+          report_id?: string | null;
+          status?: string;
+          total_tokens?: never;
+          user_id?: string | null;
+          workspace_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          cost_estimate?: number | null;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          input_chars?: number;
+          input_tokens?: number | null;
+          items?: number | null;
+          latency_ms?: number | null;
+          model?: string;
+          output_tokens?: number | null;
+          pages?: number;
+          provider?: string;
+          report_id?: string | null;
+          status?: string;
+          total_tokens?: never;
+          user_id?: string | null;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "plan_import_calls_report_id_fkey";
+            columns: ["report_id"];
+            isOneToOne: false;
+            referencedRelation: "report_progress";
+            referencedColumns: ["report_id"];
+          },
+          {
+            foreignKeyName: "plan_import_calls_report_id_fkey";
+            columns: ["report_id"];
+            isOneToOne: false;
+            referencedRelation: "reports";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "plan_import_calls_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "plan_import_calls_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -1933,6 +2026,20 @@ export type Database = {
       end_prompt_rollout: { Args: { p_promote: boolean; p_rollout_id: string }; Returns: undefined };
       expire_audit_events: { Args: { p_months: number }; Returns: number };
       expire_report_exports: { Args: { p_days: number }; Returns: number };
+      finish_plan_import_call: {
+        Args: {
+          p_call_id: string;
+          p_cost_estimate: number;
+          p_error_code: string;
+          p_input_tokens: number;
+          p_items: number;
+          p_latency_ms: number;
+          p_output_tokens: number;
+          p_status: string;
+          p_workspace_id: string;
+        };
+        Returns: boolean;
+      };
       finish_prompt_assist: {
         Args: {
           p_call_id: string;
@@ -1949,6 +2056,7 @@ export type Database = {
       };
       finish_storage_cleanup: { Args: { p_error?: string; p_ids: number[] }; Returns: number };
       health_check: { Args: Record<PropertyKey, never>; Returns: boolean };
+      import_report_plan: { Args: { p_items: Json; p_report_id: string }; Returns: number };
       invitation_preview: {
         Args: { token: string };
         Returns: {
@@ -2004,6 +2112,19 @@ export type Database = {
           user_id: string;
         }[];
       };
+      plan_import_metrics: {
+        Args: { p_since: string; p_workspace_id: string };
+        Returns: {
+          calls: number;
+          cost: number;
+          failed: number;
+          input_tokens: number;
+          last_call: string;
+          model: string;
+          output_tokens: number;
+          succeeded: number;
+        }[];
+      };
       prepare_account_deletion: { Args: { p_user_id: string }; Returns: Json };
       prompt_assist_metrics: {
         Args: { p_since: string; p_workspace_id: string };
@@ -2047,6 +2168,23 @@ export type Database = {
         };
         Returns: {
           generation_id: string;
+          refusal: string;
+          retry_after: number;
+        }[];
+      };
+      start_plan_import_call: {
+        Args: {
+          p_hourly_limit: number;
+          p_input_chars: number;
+          p_model: string;
+          p_pages: number;
+          p_provider: string;
+          p_report_id: string;
+          p_user_id: string;
+          p_workspace_id: string;
+        };
+        Returns: {
+          call_id: string;
           refusal: string;
           retry_after: number;
         }[];

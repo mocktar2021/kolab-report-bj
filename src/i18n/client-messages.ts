@@ -52,6 +52,8 @@ export const CLIENT_MESSAGE_SCOPES = {
     "Workspaces.fieldErrors",
   ],
   report: ["Report", "ReportExport", "ReportStatus", "SectionStatus", "Workspaces"],
+  /** /fr/rapports/[id]/importer-le-plan: reading a plan and its preview (KRB-196). */
+  planImport: ["PlanImport"],
   /** The organization's billing page, its billing details form and the payment return page. */
   billing: ["Billing.checkout", "Billing.offers", "Billing.page.details", "Billing.return"],
 } as const satisfies Record<string, readonly string[]>;

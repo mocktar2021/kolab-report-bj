@@ -183,3 +183,46 @@ export async function getTemplateWriterUsage(
     lastCall: row.last_call ?? null,
   }));
 }
+
+/** AI readings of PDF plans of a workspace for one model (KRB-196). */
+export type PlanImportUsage = {
+  model: string;
+  calls: number;
+  succeeded: number;
+  failed: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** USD, null when no price is set. */
+  cost: number | null;
+  lastCall: string | null;
+};
+
+/**
+ * The PDF plan readings over the last `days` days, per model, latest first.
+ * Null when they can't be read: the dashboard then leaves them out.
+ */
+export async function getPlanImportUsage(
+  workspaceId: string,
+  days: MetricPeriod,
+): Promise<PlanImportUsage[] | null> {
+  const supabase = await createClient();
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.rpc("plan_import_metrics", {
+    p_workspace_id: workspaceId.toLowerCase(),
+    p_since: since,
+  });
+  if (error || !data) {
+    if (error) log.error("ai dashboard: could not read the plan imports", { error: error.message });
+    return null;
+  }
+  return data.map((row) => ({
+    model: row.model,
+    calls: Number(row.calls),
+    succeeded: Number(row.succeeded),
+    failed: Number(row.failed),
+    inputTokens: Number(row.input_tokens),
+    outputTokens: Number(row.output_tokens),
+    cost: numberOrNull(row.cost),
+    lastCall: row.last_call ?? null,
+  }));
+}

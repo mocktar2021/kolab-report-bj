@@ -32,7 +32,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useFormatter, useTranslations } from "next-intl";
-import { Check, GripVertical, PenLine, Plus } from "lucide-react";
+import { Check, FileUp, GripVertical, PenLine, Plus } from "lucide-react";
 import { FieldError } from "@/components/auth/field-error";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -524,9 +524,18 @@ export type ParentOption = Pick<SectionRowData, "id" | "label" | "title">;
 /**
  * Adds a section at the end of the report, or a subsection at the end of a
  * section (KRB-195). The place stays selected, so several subsections of the
- * same section can be typed one after the other.
+ * same section can be typed one after the other. `importHref` adds the link
+ * to the plan import page (KRB-196).
  */
-export function AddSectionForm({ reportId, parents }: { reportId: string; parents: ParentOption[] }) {
+export function AddSectionForm({
+  reportId,
+  parents,
+  importHref,
+}: {
+  reportId: string;
+  parents: ParentOption[];
+  importHref?: string;
+}) {
   const t = useTranslations("Report");
   const tWorkspaces = useTranslations("Workspaces");
   const [state, formAction, pending] = useActionState<SectionActionState, FormData>(addSection, {
@@ -621,6 +630,23 @@ export function AddSectionForm({ reportId, parents }: { reportId: string; parent
             ? t("addedSub", { title: added.title, parent: addedParent.title })
             : t("added", { title: added.title })}
       </p>
+      {importHref ? (
+        <div className="mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">{t("importPlanHint")}</p>
+          <Button
+            asChild
+            variant="outline"
+            shape="pill"
+            size="sm"
+            className="shrink-0 self-start sm:self-auto"
+          >
+            <Link href={importHref}>
+              <FileUp aria-hidden="true" />
+              {t("importPlan")}
+            </Link>
+          </Button>
+        </div>
+      ) : null}
     </form>
   );
 }

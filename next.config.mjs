@@ -190,6 +190,8 @@ const nextConfig = {
   // the final snapshot. scripts/check-pdf-fonts.mjs checks it after each build.
   outputFileTracingIncludes: {
     "/api/deliverables/[id]/complete": ["./build/parse-worker.cjs"],
+    // Plan imports read files in their own bundle, with the PDF reader (KRB-196).
+    "/api/reports/[id]/plan": ["./build/plan-worker.cjs"],
     "/[locale]/espaces/[workspaceId]/sections/[sectionId]": ["./build/parse-worker.cjs"],
     "/api/billing/receipts/[id]": [PDF_FONTS],
     "/api/reports/[id]/exports": [PDF_FONTS],

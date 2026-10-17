@@ -681,7 +681,9 @@
         "reportFinal": "Ce rapport est final. Un propriétaire doit le rouvrir pour le modifier.",
         "readOnly": "Cet espace de travail est en lecture seule : l'ordre des sections ne peut plus changer."
       }
-    }
+    },
+    "importPlan": "Importer le plan",
+    "importPlanHint": "Vous avez déjà un plan ? Importez-le depuis un fichier Word, texte ou PDF, ou collez-le."
   },
   "ReportExport": {
     "docx": "Exporter en .docx",
@@ -1670,6 +1672,16 @@
       "tokens": "{input, number} jetons en entrée, {output, number} en sortie",
       "cost": "Coût estimé : {cost}",
       "costMissing": "Coût : prix non configurés"
+    },
+    "planImport": {
+      "title": "Lecture de plans PDF",
+      "description": "Les PDF dont l'IA a lu le plan sur les {days} derniers jours, pour « Importer le plan ». Chaque lecture compte comme un brouillon IA du mois.",
+      "empty": "Aucun plan PDF lu par l'IA sur la période.",
+      "calls": "{count, plural, one {# lecture} other {# lectures}}",
+      "failed": "{count, plural, =0 {aucun échec} one {# échec} other {# échecs}}",
+      "tokens": "Jetons : {input} en entrée, {output} en sortie",
+      "cost": "Coût estimé : {cost}",
+      "costMissing": "Prix non configurés"
     }
   },
   "Billing": {
@@ -2195,6 +2207,106 @@
       "typed": "Saisissez « {name} » pour confirmer",
       "confirm": "Supprimer l'organisation",
       "pending": "Suppression…"
+    }
+  },
+  "PlanImport": {
+    "metaTitle": "Importer le plan",
+    "backToReport": "Retour au rapport",
+    "title": "Importer le plan",
+    "subtitle": "Rapport « {title} »",
+    "intro": "Créez les sections du rapport à partir du plan que vous avez déjà. Vous relisez le plan avant que les sections soient créées.",
+    "existing": "{count, plural, one {Les sections importées s'ajouteront après la section du rapport.} other {Les sections importées s'ajouteront après les # sections du rapport.}}",
+    "frozen": "Ce rapport est final : rouvrez-le pour importer un plan.",
+    "readOnly": "Cet espace de travail est en lecture seule : aucun plan ne peut être importé.",
+    "fileTitle": "Depuis un fichier",
+    "fileLabel": "Fichier du plan",
+    "fileHelp": "Word (.docx), texte (.txt), Markdown (.md) ou PDF, 4 Mo au plus. Le fichier sert à lire le plan et n'est pas conservé.",
+    "fileHelpNoPdf": "Word (.docx), texte (.txt) ou Markdown (.md), 4 Mo au plus. Le fichier sert à lire le plan et n'est pas conservé.",
+    "pdfNote": "Un PDF est lu par l'IA : la lecture compte comme un brouillon IA du mois.",
+    "pdfOff": "La lecture des PDF par l'IA n'est pas disponible pour le moment.",
+    "fileSubmit": "Lire le fichier",
+    "pasteTitle": "Ou collez le texte",
+    "pasteLabel": "Texte du plan",
+    "pastePlaceholder": "1. Contexte\n2. Objectifs\n2.1 Objectif général\n2.2 Objectifs spécifiques\n3. Méthodologie",
+    "pasteHelp": "Une ligne par titre, numérotée (1., 1.1, I., A.) ou en Markdown (# et ##). Le texte sous un titre devient ses consignes.",
+    "pasteSubmit": "Lire le texte",
+    "reading": "Lecture du plan…",
+    "readingPdf": "L'IA lit le PDF, cela peut prendre une minute…",
+    "chooseFile": "Choisissez un fichier.",
+    "previewTitle": "Vérifiez le plan",
+    "summary": "{count, plural, one {# élément} other {# éléments}} : {sections, plural, one {# section} other {# sections}} et {subsections, plural, =0 {aucune sous-section} one {# sous-section} other {# sous-sections}}.",
+    "source": {
+      "headings": "Plan lu à partir des styles de titre du document.",
+      "numbers": "Plan lu à partir de la numérotation des lignes.",
+      "ai": "Plan proposé par l'IA à partir du texte du PDF. Relisez chaque titre."
+    },
+    "truncated": "Le document compte plus de 200 titres : seuls les 200 premiers sont repris.",
+    "previewHelp": "Renommez, retirez, fusionnez ou déplacez les éléments, et choisissez section ou sous-section. Rien n'est créé avant de cliquer sur le bouton en bas de la liste.",
+    "listLabel": "Éléments du plan",
+    "itemTitle": "Titre de l'élément {label}",
+    "itemLevel": "Type de l'élément {label}",
+    "levelSection": "Section",
+    "levelSubsection": "Sous-section",
+    "firstIsSection": "Le premier élément est toujours une section.",
+    "instructions": "Consignes",
+    "instructionsCount": "{count, plural, =0 {aucune} one {# caractère} other {# caractères}}",
+    "instructionsLabel": "Consignes de l'élément {label} pour l'IA",
+    "instructionsHelp": "Ce que la section doit contenir, pour les brouillons IA. 4 000 caractères au plus.",
+    "moveUp": "Monter « {title} »",
+    "moveDown": "Descendre « {title} »",
+    "merge": "Fusionner « {title} » avec l'élément précédent",
+    "remove": "Retirer « {title} »",
+    "untitled": "sans titre",
+    "announce": {
+      "removed": "« {title} » est retiré du plan.",
+      "merged": "« {title} » est fusionné avec « {previous} » : son titre et ses consignes passent dans les consignes de « {previous} ».",
+      "moved": "« {title} » passe en position {position} sur {count}.",
+      "level": "« {title} » devient une {level, select, section {section} other {sous-section}}."
+    },
+    "emptyPlan": "Le plan est vide. Choisissez un autre fichier ou collez un autre texte.",
+    "titleRequired": "Donnez un titre à cet élément.",
+    "instructionsTooLong": "Les consignes comptent 4 000 caractères au plus.",
+    "fixItems": "Corrigez les éléments signalés avant de créer les sections.",
+    "restart": "Choisir un autre fichier",
+    "create": "{count, plural, one {Créer la section} other {Créer les # sections}}",
+    "creating": "Création des sections…",
+    "errors": {
+      "unauthenticated": "Votre session a expiré. Reconnectez-vous puis réessayez.",
+      "notFound": "Ce rapport n'existe plus.",
+      "forbidden": "Seuls les propriétaires et administrateurs de l'espace importent un plan.",
+      "reportFinal": "Ce rapport est final : rouvrez-le pour importer un plan.",
+      "readOnly": "Cet espace de travail est en lecture seule : aucun plan ne peut être importé.",
+      "invalidRequest": "La demande n'est pas valide. Rechargez la page puis réessayez.",
+      "fileType": "Ce type de fichier n'est pas accepté. Choisissez un fichier Word (.docx), texte (.txt), Markdown (.md) ou PDF.",
+      "fileEmpty": "Ce fichier est vide.",
+      "fileTooLarge": "Ce fichier est trop volumineux : 4 Mo au plus.",
+      "contentMismatch": "Le contenu du fichier ne correspond pas à son extension. Enregistrez-le à nouveau dans le bon format.",
+      "textEmpty": "Collez le texte du plan.",
+      "textTooLong": "Ce texte est trop long : 200 000 caractères au plus.",
+      "unreadable": "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'ouvre bien, ou collez son texte.",
+      "tooLarge": "Ce fichier est trop lourd à lire. Enregistrez une version plus légère, ou collez son texte.",
+      "timeout": "La lecture du fichier a pris trop de temps. Essayez une version plus légère, ou collez son texte.",
+      "pdfNoText": "Ce PDF ne contient pas de texte lisible, sans doute un document scanné. Collez le texte du plan.",
+      "pdfLocked": "Ce PDF est protégé par un mot de passe. Enregistrez-le sans protection, ou collez son texte.",
+      "nothingFound": "Aucun titre trouvé. Utilisez les styles Titre 1 et Titre 2 dans Word, des lignes numérotées (1., 1.1) ou des titres Markdown (# et ##).",
+      "aiUnavailable": "La lecture des PDF par l'IA n'est pas disponible pour le moment. Importez un fichier Word ou texte, ou collez le plan.",
+      "rateLimited": "Vous avez fait lire trop de PDF en une heure. Réessayez plus tard, ou collez le texte du plan.",
+      "quotaExceeded": "Les {max} brouillons IA du mois sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte, ou attendez le {date}.",
+      "quotaExceededTrial": "Les {max} brouillons IA de l'essai sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte.",
+      "quotaExceededMission": "Les {max} brouillons IA de ce Pass Mission sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte.",
+      "quotaUsed": "Les brouillons IA inclus dans l'offre sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte.",
+      "aiFailed": "L'IA n'a pas pu lire le plan de ce PDF. Réessayez, ou collez son texte.",
+      "aiTimeout": "L'IA a mis trop de temps à lire ce PDF. Réessayez, ou collez son texte.",
+      "generic": "Une erreur est survenue. Réessayez.",
+      "network": "La connexion a été coupée. Vérifiez votre réseau et réessayez."
+    },
+    "createErrors": {
+      "invalidInput": "Le plan n'est pas valide. Vérifiez les titres et les consignes puis réessayez.",
+      "forbidden": "Seuls les propriétaires et administrateurs de l'espace importent un plan.",
+      "reportFinal": "Ce rapport est final : rouvrez-le pour importer un plan.",
+      "readOnly": "Cet espace de travail est en lecture seule : aucune section ne peut être créée.",
+      "tooManySections": "Le rapport compterait plus de 500 sections. Retirez des éléments du plan.",
+      "generic": "Les sections n'ont pas pu être créées. Réessayez."
     }
   }
 }

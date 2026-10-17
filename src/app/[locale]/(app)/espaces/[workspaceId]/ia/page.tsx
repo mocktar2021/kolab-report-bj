@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { aiSettings } from "@/lib/ai/config";
 import {
   METRIC_PERIODS,
+  getPlanImportUsage,
   getPromptMetrics,
   getRecentGenerations,
   getTemplateWriterUsage,
@@ -18,6 +19,7 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 import { EmptyMetrics, MetricsTable, SummaryTiles } from "./metrics-table";
 import { PeriodSwitch } from "./period-switch";
+import { PlanImportUsage } from "./plan-import-usage";
 import { RecentGenerations } from "./recent-generations";
 import { summarizeMetrics } from "./summary";
 import { TemplateWriterUsage } from "./template-writer-usage";
@@ -71,11 +73,12 @@ export default async function AiDashboardPage({
 
   const days = periodOf((await searchParams).periode);
   const supabase = await createClient();
-  const [{ data: workspace }, metrics, recent, writerUsage] = await Promise.all([
+  const [{ data: workspace }, metrics, recent, writerUsage, planImports] = await Promise.all([
     supabase.from("workspaces").select("id, name").eq("id", workspaceId).maybeSingle(),
     getPromptMetrics(workspaceId, days),
     getRecentGenerations(workspaceId, RECENT_LIMIT),
     getTemplateWriterUsage(workspaceId, days),
+    getPlanImportUsage(workspaceId, days),
   ]);
   if (!workspace) notFound();
   const { tracing } = aiSettings();
@@ -115,6 +118,8 @@ export default async function AiDashboardPage({
       )}
 
       {writerUsage === null ? null : <TemplateWriterUsage rows={writerUsage} days={days} />}
+
+      {planImports === null ? null : <PlanImportUsage rows={planImports} days={days} />}
 
       <RecentGenerations
         generations={recent}
