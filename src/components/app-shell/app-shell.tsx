@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { BookOpen, LogOut, Menu, Search, UserRound } from "lucide-react";
@@ -15,6 +15,7 @@ import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { billingOrganizationOf } from "@/lib/billing/navigation";
+import type { PaletteScope } from "./command-palette";
 import { NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
@@ -63,27 +64,39 @@ export function AppShell({
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Stays mounted once opened, so it can play its closing animation.
   const [paletteMounted, setPaletteMounted] = useState(false);
+  const [paletteScope, setPaletteScope] = useState<PaletteScope>("all");
+  const paletteOpenRef = useRef(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
-  const openPalette = useCallback(() => {
+  useEffect(() => {
+    paletteOpenRef.current = paletteOpen;
+  }, [paletteOpen]);
+
+  const showPalette = useCallback((scope: PaletteScope) => {
     setMenuOpen(false);
+    setPaletteScope(scope);
     setPaletteMounted(true);
     setPaletteOpen(true);
   }, []);
+  const openPalette = useCallback(() => showPalette("all"), [showPalette]);
+  // "Rechercher un espace" in the workspace switcher (KRB-206).
+  const searchWorkspaces = useCallback(() => showPalette("workspaces"), [showPalette]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setMenuOpen(false);
-        setPaletteMounted(true);
-        setPaletteOpen((open) => !open);
+        if (paletteOpenRef.current) {
+          setPaletteOpen(false);
+        } else {
+          showPalette("all");
+        }
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [showPalette]);
 
   return (
     <div className="min-h-dvh">
@@ -103,6 +116,7 @@ export function AppShell({
           unreadNotifications={unreadNotifications}
           billingOrganizationId={billingOrganizationId}
           onOpenPalette={openPalette}
+          onSearchWorkspaces={searchWorkspaces}
         />
       </Suspense>
 
@@ -143,6 +157,7 @@ export function AppShell({
               workspaces={workspaces}
               currentWorkspaceId={currentWorkspaceId}
               onNavigate={() => setMenuOpen(false)}
+              onSearch={searchWorkspaces}
             />
             <SearchTrigger onOpen={openPalette} />
           </div>
@@ -206,7 +221,15 @@ export function AppShell({
         </main>
       </div>
 
-      {paletteMounted ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
+      {paletteMounted ? (
+        <CommandPalette
+          open={paletteOpen}
+          onOpenChange={setPaletteOpen}
+          scope={paletteScope}
+          workspaces={workspaces}
+          currentWorkspaceId={currentWorkspaceId}
+        />
+      ) : null}
     </div>
   );
 }
