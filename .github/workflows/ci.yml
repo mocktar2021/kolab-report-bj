@@ -217,45 +217,28 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Sample the CPU
-        # Which processes use the 2 vCPUs while Lighthouse measures, on manual
-        # Lighthouse-only runs (KRB-172).
-        if: ${{ inputs.lighthouse_only }}
-        run: |
-          nohup top -b -d 1 -w 200 > "$RUNNER_TEMP/top.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/top.pid"
-
       - name: Lighthouse CI
-        # Mobile, 5 runs on /fr/connexion and the signed-in /fr/tableau-de-bord.
-        # Fails under the KRB-25 scores (lighthouserc.cjs, docs/performance.md).
-        run: npx lhci autorun
+        # Mobile, 5 runs on /fr/connexion and 5 on the signed-in
+        # /fr/tableau-de-bord, each in its own Chrome. Fails under the KRB-25
+        # scores (lighthouserc.cjs, docs/performance.md).
+        run: sh scripts/lighthouse-ci.sh
 
       - name: Lighthouse scores
         # The score of every run, and what costs the most on the median run:
-        # lhci autorun only prints the assertions that fail (KRB-172).
+        # lhci only prints the assertions that fail (KRB-172).
         if: always()
         run: node scripts/lighthouse-summary.mjs
 
-      - name: CPU per process
-        # Average share of one CPU per command over the Lighthouse runs.
-        if: ${{ !cancelled() && inputs.lighthouse_only }}
-        run: |
-          kill "$(cat "$RUNNER_TEMP/top.pid")" || true
-          awk '/^top -/ { frames++ } $1 ~ /^[0-9]+$/ && NF >= 12 { cpu[$12] += $9 }
-            END { for (c in cpu) printf "%7.1f %%  %s\n", cpu[c] / frames, c }' "$RUNNER_TEMP/top.log" | sort -rn | head -15
-
-      - name: Lighthouse traces
-        # What the long tasks of each page are made of, on manual
-        # Lighthouse-only runs (KRB-172). lhci stopped its server, so this
-        # step starts its own.
+      - name: Dashboard trace
+        # What the long tasks of the dashboard are made of, on manual
+        # Lighthouse-only runs (KRB-172).
         if: ${{ !cancelled() && inputs.lighthouse_only }}
         run: |
           npm run start > /dev/null 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/fr/connexion && break; sleep 1; done
-          node scripts/lighthouse-trace.mjs http://localhost:3000/fr/tableau-de-bord
-          node scripts/lighthouse-reuse.mjs http://localhost:3000/fr/connexion 3
-          node scripts/lighthouse-reuse.mjs http://localhost:3000/fr/tableau-de-bord 4
-          node scripts/lighthouse-reuse.mjs http://localhost:3000/fr/tableau-de-bord 4 --disable-features=ProcessPerSiteUpToMainFrameThreshold
+          profile=$(mktemp -d)
+          node scripts/lighthouse-profile.mjs "$profile"
+          LHCI_PROFILE="$profile" node scripts/lighthouse-trace.mjs http://localhost:3000/fr/tableau-de-bord
 
       - name: Keep Lighthouse reports
         if: always()

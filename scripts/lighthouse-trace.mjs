@@ -6,12 +6,12 @@
 // inside, it lists every trace event of the renderer during it, then when
 // each chunk of the HTML arrived.
 //
-//   node scripts/lighthouse-trace.mjs <url>
+//   LHCI_PROFILE=<profile folder> node scripts/lighthouse-trace.mjs <url>
 //
-// The page must be served already (next start). Pages other than the sign-in
-// page are loaded as the demo user, like Lighthouse CI does
-// (scripts/lighthouse-login.cjs). Times are unthrottled: the simulated times
-// of the report are about 4 times longer.
+// The page must be served already (next start). For a signed-in page, Chrome
+// starts from the profile of scripts/lighthouse-profile.mjs, as in
+// scripts/lighthouse-ci.sh. Times are unthrottled: the simulated times of the
+// report are about 4 times longer.
 import { createRequire } from "node:module";
 import lighthouse from "lighthouse";
 import { MainThreadTasks } from "lighthouse/core/lib/tracehouse/main-thread-tasks.js";
@@ -19,7 +19,6 @@ import { TraceProcessor } from "lighthouse/core/lib/tracehouse/trace-processor.j
 import puppeteer from "puppeteer-core";
 
 const require = createRequire(import.meta.url);
-const signIn = require("./lighthouse-login.cjs");
 const { chromium } = require("playwright");
 
 const url = process.argv[2];
@@ -30,11 +29,11 @@ if (!url) {
 
 const browser = await puppeteer.launch({
   executablePath: process.env.CHROME_PATH || chromium.executablePath(),
+  userDataDir: process.env.LHCI_PROFILE,
   args: ["--no-sandbox"],
 });
 let result;
 try {
-  await signIn(browser, { url });
   const page = await browser.newPage();
   result = await lighthouse(url, { onlyCategories: ["performance"], logLevel: "error" }, undefined, page);
 } finally {

@@ -7,6 +7,13 @@
 // fails when the median score of a category drops below the KRB-25 targets.
 // With three runs, one slow run on a CI runner was enough to move the median
 // under the line (KRB-210).
+//
+// scripts/lighthouse-ci.sh runs lhci twice: the sign-in page, then the
+// dashboard with LHCI_PROFILE, a Chrome profile where
+// scripts/lighthouse-profile.mjs signed the demo user in. Each run starts its
+// own Chrome (KRB-172): one Chrome shared by all runs put each run in the
+// renderer process of the run before, whose garbage collection then landed
+// in the next page load.
 
 // LHCI only reads CommonJS config files.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -14,6 +21,7 @@ const { chromium } = require("playwright");
 
 // With LHCI_BASE_URL set, Lighthouse runs against that server and starts none.
 const baseUrl = process.env.LHCI_BASE_URL || "http://localhost:3000";
+const profile = process.env.LHCI_PROFILE;
 
 const KIB = 1024;
 
@@ -37,20 +45,18 @@ function budgets({ script, total }) {
 module.exports = {
   ci: {
     collect: {
-      url: [`${baseUrl}/fr/connexion`, `${baseUrl}/fr/tableau-de-bord`],
+      url: [profile ? `${baseUrl}/fr/tableau-de-bord` : `${baseUrl}/fr/connexion`],
       numberOfRuns: 5,
       startServerCommand: process.env.LHCI_BASE_URL ? undefined : "npm run start",
       startServerReadyPattern: "Ready in",
       startServerReadyTimeout: 60000,
-      // Signs out before the sign-in page and in before the dashboard.
-      puppeteerScript: "./scripts/lighthouse-login.cjs",
       // The Chromium that Playwright installs, pinned by package-lock.json.
       chromePath: process.env.CHROME_PATH || chromium.executablePath(),
-      // No Chrome sandbox, as Playwright does by default: Ubuntu 24.04 runners
-      // restrict the user namespaces it needs.
-      puppeteerLaunchOptions: { args: ["--no-sandbox"] },
       settings: {
         onlyCategories: ["performance", "accessibility", "best-practices"],
+        // No Chrome sandbox, as Playwright does by default: Ubuntu 24.04
+        // runners restrict the user namespaces it needs.
+        chromeFlags: profile ? `--no-sandbox --user-data-dir=${profile}` : "--no-sandbox",
       },
     },
     assert: {
