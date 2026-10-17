@@ -21,9 +21,10 @@ Every line is checked the day before, and again on the morning of the launch for
 
 | Check | Where | Jira |
 | --- | --- | --- |
-| Supabase production on Pro, GitHub integration with **Deploy to production** and **Automatic branching** off | Supabase, project `krsccuejegzqianrzstc`, **Project Settings > Integrations** | KRB-130 |
+| Supabase organization moved to Pro, as planned for the release day: Free has no daily backups and pauses a project after 7 days without activity | Supabase, organization **Billing** | KRB-130 |
+| GitHub integration of the production project with **Deploy to production** and **Automatic branching** off (Deploy to production checked off on 2026-10-17) | Supabase, project `krsccuejegzqianrzstc`, **Project Settings > Integrations** | KRB-130 |
 | GitHub environment `production`: Supabase ref and password, `AUTH_SITE_URL`, smoke test settings | GitHub, **Settings > Environments** | KRB-132 |
-| Vercel Production variables, `NEXT_PUBLIC_APP_URL` as a plain variable, Vercel Pro | Vercel, **Settings > Environment Variables** | KRB-131 |
+| Vercel Production variables, `NEXT_PUBLIC_APP_URL` as a plain variable, and Vercel Pro on the release day | Vercel, **Settings > Environment Variables** | KRB-131 |
 | Auth settings applied to production: site URL, redirect URLs, SMTP, French templates, rate limits, captcha | **Actions > Supabase Auth settings**, first with `--dry-run` | KRB-158 |
 | SMTP sender on `kolabreport.com` with SPF, DKIM and DMARC passing | The e-mail provider's domain page | KRB-158 |
 | FedaPay live: fees unticked, live webhook, live keys on Production only | [`deployment.md`](../deployment.md#4-fedapay-krb-176) | KRB-157 |
