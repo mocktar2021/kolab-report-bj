@@ -536,6 +536,8 @@
     "switcherLabel": "Espace de travail actuel : {name}. Changer d'espace",
     "searchWorkspaces": "Rechercher un espace",
     "noOrganizationName": "Organisation sans nom",
+    "organizationReports": "Rapports",
+    "organizationReportsLabel": "{organization} : voir les rapports",
     "manageMembers": "Gérer les membres",
     "fieldErrors": {
       "nameLength": "Saisissez entre 2 et 120 caractères.",
@@ -2155,6 +2157,18 @@
     "workspaceMeta": "{reports, plural, =0 {Aucun rapport} one {# rapport} other {# rapports}}, {members, plural, =0 {aucun membre} one {# membre} other {# membres}}",
     "mission": "Pass Mission",
     "addWorkspace": "Nouvel espace de travail"
+  },
+  "OrganizationReports": {
+    "metaTitle": "Rapports de l'organisation {name}",
+    "eyebrow": "Rapports de l'organisation",
+    "backToDashboard": "Tableau de bord",
+    "summary": "{reports, plural, one {# rapport} other {# rapports}} dans {workspaces, plural, one {# espace de travail} other {# espaces de travail}}, dont {active, plural, =0 {aucun actif} one {# actif} other {# actifs}}.",
+    "summaryEmpty": "Aucun rapport pour le moment dans {workspaces, plural, one {votre espace de travail} other {vos # espaces de travail}} de cette organisation.",
+    "scope": "Seuls les espaces de travail dont vous êtes membre apparaissent ici.",
+    "workspaceMeta": "{role} · {reports, plural, =0 {aucun rapport} one {# rapport} other {# rapports}}",
+    "openWorkspace": "Ouvrir l'espace<hidden> {name}</hidden>",
+    "noReports": "Aucun rapport dans cet espace de travail pour le moment.",
+    "error": "Les rapports n'ont pas pu être chargés. Rechargez la page dans un instant."
   },
   "Deletion": {
     "cancel": "Annuler",

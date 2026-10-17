@@ -10,6 +10,11 @@ export type OrganizationGroup = {
 
 const collator = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
 
+/** French order by name (accents and numbers sort the way people expect), then by id. */
+export function compareByName(a: { id: string; name: string }, b: { id: string; name: string }) {
+  return collator.compare(a.name, b.name) || a.id.localeCompare(b.id);
+}
+
 /**
  * Groups the user's workspaces by organization (KRB-206): organizations by
  * name, workspaces by name inside each one. Groups go by id, since two
@@ -36,9 +41,7 @@ export function groupByOrganization(workspaces: MyWorkspace[], unnamed: string):
   return [...groups.values()]
     .map((group) => ({
       ...group,
-      workspaces: [...group.workspaces].sort(
-        (a, b) => collator.compare(a.name, b.name) || a.id.localeCompare(b.id),
-      ),
+      workspaces: [...group.workspaces].sort(compareByName),
     }))
     .sort(
       (a, b) => collator.compare(nameOf(a), nameOf(b)) || a.organizationId.localeCompare(b.organizationId),

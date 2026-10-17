@@ -2,12 +2,21 @@
 
 import { Fragment, useId, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { BookText, Building2, ChevronsUpDown, Gauge, Plus, Search, Settings, Users } from "lucide-react";
+import {
+  BookText,
+  Building2,
+  ChevronRight,
+  ChevronsUpDown,
+  Gauge,
+  Plus,
+  Search,
+  Settings,
+  Users,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -19,7 +28,7 @@ import { groupByOrganization } from "@/lib/workspaces/group";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { cn } from "@/lib/utils";
-import { initialsOf } from "./user-avatar";
+import { WorkspaceMark } from "./workspace-mark";
 
 type WorkspaceSwitcherProps = {
   workspaces: MyWorkspace[];
@@ -31,27 +40,12 @@ type WorkspaceSwitcherProps = {
   onSearch?: () => void;
 };
 
-/** Square with the workspace initials, used in the switcher and the workspace list. */
-export function WorkspaceMark({ name, className }: { name: string; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        // A light tint keeps the coral initials at 4.5:1, even on the hover background.
-        "flex size-8 shrink-0 items-center justify-center rounded-lg bg-highlight/[0.08] text-[11px] font-semibold text-highlight ring-1 ring-inset ring-highlight/25",
-        className,
-      )}
-    >
-      {initialsOf(name)}
-    </span>
-  );
-}
-
 /**
  * Menu to switch the current workspace, open its members, prompt templates or
  * AI dashboard, its settings (owners) and its organization (the organization
  * owner), or create a new one. Workspaces are grouped by organization, and
  * "Rechercher un espace" opens the search of the command palette (KRB-206).
+ * Each organization name opens the reports of that organization (KRB-208).
  */
 export function WorkspaceSwitcher({
   workspaces,
@@ -133,9 +127,24 @@ export function WorkspaceSwitcher({
           const id = `${labelId}-${index}`;
           return (
             <Fragment key={group.organizationId}>
-              <DropdownMenuLabel id={id} className="truncate">
-                {group.organizationName ?? t("noOrganizationName")}
-              </DropdownMenuLabel>
+              {/* The organization name opens its reports (KRB-208) and still names its group. */}
+              <DropdownMenuItem asChild className="h-8 text-xs font-medium text-muted-foreground">
+                <Link
+                  href={`/organisations/${group.organizationId}/rapports`}
+                  aria-label={t("organizationReportsLabel", {
+                    organization: group.organizationName ?? t("noOrganizationName"),
+                  })}
+                  onClick={onNavigate}
+                >
+                  <span id={id} className="min-w-0 truncate">
+                    {group.organizationName ?? t("noOrganizationName")}
+                  </span>
+                  <span className="ml-auto flex shrink-0 items-center gap-0.5 font-normal">
+                    {t("organizationReports")}
+                    <ChevronRight aria-hidden="true" />
+                  </span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuRadioGroup
                 aria-labelledby={id}
                 value={current.id}
