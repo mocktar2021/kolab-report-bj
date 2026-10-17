@@ -61,8 +61,14 @@ export function SignInForm({ next }: { next?: string }) {
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3">
           <Label htmlFor="password">{t("password")}</Label>
+          {/*
+            No prefetch: it loaded and ran the reset page's JavaScript while
+            the form was hydrating, about 100 ms of main thread on a slow
+            phone, for a link few people follow (KRB-207).
+          */}
           <Link
             href="/mot-de-passe-oublie"
+            prefetch={false}
             className="rounded text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
             {t("forgotPassword")}

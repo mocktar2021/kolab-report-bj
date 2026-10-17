@@ -101,6 +101,19 @@ An earlier series on a quieter machine gave 72 to 93 on the sign-in page and 55 
 
 Checked and left as they were: `MotionProvider` and `ThemeProvider` in the root layout cost about 2.5 kB compressed together, the two `next/font` fonts are self-hosted and preloaded, lucide-react imports are already per icon (Next.js optimizes the package by default), and Sentry stays out of the bundle until `NEXT_PUBLIC_SENTRY_DSN` is set.
 
+## Next.js 16 (KRB-207)
+
+Next.js 16 and React 19.3 add about 30 KB of compressed JavaScript to every page: the React DOM chunk grows from 55 to 65 KB and the Next.js runtime chunk from 51 to 72 KB. On a fast machine the sign-in page scores the same (median 95 on Next 15, 96 on Next 16). The first `master` run after the upgrade gave 92, 76, 80, 81 and 95, a median under the 85 target. With the CPU slowed 12 times instead of 4, closer to a CI runner, the sign-in page gave 82 on Next 15 and 80 on Next 16: it sits at the edge on a slow runner, and the upgrade pushed it under.
+
+The "Mot de passe oublié ?" link of the sign-in form prefetched the reset page. Its JavaScript loaded and ran while the form hydrated, about 100 ms of main thread at 12 times. It now has `prefetch={false}`, like the landing links (item 3 above). Median of 3 runs each, CPU slowed 12 times, alternating between the two servers:
+
+| Build | Performance | TBT | JavaScript |
+| --- | --- | --- | --- |
+| Next 16 | 84 | 544 ms | 199 KiB |
+| Next 16, no prefetch of the reset page | 88 | 380 ms | 191 KiB |
+
+The script budget of the sign-in page (190 KiB) stays a warning at 191 KiB. Before a framework upgrade, run CI by hand on its branch to see Lighthouse (`docs/ci.md`): pull requests do not run it.
+
 ## Not fixed yet
 
 The dashboard is still under the performance target: 67 to 71 here, against 85. Until the work below lands (KRB-172), `lighthouserc.cjs` fails the dashboard under 65 instead of 85, so the job stays green and still catches a regression. What is left, largest first:
