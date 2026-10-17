@@ -418,9 +418,9 @@ test("menus, dialogs and the command palette are labelled and give the focus bac
     const palette = page.getByRole("dialog", { name: "Palette de commandes" });
     await expect(palette).toBeVisible();
     await expect(palette).toHaveAccessibleDescription(
-      "Recherchez une page, un filtre ou une action, puis validez avec Entrée.",
+      "Recherchez une page, un espace de travail, un filtre ou une action, puis validez avec Entrée.",
     );
-    await expect(palette.getByRole("combobox", { name: "Rechercher une action" })).toBeFocused();
+    await expect(palette.getByRole("combobox", { name: "Rechercher une action ou un espace" })).toBeFocused();
     await expect(palette.getByRole("listbox", { name: "Actions proposées" })).toBeVisible();
     await expectNoEnglish(page, "the command palette");
     await page.keyboard.press("Escape");
