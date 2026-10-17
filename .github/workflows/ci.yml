@@ -228,6 +228,16 @@ jobs:
         if: always()
         run: node scripts/lighthouse-summary.mjs
 
+      - name: Dashboard trace
+        # What the long tasks of the dashboard are made of, on manual
+        # Lighthouse-only runs (KRB-172). lhci stopped its server, so this
+        # step starts its own.
+        if: ${{ !cancelled() && inputs.lighthouse_only }}
+        run: |
+          npm run start > /dev/null 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/fr/connexion && break; sleep 1; done
+          node scripts/lighthouse-trace.mjs http://localhost:3000/fr/tableau-de-bord
+
       - name: Keep Lighthouse reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
