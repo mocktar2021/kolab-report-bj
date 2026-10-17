@@ -254,7 +254,7 @@ Passwords need **10 characters, with at least one letter (a to z, without accent
 | `sign_in_sign_ups` | `rate_limit_otp` | 30 per 5 minutes, per IP | Sign-ups, reset requests, resent e-mails and password changes |
 | `token_verifications` | `rate_limit_verify` | 30 per 5 minutes, per IP | Confirmation and reset links opened (`/fr/auth/callback`) |
 | `token_refresh` | `rate_limit_token_refresh` | 150 per 5 minutes, per IP | Password sign-ins and session refreshes |
-| `email_sent` | `rate_limit_email_sent` | 30 per hour, whole project | Auth e-mails. Sent only with custom SMTP, which it needs |
+| `email_sent` | `rate_limit_email_sent` | 100 per hour, whole project | Auth e-mails. Sent only with custom SMTP, which it needs. Raised from 30 for the launch (KRB-162, [launch runbook](operations/launch.md)) |
 
 The forms and the proxy call Supabase from the Vercel servers, so the per IP limits count many visitors behind a few Vercel addresses. That is why they stay at the Supabase defaults: lower values would block real users first, and the captcha stops scripts. If people see "Trop de tentatives" at busy times, raise `token_refresh` or `sign_in_sign_ups`. SMS, anonymous and Web3 sign-ins are off, so their limits are not pushed.
 
