@@ -252,8 +252,10 @@ jobs:
         run: |
           npm run start > /dev/null 2>&1 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/fr/connexion && break; sleep 1; done
-          node scripts/lighthouse-trace.mjs http://localhost:3000/fr/connexion
           node scripts/lighthouse-trace.mjs http://localhost:3000/fr/tableau-de-bord
+          node scripts/lighthouse-reuse.mjs http://localhost:3000/fr/connexion 3
+          node scripts/lighthouse-reuse.mjs http://localhost:3000/fr/tableau-de-bord 4
+          node scripts/lighthouse-reuse.mjs http://localhost:3000/fr/tableau-de-bord 4 --disable-features=ProcessPerSiteUpToMainFrameThreshold
 
       - name: Keep Lighthouse reports
         if: always()
