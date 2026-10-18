@@ -148,10 +148,14 @@ function annexPart(text: string): string {
   return start < 0 ? "" : text.slice(start);
 }
 
+/** Each part after the one before it: a part can come more than once, like the date. */
 function expectInOrder(text: string, parts: string[]) {
-  const found = parts.map((part) => text.indexOf(part));
-  expect(found, `${parts.join(", ")} in ${text}`).not.toContain(-1);
-  expect(found).toEqual([...found].sort((a, b) => a - b));
+  let from = 0;
+  for (const [index, part] of parts.entries()) {
+    const at = text.indexOf(part, from);
+    expect(at, `${part} after ${parts.slice(0, index).join(", ")} in ${text}`).toBeGreaterThanOrEqual(0);
+    from = at + part.length;
+  }
 }
 
 async function positions() {
