@@ -22,6 +22,21 @@ export const EXPORT_TEXT = {
   noSections: "Ce rapport ne contient aucune section.",
 } as const;
 
+/**
+ * What an image of a section's text (KRB-216) shows in place of itself:
+ * its caption, then why. unavailable is a copy of SectionImages.unavailable
+ * in messages/fr.json.
+ */
+export const IMAGE_NOTES = {
+  unavailable: "(image indisponible)",
+  tooLarge: "(image trop lourde pour l'export)",
+  limit: "(image non reprise : l'export a atteint sa limite d'images)",
+} as const;
+
+export function imageNote(caption: string, reason: keyof typeof IMAGE_NOTES): string {
+  return caption ? `${caption} ${IMAGE_NOTES[reason]}` : IMAGE_NOTES[reason];
+}
+
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: EXPORT_TIME_ZONE });
 
 /** "14 octobre 2026", in Porto-Novo time. */

@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { Block } from "./markdown";
 import { buildReportPdf, pageGroups } from "./pdf";
 import { FRENCH_SAMPLE, SAMPLE_DOCUMENT } from "./test-document";
+import { JPEG_4X2, pngImage, withExifOrientation } from "./test-images";
 import { pdfText, squash } from "./test-pdf-text";
+import type { ExportDocument } from "./types";
 
 function expectText(pdf: Buffer, ...expected: string[]) {
   const text = squash(pdfText(pdf));
@@ -134,5 +136,61 @@ describe("buildReportPdf with subsections (KRB-195)", () => {
     );
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(text).toContain(squash("Page 4 sur 4"));
+  });
+});
+
+describe("buildReportPdf with images (KRB-216)", () => {
+  const PHOTO = "0b6f5e1c-2d3a-4b5c-8d9e-0f1a2b3c4d5e";
+  const DIAGRAM = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+  const GONE = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+  const HEAVY = "2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a";
+  const ref = (id: string, caption: string) => `![${caption}](/api/deliverables/${id}/file)`;
+
+  function document(markdown: string, images: ExportDocument["images"]): ExportDocument {
+    return {
+      ...SAMPLE_DOCUMENT,
+      sections: [{ title: "Constats", status: "in_progress", assigneeName: null, markdown }],
+      images,
+    };
+  }
+
+  /** Image XObjects drawn in the PDF. */
+  const imageObjects = (pdf: Buffer) => pdf.toString("latin1").match(/\/Subtype\s*\/Image/g)?.length ?? 0;
+
+  it("draws PNG and JPEG images with their caption", async () => {
+    const png = pngImage(40, 20, { alpha: true });
+    const jpeg = withExifOrientation(JPEG_4X2, 6);
+    const pdf = await buildReportPdf(
+      document(
+        `Relevé :\n\n${ref(DIAGRAM, "Schéma de la toiture")}\n\n${ref(PHOTO, "Façade nord")}`,
+        new Map([
+          [DIAGRAM, { status: "ready", format: "png", data: png, width: 40, height: 20, orientation: 1 }],
+          [PHOTO, { status: "ready", format: "jpeg", data: jpeg, width: 4, height: 2, orientation: 6 }],
+        ]),
+      ),
+    );
+    // The PNG with transparency is drawn with a soft mask: two objects for it, one for the JPEG.
+    expect(imageObjects(pdf)).toBe(3);
+    expectText(pdf, "Relevé :", "Schéma de la toiture", "Façade nord");
+    expect(squash(pdfText(pdf))).not.toContain("indisponible");
+  });
+
+  it("shows the caption and why when an image is not there", async () => {
+    const pdf = await buildReportPdf(
+      document(
+        `${ref(GONE, "Plan disparu")}\n\n${ref(HEAVY, "Photo lourde")}\n\n${ref(PHOTO, "")}`,
+        new Map([
+          [HEAVY, { status: "tooLarge" }],
+          [PHOTO, { status: "limit" }],
+        ]),
+      ),
+    );
+    expect(imageObjects(pdf)).toBe(0);
+    expectText(
+      pdf,
+      "Plan disparu (image indisponible)",
+      "Photo lourde (image trop lourde pour l'export)",
+      "(image non reprise : l'export a atteint sa limite d'images)",
+    );
   });
 });

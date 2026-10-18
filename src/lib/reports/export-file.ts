@@ -6,6 +6,7 @@ import { outline } from "@/lib/section-outline";
 import { sectionStatusSchema } from "@/lib/sections";
 import type { Database } from "@/lib/supabase/database.types";
 import { getWorkspaceMembers } from "@/lib/workspaces/members";
+import { loadExportImages } from "./export-images";
 import { EXPORTS_BUCKET } from "./exports";
 
 // What the export buttons (KRB-18) and the snapshot of a final report
@@ -15,7 +16,10 @@ type Client = SupabaseClient<Database>;
 
 export type ExportedReport = { id: string; title: string; workspace_id: string };
 
-/** The report as `supabase` reads it (RLS applies), or null when a read fails. */
+/**
+ * The report as `supabase` reads it (RLS applies), or null when a read fails.
+ * The images its sections show (KRB-216) are read with the same rights.
+ */
 export async function loadExportDocument(
   supabase: Client,
   report: ExportedReport,
@@ -31,21 +35,28 @@ export async function loadExportDocument(
   ]);
   if (!sections || !workspace || !members) return null;
   const names = new Map(members.map((member) => [member.userId, member.name]));
+  // Each section followed by its subsections (KRB-195).
+  const ordered = outline(
+    sections.map((section) => ({ ...section, parentId: section.parent_id, createdAt: section.created_at })),
+  );
+  const images = await loadExportImages(
+    supabase,
+    report,
+    ordered.map((section) => ({ id: section.id, markdown: section.content })),
+  );
 
   return {
     title: report.title,
     workspaceName: workspace.name,
     generatedAt,
-    // Each section followed by its subsections (KRB-195).
-    sections: outline(
-      sections.map((section) => ({ ...section, parentId: section.parent_id, createdAt: section.created_at })),
-    ).map((section) => ({
+    sections: ordered.map((section) => ({
       title: section.title,
       level: section.level,
       status: sectionStatusSchema.catch("not_started").parse(section.status),
       assigneeName: section.assigned_to ? (names.get(section.assigned_to) ?? null) : null,
       markdown: section.content,
     })),
+    images,
   };
 }
 

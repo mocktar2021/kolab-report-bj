@@ -7,6 +7,7 @@ import {
   Footer,
   Header,
   HeadingLevel,
+  ImageRun,
   LevelFormat,
   LineRuleType,
   Packer,
@@ -24,7 +25,8 @@ import {
   type INumberingOptions,
   type IParagraphOptions,
 } from "docx";
-import { EXPORT_TEXT, PAGE_WORDS, generatedOn, sectionMeta } from "./labels";
+import { fitSize, shownSize, swapsSides } from "./image-header";
+import { EXPORT_TEXT, PAGE_WORDS, generatedOn, imageNote, sectionMeta } from "./labels";
 import {
   EXPORT_LIMITS,
   TOP_PLACE,
@@ -36,7 +38,7 @@ import {
   type Place,
   type TextRun,
 } from "./markdown";
-import { numberedSections, type ExportDocument, type NumberedSection } from "./types";
+import { numberedSections, type ExportDocument, type ExportImage, type NumberedSection } from "./types";
 
 // The .docx export (KRB-18): a cover page, a "Sommaire" that is a real Word
 // table of contents, then one Heading 1 per section, each on a new page.
@@ -52,6 +54,11 @@ import { numberedSections, type ExportDocument, type NumberedSection } from "./t
 // A4 with 2 cm margins, in twentieths of a point.
 const PAGE = { width: 11906, height: 16838, margin: 1134 } as const;
 const CONTENT_WIDTH = PAGE.width - 2 * PAGE.margin;
+const CONTENT_HEIGHT = PAGE.height - 2 * PAGE.margin;
+// docx sizes images in pixels at 96 dpi: 15 twentieths of a point each.
+const TWIPS_PER_PIXEL = 15;
+/** An image is at most this share of the page height, so it fits under a heading with its caption. */
+const IMAGE_HEIGHT_SHARE = 0.65;
 const LIST_INDENT = 360;
 const QUOTE_INDENT = 567;
 const CODE_FONT = "Courier New";
@@ -59,6 +66,25 @@ const MUTED = "595959";
 const BORDER_COLOR = "BFBFBF";
 // Bookmarks behind the TOC links. Word wants letters, digits and underscores.
 const sectionAnchor = (index: number) => `section_${index + 1}`;
+
+/**
+ * Word draws the stored pixels of a JPEG and ignores its Exif orientation:
+ * the turn and the flip go on the drawing instead, as PowerPoint does. Each
+ * flip comes before the turn, which is clockwise.
+ */
+const ORIENTATIONS: Record<
+  number,
+  { rotation?: number; flip?: { horizontal?: boolean; vertical?: boolean } }
+> = {
+  1: {},
+  2: { flip: { horizontal: true } },
+  3: { rotation: 180 },
+  4: { flip: { vertical: true } },
+  5: { rotation: 270, flip: { horizontal: true } },
+  6: { rotation: 90 },
+  7: { rotation: 90, flip: { horizontal: true } },
+  8: { rotation: 270 },
+};
 
 const BULLETS = ["•", "◦", "▪"] as const;
 const BULLET_REFERENCE = "bullets";
@@ -115,6 +141,9 @@ class DocxBody {
   private instances = 0;
   /** 1 in a subsection (KRB-195): its text's headings start one level lower. */
   headingShift = 0;
+
+  constructor(private readonly images: ReadonlyMap<string, ExportImage> = new Map()) {}
+
   readonly numbering: INumberingOptions["config"][number][] = [
     {
       reference: BULLET_REFERENCE,
@@ -212,7 +241,75 @@ class DocxBody {
         return this.list(block, place);
       case "table":
         return [this.table(block, place)];
+      case "image":
+        return this.image(block, place);
     }
+  }
+
+  /**
+   * The image at the width of the text, never past its own size, its caption
+   * in italics under it. An image the route could not read shows its caption
+   * and why.
+   */
+  private image(block: Extract<Block, { type: "image" }>, place: Place): FileChild[] {
+    const image = this.images.get(block.id);
+    const indent = indentOf(place) ? { left: indentOf(place) } : undefined;
+    if (image?.status !== "ready") {
+      return [
+        new Paragraph({
+          indent,
+          children: [
+            new DocxTextRun({
+              text: imageNote(block.caption, image?.status ?? "unavailable"),
+              italics: true,
+              color: MUTED,
+            }),
+          ],
+        }),
+      ];
+    }
+    const maxWidth = (CONTENT_WIDTH - indentOf(place)) / TWIPS_PER_PIXEL;
+    const maxHeight = (CONTENT_HEIGHT * IMAGE_HEIGHT_SHARE) / TWIPS_PER_PIXEL;
+    const turned = swapsSides(image.orientation);
+    // Turned a quarter, the frame keeps the stored sides: it must fit the width too.
+    const shown = fitSize(shownSize(image), maxWidth, turned ? Math.min(maxHeight, maxWidth) : maxHeight, 1);
+    const frame = turned ? { width: shown.height, height: shown.width } : shown;
+    // Word turns the drawing around the middle of its frame, which keeps its
+    // place in the line: the paragraph gets the height the turn adds.
+    const room = Math.round((Math.max(0, shown.height - frame.height) / 2) * TWIPS_PER_PIXEL);
+    const orientation = ORIENTATIONS[image.orientation] ?? {};
+    const result: FileChild[] = [
+      new Paragraph({
+        indent,
+        alignment: AlignmentType.CENTER,
+        keepNext: Boolean(block.caption),
+        spacing: {
+          before: 120 + room,
+          after: (block.caption ? 60 : 200) + room,
+          line: 240,
+          lineRule: LineRuleType.AUTO,
+        },
+        children: [
+          new ImageRun({
+            type: image.format === "png" ? "png" : "jpg",
+            data: image.data,
+            transformation: { width: frame.width, height: frame.height, ...orientation },
+            altText: { name: block.caption || "Image", description: block.caption, title: block.caption },
+          }),
+        ],
+      }),
+    ];
+    if (block.caption) {
+      result.push(
+        new Paragraph({
+          indent,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+          children: [new DocxTextRun({ text: block.caption, italics: true, size: 18, color: MUTED })],
+        }),
+      );
+    }
+    return result;
   }
 
   private list(block: Extract<Block, { type: "list" }>, place: Place): FileChild[] {
@@ -341,7 +438,7 @@ function sectionChildren(section: NumberedSection, index: number, body: DocxBody
 /** The report as a .docx file. */
 export async function buildReportDocx(doc: ExportDocument): Promise<Buffer> {
   const title = cleanLine(doc.title);
-  const body = new DocxBody();
+  const body = new DocxBody(doc.images);
   const numbered = numberedSections(doc.sections);
   const sections = numbered.flatMap((section, index) => sectionChildren(section, index, body));
   const contents: FileChild[] = [

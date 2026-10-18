@@ -1,14 +1,18 @@
-import type { Nodes, Root, RootContent, Table } from "mdast";
+import type { Nodes, PhrasingContent, Root, RootContent, Table } from "mdast";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
+import { sectionImageId } from "@/lib/deliverables/section-images";
 import { isRiskyMarkdown, MARKDOWN_RISK_LIMITS, markdownParseRisk } from "@/lib/markdown-risk";
 
 // Section Markdown (GFM) turned into a short list of blocks that the .docx and
 // PDF builders both draw (KRB-18). The rules match the app's Markdown view:
 // links stay text followed by their address and are never clickable, images
 // become their alt text and are never fetched, raw HTML is kept as plain text
-// and never interpreted.
+// and never interpreted. The one exception is the image of a deliverable,
+// written as its file route (KRB-216): in a paragraph, it becomes an image
+// block, whose bytes the export route reads beforehand with the user's rights.
+// In a heading, a table or a link it stays its alt text.
 //
 // The parser has inputs that cost quadratic time (thousands of emphasis
 // markers in one paragraph, of setext headings) or overflow the stack
@@ -66,7 +70,9 @@ export type Block =
   | { type: "code"; text: string }
   | { type: "rule" }
   /** rows[0] is the header row. Every row has align.length cells. */
-  | { type: "table"; align: ColumnAlign[]; rows: TextRun[][][] };
+  | { type: "table"; align: ColumnAlign[]; rows: TextRun[][][] }
+  /** The image of a deliverable (KRB-216). caption is its alt text, on one line. */
+  | { type: "image"; id: string; caption: string };
 
 // C0 controls except tab and newline, DEL, C1 controls, and the two
 // non-characters XML refuses.
@@ -279,6 +285,41 @@ function tableBlock(node: Table, definitions: Definitions): Block {
   return { type: "table", align, rows };
 }
 
+/** The deliverable an image node shows, or null when it is any other image or not one. */
+function imageId(node: PhrasingContent, definitions: Definitions): string | null {
+  if (node.type === "image") return sectionImageId(node.url);
+  if (node.type === "imageReference") return sectionImageId(definitions.get(node.identifier));
+  return null;
+}
+
+/**
+ * A paragraph, cut around the images of deliverables at its top level: each
+ * becomes a block between the text before and after it.
+ */
+function paragraphBlocks(children: readonly PhrasingContent[], definitions: Definitions): Block[] {
+  const blocks: Block[] = [];
+  let text: PhrasingContent[] = [];
+  const flush = () => {
+    // A line break next to an image would leave an empty line.
+    while (text[0]?.type === "break") text.shift();
+    while (text.at(-1)?.type === "break") text.pop();
+    const runs = inlineRuns(text, definitions);
+    if (runs.some((run) => run.text.trim())) blocks.push({ type: "paragraph", runs });
+    text = [];
+  };
+  for (const node of children) {
+    const id = imageId(node, definitions);
+    if (!id) {
+      text.push(node);
+      continue;
+    }
+    flush();
+    blocks.push({ type: "image", id, caption: cleanLine("alt" in node ? (node.alt ?? "") : "") });
+  }
+  flush();
+  return blocks;
+}
+
 /**
  * Blocks of mdast nodes. The recursion follows the tree, whose depth
  * parseRisk keeps under EXPORT_LIMITS.linePrefix. The builders cap how deep
@@ -288,11 +329,9 @@ function toBlocks(nodes: readonly RootContent[], definitions: Definitions): Bloc
   const result: Block[] = [];
   for (const node of nodes) {
     switch (node.type) {
-      case "paragraph": {
-        const runs = inlineRuns(node.children, definitions);
-        if (runs.some((run) => run.text.trim())) result.push({ type: "paragraph", runs });
+      case "paragraph":
+        result.push(...paragraphBlocks(node.children, definitions));
         break;
-      }
       case "heading": {
         const runs = inlineRuns(node.children, definitions);
         if (runs.some((run) => run.text.trim())) result.push({ type: "heading", depth: node.depth, runs });
@@ -377,6 +416,28 @@ export function sectionBlocks(markdown: string | null): Block[] {
   } catch {
     return plainBlocks(text);
   }
+}
+
+/**
+ * The deliverables a section's text shows as images, in order, each once.
+ * The export route reads them before the builders draw the text.
+ */
+export function sectionImageIds(markdown: string | null): string[] {
+  // Most sections have none: they are not parsed twice.
+  if (!markdown?.includes("/api/deliverables/")) return [];
+  const ids = new Set<string>();
+  // A stack, last block first, so the blocks come out in reading order.
+  const work: Block[] = sectionBlocks(markdown).reverse();
+  const pushAll = (blocks: readonly Block[]) => {
+    for (let index = blocks.length - 1; index >= 0; index--) work.push(blocks[index]!);
+  };
+  while (work.length > 0) {
+    const block = work.pop()!;
+    if (block.type === "image") ids.add(block.id);
+    else if (block.type === "quote") pushAll(block.blocks);
+    else if (block.type === "list") pushAll(block.items.flatMap((item) => item.blocks));
+  }
+  return [...ids];
 }
 
 /** The text of runs, without their marks. */
