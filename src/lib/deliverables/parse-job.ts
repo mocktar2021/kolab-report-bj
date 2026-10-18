@@ -2,6 +2,7 @@ import "server-only";
 import { fork } from "node:child_process";
 import path from "node:path";
 import { getRequestId, log } from "@/lib/log";
+import { watchMemory } from "@/lib/process-memory";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/database.types";
 import { type FileExtension, fileTypeFor } from "./file-types";
@@ -38,25 +39,35 @@ export type ParseClaim = {
 /**
  * Marks a checked file as being read, unless a read is already running.
  * Pending and failed files can be claimed, and running ones once stale.
+ * `kept` claims a skipped file too, for one the app reads now (isKeptUnread).
  */
-export async function claimParse(id: string, workspaceId: string): Promise<ParseClaim | null> {
+export async function claimParse(
+  id: string,
+  workspaceId: string,
+  { kept = false }: { kept?: boolean } = {},
+): Promise<ParseClaim | null> {
   const staleBefore = new Date(Date.now() - STALE_PARSE_MS).toISOString();
+  const statuses = kept ? "pending,failed,skipped" : "pending,failed";
   const { data, error } = await createAdminClient()
     .from("deliverables")
     .update({ parse_status: "processing", parse_error: null })
     .eq("id", id)
     .eq("workspace_id", workspaceId)
     .not("uploaded_at", "is", null)
-    .or(`parse_status.in.(pending,failed),and(parse_status.eq.processing,updated_at.lt.${staleBefore})`)
+    .or(`parse_status.in.(${statuses}),and(parse_status.eq.processing,updated_at.lt.${staleBefore})`)
     .select("id, workspace_id, storage_path, file_name, updated_at")
     .maybeSingle();
   if (error) log.error("deliverables: could not claim a parse", { error: error.message });
   return data;
 }
 
+/** A PDF starts no new page this close to the deadline, so the pages already read are saved. */
+const PDF_STOP_MS = 5_000;
+
 /**
  * Runs the parsers in a child process, killed when it answers, fails or
- * reaches the deadline. Running out of memory aborts it (SIGABRT).
+ * reaches the deadline. Running out of heap aborts it (SIGABRT), and past
+ * `memoryMb` in all it is killed: the file is then too large.
  * `requestId` goes on the lines the process logs.
  */
 export function parseInWorker(
@@ -66,8 +77,9 @@ export function parseInWorker(
   {
     file = PARSE_WORKER_FILE,
     heapMb = PARSE_LIMITS.workerHeapMb,
+    memoryMb = PARSE_LIMITS.workerMemoryMb,
     requestId = null,
-  }: { file?: string; heapMb?: number; requestId?: string | null } = {},
+  }: { file?: string; heapMb?: number; memoryMb?: number; requestId?: string | null } = {},
 ): Promise<ParseResult> {
   return new Promise((resolve, reject) => {
     const child = fork(file, [], {
@@ -83,6 +95,12 @@ export function parseInWorker(
       },
       Math.max(deadline - Date.now(), 0),
     );
+    const stopWatching = child.pid
+      ? watchMemory(child.pid, memoryMb, () => {
+          reject(new ParseError("tooLarge"));
+          child.kill("SIGKILL");
+        })
+      : () => undefined;
     child.once("message", (output: WorkerOutput) => {
       if (output.ok) resolve(output.result);
       else reject(new ParseError(output.key));
@@ -91,9 +109,10 @@ export function parseInWorker(
     // Settles the promise if the process ends without answering.
     child.once("exit", (_code, signal) => {
       clearTimeout(timer);
+      stopWatching();
       reject(new ParseError(signal === "SIGABRT" ? "tooLarge" : "unreadable"));
     });
-    child.send({ extension, bytes, requestId } satisfies WorkerInput);
+    child.send({ extension, bytes, requestId, stopAt: deadline - PDF_STOP_MS } satisfies WorkerInput);
   });
 }
 

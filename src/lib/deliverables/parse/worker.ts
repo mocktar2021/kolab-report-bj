@@ -8,16 +8,23 @@ import { ParseError, type ParseErrorKey, type ParseResult } from "./types";
 // The process gets no environment, so no key the server holds. It logs
 // with the request id the server passes, in the server's line format.
 
-export type WorkerInput = { extension: FileExtension; bytes: Uint8Array; requestId: string | null };
+/** stopAt: Date.now() past which a PDF starts no new page, so what was read can still be saved. */
+export type WorkerInput = {
+  extension: FileExtension;
+  bytes: Uint8Array;
+  requestId: string | null;
+  stopAt?: number;
+};
 export type WorkerOutput = { ok: true; result: ParseResult } | { ok: false; key: ParseErrorKey };
 
 function answer(output: WorkerOutput) {
   process.send?.(output, () => process.exit(0));
 }
 
-process.once("message", ({ extension, bytes, requestId }: WorkerInput) => {
+process.once("message", ({ extension, bytes, requestId, stopAt }: WorkerInput) => {
   const log = createLogger(() => requestId);
-  parseDeliverableFile(extension, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)).then(
+  const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  parseDeliverableFile(extension, buffer, { stopAt }).then(
     (result) => answer({ ok: true, result }),
     (error: unknown) => {
       if (!(error instanceof ParseError)) log.error("deliverables: parse failed", { error });

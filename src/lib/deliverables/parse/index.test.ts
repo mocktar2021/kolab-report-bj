@@ -2,14 +2,16 @@
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
+import { testPdf } from "../../pdf/test-pdf";
 import { FILE_TYPES, type FileExtension } from "../file-types";
 import { isParsed, PARSE_LIMITS, ParseError, parseDeliverableFile } from "./index";
 import { finishMarkdown } from "./markdown";
+import { isKeptUnread, STORED_RESULT } from "./types";
 
 const fixture = (name: string) =>
   readFileSync(new URL(`../../../../tests/fixtures/deliverables/${name}`, import.meta.url));
 
-const PARSED: FileExtension[] = ["docx", "xlsx", "csv", "txt", "md"];
+const PARSED: FileExtension[] = ["docx", "xlsx", "csv", "txt", "md", "pdf"];
 const STORED = (Object.keys(FILE_TYPES) as FileExtension[]).filter(
   (extension) => !PARSED.includes(extension),
 );
@@ -25,9 +27,9 @@ describe("isParsed", () => {
 });
 
 describe("parseDeliverableFile", () => {
-  it("stores PDF, images, diagrams, presentations and old Office files", () => {
+  it("stores images, diagrams, presentations and old Office files", () => {
     expect(STORED).toEqual(
-      expect.arrayContaining(["pdf", "png", "jpg", "pptx", "doc", "xls", "svg", "drawio", "vsdx"]),
+      expect.arrayContaining(["png", "jpg", "pptx", "doc", "xls", "svg", "drawio", "vsdx"]),
     );
   });
 
@@ -66,6 +68,18 @@ describe("parseDeliverableFile", () => {
     expect(result.meta.kind).toBe("text");
   });
 
+  it("reads .pdf as plain text", async () => {
+    const result = await parseDeliverableFile("pdf", Buffer.from(testPdf([["# Titre", "Texte *gras*."]])));
+    expect(result).toMatchObject({ status: "parsed", markdown: "# Titre\nTexte *gras*." });
+    expect(result.meta).toMatchObject({ kind: "pdf", pages: 1, pagesRead: 1 });
+  });
+
+  it("passes stopAt to the PDF reader", async () => {
+    const pdf = Buffer.from(testPdf([["Page 1"], ["Page 2"]]));
+    const result = await parseDeliverableFile("pdf", pdf, { stopAt: Date.now() - 1 });
+    expect(result.meta).toMatchObject({ truncated: true, pages: 2, pagesRead: 1 });
+  });
+
   it("uses the extension, not the content, to pick the parser", async () => {
     const asXlsx = parseDeliverableFile("xlsx", fixture("etude-thermique.docx"));
     await expect(asXlsx).rejects.toBeInstanceOf(ParseError);
@@ -73,6 +87,24 @@ describe("parseDeliverableFile", () => {
     await expect(parseDeliverableFile("docx", fixture("illisible.docx"))).rejects.toMatchObject({
       key: "corrupt",
     });
+  });
+});
+
+describe("isKeptUnread", () => {
+  const stored = STORED_RESULT.meta;
+
+  it("finds a PDF kept before PDFs were read", () => {
+    expect(isKeptUnread("Plan masse.pdf", "skipped", stored)).toBe(true);
+    expect(isKeptUnread("PLAN.PDF", "skipped", stored)).toBe(true);
+  });
+
+  it("leaves out files read since, files the app keeps as is, and other states", () => {
+    expect(isKeptUnread("scan.pdf", "skipped", { ...stored, kind: "pdf", reason: "noText" })).toBe(false);
+    expect(isKeptUnread("photo.png", "skipped", stored)).toBe(false);
+    expect(isKeptUnread("plan.pdf", "parsed", stored)).toBe(false);
+    expect(isKeptUnread("plan.pdf", "pending", stored)).toBe(false);
+    expect(isKeptUnread("plan.pdf", "skipped", null)).toBe(false);
+    expect(isKeptUnread("plan.pdf", "skipped", "stored")).toBe(false);
   });
 });
 

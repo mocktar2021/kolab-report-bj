@@ -55,7 +55,7 @@ The code supports both (`src/lib/email/send.ts`), and `docs/deployment.md` names
 
 The Vercel AI SDK talks to Anthropic (`@ai-sdk/anthropic`) or OpenAI (`@ai-sdk/openai`), chosen by `AI_PROVIDER` in `src/lib/ai/models.ts`. `AI_FALLBACK_PROVIDER` can add the other one as a fallback, called when the first fails before answering. The `mock` provider makes no external call and is refused in production. Each environment has its own API key (`docs/deployment.md`), so staging calls the provider too: keep real customer data out of staging.
 
-- **Receives**: per draft, the system prompt and the filled template: section title and instructions, report title and description, workspace name, and the extracted text and file names of the section's parsed files (Word, Excel, CSV, text, Markdown), after masking when `AI_REDACT_PII=true`. Summary calls get parts of the same masked text. No user id, e-mail or requester name. Full list and what the masking covers: activity 4 in [`record-of-processing.md`](record-of-processing.md).
+- **Receives**: per draft, the system prompt and the filled template: section title and instructions, report title and description, workspace name, and the extracted text and file names of the section's parsed files (Word, Excel, CSV, text, Markdown, PDF), after masking when `AI_REDACT_PII=true`. Summary calls get parts of the same masked text. No user id, e-mail or requester name. Full list and what the masking covers: activity 4 in [`record-of-processing.md`](record-of-processing.md).
 - **To confirm with each provider before launch**: how long it keeps API inputs and outputs, whether it uses them for training, where it processes them, and whether zero data retention is available for the account.
 
 ### Anthropic

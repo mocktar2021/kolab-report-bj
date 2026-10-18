@@ -15,6 +15,7 @@ import {
   type LucideIcon,
   Presentation,
   RotateCw,
+  ScanText,
   Trash2,
   Workflow,
 } from "lucide-react";
@@ -43,8 +44,12 @@ export type DeliverableRow = {
   uploaderName: string | null;
   parseState: ParseState;
   parseError: string | null;
+  /** Why a PDF that was read is kept as is: it has no text, or a password locks it. */
+  skipReason: "noText" | "locked" | null;
   /** Still pending long after upload: no read ever started. */
   notStarted: boolean;
+  /** Kept as is before the app read files of its type, such as a PDF before KRB-214: "Analyser" reads it. */
+  keptUnread: boolean;
   canDelete: boolean;
   canRetry: boolean;
 };
@@ -174,11 +179,15 @@ function DeliverableItem({ file, onDeleted }: { file: DeliverableRow; onDeleted:
       ? t(`parseErrors.${parseErrorKey(file.parseError)}`)
       : file.parseState === "stale"
         ? t("parseErrors.stale")
-        : file.parseState === "skipped"
-          ? t("skippedHint")
-          : file.notStarted
-            ? t("pendingHint")
-            : null;
+        : file.skipReason
+          ? t(`skippedReasons.${file.skipReason}`)
+          : file.keptUnread && file.canRetry
+            ? t("keptUnreadHint")
+            : file.parseState === "skipped"
+              ? t("skippedHint")
+              : file.notStarted
+                ? t("pendingHint")
+                : null;
   // Red when a read went wrong, muted when the file was not read.
   const parseMessageMuted = file.parseState === "skipped" || file.notStarted;
 
@@ -310,11 +319,11 @@ function DeliverableItem({ file, onDeleted }: { file: DeliverableRow; onDeleted:
               variant="outline"
               className="h-7"
               disabled={pending}
-              aria-label={t("retryLabel", { name: file.name })}
+              aria-label={t(file.keptUnread ? "readLabel" : "retryLabel", { name: file.name })}
               onClick={() => run(() => retryParse(file.id))}
             >
-              <RotateCw aria-hidden="true" />
-              {t("retry")}
+              {file.keptUnread ? <ScanText aria-hidden="true" /> : <RotateCw aria-hidden="true" />}
+              {t(file.keptUnread ? "read" : "retry")}
             </Button>
           ) : null}
           {error && !error.ok ? (

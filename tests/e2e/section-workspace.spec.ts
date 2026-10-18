@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 import { expect, test, type Page } from "@playwright/test";
+import { testPdf } from "../../src/lib/pdf/test-pdf";
 import { adminClient, createTestUser, createWorkspaceFor, type TestUser } from "./supabase";
 
 // KRB-14: files are read after upload, previewed, retried, deleted, and the
-// section status changes. Needs the storage service (CI).
+// section status changes. KRB-214: PDFs are read too, and one kept before
+// that can be read with "Analyser". Needs the storage service (CI).
 test.describe.configure({ mode: "serial" });
 
 const DOCX = readFileSync("tests/e2e/fixtures/rapport-etude.docx");
@@ -12,7 +14,9 @@ const NOT_A_DOCX = Buffer.concat([
   Buffer.from([0x50, 0x4b, 0x03, 0x04]),
   Buffer.from("pas un vrai document"),
 ]);
-const PDF = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n");
+// A "#" line shows the text is not read as Markdown.
+const PDF = Buffer.from(testPdf([["# Plan masse", "Surface habitable : 1 200 m²"], ["Annexe : coupe A-A"]]));
+const SCANNED_PDF = Buffer.from(testPdf([[]], { image: true }));
 
 type Setup = {
   owner: TestUser;
@@ -85,13 +89,14 @@ async function workbook(): Promise<Buffer> {
   return Buffer.from(await book.xlsx.writeBuffer());
 }
 
-test("Word and Excel files are read and previewed, a PDF is kept as is", async ({ page }) => {
+test("Word, Excel and PDF files are read and previewed, a scanned PDF is kept as is", async ({ page }) => {
   await signIn(page, setup.expert);
   await page.goto(sectionUrl());
   await page.getByLabel("Choisir des fichiers").setInputFiles([
     { name: "Rapport d'étude.docx", mimeType: "application/octet-stream", buffer: DOCX },
     { name: "Consommations.xlsx", mimeType: "application/octet-stream", buffer: await workbook() },
     { name: "Plan masse.pdf", mimeType: "application/pdf", buffer: PDF },
+    { name: "Plan scanné.pdf", mimeType: "application/pdf", buffer: SCANNED_PDF },
   ]);
 
   // The page refreshes itself while files are being read.
@@ -107,9 +112,19 @@ test("Word and Excel files are read and previewed, a PDF is kept as is", async (
   await expect(excel.getByRole("heading", { name: "Consommations" })).toBeVisible();
   await expect(excel.getByRole("cell", { name: "182000" })).toBeVisible();
 
+  // The text of a PDF shows as plain text: no heading.
   const pdf = fileItem(page, "Plan masse.pdf");
-  await expect(pdf.getByText("Non analysé")).toBeVisible({ timeout: 30_000 });
-  await expect(pdf.getByRole("button", { name: /Aperçu/ })).toHaveCount(0);
+  await expect(pdf.getByText("Analysé", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await pdf.getByRole("button", { name: "Aperçu de Plan masse.pdf" }).click();
+  await expect(pdf.locator("pre")).toContainText("# Plan masse\nSurface habitable : 1 200 m²");
+  await expect(pdf.locator("pre")).toContainText("Annexe : coupe A-A");
+  await expect(pdf.getByRole("heading")).toHaveCount(0);
+
+  const scanned = fileItem(page, "Plan scanné.pdf");
+  await expect(scanned.getByText("Non analysé")).toBeVisible({ timeout: 30_000 });
+  await expect(scanned.getByText("Ce PDF ne contient pas de texte lisible", { exact: false })).toBeVisible();
+  await expect(scanned.getByRole("button", { name: /Aperçu|Analyser|Relancer/ })).toHaveCount(0);
+  await expect(scanned.getByRole("link", { name: "Télécharger Plan scanné.pdf" })).toBeVisible();
 
   const { data: rows } = await adminClient()
     .from("deliverables")
@@ -122,7 +137,46 @@ test("Word and Excel files are read and previewed, a PDF is kept as is", async (
     kind: "spreadsheet",
     sheets: [{ name: "Consommations", rows: 3, keptRows: 3 }],
   });
-  expect(parsed.get("Plan masse.pdf")?.parse_status).toBe("skipped");
+  expect(parsed.get("Plan masse.pdf")?.parse_status).toBe("parsed");
+  expect(parsed.get("Plan masse.pdf")?.parse_meta).toMatchObject({ kind: "pdf", pages: 2, pagesRead: 2 });
+  expect(parsed.get("Plan scanné.pdf")?.parse_status).toBe("skipped");
+  expect(parsed.get("Plan scanné.pdf")?.parse_meta).toMatchObject({ kind: "pdf", reason: "noText" });
+});
+
+test("a PDF kept before PDFs were read is read with Analyser", async ({ page }) => {
+  // The file as KRB-14 left it: kept, with the meta of a file the app does not read.
+  const { error } = await adminClient()
+    .from("deliverables")
+    .update({
+      parse_status: "skipped",
+      parsed_content: null,
+      parse_meta: { version: 1, kind: "stored", words: 0, characters: 0, tokenEstimate: 0, truncated: false },
+    })
+    .eq("section_id", setup.sectionId)
+    .eq("file_name", "Plan masse.pdf");
+  if (error) throw error;
+
+  await signIn(page, setup.expert);
+  await page.goto(sectionUrl());
+  const pdf = fileItem(page, "Plan masse.pdf");
+  await expect(pdf.getByText("Non analysé")).toBeVisible();
+  await expect(pdf.getByText("Ce fichier n'a pas encore été lu.", { exact: false })).toBeVisible();
+  await pdf.getByRole("button", { name: "Analyser Plan masse.pdf" }).click();
+  await expect(pdf.getByText("Analysé", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(pdf.getByRole("button", { name: "Analyser Plan masse.pdf" })).toHaveCount(0);
+
+  const { data } = await adminClient()
+    .from("deliverables")
+    .select("parse_status, parsed_content")
+    .eq("section_id", setup.sectionId)
+    .eq("file_name", "Plan masse.pdf")
+    .single();
+  expect(data?.parse_status).toBe("parsed");
+  expect(data?.parsed_content).toContain("Surface habitable : 1 200 m²");
+
+  // A PDF read and found without text gets no button.
+  const scanned = fileItem(page, "Plan scanné.pdf");
+  await expect(scanned.getByRole("button", { name: /Analyser/ })).toHaveCount(0);
 });
 
 test("a file that cannot be read shows an error and can be retried", async ({ page }) => {

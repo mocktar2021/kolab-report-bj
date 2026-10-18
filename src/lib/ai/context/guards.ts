@@ -50,6 +50,7 @@ const KIND_LABELS: Record<string, string> = {
   document: "document",
   spreadsheet: "tableur",
   text: "texte",
+  pdf: "PDF",
   stored: "fichier",
 };
 

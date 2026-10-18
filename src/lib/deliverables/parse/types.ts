@@ -1,4 +1,4 @@
-import type { FileExtension } from "../file-types";
+import { type FileExtension, fileTypeFor } from "../file-types";
 
 // What the app keeps after reading a deliverable. parsed_content holds the
 // Markdown, parse_meta the ParseMeta below. Messages for ParseErrorKey are
@@ -17,10 +17,14 @@ export const PARSE_LIMITS = {
   maxCellChars: 500,
   /** About 50,000 tokens, more than a section draft needs. */
   maxMarkdownChars: 200_000,
+  /** Pages of a PDF read. The text of most files reaches maxMarkdownChars well before. */
+  maxPdfPages: 300,
   /** Download and read together. */
   timeoutMs: 45_000,
   /** Heap of the process that reads a file. Past it the process ends and the file is too large. */
   workerHeapMb: 512,
+  /** All the memory of that process, buffers outside the heap included (src/lib/process-memory.ts). */
+  workerMemoryMb: 1024,
 } as const;
 
 /** A read still running after this long is taken for one that died, and can be retried. */
@@ -45,8 +49,8 @@ export type SheetMeta = {
 
 export type ParseMeta = {
   version: 1;
-  /** "stored" files are kept but not read (PDF, images, diagrams). */
-  kind: "document" | "spreadsheet" | "text" | "stored";
+  /** "stored" files are kept but not read (images, diagrams, presentations). */
+  kind: "document" | "spreadsheet" | "text" | "pdf" | "stored";
   words: number;
   characters: number;
   /** Rough count for the AI draft: about four characters per token. */
@@ -55,6 +59,11 @@ export type ParseMeta = {
   truncated: boolean;
   tables?: number;
   sheets?: SheetMeta[];
+  /** Pages of a PDF, and how many of them were read. */
+  pages?: number;
+  pagesRead?: number;
+  /** Why a PDF is kept without its text: it has none, as a scan, or a password locks it. */
+  reason?: "noText" | "locked";
 };
 
 export type ParseResult =
@@ -62,7 +71,17 @@ export type ParseResult =
 
 /** Extensions the app reads. Everything else is stored as is. */
 export function isParsed(extension: FileExtension): boolean {
-  return ["docx", "xlsx", "csv", "txt", "md"].includes(extension);
+  return ["docx", "xlsx", "csv", "txt", "md", "pdf"].includes(extension);
+}
+
+/**
+ * A file kept without being read, of a type the app reads now: a PDF
+ * uploaded before KRB-214. "Analyser" reads it (retryParse).
+ */
+export function isKeptUnread(fileName: string, status: string, meta: unknown): boolean {
+  const type = fileTypeFor(fileName);
+  const kind = meta && typeof meta === "object" && "kind" in meta ? meta.kind : null;
+  return status === "skipped" && type !== null && isParsed(type.extension) && kind === "stored";
 }
 
 /** The result for a file the app keeps without reading it. */

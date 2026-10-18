@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 import { beforeAll, describe, expect, it } from "vitest";
+import { deflatedSpaces, testPdf } from "../pdf/test-pdf";
 import { readPlanInWorker } from "./read-job";
 import { PlanReadError } from "./types";
 
@@ -69,6 +70,17 @@ describe("readPlanInWorker", () => {
     );
     expect(await errorKey(readPlanInWorker("pdf", empty, soon(), { file }))).toBe("pdfNoText");
   });
+
+  // pdf.js decodes a stream outside the heap, which --max-old-space-size does
+  // not limit: 2 MB here decode to 512 MB. The memory watch reads /proc.
+  it.runIf(process.platform === "linux")(
+    "calls a PDF too large when its streams pass the memory limit",
+    async () => {
+      const bomb = testPdf([["1. Contexte"]], { deflated: await deflatedSpaces(512) });
+      expect(await errorKey(readPlanInWorker("pdf", bomb, soon(), { file, memoryMb: 300 }))).toBe("tooLarge");
+    },
+    30_000,
+  );
 
   it("stops a read at the deadline", async () => {
     expect(await errorKey(readPlanInWorker("pdf", fixture("tdr.pdf"), Date.now() + 1, { file }))).toBe(

@@ -115,7 +115,7 @@ export const faqPart: GuidePart = {
         {
           list: [
             "Elle ne change jamais une section toute seule. Un brouillon n'entre dans la section que si un membre l'accepte, tel quel ou corrigé.",
-            "Elle ne lit pas les PDF, les présentations, les images ni les schémas déposés comme livrables.",
+            "Elle ne lit pas les présentations, les images ni les schémas déposés comme livrables, ni les PDF sans texte lisible ou protégés par un mot de passe.",
             "Elle ne reçoit ni le nom ni l'adresse e-mail de la personne qui fait la demande.",
             "Elle ne vérifie pas les faits. Un brouillon peut contenir des erreurs, des oublis ou des chiffres mal lus : relisez-le et vérifiez les chiffres et les sources avant de l'accepter.",
             "KolabReport n'utilise pas vos contenus pour entraîner des modèles d'IA.",

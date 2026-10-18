@@ -1,6 +1,7 @@
 import "server-only";
 import { fork } from "node:child_process";
 import path from "node:path";
+import { watchMemory } from "@/lib/process-memory";
 import type { PlanFileResult } from "./read";
 import { PLAN_LIMITS, PlanReadError, type PlanFormat } from "./types";
 import type { PlanWorkerInput, PlanWorkerOutput } from "./worker";
@@ -15,7 +16,8 @@ export const PLAN_WORKER_FILE = path.join(process.cwd(), "build", "plan-worker.c
 
 /**
  * Runs the plan readers in a child process, killed when it answers, fails or
- * reaches the deadline. Running out of memory aborts it (SIGABRT).
+ * reaches the deadline. Running out of heap aborts it (SIGABRT), and past
+ * `memoryMb` in all it is killed: the file is then too large.
  */
 export function readPlanInWorker(
   format: PlanFormat,
@@ -24,8 +26,9 @@ export function readPlanInWorker(
   {
     file = PLAN_WORKER_FILE,
     heapMb = PLAN_LIMITS.workerHeapMb,
+    memoryMb = PLAN_LIMITS.workerMemoryMb,
     requestId = null,
-  }: { file?: string; heapMb?: number; requestId?: string | null } = {},
+  }: { file?: string; heapMb?: number; memoryMb?: number; requestId?: string | null } = {},
 ): Promise<PlanFileResult> {
   return new Promise((resolve, reject) => {
     const child = fork(file, [], {
@@ -41,6 +44,12 @@ export function readPlanInWorker(
       },
       Math.max(deadline - Date.now(), 0),
     );
+    const stopWatching = child.pid
+      ? watchMemory(child.pid, memoryMb, () => {
+          reject(new PlanReadError("tooLarge"));
+          child.kill("SIGKILL");
+        })
+      : () => undefined;
     child.once("message", (output: PlanWorkerOutput) => {
       if (output.ok) resolve(output.result);
       else reject(new PlanReadError(output.key));
@@ -49,6 +58,7 @@ export function readPlanInWorker(
     // Settles the promise if the process ends without answering.
     child.once("exit", (_code, signal) => {
       clearTimeout(timer);
+      stopWatching();
       reject(new PlanReadError(signal === "SIGABRT" ? "tooLarge" : "unreadable"));
     });
     child.send({ format, bytes, requestId } satisfies PlanWorkerInput);
