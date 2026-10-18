@@ -135,7 +135,10 @@ test("an owner inserts a PNG deliverable and finds it in the section, the report
   await main.getByRole("button", { name: "Exporter en .docx" }).click();
   const download = await downloading;
   const zip = await JSZip.loadAsync(readFileSync(await download.path()));
-  const media = Object.keys(zip.files).filter((name) => name.startsWith("word/media/"));
+  // Files only: the zip can also list the word/media/ folder itself.
+  const media = Object.values(zip.files)
+    .filter((entry) => !entry.dir && entry.name.startsWith("word/media/"))
+    .map((entry) => entry.name);
   expect(media).toHaveLength(1);
   expect(media[0]).toMatch(/\.png$/);
   const documentXml = await zip.file("word/document.xml")!.async("string");
