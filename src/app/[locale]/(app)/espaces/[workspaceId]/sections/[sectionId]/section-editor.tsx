@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { Check, Eye, PencilLine, RotateCcw } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
+import { insertBlock, sectionImageMarkdown, transferredFiles } from "@/lib/deliverables/section-images";
 import { MAX_SECTION_CONTENT } from "@/lib/sections";
 import { useUnsavedWork } from "@/lib/unsaved-work";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,9 @@ import {
   type SectionContentVersion,
 } from "./content-actions";
 import { ContentCompare } from "./content-compare";
+import { useImageInsertTarget, type SectionImageRef } from "./image-insert";
+import { ImageUploadList, useImageUploads } from "./image-uploads";
+import type { ImagePlace, RichTextControl } from "./rich-text-editor";
 import { SectionContent } from "./section-content";
 
 // Hand editing of the section's text (Story KRB-18). The editor keeps the
@@ -35,6 +39,11 @@ import { SectionContent } from "./section-content";
 // Two modes (KRB-197): "Texte", a Word-like editor, and "Markdown", the
 // source. Both edit the same Markdown, which is what gets saved. The Texte
 // editor and its libraries load only when the editor opens.
+//
+// Images (KRB-216): a PNG or JPEG pasted or dropped in either tab is uploaded
+// as a deliverable of the section, then goes in the text where it was put.
+// "Insérer dans le texte" in the deliverable list puts one at the cursor, and
+// opens the editor first when it is closed.
 
 // Hover, focus and opening all start the load, so they share one promise.
 // Vitest also needs it: a vi.mock only applies to the first of several imports
@@ -104,7 +113,7 @@ function storeMode(mode: EditorMode) {
 type SaveError = Exclude<Extract<SaveSectionContentResult, { ok: false }>["error"], "conflict">;
 
 /** What the status line says after an action. */
-type Notice = "saved" | "cleared" | "kept" | "restored";
+type Notice = "saved" | "cleared" | "kept" | "restored" | "imageInserted";
 
 /** The saved text the server sent back on a conflict. `again`: the overwrite conflicted too. */
 type Conflict = SectionContentVersion & { again: boolean };
@@ -146,7 +155,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
   // A new key loads the Texte editor again, after the text changed from outside it.
   const [visualKey, setVisualKey] = useState(0);
   // The Texte editor takes the focus once it is ready.
-  const [visualFocus, setVisualFocus] = useState(false);
+  const [visualFocus, setVisualFocus] = useState<boolean | "end">(false);
   const [preview, setPreview] = useState(false);
   const [conflict, setConflict] = useState<Conflict | null>(null);
   const [error, setError] = useState<SaveError | null>(null);
@@ -158,6 +167,9 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
   const tabRefs = useRef<Record<EditorMode, HTMLButtonElement | null>>({ text: null, markdown: null });
   const conflictRef = useRef<HTMLHeadingElement>(null);
   const focusNext = useRef<FocusTarget | null>(null);
+  const visualControl = useRef<RichTextControl | null>(null);
+  // Where the cursor goes in the textarea once the text shows an inserted image.
+  const textareaCaret = useRef<number | null>(null);
 
   const dirty = editing && text !== (base.content ?? "");
   const tooLong = text.length > MAX_SECTION_CONTENT;
@@ -189,23 +201,74 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     focusNext.current = null;
     if (target === "title") document.getElementById("section-content-title")?.focus();
     else if (target === "edit") editRef.current?.focus();
-    else if (target === "textarea") textareaRef.current?.focus();
-    else if (target === "tab") tabRefs.current[mode]?.focus();
+    else if (target === "textarea") {
+      textareaRef.current?.focus();
+      const caret = textareaCaret.current;
+      textareaCaret.current = null;
+      if (caret !== null) textareaRef.current?.setSelectionRange(caret, caret);
+    } else if (target === "tab") tabRefs.current[mode]?.focus();
     else conflictRef.current?.focus();
   });
 
-  // Leaving the page would lose the changes. The update banner waits too.
-  useUnsavedWork(dirty);
+  /**
+   * Puts the image in the text: at `place` in the Texte tab, after the
+   * cursor in the Markdown tab. An upload that ends after the editor closed
+   * leaves the file in the deliverable list only.
+   */
+  function insertImage(image: SectionImageRef, place: ImagePlace | null) {
+    if (!editing) return;
+    const markdown = sectionImageMarkdown(image.id, image.caption);
+    const control = visualControl.current;
+    const area = textareaRef.current;
+    if (mode === "text" && control) {
+      control.insertImage(image, place);
+    } else if (mode === "markdown" && area) {
+      const next = insertBlock(area.value, area.selectionEnd, area.selectionEnd, markdown);
+      setText(next.text);
+      setPreview(false);
+      textareaCaret.current = next.cursor;
+      focusNext.current = "textarea";
+    } else {
+      // The Texte editor is still loading: the image goes at the end and the editor reads the text again.
+      replaceText(insertBlock(text, text.length, text.length, markdown).text);
+    }
+    setNotice("imageInserted");
+  }
+
+  const images = useImageUploads(sectionId, insertImage);
+
+  // "Insérer dans le texte" in the deliverable list.
+  useImageInsertTarget((image) => {
+    if (pending) return;
+    if (editing) {
+      insertImage(image, null);
+      return;
+    }
+    const current = base.content ?? "";
+    const markdown = sectionImageMarkdown(image.id, image.caption);
+    open(insertBlock(current, current.length, current.length, markdown).text, "end");
+    setNotice("imageInserted");
+  });
+
+  // Leaving the page would lose the changes or cut an upload short. The update banner waits too.
+  useUnsavedWork(dirty || images.busy);
 
   function adopt(next: SectionContentVersion) {
     setKnown(next);
     setBase(next);
   }
 
-  /** The text field of the mode takes the focus: the textarea now, the Texte editor once it is ready. */
-  function focusField(fieldMode: EditorMode) {
-    if (fieldMode === "markdown") focusNext.current = "textarea";
-    else setVisualFocus(true);
+  /**
+   * The text field of the mode takes the focus: the textarea now, the Texte
+   * editor once it is ready. "end" puts the cursor after the text.
+   */
+  function focusField(fieldMode: EditorMode, at: "start" | "end" = "start") {
+    if (fieldMode === "markdown") {
+      focusNext.current = "textarea";
+      if (at === "end") textareaCaret.current = Number.MAX_SAFE_INTEGER;
+    } else {
+      setVisualFocus(at === "end" ? "end" : true);
+    }
   }
 
   const onVisualFocused = useCallback(() => setVisualFocus(false), []);
@@ -216,16 +279,17 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
     setVisualKey((key) => key + 1);
   }
 
-  function open() {
+  /** `at` "end" for an image added to the end of the text, where the cursor then goes. */
+  function open(initial = base.content ?? "", at: "start" | "end" = "start") {
     const lastMode = storedMode();
-    replaceText(base.content ?? "");
+    replaceText(initial);
     setMode(lastMode);
     setEditing(true);
     setPreview(false);
     setConflict(null);
     setError(null);
     setNotice(null);
-    focusField(lastMode);
+    focusField(lastMode, at);
   }
 
   function switchMode(next: EditorMode) {
@@ -351,7 +415,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
           variant="outline"
           size="sm"
           shape="pill"
-          onClick={open}
+          onClick={() => open()}
           // Starts loading the Texte editor before the click.
           onPointerEnter={() => void loadRichTextEditor()}
           onFocus={() => void loadRichTextEditor()}
@@ -501,6 +565,8 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
                       autoFocus={visualFocus}
                       onAutoFocused={onVisualFocused}
                       onShowMarkdown={showMarkdown}
+                      onFiles={images.add}
+                      control={visualControl}
                     />
                   </EditorBoundary>
                 </>
@@ -517,6 +583,22 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
                     onChange={(event) => {
                       setText(event.target.value);
                       setNotice(null);
+                    }}
+                    onPaste={(event) => {
+                      const files = transferredFiles(event.clipboardData);
+                      if (!files) return;
+                      event.preventDefault();
+                      images.add(files.map((file) => ({ file, place: null })));
+                    }}
+                    onDragOver={(event) => {
+                      // Without this, the browser opens a dropped file in place of the page.
+                      if (event.dataTransfer.types.includes("Files")) event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      const files = transferredFiles(event.dataTransfer);
+                      if (!files) return;
+                      event.preventDefault();
+                      images.add(files.map((file) => ({ file, place: null })));
                     }}
                     rows={16}
                     readOnly={pending}
@@ -543,6 +625,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
                           headingLevel={3}
                           headings="flatten"
                           links="text"
+                          images="deliverables"
                           fallback={<p className="text-destructive">{t("previewError")}</p>}
                         >
                           {text}
@@ -569,6 +652,7 @@ export function SectionEditor({ sectionId, content, version, draftHint }: Sectio
                 </span>
               ) : null}
             </p>
+            <ImageUploadList uploads={images.uploads} onDismiss={images.dismiss} />
           </div>
 
           {changedMeanwhile ? <p className="text-sm text-muted-foreground">{t("changedMeanwhile")}</p> : null}

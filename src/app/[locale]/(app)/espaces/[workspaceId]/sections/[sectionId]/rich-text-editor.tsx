@@ -3,6 +3,7 @@
 import {
   useEffect,
   useId,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -11,6 +12,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import type { EditorView } from "@tiptap/pm/view";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import { useTranslations } from "next-intl";
 import {
@@ -28,6 +30,7 @@ import {
   TextQuote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sectionImageMarkdown, sectionImagePath, transferredFiles } from "@/lib/deliverables/section-images";
 import {
   bindOrigin,
   docToMarkdown,
@@ -43,6 +46,23 @@ import { cn } from "@/lib/utils";
 // section-editor.tsx). The parent keeps the Markdown: this component reads it
 // once when it mounts and sends the new Markdown after every change. To load
 // another text, the parent mounts it again with a new key.
+//
+// Images (KRB-216): files pasted or dropped in the text go to the parent,
+// which uploads them as deliverables of the section, then puts each image
+// where it was pasted or dropped through `control`, even if the text changed
+// during the upload.
+
+/** A place in the text that moves with the edits made after it was taken. */
+export type ImagePlace = { pos: number };
+
+export type RichTextControl = {
+  /**
+   * Puts the image of a deliverable in a paragraph of its own at `place`,
+   * or after the selection when the place is from another editor, then
+   * moves the cursor after it.
+   */
+  insertImage: (image: { id: string; caption: string }, place?: ImagePlace | null) => void;
+};
 
 export type RichTextEditorProps = {
   /** The Markdown the editor opens on. */
@@ -55,11 +75,15 @@ export type RichTextEditorProps = {
   invalid: boolean;
   /** While a save runs: the text can't change, the focus stays. */
   readOnly: boolean;
-  /** Move the focus into the text once the editor is ready, then call onAutoFocused. */
-  autoFocus: boolean;
+  /** Move the focus into the text once the editor is ready, then call onAutoFocused. "end": after the last block. */
+  autoFocus: boolean | "end";
   onAutoFocused: () => void;
   /** Opens the Markdown tab, for a text this mode can't show. */
   onShowMarkdown: () => void;
+  /** Files pasted or dropped in the text, each with the place it goes. */
+  onFiles?: (files: { file: File; place: ImagePlace }[]) => void;
+  /** Set while the editor is mounted. */
+  control?: RefObject<RichTextControl | null>;
 };
 
 const fieldClass =
@@ -94,15 +118,21 @@ function LoadedEditor({
   readOnly,
   autoFocus,
   onAutoFocused,
+  onFiles,
+  control,
 }: RichTextEditorProps & { parsed: ParsedMarkdown }) {
   const t = useTranslations("SectionEditor");
   const toolbarRef = useRef<HTMLDivElement>(null);
+  // Places waiting for an image, moved along with every change.
+  const places = useRef(new Set<ImagePlace>());
+  const onFilesRef = useRef(onFiles);
   // Bound on the first change, to the document the text was read into.
   const origin = useRef<MarkdownOrigin | null | undefined>(undefined);
   const last = useRef(initialMarkdown);
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
+    onFilesRef.current = onFiles;
   });
 
   const extensions = useMemo(() => richTextExtensions({ rawTitle: t("visual.raw") }), [t]);
@@ -121,8 +151,15 @@ function LoadedEditor({
     [labelledBy, describedBy, invalid, readOnly],
   );
 
-  const editorProps = useMemo(
-    () => ({
+  const editorProps = useMemo(() => {
+    // One place per file: once the first image is in, the next place has moved after it.
+    const placeFiles = (files: File[], pos: number) =>
+      files.map((file) => {
+        const place = { pos };
+        places.current.add(place);
+        return { file, place };
+      });
+    return {
       attributes,
       handleKeyDown: (_view: unknown, event: globalThis.KeyboardEvent) => {
         // Alt+F10 goes to the toolbar, as in word processors.
@@ -133,9 +170,22 @@ function LoadedEditor({
         }
         return false;
       },
-    }),
-    [attributes],
-  );
+      handlePaste: (view: EditorView, event: ClipboardEvent) => {
+        const files = transferredFiles(event.clipboardData);
+        if (!files || !onFilesRef.current) return false;
+        onFilesRef.current(placeFiles(files, view.state.selection.to));
+        return true;
+      },
+      handleDrop: (view: EditorView, event: DragEvent, _slice: unknown, moved: boolean) => {
+        const files = moved ? null : transferredFiles(event.dataTransfer);
+        if (!files || !onFilesRef.current) return false;
+        event.preventDefault();
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        onFilesRef.current(placeFiles(files, at?.pos ?? view.state.selection.to));
+        return true;
+      },
+    };
+  }, [attributes]);
 
   const editor = useEditor({
     extensions,
@@ -145,6 +195,10 @@ function LoadedEditor({
     // Focusable while a save runs, when the text is read-only.
     coreExtensionOptions: { tabindex: { value: "0" } },
     editorProps,
+    onTransaction: ({ transaction }) => {
+      if (!transaction.docChanged) return;
+      for (const place of places.current) place.pos = transaction.mapping.map(place.pos);
+    },
     onUpdate: ({ editor: updated, transaction }) => {
       if (origin.current === undefined) origin.current = bindOrigin(parsed, transaction.before);
       const markdown = docToMarkdown(updated.state.doc, origin.current);
@@ -158,9 +212,35 @@ function LoadedEditor({
     if (editor && editor.isEditable === readOnly) editor.setEditable(!readOnly, false);
   }, [editor, readOnly]);
 
+  useImperativeHandle<RichTextControl | null, RichTextControl | null>(
+    control,
+    () =>
+      editor && {
+        insertImage: ({ id, caption }, place) => {
+          const known = place ? places.current.delete(place) : false;
+          const pos =
+            known && place ? Math.min(place.pos, editor.state.doc.content.size) : editor.state.selection.to;
+          const raw = {
+            type: "rawInline",
+            attrs: {
+              mdast: JSON.stringify({ type: "image", url: sectionImagePath(id), title: null, alt: caption }),
+              text: sectionImageMarkdown(id, caption),
+            },
+          };
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(pos, { type: "paragraph", content: [raw] }, { updateSelection: true })
+            .scrollIntoView()
+            .run();
+        },
+      },
+    [editor],
+  );
+
   useEffect(() => {
     if (!editor || !autoFocus) return;
-    editor.commands.focus("start");
+    editor.commands.focus(autoFocus === "end" ? "end" : "start", { scrollIntoView: true });
     onAutoFocused();
   }, [editor, autoFocus, onAutoFocused]);
 

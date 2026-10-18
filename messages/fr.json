@@ -1067,10 +1067,10 @@
     "preview": "Aperçu",
     "previewEmpty": "Le texte est vide.",
     "previewError": "Cet aperçu n'a pas pu être affiché.",
-    "help": "Titres, listes et tableaux en Markdown. Un texte vide efface le contenu. Ctrl+S ou Cmd+S enregistre.",
+    "help": "Titres, listes et tableaux en Markdown. Collez ou glissez une image PNG ou JPEG pour l'insérer. Un texte vide efface le contenu. Ctrl+S ou Cmd+S enregistre.",
     "visual": {
       "label": "Texte de la section",
-      "help": "Mettez en forme avec la barre d'outils ou au clavier. Alt+F10 va à la barre d'outils, Échap revient au texte. Un texte vide efface le contenu. Ctrl+S ou Cmd+S enregistre.",
+      "help": "Mettez en forme avec la barre d'outils ou au clavier. Alt+F10 va à la barre d'outils, Échap revient au texte. Collez ou glissez une image PNG ou JPEG pour l'insérer. Un texte vide efface le contenu. Ctrl+S ou Cmd+S enregistre.",
       "loading": "Chargement de l'éditeur…",
       "tooComplex": "Ce texte est trop long ou trop complexe pour le mode Texte. Vous pouvez le modifier dans l'onglet Markdown.",
       "loadError": "L'éditeur Texte n'a pas pu s'afficher. Votre texte est gardé : vérifiez votre connexion, ou continuez dans l'onglet Markdown.",
@@ -1113,7 +1113,8 @@
       "saved": "Texte enregistré.",
       "cleared": "Texte effacé. La section n'a plus de contenu.",
       "kept": "Votre version est enregistrée.",
-      "restored": "La version enregistrée est reprise dans l'éditeur."
+      "restored": "La version enregistrée est reprise dans l'éditeur.",
+      "imageInserted": "Image insérée dans le texte. Enregistrez pour la garder."
     },
     "conflict": {
       "title": "Quelqu'un a modifié cette section pendant que vous écriviez.",
@@ -1139,6 +1140,18 @@
       "generic": "Le texte n'a pas pu être enregistré. Réessayez.",
       "readOnly": "Cet espace de travail est en lecture seule : le texte n'a pas été enregistré. Copiez-le si vous voulez le garder."
     }
+  },
+  "SectionImages": {
+    "unavailable": "(image indisponible)",
+    "noCaption": "Image sans légende",
+    "insert": "Insérer dans le texte",
+    "insertLabel": "Insérer {name} dans le texte",
+    "progressLabel": "Envoi de {name}",
+    "sending": "Envoi de {name} : {percent}",
+    "checking": "Vérification de {name}",
+    "failed": "{name} n'a pas été ajoutée au texte : {reason}",
+    "wrongType": "Seules les images PNG et JPEG vont dans le texte. Déposez les autres fichiers dans Déposer des livrables.",
+    "dismiss": "Fermer"
   },
   "SectionManage": {
     "edit": "Modifier le titre et les consignes",

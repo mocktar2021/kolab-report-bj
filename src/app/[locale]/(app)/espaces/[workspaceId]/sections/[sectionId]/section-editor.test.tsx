@@ -9,6 +9,9 @@ import { saveSectionContent } from "./content-actions";
 import { EDITOR_MODE_STORAGE_KEY, SectionEditor } from "./section-editor";
 
 vi.mock("./content-actions", () => ({ saveSectionContent: vi.fn() }));
+// Pasted and dropped images are uploaded as deliverables (KRB-216).
+vi.mock("@/lib/deliverables/upload", () => ({ uploadDeliverable: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 beforeAll(() => {
   // jsdom draws nothing: ProseMirror measures the selection to scroll to it.

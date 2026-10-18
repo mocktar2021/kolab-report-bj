@@ -10,6 +10,10 @@ export type UploadUrlResponse = {
 
 export type UploadResult = { ok: true } | { ok: false; error: DeliverableErrorKey };
 
+/** The id comes back so the file can go in the section's text (KRB-216). */
+export type DeliverableUploadResult =
+  { ok: true; deliverableId: string } | { ok: false; error: DeliverableErrorKey };
+
 type UploadCallbacks = {
   /** Share of the file sent, from 0 to 1. */
   onProgress: (sent: number) => void;
@@ -62,7 +66,7 @@ export async function uploadDeliverable(
   sectionId: string,
   file: File,
   { onProgress, onChecking }: UploadCallbacks,
-): Promise<UploadResult> {
+): Promise<DeliverableUploadResult> {
   const start = await fetch("/api/deliverables/upload-url", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -80,5 +84,5 @@ export async function uploadDeliverable(
   if (!sent.ok) return sent;
   if (!done) return { ok: false, error: "uploadFailed" };
   if (!done.ok) return { ok: false, error: await errorFrom(done) };
-  return { ok: true };
+  return { ok: true, deliverableId };
 }

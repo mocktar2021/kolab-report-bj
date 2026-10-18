@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   FileText,
   FileType2,
+  ImagePlus,
   type LucideIcon,
   Presentation,
   RotateCw,
@@ -22,8 +23,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FILE_TYPES, type FileKind } from "@/lib/deliverables/file-types";
 import { formatFileSize } from "@/lib/deliverables/format";
+import { captionFromFileName, isSectionImageType } from "@/lib/deliverables/section-images";
 import type { ParseErrorKey } from "@/lib/deliverables/parse/types";
 import { deleteDeliverable, retryParse, type DeliverableActionResult } from "./actions";
+import { useImageInsert } from "./image-insert";
 import { ParseBadge, type ParseState } from "./parse-badge";
 
 // react-markdown only loads when someone opens a preview.
@@ -126,7 +129,7 @@ export function DeliverableList({ files, canEdit }: { files: DeliverableRow[]; c
       ) : (
         <ul className="divide-y">
           {files.map((file) => (
-            <DeliverableItem key={file.id} file={file} onDeleted={onDeleted} />
+            <DeliverableItem key={file.id} file={file} canEdit={canEdit} onDeleted={onDeleted} />
           ))}
         </ul>
       )}
@@ -134,8 +137,20 @@ export function DeliverableList({ files, canEdit }: { files: DeliverableRow[]; c
   );
 }
 
-function DeliverableItem({ file, onDeleted }: { file: DeliverableRow; onDeleted: (name: string) => void }) {
+function DeliverableItem({
+  file,
+  canEdit,
+  onDeleted,
+}: {
+  file: DeliverableRow;
+  canEdit: boolean;
+  onDeleted: (name: string) => void;
+}) {
   const t = useTranslations("Deliverables");
+  const tImages = useTranslations("SectionImages");
+  // A PNG or JPEG goes in the text for people who can edit it (KRB-216).
+  const insertImage = useImageInsert();
+  const canInsert = canEdit && insertImage !== null && isSectionImageType(file.mimeType);
   const format = useFormatter();
   const router = useRouter();
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -228,6 +243,18 @@ function DeliverableItem({ file, onDeleted }: { file: DeliverableRow; onDeleted:
             >
               {previewOpen ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
               <span className="hidden sm:inline">{previewOpen ? t("hidePreview") : t("preview")}</span>
+            </Button>
+          ) : null}
+          {canInsert ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-label={tImages("insertLabel", { name: file.name })}
+              onClick={() => insertImage?.({ id: file.id, caption: captionFromFileName(file.name) })}
+            >
+              <ImagePlus aria-hidden="true" />
+              <span className="hidden sm:inline">{tImages("insert")}</span>
             </Button>
           ) : null}
           <Button asChild size="sm" variant="ghost">

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isSectionImageType } from "@/lib/deliverables/section-images";
 import { DELIVERABLES_BUCKET, errorResponse, NO_STORE } from "@/lib/deliverables/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
@@ -14,7 +15,8 @@ const INLINE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/sv
 /**
  * Redirects workspace members to a short-lived signed URL of a deliverable.
  * Files download as attachments. `?apercu` shows an image inline instead,
- * for previews in <img>.
+ * for previews in <img>. `?image` is for the images of a section's text
+ * (KRB-216): inline too, and only for a PNG or a JPEG.
  */
 export async function GET(request: NextRequest, { params }: { params: Params }) {
   const { id } = await params;
@@ -33,7 +35,10 @@ export async function GET(request: NextRequest, { params }: { params: Params }) 
     .maybeSingle();
   if (!file) return errorResponse(404, "notReceived");
 
-  const inline = request.nextUrl.searchParams.has("apercu") && INLINE_TYPES.has(file.mime_type);
+  const { searchParams } = request.nextUrl;
+  const image = searchParams.has("image");
+  if (image && !isSectionImageType(file.mime_type)) return errorResponse(415, "fileType");
+  const inline = image || (searchParams.has("apercu") && INLINE_TYPES.has(file.mime_type));
   const { data: signed, error } = await supabase.storage
     .from(DELIVERABLES_BUCKET)
     .createSignedUrl(

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import messages from "../../../messages/fr.json";
 import { SECTION_STATUSES } from "@/lib/sections";
 import {
+  IMAGE_NOTES,
   STATUS_LABELS,
   UNASSIGNED_LABEL,
   formatExportDate,
   generatedOn,
+  imageNote,
   pageLabel,
   sectionMeta,
 } from "./labels";
@@ -33,5 +35,11 @@ describe("export labels", () => {
 
   it("number pages in French", () => {
     expect(pageLabel(3, 12)).toBe("Page 3 sur 12");
+  });
+
+  it("say an image is unavailable like the app (KRB-216)", () => {
+    expect(IMAGE_NOTES.unavailable).toBe(messages.SectionImages.unavailable);
+    expect(imageNote("Façade nord", "unavailable")).toBe("Façade nord (image indisponible)");
+    expect(imageNote("", "tooLarge")).toBe("(image trop lourde pour l'export)");
   });
 });
