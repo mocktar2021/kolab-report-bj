@@ -86,15 +86,12 @@ export function insertBlock(
 }
 
 /**
- * Whether an HTML clipboard holds text, tags and spaces left out. Enough to
- * tell an image from a copied text. Word and Excel add a <style>, which
- * counts as text. DOMParser builds an inert document: nothing runs or loads.
+ * Whether an HTML clipboard is a copied image: it has an <img>. The HTML is
+ * only looked at, never parsed or shown. HTML without one, such as Word's
+ * <style> and an empty paragraph, is a copied text.
  */
-function htmlHasText(html: string): boolean {
-  if (!html.trim()) return false;
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  if (doc.querySelector("style, script, title")) return true;
-  return (doc.body.textContent ?? "").replace(/\s/g, "") !== "";
+function htmlIsImage(html: string): boolean {
+  return /<img\b/i.test(html);
 }
 
 /**
@@ -109,7 +106,8 @@ export function transferredFiles(data: DataTransfer | null): File[] | null {
   const names = new Set(files.map((file) => file.name));
   const text = data.getData("text/plain").trim();
   if (text && !text.split(/\r?\n/).every((line) => names.has(line.trim()))) return null;
-  if (htmlHasText(data.getData("text/html")) && !text) return null;
+  const html = data.getData("text/html");
+  if (!text && html.trim() && !htmlIsImage(html)) return null;
   return files;
 }
 
