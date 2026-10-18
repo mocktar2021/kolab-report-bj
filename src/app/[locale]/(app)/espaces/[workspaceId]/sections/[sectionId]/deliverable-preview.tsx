@@ -55,6 +55,11 @@ export function DeliverablePreview({ id, name, isImage }: { id: string; name: st
   const cappedSheets = (meta?.sheets ?? []).filter(
     (sheet) => sheet.keptRows < sheet.rows || sheet.keptColumns < sheet.columns,
   );
+  // A PDF whose reading stopped before its last page, at the page or character limit.
+  const pdfPages =
+    meta?.pages !== undefined && meta.pagesRead !== undefined && meta.pagesRead < meta.pages
+      ? { read: meta.pagesRead, pages: meta.pages }
+      : null;
 
   return (
     <div className="rounded-xl border bg-muted/20">
@@ -69,8 +74,9 @@ export function DeliverablePreview({ id, name, isImage }: { id: string; name: st
       <div className="max-h-[32rem] overflow-y-auto px-4 py-3 text-sm leading-relaxed">
         {!markdown ? (
           <p className="text-muted-foreground">{t("previewEmpty")}</p>
-        ) : meta?.kind === "text" ? (
+        ) : meta?.kind === "text" || meta?.kind === "pdf" ? (
           // A .txt or .md file is shown as written: a crafted .md can freeze or crash react-markdown.
+          // The text of a PDF is plain text too, never Markdown.
           <pre className="whitespace-pre-wrap break-words font-sans">{markdown}</pre>
         ) : (
           <Markdown fallback={<p className="text-destructive">{t("previewError")}</p>}>{markdown}</Markdown>
@@ -89,7 +95,16 @@ export function DeliverablePreview({ id, name, isImage }: { id: string; name: st
               })}
             </li>
           ))}
-          {meta?.truncated ? <li>{t("previewTruncated")}</li> : null}
+          {pdfPages ? (
+            <li>
+              {t("previewPages", {
+                read: format.number(pdfPages.read),
+                pages: format.number(pdfPages.pages),
+              })}
+            </li>
+          ) : meta?.truncated ? (
+            <li>{t("previewTruncated")}</li>
+          ) : null}
         </ul>
       ) : null}
     </div>

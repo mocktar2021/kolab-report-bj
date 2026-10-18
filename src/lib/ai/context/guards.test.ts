@@ -80,6 +80,9 @@ describe("deliverableBlock", () => {
     expect(deliverableBlock({ ref: "L2", fileName: "data.xlsx", kind: "spreadsheet", part: 3 }, "x")).toBe(
       '<livrable id="L2" nom="data.xlsx" type="tableur" partie="3">\nx\n</livrable>',
     );
+    expect(deliverableBlock({ ref: "L3", fileName: "plan.pdf", kind: "pdf" }, "Texte")).toBe(
+      '<livrable id="L3" nom="plan.pdf" type="PDF">\nTexte\n</livrable>',
+    );
   });
 
   it("keeps an untrusted file name inside its attribute", () => {

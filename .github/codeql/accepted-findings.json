@@ -3,5 +3,10 @@
     "rule": "js/user-controlled-bypass",
     "path": "src/app/[locale]/auth/callback/route.ts",
     "reason": "The query string only picks how the e-mail link is checked (token_hash or PKCE code). Supabase Auth verifies the token on both paths and the user gets a session only when that check passes, so nothing is bypassed."
+  },
+  {
+    "rule": "js/insufficient-password-hash",
+    "path": "src/lib/pdf/test-pdf.ts",
+    "reason": "Test helper only. It builds a password-locked PDF for the reader tests, and the PDF standard security handler (PDF 1.7, algorithms 2 to 4) is defined with MD5 and RC4. No user password is stored or hashed."
   }
 ]

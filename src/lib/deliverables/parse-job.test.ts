@@ -4,12 +4,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { deflatedSpaces, testPdf } from "../pdf/test-pdf";
 import { parseInWorker } from "./parse-job";
 import { zip } from "./parse/test-zip";
 import { ParseError } from "./parse/types";
 
-// Runs the parsers the way the app does: bundled by esbuild, in a worker
-// thread with a memory limit and a deadline. No database here.
+// Runs the parsers the way the app does: bundled by esbuild, in a child
+// process with memory limits and a deadline. No database here.
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 
 const fixture = (name: string) =>
@@ -78,6 +79,15 @@ describe("parseInWorker", () => {
     expect(result).toMatchObject({ status: "parsed", meta: { kind: "spreadsheet" } });
   });
 
+  it("reads a PDF, and keeps one without text as is", async () => {
+    const result = await parseInWorker("pdf", testPdf([["Plan masse", "Surface : 1 200 m²"]]), soon(), {
+      file,
+    });
+    expect(result).toMatchObject({ status: "parsed", markdown: "Plan masse\nSurface : 1 200 m²" });
+    const scan = await parseInWorker("pdf", testPdf([[]], { image: true }), soon(), { file });
+    expect(scan).toMatchObject({ status: "skipped", meta: { kind: "pdf", reason: "noText" } });
+  });
+
   it("passes on the parser's error", async () => {
     expect(await errorKey(parseInWorker("docx", fixture("illisible.docx"), soon(), { file }))).toBe(
       "corrupt",
@@ -95,4 +105,18 @@ describe("parseInWorker", () => {
     const result = await parseInWorker("docx", fixture("etude-thermique.docx"), soon(), { file });
     expect(result.status).toBe("parsed");
   }, 30_000);
+
+  // pdf.js decodes a stream outside the heap, which --max-old-space-size does
+  // not limit: 2 MB here decode to 512 MB. The memory watch reads /proc.
+  it.runIf(process.platform === "linux")(
+    "calls a PDF too large when its streams pass the memory limit, and the server keeps going",
+    async () => {
+      const bomb = testPdf([["Titre"]], { deflated: await deflatedSpaces(512) });
+      const work = parseInWorker("pdf", bomb, soon(), { file, memoryMb: 300 });
+      expect(await errorKey(work)).toBe("tooLarge");
+      const result = await parseInWorker("pdf", testPdf([["Titre"]]), soon(), { file, memoryMb: 300 });
+      expect(result.status).toBe("parsed");
+    },
+    30_000,
+  );
 });

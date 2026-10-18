@@ -11,7 +11,7 @@ import { getDraftPanel } from "@/lib/ai/server";
 import { getReadOnlyReason } from "@/lib/billing/banner";
 import { draftsHintText } from "@/lib/billing/hints";
 import { getWorkspaceUsage } from "@/lib/billing/state";
-import { STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
+import { isKeptUnread, type ParseMeta, STALE_PARSE_MS } from "@/lib/deliverables/parse/types";
 import { getSectionDeletionPreview } from "@/lib/deletions/preview";
 import { isReportFrozen } from "@/lib/reports/status";
 import { outline } from "@/lib/section-outline";
@@ -89,7 +89,7 @@ export default async function SectionPage({ params }: { params: Params }) {
     supabase
       .from("deliverables")
       .select(
-        "id, file_name, mime_type, size_bytes, uploaded_by, uploaded_at, parse_status, parse_error, updated_at",
+        "id, file_name, mime_type, size_bytes, uploaded_by, uploaded_at, parse_status, parse_error, parse_meta, updated_at",
       )
       .eq("section_id", section.id)
       .not("uploaded_at", "is", null)
@@ -124,6 +124,9 @@ export default async function SectionPage({ params }: { params: Params }) {
     // claimed, for example one uploaded before files were read.
     const parseState: ParseState = file.parse_status === "processing" && old ? "stale" : file.parse_status;
     const notStarted = file.parse_status === "pending" && old;
+    const keptUnread = isKeptUnread(file.file_name, file.parse_status, file.parse_meta);
+    const reason =
+      file.parse_status === "skipped" ? (file.parse_meta as ParseMeta | null)?.reason : undefined;
     return {
       id: file.id,
       name: file.file_name,
@@ -134,11 +137,13 @@ export default async function SectionPage({ params }: { params: Params }) {
       uploaderName: file.uploaded_by ? (names.get(file.uploaded_by) ?? null) : null,
       parseState,
       parseError: file.parse_error,
+      skipReason: reason === "noText" || reason === "locked" ? reason : null,
       notStarted,
+      keptUnread,
       // Same rule as the delete policy: managers, or the uploader while the
       // section is theirs. A read-only workspace still deletes.
       canDelete: !frozen && editor && (manager || file.uploaded_by === access.userId),
-      canRetry: canEdit && (parseState === "failed" || parseState === "stale" || notStarted),
+      canRetry: canEdit && (parseState === "failed" || parseState === "stale" || notStarted || keptUnread),
     };
   });
   // With their state, so the watcher starts over when a pending file is claimed.
