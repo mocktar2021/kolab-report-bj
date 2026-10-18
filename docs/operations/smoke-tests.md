@@ -57,7 +57,7 @@ where email like 'you+kolabreport-smoke-%@example.com'
   and email_confirmed_at is null;
 ```
 
-Their profile goes with them. Never click the confirmation links. Each sign-up also uses one of the project's Auth e-mails, 30 an hour by default (**Auth > Rate Limits**), shared with real users.
+Their profile goes with them. Never click the confirmation links. Each sign-up also uses one of the project's Auth e-mails, 100 an hour since the launch settings (KRB-162, **Auth > Rate Limits**), shared with real users.
 
 ## Setup, once per environment
 

@@ -6,7 +6,10 @@ import { FILE_PREFIX, SMOKE_SECTION_TITLE, escapeRegExp } from "./support";
 // with the smoke account's own rights. Same labels as the e2e specs
 // (tests/e2e/section-workspace.spec.ts, tests/e2e/master-report.spec.ts).
 
-/** Heading of the uploaded file, shown back by the preview once the file is read. */
+/**
+ * Heading of the uploaded file. The preview shows Markdown files as written,
+ * in plain text (KRB-14), so it comes back as the line `# Contrôle après déploiement`.
+ */
 export const DELIVERABLE_HEADING = "Contrôle après déploiement";
 
 const DELIVERABLE = `# ${DELIVERABLE_HEADING}
@@ -91,7 +94,8 @@ export async function waitUntilParsed(page: Page, name: string) {
 export async function previewShowsContent(page: Page, name: string) {
   const item = fileItem(page, name);
   await item.getByRole("button", { name: `Aperçu de ${name}` }).click();
-  await expect(item.getByRole("heading", { name: DELIVERABLE_HEADING })).toBeVisible();
+  // Plain text, not a heading: the first line keeps its "#".
+  await expect(item.getByText(`# ${DELIVERABLE_HEADING}`)).toBeVisible();
 }
 
 /** "Exporter en .docx" on the report page, and checks the downloaded file. */
