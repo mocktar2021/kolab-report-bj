@@ -24,7 +24,8 @@ import {
   type INumberingOptions,
   type IParagraphOptions,
 } from "docx";
-import { EXPORT_TEXT, PAGE_WORDS, generatedOn, sectionMeta } from "./labels";
+import { annexTable, annexes, type Annex } from "./annexes";
+import { ANNEX_TEXT, EXPORT_TEXT, PAGE_WORDS, generatedOn, sectionMeta } from "./labels";
 import {
   EXPORT_LIMITS,
   TOP_PLACE,
@@ -338,12 +339,40 @@ function sectionChildren(section: NumberedSection, index: number, body: DocxBody
   ];
 }
 
+const ANNEXES_ANCHOR = "annexes";
+
+/**
+ * The "Annexes" page (KRB-215) on a new page after the sections: a Heading 1
+ * listed in the contents, then each section's title and the table of its
+ * files. The titles are bold text rather than headings, so a refreshed table
+ * of contents does not list the sections twice.
+ */
+function annexesChildren(list: readonly Annex[], body: DocxBody): FileChild[] {
+  if (list.length === 0) return [];
+  return [
+    new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      pageBreakBefore: true,
+      children: [new Bookmark({ id: ANNEXES_ANCHOR, children: [new DocxTextRun(ANNEX_TEXT.title)] })],
+    }),
+    ...list.flatMap((annex) => [
+      new Paragraph({
+        keepNext: true,
+        spacing: { before: 240, after: 120 },
+        children: [new DocxTextRun({ text: annex.title, bold: true, size: 24, color: "1F4D78" })],
+      }),
+      ...body.blocks([annexTable(annex.files)], TOP_PLACE),
+    ]),
+  ];
+}
+
 /** The report as a .docx file. */
 export async function buildReportDocx(doc: ExportDocument): Promise<Buffer> {
   const title = cleanLine(doc.title);
   const body = new DocxBody();
   const numbered = numberedSections(doc.sections);
   const sections = numbered.flatMap((section, index) => sectionChildren(section, index, body));
+  const annexList = annexes(doc);
   const contents: FileChild[] = [
     new Paragraph({
       style: "TOCHeading",
@@ -353,11 +382,14 @@ export async function buildReportDocx(doc: ExportDocument): Promise<Buffer> {
     new TableOfContents(EXPORT_TEXT.contents, {
       headingStyleRange: "1-3",
       hyperlink: true,
-      cachedEntries: numbered.map((section, index) => ({
-        title: numberedTitle(section),
-        level: section.level,
-        href: sectionAnchor(index),
-      })),
+      cachedEntries: [
+        ...numbered.map((section, index) => ({
+          title: numberedTitle(section),
+          level: section.level,
+          href: sectionAnchor(index),
+        })),
+        ...(annexList.length > 0 ? [{ title: ANNEX_TEXT.title, level: 1, href: ANNEXES_ANCHOR }] : []),
+      ],
     }),
     ...(doc.sections.length === 0
       ? [new Paragraph({ children: [new DocxTextRun({ text: EXPORT_TEXT.noSections, italics: true })] })]
@@ -465,7 +497,7 @@ export async function buildReportDocx(doc: ExportDocument): Promise<Buffer> {
             ],
           }),
         },
-        children: [...coverPage(doc, title), ...contents, ...sections],
+        children: [...coverPage(doc, title), ...contents, ...sections, ...annexesChildren(annexList, body)],
       },
     ],
   });

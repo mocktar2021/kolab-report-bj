@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import JSZip from "jszip";
+import { pdfText, squash } from "../../src/lib/export/test-pdf-text";
 import { adminClient, createTestUser, createWorkspaceFor, type TestUser } from "./supabase";
 
 // KRB-18: the master report. Every section in order with its text, keyboard
 // reordering for managers, edit links for experts, and the .docx and PDF
-// exports. The export tests need the Storage container (CI only).
+// exports, with or without the list of files in annex (KRB-215). The export
+// tests need the Storage container (CI only).
 test.describe.configure({ mode: "serial" });
 
 type Setup = {
@@ -72,6 +75,27 @@ test.beforeAll(async () => {
     return section.id;
   };
 
+  // Files for the annexes of the exports (KRB-215): rows only, since the
+  // annexes list the files and never open them. The last one is still
+  // uploading, so it is not listed.
+  const file = (sectionId: string, name: string, uploadedBy: string, uploadedAt: string | null) => ({
+    workspace_id: workspaceId,
+    section_id: sectionId,
+    uploaded_by: uploadedBy,
+    storage_path: `${workspaceId}/${sectionId}/e2e-${name}`,
+    file_name: name,
+    mime_type: "application/pdf",
+    size_bytes: 1024,
+    uploaded_at: uploadedAt,
+  });
+  const { error: fileError } = await admin.from("deliverables").insert([
+    // 23:30 UTC is already 13 October in Porto-Novo.
+    file(id("Contexte"), "plan-du-siege.pdf", owner.id, "2026-10-12T23:30:00Z"),
+    file(id("Diagnostic"), "releves-2025.pdf", expert.id, "2026-10-13T09:00:00Z"),
+    file(id("Diagnostic"), "envoi-en-cours.pdf", expert.id, null),
+  ]);
+  if (fileError) throw fileError;
+
   setup = {
     owner,
     expert,
@@ -105,6 +129,33 @@ function regions(page: Page) {
 /** The text of the report shows with "Aperçu" (KRB-201). */
 async function showText(page: Page) {
   await page.getByRole("main").getByRole("button", { name: "Aperçu du texte du rapport" }).click();
+}
+
+/** The text of a .docx, one line per paragraph or table cell. */
+async function docxText(bytes: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(bytes);
+  const xml = (await zip.file("word/document.xml")?.async("string")) ?? "";
+  return xml
+    .split("</w:p>")
+    .map((paragraph) => [...paragraph.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join(""))
+    .join("\n")
+    .replaceAll("&apos;", "'");
+}
+
+/** What follows the "Annexes" title, which ends the file, or "" without it. */
+function annexPart(text: string): string {
+  const start = text.lastIndexOf("Annexes");
+  return start < 0 ? "" : text.slice(start);
+}
+
+/** Each part after the one before it: a part can come more than once, like the date. */
+function expectInOrder(text: string, parts: string[]) {
+  let from = 0;
+  for (const [index, part] of parts.entries()) {
+    const at = text.indexOf(part, from);
+    expect(at, `${part} after ${parts.slice(0, index).join(", ")} in ${text}`).toBeGreaterThanOrEqual(0);
+    from = at + part.length;
+  }
 }
 
 async function positions() {
@@ -260,12 +311,11 @@ test("an owner exports the report as .docx and PDF and finds them in Exports ré
   await signIn(page, setup.owner);
   await page.goto(reportUrl());
   const { main } = regions(page);
+  // The files go in annex unless the box is unticked (KRB-215).
+  const annexBox = main.getByRole("checkbox", { name: "Inclure la liste des livrables en annexe" });
+  await expect(annexBox).toBeChecked();
 
-  const checks = [
-    { button: "Exporter en .docx", extension: "docx", magic: "PK" },
-    { button: "Exporter en PDF", extension: "pdf", magic: "%PDF" },
-  ];
-  for (const { button, extension, magic } of checks) {
+  async function exportAs(button: string, extension: string, magic: string) {
     const downloading = page.waitForEvent("download");
     await main.getByRole("button", { name: button }).click();
     const download = await downloading;
@@ -275,13 +325,60 @@ test("an owner exports the report as .docx and PDF and finds them in Exports ré
     const bytes = readFileSync(await download.path());
     expect(bytes.subarray(0, magic.length).toString("latin1")).toBe(magic);
     await expect(main.getByText(/le téléchargement commence/)).toBeVisible();
+    return bytes;
   }
 
-  // Both files show in "Exports récents" with a download link.
+  const docx = await docxText(await exportAs("Exporter en .docx", "docx", "PK"));
+  const pdf = squash(pdfText(await exportAs("Exporter en PDF", "pdf", "%PDF")));
+
+  // Both end with the sections that have files, numbered as in the report,
+  // with who added each file and when, in Porto-Novo time.
+  const order = (await positions()).map((row) => row.title);
+  const numbered = (title: string) => `${order.indexOf(title) + 1}. ${title}`;
+  const expected = [
+    ["Contexte", "plan-du-siege.pdf", setup.owner.name],
+    ["Diagnostic", "releves-2025.pdf", setup.expert.name],
+  ]
+    .sort(([a = ""], [b = ""]) => order.indexOf(a) - order.indexOf(b))
+    .flatMap(([title = "", name = "", by = ""]) => [numbered(title), name, by, "13 octobre 2026"]);
+  expectInOrder(annexPart(docx), expected);
+  expectInOrder(annexPart(pdf), expected.map(squash));
+  for (const text of [annexPart(docx), annexPart(pdf)]) {
+    expect(text).not.toContain("Recommandations");
+    expect(text).not.toContain("envoi-en-cours.pdf");
+  }
+
+  // Unticked from the keyboard, the next export has no annexes.
+  await annexBox.focus();
+  await page.keyboard.press("Space");
+  await expect(annexBox).not.toBeChecked();
+  const plain = await docxText(await exportAs("Exporter en .docx", "docx", "PK"));
+  expect(plain).toContain(numbered("Contexte"));
+  expect(annexPart(plain)).toBe("");
+  expect(plain).not.toContain("plan-du-siege.pdf");
+
+  // The three files show in "Exports récents" with a download link, and say
+  // which ones have the annexes.
   const recent = main.getByRole("region", { name: "Exports récents" });
-  await expect(recent.getByRole("listitem")).toHaveCount(2);
+  await expect(recent.getByRole("listitem")).toHaveCount(3);
+  await expect(recent.getByRole("listitem").nth(0)).toContainText("sans annexes");
+  await expect(recent.getByRole("listitem").nth(1)).toContainText("avec annexes");
+  await expect(recent.getByRole("listitem").nth(2)).toContainText("avec annexes");
   await expect(recent.getByRole("link", { name: /^Télécharger .+\.pdf$/ })).toHaveAttribute(
     "href",
     /^\/api\/exports\/[0-9a-f-]{36}$/,
   );
+
+  // Each row records the option, so a file with the annexes never stands for one without.
+  const { data: rows, error } = await adminClient()
+    .from("report_exports")
+    .select("format, with_annexes")
+    .eq("report_id", setup.reportId)
+    .order("created_at");
+  if (error) throw error;
+  expect(rows).toEqual([
+    { format: "docx", with_annexes: true },
+    { format: "pdf", with_annexes: true },
+    { format: "docx", with_annexes: false },
+  ]);
 });

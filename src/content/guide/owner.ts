@@ -197,11 +197,12 @@ export const ownerPart: GuidePart = {
         {
           steps: [
             "Quand les sections sont prêtes, cliquez sur **Soumettre pour revue** dans le cadre **Revue et finalisation**. Le rapport passe **En revue** et les membres concernés sont prévenus. Pour reprendre la rédaction, cliquez sur **Repasser en brouillon**.",
-            "Quand le rapport est en revue, un propriétaire clique sur **Finaliser**. Les sections passent en lecture seule pour tout le monde, propriétaires compris, et un PDF de la version finale est enregistré avec les exports du rapport.",
+            "Quand le rapport est en revue, un propriétaire clique sur **Finaliser**. Les sections passent en lecture seule pour tout le monde, propriétaires compris, et un PDF de la version finale, avec la liste des livrables en annexe, est enregistré avec les exports du rapport.",
             "Pour corriger un rapport final, un propriétaire clique sur **Rouvrir en brouillon**.",
           ],
         },
         "Pour télécharger le rapport, cliquez sur **Exporter en .docx** ou **Exporter en PDF** en haut de la page. Le téléchargement commence dès que le fichier est prêt. La liste **Exports récents** garde les derniers fichiers. Un rapport trop long pour un PDF s'exporte en .docx.",
+        "Sous les boutons, la case **Inclure la liste des livrables en annexe** est cochée par défaut. Le fichier se termine alors par une page **Annexes** : pour chaque section qui a des livrables, dans l'ordre du rapport, le nom de chaque fichier, la personne qui l'a ajouté et la date d'ajout. Décochez la case pour un fichier sans cette page. Dans **Exports récents**, chaque fichier indique « avec annexes » ou « sans annexes ».",
         {
           figure: "rapportRevue",
           caption: "Les boutons d'export et le cadre « Revue et finalisation » d'un rapport en brouillon.",

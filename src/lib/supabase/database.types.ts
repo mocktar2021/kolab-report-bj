@@ -1248,6 +1248,7 @@ export type Database = {
           status: string;
           status_event_id: string | null;
           storage_path: string | null;
+          with_annexes: boolean;
           workspace_id: string;
         };
         ComputedFields: never;
@@ -1265,6 +1266,7 @@ export type Database = {
           status?: string;
           status_event_id?: string | null;
           storage_path?: string | null;
+          with_annexes?: boolean;
           workspace_id: string;
         };
         Update: {
@@ -1281,6 +1283,7 @@ export type Database = {
           status?: string;
           status_event_id?: string | null;
           storage_path?: string | null;
+          with_annexes?: boolean;
           workspace_id?: string;
         };
         Relationships: [
@@ -1988,6 +1991,7 @@ export type Database = {
           p_hourly_limit: number;
           p_report_id: string;
           p_user_id: string;
+          p_with_annexes?: boolean;
         };
         Returns: {
           export_id: string;

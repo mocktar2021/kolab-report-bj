@@ -1,4 +1,5 @@
 import "server-only";
+import { annexChars } from "./annexes";
 import { buildReportDocx } from "./docx";
 import { buildReportPdf } from "./pdf";
 import type { ExportDocument, ExportFormat } from "./types";
@@ -28,11 +29,11 @@ export class ExportTooLargeError extends Error {
   }
 }
 
-/** Characters of section text in the report, titles included. */
+/** Characters of section text in the report, titles and annexes (KRB-215) included. */
 export function exportChars(doc: ExportDocument): number {
-  return doc.sections.reduce(
-    (sum, section) => sum + section.title.length + (section.markdown?.length ?? 0),
-    0,
+  return (
+    doc.sections.reduce((sum, section) => sum + section.title.length + (section.markdown?.length ?? 0), 0) +
+    annexChars(doc)
   );
 }
 
@@ -51,6 +52,7 @@ export { buildReportPdf } from "./pdf";
 export {
   EXPORT_FORMATS,
   EXPORT_MIME_TYPES,
+  type ExportDeliverable,
   type ExportDocument,
   type ExportFormat,
   type ExportSection,

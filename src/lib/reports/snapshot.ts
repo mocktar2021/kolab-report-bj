@@ -10,6 +10,7 @@ import { loadExportDocument, markExportFailed, storeExportFile, type ExportedRep
 // The snapshot of a final report (KRB-20): the PDF of the report as it was
 // when it became final, kept in the "exports" bucket with kind "final" and
 // the status change it belongs to. A report too large for a PDF gets a .docx.
+// It lists the files in annex (KRB-215), like the export buttons by default.
 
 /** A snapshot still pending after this long died with its request (the export route's limit). */
 const STALE_SNAPSHOT_MS = 2 * 60 * 1000;
@@ -69,7 +70,7 @@ export async function createFinalSnapshot(input: {
   if (existing) return existing.status === "ready" ? "ready" : "busy";
 
   const generatedAt = new Date();
-  const doc = await loadExportDocument(supabase, report, generatedAt);
+  const doc = await loadExportDocument(supabase, report, generatedAt, { withAnnexes: true });
   if (!doc) return "failed";
   const built = await buildSnapshot(doc);
   if (!built) return "failed";
@@ -86,6 +87,7 @@ export async function createFinalSnapshot(input: {
       created_by: userId,
       kind: "final",
       status_event_id: eventId,
+      with_annexes: true,
     })
     .select("id")
     .single();

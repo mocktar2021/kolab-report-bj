@@ -63,12 +63,15 @@ type ExportButtonsProps = {
 /**
  * "Exporter en .docx" and "Exporter en PDF", for owners and admins. The server
  * builds the file, which can take a few seconds: both buttons wait meanwhile.
+ * The box under them adds the "Annexes" page, the list of each section's
+ * files (KRB-215). It starts ticked.
  */
 export function ExportButtons({ reportId, hourlyLimit, onDownload = startDownload }: ExportButtonsProps) {
   const t = useTranslations("ReportExport");
   const router = useRouter();
   const [pending, setPending] = useState<ExportFormat | null>(null);
   const [state, setState] = useState<ExportState>(null);
+  const [withAnnexes, setWithAnnexes] = useState(true);
   const running = useRef(false);
 
   async function exportAs(format: ExportFormat) {
@@ -80,7 +83,7 @@ export function ExportButtons({ reportId, hourlyLimit, onDownload = startDownloa
       const response = await fetch(`/api/reports/${reportId}/exports`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format }),
+        body: JSON.stringify({ format, withAnnexes }),
       });
       const body: unknown = await response.json().catch(() => null);
       const download = response.status === 201 ? downloadUrl(body) : null;
@@ -126,6 +129,15 @@ export function ExportButtons({ reportId, hourlyLimit, onDownload = startDownloa
           );
         })}
       </div>
+      <label className="inline-flex cursor-pointer items-center gap-2 self-start text-sm text-muted-foreground sm:self-end">
+        <input
+          type="checkbox"
+          checked={withAnnexes}
+          onChange={(event) => setWithAnnexes(event.target.checked)}
+          className="size-4 shrink-0 cursor-pointer rounded-sm accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        />
+        {t("withAnnexes")}
+      </label>
       <p role="status" aria-live="polite" className="text-xs sm:text-right">
         {pending ? (
           <span className="text-muted-foreground">{t("pending")}</span>
