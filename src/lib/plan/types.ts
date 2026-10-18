@@ -19,6 +19,8 @@ export const PLAN_LIMITS = {
   timeoutMs: 30_000,
   /** Heap of the worker process. Past it the file is too large. */
   workerHeapMb: 512,
+  /** All the memory of that process, buffers outside the heap included (src/lib/process-memory.ts). */
+  workerMemoryMb: 1024,
   /** AI readings of PDF plans per person and hour. */
   pdfReadingsPerHour: 10,
 } as const;
