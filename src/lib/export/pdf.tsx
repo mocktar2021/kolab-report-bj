@@ -10,7 +10,8 @@ import {
   type Styles,
 } from "@react-pdf/renderer";
 import type { ReactNode } from "react";
-import { EXPORT_TEXT, generatedOn, pageLabel, sectionMeta } from "./labels";
+import { annexTable, annexes, type Annex, type AnnexFile } from "./annexes";
+import { ANNEX_TEXT, EXPORT_TEXT, generatedOn, pageLabel, sectionMeta } from "./labels";
 import {
   TOP_PLACE,
   cleanLine,
@@ -517,10 +518,76 @@ function sectionPages({ section, index }: Placed, subsections: Placed[], title: 
   ));
 }
 
+const ANNEXES_ANCHOR = "annexes";
+
+type AnnexItem = { kind: "title"; text: string } | { kind: "file"; file: AnnexFile };
+
+/**
+ * The "Annexes" page (KRB-215) on new pages after the sections: each
+ * section's title, then the table of its files. Long lists are split into
+ * Pages like a long section (groupItems), and a table cut that way starts
+ * again with its header row on the next sheet.
+ */
+function annexPages(list: readonly Annex[], title: string): ReactNode[] {
+  if (list.length === 0) return [];
+  const items: AnnexItem[] = list.flatMap((annex): AnnexItem[] => [
+    { kind: "title", text: annex.title },
+    ...annex.files.map((file): AnnexItem => ({ kind: "file", file })),
+  ]);
+  const size = (item: AnnexItem) =>
+    item.kind === "title" ? 40 + item.text.length : 60 + item.file.name.length + item.file.addedBy.length;
+  const body = new PdfBody();
+
+  return groupItems(items, size, (item) => item.kind === "title").map((group, groupIndex) => {
+    // Files that follow each other make one table.
+    const nodes: ReactNode[] = [];
+    let files: AnnexFile[] = [];
+    const flush = () => {
+      if (files.length > 0) nodes.push(...body.blocks([annexTable(files)], TOP_PLACE));
+      files = [];
+    };
+    group.forEach((item, key) => {
+      if (item.kind === "file") {
+        files.push(item.file);
+        return;
+      }
+      flush();
+      nodes.push(
+        <Text
+          key={`annex-${key}`}
+          style={styles.subsectionTitle}
+          minPresenceAhead={60}
+          hyphenationCallback={breakWords}
+        >
+          {toWinAnsi(item.text)}
+        </Text>,
+      );
+    });
+    flush();
+    return (
+      <Page
+        key={`annexes-${groupIndex}`}
+        size="A4"
+        style={styles.page}
+        bookmark={groupIndex === 0 ? { title: ANNEX_TEXT.title, fit: true } : undefined}
+      >
+        <Footer title={title} />
+        {groupIndex === 0 ? (
+          <Text id={ANNEXES_ANCHOR} style={styles.sectionTitle}>
+            {ANNEX_TEXT.title}
+          </Text>
+        ) : null}
+        {nodes}
+      </Page>
+    );
+  });
+}
+
 function ReportPdf({ doc }: { doc: ExportDocument }) {
   const plainTitle = cleanLine(doc.title);
   const title = toWinAnsi(plainTitle);
   const numbered = numberedSections(doc.sections).map((section, index) => ({ section, index }));
+  const annexList = annexes(doc);
   // Each section with the subsections that follow it.
   const chapters: { head: Placed; subsections: Placed[] }[] = [];
   for (const placed of numbered) {
@@ -550,8 +617,14 @@ function ReportPdf({ doc }: { doc: ExportDocument }) {
             {numberedTitle(section)}
           </Link>
         ))}
+        {annexList.length > 0 ? (
+          <Link src={`#${ANNEXES_ANCHOR}`} style={styles.contentsEntry}>
+            {ANNEX_TEXT.title}
+          </Link>
+        ) : null}
       </Page>
       {chapters.flatMap((chapter) => sectionPages(chapter.head, chapter.subsections, title))}
+      {annexPages(annexList, title)}
     </Document>
   );
 }

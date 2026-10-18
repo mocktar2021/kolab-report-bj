@@ -105,8 +105,8 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 | Role | Processor for the firm (assumption to confirm) |
 | Purpose | Let owners and admins download a report as `.docx` or PDF, and keep a PDF snapshot of a report when it becomes final |
 | Legal basis | Set by the firm, as controller |
-| Data subjects | Members (each section's assignee is printed: "Responsable : name"), and anyone named in the report |
-| Data categories | `report_exports`: who exported, when, format, file name, size, number of sections, kind (`manual` or `final`), the status change of a final snapshot. Files in the `exports` bucket: the report content. |
+| Data subjects | Members (each section's assignee is printed: "Responsable : name", and with the annexes, who added each deliverable), and anyone named in the report |
+| Data categories | `report_exports`: who exported, when, format, with or without the annexes (`with_annexes`, KRB-215), file name, size, number of sections, kind (`manual` or `final`), the status change of a final snapshot. Files in the `exports` bucket: the report content and, with the annexes, the name of each deliverable, who added it and when. |
 | Recipients | Supabase Storage, Vercel (builds the file in a function), owners and admins of the workspace |
 | Transfers outside the EU | See [`processors.md`](processors.md) |
 | Retention | Manual exports 90 days. The final snapshot as long as its report. The daily cleanup job (KRB-166) removes the files. See [`retention.md`](retention.md). |

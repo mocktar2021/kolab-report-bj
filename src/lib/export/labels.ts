@@ -14,12 +14,23 @@ export const STATUS_LABELS: Record<SectionStatus, string> = {
 /** Copy of Report.unassigned in messages/fr.json. */
 export const UNASSIGNED_LABEL = "Non attribuée";
 
+/** Copy of Deliverables.unknownMember in messages/fr.json. */
+export const UNKNOWN_MEMBER_LABEL = "Membre inconnu";
+
 export const EXPORT_TIME_ZONE = "Africa/Porto-Novo";
 
 export const EXPORT_TEXT = {
   contents: "Sommaire",
   emptySection: "Section non rédigée.",
   noSections: "Ce rapport ne contient aucune section.",
+} as const;
+
+/** The "Annexes" page and the columns of its tables (KRB-215). */
+export const ANNEX_TEXT = {
+  title: "Annexes",
+  file: "Fichier",
+  addedBy: "Ajouté par",
+  addedOn: "Date d'ajout",
 } as const;
 
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: EXPORT_TIME_ZONE });

@@ -9,6 +9,7 @@ function file(id: string, overrides: Partial<RecentExport>): RecentExport {
     id,
     kind: "manual",
     format: "pdf",
+    withAnnexes: true,
     fileName: `${id}.pdf`,
     sizeBytes: 2048,
     createdAt: "2026-10-14T09:32:00.000Z",
@@ -40,5 +41,21 @@ describe("RecentExports", () => {
       "href",
       "/api/exports/audit-final",
     );
+  });
+
+  it("tells an export with the annexes from one without (KRB-215)", () => {
+    render(
+      <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
+        <RecentExports
+          exports={[file("audit-sans", { withAnnexes: false }), file("audit-avec", { withAnnexes: true })]}
+        />
+      </NextIntlClientProvider>,
+    );
+
+    const [without, withAnnexes] = screen.getAllByRole("listitem");
+    expect(without).toHaveTextContent("sans annexes");
+    expect(without).not.toHaveTextContent("avec annexes");
+    expect(withAnnexes).toHaveTextContent("avec annexes");
+    expect(withAnnexes).not.toHaveTextContent("sans annexes");
   });
 });
