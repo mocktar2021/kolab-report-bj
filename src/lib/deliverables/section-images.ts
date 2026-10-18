@@ -85,12 +85,16 @@ export function insertBlock(
   return { text: `${head}${tail}${after}`, cursor: head.length };
 }
 
-/** Text of an HTML clipboard, tags and spaces left out. Enough to tell an image from a copied text. */
-function htmlText(html: string): string {
-  return html
-    .replace(/<(style|script|title)\b[\s\S]*?<\/\1\s*>/gi, "x")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;|\s/g, "");
+/**
+ * Whether an HTML clipboard holds text, tags and spaces left out. Enough to
+ * tell an image from a copied text. Word and Excel add a <style>, which
+ * counts as text. DOMParser builds an inert document: nothing runs or loads.
+ */
+function htmlHasText(html: string): boolean {
+  if (!html.trim()) return false;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (doc.querySelector("style, script, title")) return true;
+  return (doc.body.textContent ?? "").replace(/\s/g, "") !== "";
 }
 
 /**
@@ -105,7 +109,7 @@ export function transferredFiles(data: DataTransfer | null): File[] | null {
   const names = new Set(files.map((file) => file.name));
   const text = data.getData("text/plain").trim();
   if (text && !text.split(/\r?\n/).every((line) => names.has(line.trim()))) return null;
-  if (htmlText(data.getData("text/html")) && !text) return null;
+  if (htmlHasText(data.getData("text/html")) && !text) return null;
   return files;
 }
 
