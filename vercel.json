@@ -3,10 +3,7 @@
   "regions": ["cdg1"],
   "buildCommand": "npm run build",
   "git": {
-    "deploymentEnabled": {
-      "master": false,
-      "production": false
-    }
+    "deploymentEnabled": false
   },
   "crons": [
     {
