@@ -21,6 +21,8 @@ export type ReportExportRow = {
   /** manual: from the export buttons. final: stored when the report became final (KRB-20). */
   kind: "manual" | "final";
   format: ExportFormat;
+  /** Asked with the list of files in annex (KRB-215). */
+  withAnnexes: boolean;
   fileName: string;
   sizeBytes: number;
   createdAt: string;
@@ -38,7 +40,7 @@ export async function listReportExports(reportId: string, limit = 10): Promise<R
   const supabase = await createClient();
   const { data } = await supabase
     .from("report_exports")
-    .select("id, kind, format, file_name, size_bytes, created_at, created_by")
+    .select("id, kind, format, with_annexes, file_name, size_bytes, created_at, created_by")
     .eq("report_id", reportId.toLowerCase())
     .eq("status", "ready")
     .order("created_at", { ascending: false })
@@ -47,6 +49,7 @@ export async function listReportExports(reportId: string, limit = 10): Promise<R
     id: row.id,
     kind: row.kind === "final" ? "final" : "manual",
     format: row.format === "pdf" ? "pdf" : "docx",
+    withAnnexes: row.with_annexes,
     fileName: row.file_name,
     sizeBytes: Number(row.size_bytes),
     createdAt: row.created_at,

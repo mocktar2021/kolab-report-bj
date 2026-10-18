@@ -19,6 +19,16 @@ export type ExportSection = {
   assigneeName: string | null;
   /** The section text as Markdown (GFM), null or blank when empty. */
   markdown: string | null;
+  /** Its files, in the order they were added, for the annexes (KRB-215). */
+  deliverables?: ExportDeliverable[];
+};
+
+/** A file added to a section, listed on the "Annexes" page (KRB-215). */
+export type ExportDeliverable = {
+  fileName: string;
+  /** Display name of who added it, null when unknown. */
+  addedBy: string | null;
+  addedAt: Date;
 };
 
 /**
@@ -47,6 +57,12 @@ export type ExportDocument = {
   sections: ExportSection[];
   /** The images the sections show, by deliverable id. A missing one is unavailable. */
   images?: ReadonlyMap<string, ExportImage>;
+  /**
+   * Ends the export with an "Annexes" page that lists the files of each
+   * section (KRB-215). Sections without files are left out, and so is the
+   * page when no section has any.
+   */
+  withAnnexes?: boolean;
 };
 
 /** The sections with their level and number ("1." or "1.1"), in the order given. */

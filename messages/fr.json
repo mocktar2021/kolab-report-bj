@@ -739,6 +739,7 @@
     "pdf": "Exporter en PDF",
     "pending": "Préparation du fichier. Cela peut prendre quelques secondes.",
     "ready": "Fichier {fileName} prêt, le téléchargement commence.",
+    "withAnnexes": "Inclure la liste des livrables en annexe",
     "errors": {
       "invalidInput": "La demande d'export n'est pas valide. Rechargez la page puis réessayez.",
       "forbidden": "Seuls les propriétaires et administrateurs peuvent exporter ce rapport.",
@@ -757,7 +758,9 @@
     },
     "download": "<hidden>Télécharger </hidden>{fileName}",
     "by": "par {name}",
-    "finalLabel": "Version finale"
+    "finalLabel": "Version finale",
+    "recentWithAnnexes": "avec annexes",
+    "recentWithoutAnnexes": "sans annexes"
   },
   "ReportStatus": {
     "labels": {

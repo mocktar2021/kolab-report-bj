@@ -105,14 +105,15 @@ test("the owner submits the report for review and finalizes it, and the expert i
   await dialog.getByRole("button", { name: "Finaliser le rapport" }).click();
   await expect(page.getByText("Le rapport est final.")).toBeVisible({ timeout: 30_000 });
 
-  // The PDF of the final version is stored and listed for the owner.
+  // The PDF of the final version is stored and listed for the owner, with
+  // the list of files in annex like an export by default (KRB-215).
   await expect(page.getByRole("link", { name: "Version finale (PDF)" })).toBeVisible();
   const { data: snapshots } = await adminClient()
     .from("report_exports")
-    .select("format, status")
+    .select("format, status, with_annexes")
     .eq("report_id", setup.reportId)
     .eq("kind", "final");
-  expect(snapshots).toEqual([{ format: "pdf", status: "ready" }]);
+  expect(snapshots).toEqual([{ format: "pdf", status: "ready", with_annexes: true }]);
 
   const { data: report } = await adminClient()
     .from("reports")

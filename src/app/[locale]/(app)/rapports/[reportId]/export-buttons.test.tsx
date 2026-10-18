@@ -60,7 +60,7 @@ describe("ExportButtons", () => {
     expect(url).toBe(`/api/reports/${REPORT_ID}/exports`);
     expect(init?.method).toBe("POST");
     expect(new Headers(init?.headers).get("Content-Type")).toBe("application/json");
-    expect(JSON.parse(String(init?.body))).toEqual({ format: "docx" });
+    expect(JSON.parse(String(init?.body))).toEqual({ format: "docx", withAnnexes: true });
 
     expect(docx).toHaveAttribute("aria-disabled", "true");
     expect(pdf).toHaveAttribute("aria-disabled", "true");
@@ -98,8 +98,40 @@ describe("ExportButtons", () => {
 
     await user.click(pdf);
 
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ format: "pdf" });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      format: "pdf",
+      withAnnexes: true,
+    });
     await waitFor(() => expect(onDownload).toHaveBeenCalledTimes(1));
+  });
+
+  it("asks for the list of files in annex until the box is unticked from the keyboard", async () => {
+    fetchMock.mockResolvedValue(
+      json(201, { id: EXPORT_ID, fileName: "audit-2026-10-14.pdf", url: `/api/exports/${EXPORT_ID}` }),
+    );
+    const user = userEvent.setup();
+    const { pdf } = renderButtons();
+    const box = screen.getByRole("checkbox", { name: "Inclure la liste des livrables en annexe" });
+    expect(box).toBeChecked();
+
+    box.focus();
+    await user.keyboard(" ");
+    expect(box).not.toBeChecked();
+    await user.click(pdf);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      format: "pdf",
+      withAnnexes: false,
+    });
+
+    // Ticked again, the next export has the annexes.
+    await user.click(screen.getByText("Inclure la liste des livrables en annexe"));
+    expect(box).toBeChecked();
+    await waitFor(() => expect(pdf).toHaveAttribute("aria-disabled", "false"));
+    await user.click(pdf);
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      format: "pdf",
+      withAnnexes: true,
+    });
   });
 
   it("says when the hourly limit is reached", async () => {

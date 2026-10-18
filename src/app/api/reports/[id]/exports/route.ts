@@ -22,7 +22,9 @@ export const maxDuration = 60;
 
 type Params = Promise<{ id: string }>;
 
-const bodySchema = z.object({ format: z.enum(EXPORT_FORMATS) });
+// withAnnexes (KRB-215): the "Annexes" page listing each section's files.
+// On when left out, like the box on the page.
+const bodySchema = z.object({ format: z.enum(EXPORT_FORMATS), withAnnexes: z.boolean().default(true) });
 
 function failure(status: number, error: ExportErrorKey) {
   return NextResponse.json({ error }, { status, headers: NO_STORE });
@@ -37,7 +39,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
   if (!uuidSchema.safeParse(id).success) return failure(404, "notFound");
   const body = bodySchema.safeParse(await request.json().catch(() => null));
   if (!body.success) return failure(400, "invalidInput");
-  const format = body.data.format;
+  const { format, withAnnexes } = body.data;
   const reportId = id.toLowerCase();
 
   // RLS hides reports of other workspaces.
@@ -62,6 +64,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
       p_format: format,
       p_file_name: fileName,
       p_hourly_limit: EXPORTS_PER_HOUR,
+      p_with_annexes: withAnnexes,
     })
     .maybeSingle();
   if (claimError || !claim) {
@@ -79,7 +82,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     return failure(status, error);
   };
 
-  const doc = await loadExportDocument(supabase, report, generatedAt);
+  const doc = await loadExportDocument(supabase, report, generatedAt, { withAnnexes });
   if (!doc) return fail(500, "generic");
 
   let file: Buffer;

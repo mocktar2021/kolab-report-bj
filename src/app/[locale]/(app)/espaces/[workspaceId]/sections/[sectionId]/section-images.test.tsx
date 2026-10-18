@@ -47,6 +47,8 @@ const ROW: DeliverableRow = {
   uploaderName: "Edgar Expert",
   parseState: "skipped",
   parseError: null,
+  skipReason: null,
+  keptUnread: false,
   notStarted: false,
   canDelete: false,
   canRetry: false,

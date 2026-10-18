@@ -62,6 +62,7 @@ export function RecentExports({ exports }: { exports: readonly RecentExport[] })
                   </span>
                 ) : null}
                 <span>{t(`formats.${file.format}`)}</span>
+                <span>{file.withAnnexes ? t("recentWithAnnexes") : t("recentWithoutAnnexes")}</span>
                 <span>{formatFileSize(file.sizeBytes, format)}</span>
                 <time dateTime={file.createdAt}>
                   {format.dateTime(new Date(file.createdAt), DATE_FORMAT)}
