@@ -82,7 +82,7 @@ export const expertPart: GuidePart = {
           figure: "editeurTexte",
           caption: "L'onglet Texte, avec sa barre de mise en forme.",
         },
-        "Un texte copié depuis Word garde ses titres, ses listes et ses tableaux. Les images et les mises en page complexes ne sont pas reprises.",
+        "Un texte copié depuis Word garde ses titres, ses listes et ses tableaux. Les mises en page complexes ne sont pas reprises, ni les images : ajoutez-les comme expliqué dans la partie suivante.",
         "L'onglet **Markdown** montre le même texte en Markdown : `##` devant un titre, `-` devant un élément de liste, `|` entre les colonnes d'un tableau. Le bouton **Aperçu** affiche le rendu. Cet onglet sert aux personnes qui préfèrent écrire en Markdown, ou à un texte trop long ou trop complexe pour l'onglet Texte. L'éditeur rouvre le dernier onglet utilisé sur votre appareil.",
         {
           figure: "editeurMarkdown",
@@ -90,6 +90,23 @@ export const expertPart: GuidePart = {
         },
         `Cliquez sur **Enregistrer**, ou faites Ctrl+S (Cmd+S sur Mac). Un texte compte ${NUMBER.format(MAX_SECTION_CONTENT)} caractères au plus. Un texte vide efface le contenu de la section.`,
         "Si quelqu'un a modifié la section pendant que vous écriviez, l'éditeur affiche les deux versions pour les comparer. Choisissez **Garder ma version** ou **Reprendre la version enregistrée**. En attendant, votre texte reste dans l'éditeur.",
+      ],
+    },
+    {
+      id: "images-dans-le-texte",
+      title: "Mettre des images dans le texte",
+      body: [
+        "Les photos de terrain et les schémas peuvent aller dans le texte de la section, au format PNG ou JPEG. Une image du texte est toujours un livrable de la section : les mêmes personnes la voient.",
+        {
+          steps: [
+            "Dans la liste **Livrables**, cliquez sur **Insérer dans le texte** à côté d'une image PNG ou JPEG. L'éditeur s'ouvre avec l'image à l'endroit du curseur, ou à la fin du texte s'il était fermé.",
+            "Vous pouvez aussi coller une image (Ctrl+V) ou la glisser dans l'éditeur, dans l'onglet **Texte** comme dans l'onglet **Markdown**. Elle est d'abord déposée comme livrable, puis placée là où vous l'avez mise. Si l'envoi est refusé, l'éditeur dit pourquoi.",
+            "Cliquez sur **Enregistrer**. L'image s'affiche dans l'**Aperçu** de la section et dans le texte du rapport.",
+          ],
+        },
+        "La légende est le nom du fichier, sans son extension. Pour la changer, ouvrez l'onglet **Markdown** et modifiez le texte entre crochets, juste après `![`.",
+        "Les autres formats (WebP, GIF, SVG, draw.io, Visio) restent des livrables à télécharger. Pour mettre un schéma dans le texte, exportez-le d'abord en PNG.",
+        "Accepter un brouillon de l'IA remplace tout le texte de la section, images comprises : insérez-les de nouveau depuis la liste **Livrables**. Si une image est supprimée des livrables, le texte n'affiche plus que sa légende, suivie de « (image indisponible) ».",
       ],
     },
     {

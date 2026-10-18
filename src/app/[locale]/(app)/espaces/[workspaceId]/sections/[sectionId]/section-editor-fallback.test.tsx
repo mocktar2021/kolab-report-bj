@@ -6,6 +6,9 @@ import messages from "../../../../../../../../messages/fr.json";
 import { SectionEditor } from "./section-editor";
 
 vi.mock("./content-actions", () => ({ saveSectionContent: vi.fn() }));
+// Pasted and dropped images are uploaded as deliverables (KRB-216).
+vi.mock("@/lib/deliverables/upload", () => ({ uploadDeliverable: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 // The Texte editor fails, as when its code can't load.
 vi.mock("./rich-text-editor", () => ({
   RichTextEditor: () => {

@@ -1,6 +1,7 @@
 import "server-only";
 import {
   Document,
+  Image,
   Link,
   Page,
   StyleSheet,
@@ -11,7 +12,8 @@ import {
 } from "@react-pdf/renderer";
 import type { ReactNode } from "react";
 import { annexTable, annexes, type Annex, type AnnexFile } from "./annexes";
-import { ANNEX_TEXT, EXPORT_TEXT, generatedOn, pageLabel, sectionMeta } from "./labels";
+import { fitSize, shownSize } from "./image-header";
+import { ANNEX_TEXT, EXPORT_TEXT, generatedOn, imageNote, pageLabel, sectionMeta } from "./labels";
 import {
   TOP_PLACE,
   cleanLine,
@@ -22,7 +24,7 @@ import {
   type Place,
   type TextRun,
 } from "./markdown";
-import { numberedSections, type ExportDocument, type NumberedSection } from "./types";
+import { numberedSections, type ExportDocument, type ExportImage, type NumberedSection } from "./types";
 import { toWinAnsi } from "./winansi";
 
 // The PDF export (KRB-18), drawn server-side with @react-pdf/renderer: a
@@ -42,6 +44,10 @@ type Style = Styles[string];
 // A4 is 595 by 842 points.
 const CONTENT_WIDTH = 595 - 2 * 57;
 const CONTENT_HEIGHT = 842 - 50 - 56;
+/** An image is at most this share of the page height, so it fits under a heading with its caption. */
+const IMAGE_HEIGHT_SHARE = 0.65;
+/** Points per pixel at 96 dpi: an image is never drawn larger than that. */
+const POINTS_PER_PIXEL = 0.75;
 // Footer titles longer than this are cut, so the footer stays on one line.
 const FOOTER_TITLE_CHARS = 90;
 
@@ -129,6 +135,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row" },
   headerRow: { backgroundColor: COLORS.shade },
   cell: { borderRightWidth: 0.75, borderBottomWidth: 0.75, borderColor: COLORS.border, padding: 3 },
+  figure: { alignItems: "center", marginTop: 4, marginBottom: 10 },
+  caption: { fontSize: 9, fontStyle: "italic", color: COLORS.muted, marginTop: 4, textAlign: "center" },
+  imageNote: { fontStyle: "italic", color: COLORS.muted },
 });
 
 const HEADING_STYLES = [styles.heading2, styles.heading3, styles.heading4];
@@ -224,6 +233,8 @@ class PdfBody {
   /** 1 in a subsection (KRB-195): its text's headings start one level lower. */
   headingShift = 0;
 
+  constructor(private readonly images: ReadonlyMap<string, ExportImage> = new Map()) {}
+
   private key(): number {
     return this.keys++;
   }
@@ -278,7 +289,37 @@ class PdfBody {
         return this.list(block, place);
       case "table":
         return [this.table(block, place)];
+      case "image":
+        return [this.image(block, place)];
     }
+  }
+
+  /**
+   * The image at the width of the text, never past its own size, its caption
+   * in italics under it, both on the same page. pdfkit applies the Exif
+   * orientation itself, so the box takes the turned size. An image the route
+   * could not read shows its caption and why.
+   */
+  private image(block: Extract<Block, { type: "image" }>, place: Place): ReactNode {
+    const image = this.images.get(block.id);
+    if (image?.status !== "ready") {
+      const note: TextRun = { text: imageNote(block.caption, image?.status ?? "unavailable") };
+      return this.paragraph([note], place, [styles.imageNote]);
+    }
+    const width = CONTENT_WIDTH - Number(marginOf(place).marginLeft ?? 0);
+    const size = fitSize(shownSize(image), width, CONTENT_HEIGHT * IMAGE_HEIGHT_SHARE, POINTS_PER_PIXEL);
+    return (
+      <View key={this.key()} style={[styles.figure, marginOf(place)]} wrap={false}>
+        {/* A Buffer is never fetched, and cache={false} keeps it out of react-pdf's shared cache. */}
+        {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image takes no alt: the caption follows */}
+        <Image src={image.data} cache={false} style={{ width: size.width, height: size.height }} />
+        {block.caption ? (
+          <Text style={styles.caption} hyphenationCallback={breakWords}>
+            {toWinAnsi(block.caption)}
+          </Text>
+        ) : null}
+      </View>
+    );
   }
 
   private list(block: Extract<Block, { type: "list" }>, place: Place): ReactNode[] {
@@ -380,6 +421,8 @@ function blockSize(block: Block): number {
       return 20 + block.text.length;
     case "rule":
       return 20;
+    case "image":
+      return 200 + block.caption.length;
     case "quote":
       return block.blocks.reduce((sum, inner) => sum + blockSize(inner), 0);
     case "list":
@@ -457,7 +500,12 @@ type Placed = { section: NumberedSection; index: number };
  * it. A section without text shows "Section non rédigée." only when it has no
  * subsections either.
  */
-function sectionPages({ section, index }: Placed, subsections: Placed[], title: string) {
+function sectionPages(
+  { section, index }: Placed,
+  subsections: Placed[],
+  title: string,
+  images: ExportDocument["images"],
+) {
   const items: PdfItem[] = [
     ...textItems(section, 0, subsections.length === 0),
     ...subsections.flatMap((sub): PdfItem[] => [
@@ -466,7 +514,7 @@ function sectionPages({ section, index }: Placed, subsections: Placed[], title: 
     ]),
   ];
   const assignee = section.assigneeName && cleanLine(section.assigneeName);
-  const body = new PdfBody();
+  const body = new PdfBody(images);
 
   const draw = (item: PdfItem, key: number): ReactNode => {
     if (item.kind === "empty") {
@@ -623,7 +671,7 @@ function ReportPdf({ doc }: { doc: ExportDocument }) {
           </Link>
         ) : null}
       </Page>
-      {chapters.flatMap((chapter) => sectionPages(chapter.head, chapter.subsections, title))}
+      {chapters.flatMap((chapter) => sectionPages(chapter.head, chapter.subsections, title, doc.images))}
       {annexPages(annexList, title)}
     </Document>
   );

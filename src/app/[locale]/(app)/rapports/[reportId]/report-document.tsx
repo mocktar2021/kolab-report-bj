@@ -145,6 +145,7 @@ const SectionArticle = memo(function SectionArticle({
             headingLevel={sub ? 5 : 4}
             headings="flatten"
             links="text"
+            images="deliverables"
             fallback={<p className="text-destructive">{t("contentError")}</p>}
           >
             {text}

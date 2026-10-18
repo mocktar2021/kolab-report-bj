@@ -6,6 +6,8 @@ import { loadExportDocument } from "./export-file";
 vi.mock("@/lib/log", () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/workspaces/members", () => ({ getWorkspaceMembers: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+// The images of the sections (KRB-216) have their own tests.
+vi.mock("./export-images", () => ({ loadExportImages: vi.fn(async () => new Map()) }));
 
 const REPORT = { id: "r1", title: "Audit du siège", workspace_id: "w1" };
 const GENERATED_AT = new Date("2026-10-14T09:30:00Z");

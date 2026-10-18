@@ -1,4 +1,4 @@
-import { getSchema, type JSONContent } from "@tiptap/core";
+import { getHTMLFromFragment, getSchema, type JSONContent } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { describe, expect, it } from "vitest";
 import { bindOrigin, docToMarkdown, parseMarkdown } from "./markdown";
@@ -369,5 +369,60 @@ describe("parseMarkdown and docToMarkdown", () => {
 
   it("refuses a text too costly to parse", () => {
     expect(parseMarkdown(">".repeat(1000))).toBeNull();
+  });
+});
+
+describe("images of deliverables (KRB-216)", () => {
+  const ID = "0b6f5e1c-2d3a-4b5c-8d9e-0f1a2b3c4d5e";
+  const IMAGE = `![Façade nord\\_2026](/api/deliverables/${ID}/file)`;
+
+  it("keeps the reference as written when the text around it changes", () => {
+    const source = `Avant.\n\n${IMAGE}\n\nAprès.`;
+    const { doc, origin } = load(source);
+    expect(docToMarkdown(doc, origin)).toBe(source);
+    const changed = replaceBlock(doc, 0, paragraph("Avant, corrigé."));
+    expect(docToMarkdown(changed, origin)).toBe(`Avant, corrigé.\n\n${IMAGE}\n\nAprès.`);
+    // Its paragraph written anew, with text added next to it: same address, same caption.
+    const image = doc.child(1).child(0);
+    const withText = doc.copy(
+      doc.content.replaceChild(1, schema.node("paragraph", null, [schema.text("Vue : "), image])),
+    );
+    expect(docToMarkdown(withText, origin)).toBe(
+      `Avant.\n\nVue : ![Façade nord_2026](/api/deliverables/${ID}/file)\n\nAprès.`,
+    );
+  });
+
+  it("writes an image the editor inserts as its file route", () => {
+    const doc = fromJson([
+      paragraph("Relevé"),
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "rawInline",
+            attrs: {
+              mdast: JSON.stringify({
+                type: "image",
+                url: `/api/deliverables/${ID}/file`,
+                title: null,
+                alt: "Plan [v2]",
+              }),
+              text: "",
+            },
+          },
+        ],
+      },
+    ]);
+    expect(docToMarkdown(doc)).toBe(`Relevé\n\n![Plan \\[v2\\]](/api/deliverables/${ID}/file)`);
+  });
+
+  it("draws the image of a deliverable in the editor, and any other image as its Markdown", () => {
+    const html = getHTMLFromFragment(
+      load(`${IMAGE}\n\n![Pixel](https://evil.example/p.png)`).doc.content,
+      schema,
+    );
+    expect(html).toContain(`<img src="/api/deliverables/${ID}/file?image" alt="Façade nord_2026"`);
+    expect(html).not.toContain('evil.example/p.png"');
+    expect(html).toContain("![Pixel](https://evil.example/p.png)</code>");
   });
 });

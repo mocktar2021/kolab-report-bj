@@ -79,6 +79,7 @@ export function SectionContent({ content, draftHint, actions, children }: Sectio
               headingLevel={3}
               headings="flatten"
               links="text"
+              images="deliverables"
               fallback={<p className="text-destructive">{t("contentError")}</p>}
             >
               {text}

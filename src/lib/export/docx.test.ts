@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildReportDocx } from "./docx";
 import { EXPORT_LIMITS } from "./markdown";
 import { FRENCH_SAMPLE, SAMPLE_DOCUMENT } from "./test-document";
+import { JPEG_4X2, pngImage, withExifOrientation } from "./test-images";
 import type { ExportDocument } from "./types";
 
 // JSZip comes with the docx package.
@@ -179,5 +180,87 @@ describe("buildReportDocx with subsections (KRB-195)", () => {
     expect(paragraphs.find((paragraph) => text(paragraph).trim() === "Cible")).toContain(
       '<w:pStyle w:val="Heading3"/>',
     );
+  });
+});
+
+describe("buildReportDocx with images (KRB-216)", () => {
+  const PHOTO = "0b6f5e1c-2d3a-4b5c-8d9e-0f1a2b3c4d5e";
+  const DIAGRAM = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+  const GONE = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+  const ref = (id: string, caption: string) => `![${caption}](/api/deliverables/${id}/file)`;
+
+  function document(markdown: string, images: ExportDocument["images"]): ExportDocument {
+    return {
+      ...SAMPLE_DOCUMENT,
+      sections: [{ title: "Constats", status: "in_progress", assigneeName: null, markdown }],
+      images,
+    };
+  }
+
+  async function media(doc: ExportDocument) {
+    const zip = await JSZip.loadAsync(await buildReportDocx(doc));
+    return Object.keys(zip.files).filter((name) => name.startsWith("word/media/"));
+  }
+
+  it("embeds the images in word/media with their caption in italics under them", async () => {
+    const png = pngImage(1200, 600);
+    const doc = document(
+      `Relevé :\n\n${ref(DIAGRAM, "Schéma de la toiture")}\n\n${ref(PHOTO, "Façade nord")}`,
+      new Map([
+        [DIAGRAM, { status: "ready", format: "png", data: png, width: 1200, height: 600, orientation: 1 }],
+        [PHOTO, { status: "ready", format: "jpeg", data: JPEG_4X2, width: 4, height: 2, orientation: 1 }],
+      ]),
+    );
+    const files = await media(doc);
+    expect(files.filter((name) => name.endsWith(".png"))).toHaveLength(1);
+    expect(files.filter((name) => name.endsWith(".jpg"))).toHaveLength(1);
+    const { document: xml, relationships } = await parts(doc);
+    expect(relationships.match(/relationships\/image"/g)).toHaveLength(2);
+    expect(xml.match(/<pic:pic\b/g)).toHaveLength(2);
+    expect(xml).toContain('descr="Schéma de la toiture"');
+    expect(text(xml)).toMatch(/Relevé :\n(?:.*\n)?Schéma de la toiture/);
+    expect(xml).toMatch(/<w:i\/>(?:(?!<\/w:r>).)*<w:t[^>]*>Façade nord<\/w:t>/);
+    // The diagram is scaled down to the width of the text, 9638 twips: 642 pixels, 6 116 350 EMU.
+    const [cx, cy] = [...xml.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"\/>/g)][0]!.slice(1).map(Number);
+    expect(cx).toBe(Math.round(((11906 - 2 * 1134) / 15) * 9525));
+    expect(cx! / cy!).toBeCloseTo(2, 2);
+    // The 4 by 2 photo is not blown up.
+    expect(xml).toContain('<wp:extent cx="38100" cy="19050"/>');
+  });
+
+  it("turns a photo the way its Exif orientation says, since Word does not", async () => {
+    const jpeg = withExifOrientation(JPEG_4X2, 6);
+    const { document: xml } = await parts(
+      document(
+        ref(PHOTO, "Portrait"),
+        new Map([
+          [PHOTO, { status: "ready", format: "jpeg", data: jpeg, width: 4, height: 2, orientation: 6 }],
+        ]),
+      ),
+    );
+    expect(xml).toMatch(/<a:xfrm rot="5400000"/);
+    // The frame keeps the stored sides: 4 wide, 2 high.
+    expect(xml).toContain('<wp:extent cx="38100" cy="19050"/>');
+  });
+
+  it("shows the caption and why when an image is not there", async () => {
+    const doc = document(
+      `${ref(GONE, "Plan disparu")}\n\n${ref(PHOTO, "Photo lourde")}\n\n${ref(DIAGRAM, "")}`,
+      new Map([
+        [PHOTO, { status: "tooLarge" }],
+        [DIAGRAM, { status: "limit" }],
+      ]),
+    );
+    expect(await media(doc)).toEqual([]);
+    const body = text((await parts(doc)).document);
+    expect(body).toContain("Plan disparu (image indisponible)");
+    expect(body).toContain("Photo lourde (image trop lourde pour l'export)");
+    expect(body).toContain("(image non reprise : l'export a atteint sa limite d'images)");
+  });
+
+  it("never draws an image of another address", async () => {
+    const doc = document("![Pixel](https://evil.example/p.png)", new Map());
+    expect(await media(doc)).toEqual([]);
+    expect(text((await parts(doc)).document)).toContain("Pixel");
   });
 });

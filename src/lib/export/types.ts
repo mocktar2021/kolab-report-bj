@@ -1,5 +1,6 @@
 import { renumber } from "@/lib/section-outline";
 import type { SectionStatus } from "@/lib/sections";
+import type { ImageFormat } from "./image-header";
 
 // What an export of a master report holds (Story KRB-18). The route reads
 // the report with the user's rights and hands this to the .docx or PDF
@@ -30,6 +31,23 @@ export type ExportDeliverable = {
   addedAt: Date;
 };
 
+/**
+ * An image of a section's text (KRB-216), read by the route with the user's
+ * rights. unavailable: deleted, of another report, or not a PNG or JPEG.
+ * tooLarge: past the caps of one image. limit: past the caps of the export.
+ */
+export type ExportImage =
+  | {
+      status: "ready";
+      format: ImageFormat;
+      data: Buffer;
+      /** Pixels as stored. orientation (Exif, 1 to 8) says how to turn them. */
+      width: number;
+      height: number;
+      orientation: number;
+    }
+  | { status: "unavailable" | "tooLarge" | "limit" };
+
 export type ExportDocument = {
   title: string;
   workspaceName: string;
@@ -37,6 +55,8 @@ export type ExportDocument = {
   generatedAt: Date;
   /** Sections in report order, each followed by its subsections. */
   sections: ExportSection[];
+  /** The images the sections show, by deliverable id. A missing one is unavailable. */
+  images?: ReadonlyMap<string, ExportImage>;
   /**
    * Ends the export with an "Annexes" page that lists the files of each
    * section (KRB-215). Sections without files are left out, and so is the

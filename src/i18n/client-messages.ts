@@ -46,12 +46,13 @@ export const CLIENT_MESSAGE_SCOPES = {
     "Deliverables",
     "Prompts.outputSchemas",
     "SectionEditor",
+    "SectionImages",
     "SectionManage",
     "SectionStatus",
     "Workspaces.errors",
     "Workspaces.fieldErrors",
   ],
-  report: ["Report", "ReportExport", "ReportStatus", "SectionStatus", "Workspaces"],
+  report: ["Report", "ReportExport", "ReportStatus", "SectionImages", "SectionStatus", "Workspaces"],
   /** /fr/rapports/[id]/importer-le-plan: reading a plan and its preview (KRB-196). */
   planImport: ["PlanImport"],
   /** The organization's billing page, its billing details form and the payment return page. */

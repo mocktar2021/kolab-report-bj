@@ -9,6 +9,7 @@ import {
   parseRisk,
   runsText,
   sectionBlocks,
+  sectionImageIds,
   type Block,
 } from "./markdown";
 
@@ -249,5 +250,60 @@ describe("limits", () => {
   it("measures the deepest line prefix", () => {
     expect(parseRisk("> > - 1. texte").prefix).toBe(9);
     expect(parseRisk("texte").prefix).toBe(0);
+  });
+});
+
+describe("images of deliverables (KRB-216)", () => {
+  const ID = "0b6f5e1c-2d3a-4b5c-8d9e-0f1a2b3c4d5e";
+  const OTHER = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+  const image = (id: string, alt = "Façade nord") => `![${alt}](/api/deliverables/${id}/file)`;
+
+  it("makes an image block of a deliverable's file route", () => {
+    expect(sectionBlocks(image(ID))).toEqual([{ type: "image", id: ID, caption: "Façade nord" }]);
+  });
+
+  it("cuts the paragraph around the image", () => {
+    const blocks = sectionBlocks(`Avant la photo\n${image(ID)}\nAprès la photo.`);
+    expect(blocks.map((block) => block.type)).toEqual(["paragraph", "image", "paragraph"]);
+    expect(runsText((blocks[0] as Extract<Block, { type: "paragraph" }>).runs).trim()).toBe("Avant la photo");
+    expect(runsText((blocks[2] as Extract<Block, { type: "paragraph" }>).runs).trim()).toBe(
+      "Après la photo.",
+    );
+  });
+
+  it("keeps any other image as its alt text", () => {
+    for (const url of [
+      `https://evil.example/api/deliverables/${ID}/file`,
+      `/api/deliverables/${ID}/file?x=1`,
+      `/api/deliverables/${ID.toUpperCase()}/file`,
+      "https://exemple.bj/plan.png",
+    ]) {
+      expect(paragraphText(`![Plan](${url})`)).toBe("Plan");
+    }
+  });
+
+  it("reads reference images, and images in lists and quotes", () => {
+    const reference = sectionBlocks(`![Plan][p]\n\n[p]: /api/deliverables/${ID}/file`);
+    expect(reference).toEqual([{ type: "image", id: ID, caption: "Plan" }]);
+    const list = only(sectionBlocks(`- Relevé\n\n  ${image(ID)}`), "list");
+    expect(list.items[0]?.blocks.map((block) => block.type)).toEqual(["paragraph", "image"]);
+    const quote = only(sectionBlocks(`> ${image(ID)}`), "quote");
+    expect(quote.blocks).toEqual([{ type: "image", id: ID, caption: "Façade nord" }]);
+  });
+
+  it("keeps the alt text of an image in a heading, a table cell or a link", () => {
+    expect(runsText(only(sectionBlocks(`## ${image(ID, "Titre")}`), "heading").runs)).toBe("Titre");
+    const table = only(sectionBlocks(`| A |\n| - |\n| ${image(ID, "Cellule")} |`), "table");
+    expect(runsText(table.rows[1]?.[0] ?? [])).toBe("Cellule");
+    expect(paragraphText(`[${image(ID, "Lien")}](https://exemple.bj)`)).toBe("Lien (https://exemple.bj)");
+  });
+
+  it("lists the images a section shows, in order, each once", () => {
+    const markdown = `${image(OTHER)}\n\n- ${image(ID)}\n\n> ${image(OTHER)}\n\n![x](https://exemple.bj/x.png)`;
+    expect(sectionImageIds(markdown)).toEqual([OTHER, ID]);
+    expect(sectionImageIds("Pas d'image ici.")).toEqual([]);
+    expect(sectionImageIds(null)).toEqual([]);
+    // A link to a file is not an image.
+    expect(sectionImageIds(`[le fichier](/api/deliverables/${ID}/file)`)).toEqual([]);
   });
 });

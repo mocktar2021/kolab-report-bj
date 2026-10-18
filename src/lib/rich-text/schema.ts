@@ -6,6 +6,7 @@ import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table
 import type { Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { StarterKit } from "@tiptap/starter-kit";
+import { sectionImageId, sectionImageSrc } from "@/lib/deliverables/section-images";
 import { cleanPastedHtml } from "./paste";
 
 // The document model of the "Texte" mode of the section editor (KRB-197). It
@@ -14,7 +15,8 @@ import { cleanPastedHtml } from "./paste";
 // code blocks, rules and GitHub tables. No underline, colors, fonts or
 // images. Pasted HTML that doesn't fit this model is dropped by the parser.
 // Markdown the model doesn't know (images, raw HTML, footnotes, reference
-// links) is kept as a locked "raw" node and written back unchanged.
+// links) is kept as a locked "raw" node and written back unchanged. The image
+// of a deliverable (KRB-216) is such a node too, drawn as the image.
 
 /** Web pages and e-mail addresses only. Anything else is never a clickable link. */
 export function isSafeHref(href: string | null | undefined): boolean {
@@ -171,6 +173,19 @@ const RawBlock = Node.create<RawOptions>({
   },
 });
 
+/** The deliverable and caption of a raw node that holds the image of a deliverable, or null. */
+export function rawSectionImage(mdast: unknown): { id: string; alt: string } | null {
+  if (typeof mdast !== "string" || !mdast.includes("/api/deliverables/")) return null;
+  try {
+    const node = JSON.parse(mdast) as { type?: unknown; url?: unknown; alt?: unknown };
+    if (node.type !== "image" || typeof node.url !== "string") return null;
+    const id = sectionImageId(node.url);
+    return id ? { id, alt: typeof node.alt === "string" ? node.alt : "" } : null;
+  } catch {
+    return null;
+  }
+}
+
 const RawInline = Node.create<RawOptions>({
   name: "rawInline",
   group: "inline",
@@ -191,6 +206,14 @@ const RawInline = Node.create<RawOptions>({
     return [];
   },
   renderHTML({ node }) {
+    const image = rawSectionImage(node.attrs.mdast);
+    if (image) {
+      return [
+        "span",
+        { class: "rich-text-image", "data-raw": "inline", title: this.options.title || null },
+        ["img", { src: sectionImageSrc(image.id), alt: image.alt, loading: "lazy", draggable: "false" }],
+      ];
+    }
     return [
       "code",
       { class: "rich-text-raw", "data-raw": "inline", title: this.options.title || null },

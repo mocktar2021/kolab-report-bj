@@ -450,6 +450,15 @@
     @apply whitespace-pre-wrap px-3 py-2 text-xs;
   }
 
+  /* The image of a deliverable in the text (KRB-216). */
+  .rich-text-content .rich-text-image {
+    @apply inline-block max-w-full align-bottom;
+  }
+
+  .rich-text-content .rich-text-image img {
+    @apply h-auto max-h-80 max-w-full rounded-md border bg-muted/30;
+  }
+
   .rich-text-content .ProseMirror-selectednode {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
