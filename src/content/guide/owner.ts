@@ -202,6 +202,7 @@ export const ownerPart: GuidePart = {
           ],
         },
         "Pour télécharger le rapport, cliquez sur **Exporter en .docx** ou **Exporter en PDF** en haut de la page. Le téléchargement commence dès que le fichier est prêt. La liste **Exports récents** garde les derniers fichiers. Un rapport trop long pour un PDF s'exporte en .docx.",
+        "Les images du texte des sections sont reprises dans les deux formats, à la largeur du texte, avec leur légende en italique. Un export reprend au plus 50 images, 40 Mo d'images en tout et 10 Mo par image. Au-delà, ou pour une image supprimée, le fichier montre la légende de l'image et la raison.",
         {
           figure: "rapportRevue",
           caption: "Les boutons d'export et le cadre « Revue et finalisation » d'un rapport en brouillon.",
