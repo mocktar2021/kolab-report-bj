@@ -41,7 +41,8 @@ export const expertPart: GuidePart = {
           ],
         },
         "Formats acceptés : Word, Excel, PowerPoint, PDF, texte, images et schémas draw.io ou Visio. 50 Mo maximum par fichier, 5 Mo pour un SVG.",
-        "L'application lit les fichiers Word, Excel, CSV, texte et Markdown. Leur badge passe à **Analysé** : leur texte servira au brouillon. Les PDF, les présentations, les images et les schémas sont gardés avec la section mais marqués **Non analysé** : l'IA ne les lit pas.",
+        "L'application lit les fichiers Word, Excel, CSV, texte, Markdown et PDF. Leur badge passe à **Analysé** : leur texte servira au brouillon. Les présentations, les images et les schémas sont gardés avec la section mais marqués **Non analysé** : l'IA ne les lit pas.",
+        "Un PDF sans texte lisible, comme un document scanné, ou protégé par un mot de passe est aussi marqué **Non analysé**, avec un message qui dit pourquoi. Il reste téléchargeable. Un PDF déposé avant que l'application lise les PDF affiche le bouton **Analyser** : cliquez dessus pour que son texte serve au brouillon.",
         {
           figure: "livrables",
           caption: "La zone de dépôt et la liste des livrables d'une section.",

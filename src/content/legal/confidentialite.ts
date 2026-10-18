@@ -8,7 +8,7 @@ const CONTROLLER = "Responsable de traitement";
 const PROCESSOR = "Sous-traitant de l'organisation cliente";
 
 export const confidentialite: LegalDocument = {
-  updatedAt: "2026-10-15",
+  updatedAt: "2026-10-18",
   intro: [
     "Cette politique explique quelles données personnelles KolabReport traite, pourquoi, avec qui elles sont partagées, combien de temps elles sont gardées et comment exercer vos droits. Elle s'applique au site, à l'application KolabReport et aux e-mails qu'ils envoient.",
   ],
@@ -395,10 +395,10 @@ export const confidentialite: LegalDocument = {
           list: [
             "le titre et les consignes de la section ;",
             "le titre et la description du rapport, et le nom de l'espace de travail ;",
-            "le texte extrait des livrables de la section au format Word, Excel, CSV, texte ou Markdown, avec le nom de chaque fichier.",
+            "le texte extrait des livrables de la section au format Word, Excel, CSV, texte, Markdown ou PDF, avec le nom de chaque fichier.",
           ],
         },
-        "Les PDF, les présentations PowerPoint, les images et les schémas ne sont pas lus : ils ne sont jamais envoyés. Un fichier trop long est coupé, et les parties qui ne tiennent pas sont résumées par des appels supplémentaires qui reçoivent le même texte masqué. KolabReport n'envoie ni l'identifiant, ni le nom, ni l'e-mail de la personne qui fait la demande.",
+        "Les présentations PowerPoint, les images et les schémas ne sont pas lus : ils ne sont jamais envoyés, pas plus que les PDF sans texte lisible ou protégés par un mot de passe. Un fichier trop long est coupé, et les parties qui ne tiennent pas sont résumées par des appels supplémentaires qui reçoivent le même texte masqué. KolabReport n'envoie ni l'identifiant, ni le nom, ni l'e-mail de la personne qui fait la demande.",
         "Avant l'envoi, KolabReport remplace par un repère les adresses e-mail, les numéros de téléphone du Bénin et de France, les IBAN, les numéros de sécurité sociale français et les numéros de carte bancaire. Les noms de personnes, les adresses postales, les dates de naissance, les autres numéros d'identification et les informations de santé écrites en clair ne sont pas masqués. Évitez de déposer des données sensibles qui ne sont pas nécessaires au rapport.",
         `Le fournisseur d'IA traite ces données comme sous-traitant, pour produire le brouillon. La durée pendant laquelle il garde les demandes et l'usage qu'il peut en faire sont fixés par ses conditions commerciales et son accord de traitement des données. ${PUBLISHER.name} n'utilise pas vos contenus pour entraîner des modèles d'IA.`,
         "Le brouillon est enregistré comme une proposition. Il ne remplace le contenu de la section que si un membre l'accepte. Aucune décision produisant des effets juridiques à votre égard n'est prise de façon automatisée.",

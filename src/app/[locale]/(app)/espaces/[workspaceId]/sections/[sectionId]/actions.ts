@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { workspaceIsWritable } from "@/lib/billing/state";
 import { claimParse, runParse } from "@/lib/deliverables/parse-job";
-import type { ParseMeta } from "@/lib/deliverables/parse/types";
+import { isKeptUnread, type ParseMeta } from "@/lib/deliverables/parse/types";
 import { removeObjects } from "@/lib/deliverables/server";
 import { log } from "@/lib/log";
 import { canEditSection, sectionStatusSchema, type SectionStatus } from "@/lib/sections";
@@ -25,7 +25,9 @@ async function editableDeliverable(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("deliverables")
-    .select("id, workspace_id, storage_path, section:report_sections(assigned_to, report:reports(status))")
+    .select(
+      "id, workspace_id, storage_path, file_name, parse_status, parse_meta, section:report_sections(assigned_to, report:reports(status))",
+    )
     .eq("id", id)
     .not("uploaded_at", "is", null)
     .maybeSingle();
@@ -36,15 +38,23 @@ async function editableDeliverable(id: string) {
   return { supabase, deliverable: data };
 }
 
-/** "Relancer l'analyse": reads the file again, unless a read is already running. */
+/**
+ * "Relancer l'analyse": reads the file again, unless a read is already
+ * running. "Analyser": reads a file kept before the app read its type, such
+ * as a PDF uploaded before KRB-214.
+ */
 export async function retryParse(id: string): Promise<DeliverableActionResult> {
   const found = await editableDeliverable(id);
   if (!found) return { ok: false, error: "forbidden" };
   if (found === "reportFinal") return { ok: false, error: found };
+  const { deliverable } = found;
+  // Other skipped files would only be skipped again.
+  const kept = isKeptUnread(deliverable.file_name, deliverable.parse_status, deliverable.parse_meta);
+  if (deliverable.parse_status === "skipped" && !kept) return { ok: false, error: "forbidden" };
   // The parse writes with the service role, which the read-only guards do
   // not check (KRB-178): check here.
-  if (!(await workspaceIsWritable(found.deliverable.workspace_id))) return { ok: false, error: "readOnly" };
-  const claim = await claimParse(found.deliverable.id, found.deliverable.workspace_id);
+  if (!(await workspaceIsWritable(deliverable.workspace_id))) return { ok: false, error: "readOnly" };
+  const claim = await claimParse(deliverable.id, deliverable.workspace_id, { kept });
   if (!claim) return { ok: false, error: "busy" };
   after(() => runParse(claim));
   return { ok: true };
