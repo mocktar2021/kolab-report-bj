@@ -41,6 +41,8 @@ function rc4(key: Uint8Array, data: Uint8Array): Buffer {
   return out;
 }
 
+// The PDF standard security handler is defined with MD5 and RC4. Accepted in
+// .github/codeql/accepted-findings.json: tests only, no stored password.
 const md5 = (...parts: Uint8Array[]) => {
   const hash = createHash("md5");
   for (const part of parts) hash.update(part);
