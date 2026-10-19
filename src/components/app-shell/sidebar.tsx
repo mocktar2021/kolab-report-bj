@@ -1,28 +1,21 @@
-"use client";
-
+import { Suspense } from "react";
 import { useTranslations } from "next-intl";
-import { BookOpen, LogOut, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react";
+import { BookOpen, LogOut, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LegalLinks } from "@/components/legal/legal-links";
 import { InstallAppButton } from "@/components/pwa/install-app";
 import { GUIDE_PATH } from "@/content/guide/pages";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Link, usePathname } from "@/i18n/navigation";
-import { signOut } from "@/lib/auth/actions";
-import { clearOfflineCaches } from "@/lib/pwa/clear-offline-caches";
+import { Link } from "@/i18n/navigation";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { NavItems } from "./nav-items";
 import { NotificationBell } from "./notification-bell";
 import { SearchTrigger } from "./search-trigger";
-import { useSidebarCollapsed } from "./sidebar-state";
+import { AccountLink, SidebarToggle, SignOutForm } from "./sidebar-controls";
+import { SIDEBAR_ID } from "./sidebar-script";
 import { UserAvatar } from "./user-avatar";
 import { WorkspaceSwitcher } from "./workspace-switcher";
-
-export const SIDEBAR_ID = "app-sidebar";
-
-/** Name, data export, organization transfer and account deletion (KRB-186). */
-export const ACCOUNT_PATH = "/compte";
 
 const footerButtonClass =
   "flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sidebar-collapsed:justify-center sidebar-collapsed:px-0";
@@ -34,15 +27,16 @@ type SidebarProps = {
   unreadNotifications: number;
   /** The organization whose billing page the "Abonnement" link opens, if any. */
   billingOrganizationId: string | null;
-  onOpenPalette: () => void;
-  /** Opens the palette on the workspace search (KRB-206). */
-  onSearchWorkspaces: () => void;
 };
 
 /**
  * Desktop navigation (lg and up). Width follows <html data-sidebar>. It is the
  * page header on wide screens, so screen readers list it as the banner
  * landmark, like the top bar below lg.
+ *
+ * A Server Component (KRB-212): the logo, the user block, the links and the
+ * legal links cost no hydration. Only the parts that need state or the
+ * pathname are Client Components.
  */
 export function Sidebar({
   user,
@@ -50,13 +44,9 @@ export function Sidebar({
   currentWorkspaceId,
   unreadNotifications,
   billingOrganizationId,
-  onOpenPalette,
-  onSearchWorkspaces,
 }: SidebarProps) {
   const t = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
-  const { collapsed, toggle } = useSidebarCollapsed();
-  const pathname = usePathname();
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId);
 
   return (
@@ -73,13 +63,8 @@ export function Sidebar({
       </div>
 
       <div className="space-y-3 px-3">
-        <WorkspaceSwitcher
-          workspaces={workspaces}
-          currentWorkspaceId={currentWorkspaceId}
-          collapsible
-          onSearch={onSearchWorkspaces}
-        />
-        <SearchTrigger onOpen={onOpenPalette} collapsible />
+        <WorkspaceSwitcher workspaces={workspaces} currentWorkspaceId={currentWorkspaceId} collapsible />
+        <SearchTrigger collapsible />
       </div>
 
       {/*
@@ -92,12 +77,15 @@ export function Sidebar({
         aria-label={t("navLabel")}
         className="mt-5 min-h-0 flex-1 overflow-y-auto px-3 pb-1 pt-1 sidebar-collapsed:overflow-visible"
       >
-        <NavItems
-          variant="sidebar"
-          workspaceId={currentWorkspaceId}
-          manager={current ? isManager(current.role) : false}
-          billingOrganizationId={billingOrganizationId}
-        />
+        {/* useSearchParams in the navigation needs a Suspense boundary. */}
+        <Suspense>
+          <NavItems
+            variant="sidebar"
+            workspaceId={currentWorkspaceId}
+            manager={current ? isManager(current.role) : false}
+            billingOrganizationId={billingOrganizationId}
+          />
+        </Suspense>
       </nav>
 
       <div className="space-y-1 border-t p-3">
@@ -113,15 +101,10 @@ export function Sidebar({
             ) : null}
           </div>
         </div>
-        <Link
-          href={ACCOUNT_PATH}
-          className={footerButtonClass}
-          aria-label={t("account")}
-          aria-current={pathname === ACCOUNT_PATH ? "page" : undefined}
-        >
+        <AccountLink className={footerButtonClass} aria-label={t("account")}>
           <UserRound className="size-4 shrink-0" aria-hidden="true" />
           <span className="sidebar-collapsed:sr-only">{t("account")}</span>
-        </Link>
+        </AccountLink>
         {/* The user guide (KRB-199), a public page: it opens without the app shell. */}
         <Link href={GUIDE_PATH} prefetch={false} className={footerButtonClass} aria-label={t("guide")}>
           <BookOpen className="size-4 shrink-0" aria-hidden="true" />
@@ -129,24 +112,13 @@ export function Sidebar({
         </Link>
         <InstallAppButton className={footerButtonClass} collapsible />
         <ThemeToggle variant="row" collapsible side="right" align="end" />
-        <form action={signOut} onSubmit={clearOfflineCaches}>
+        <SignOutForm>
           <button type="submit" className={footerButtonClass} aria-label={tCommon("signOut")}>
             <LogOut className="size-4 shrink-0" aria-hidden="true" />
             <span className="sidebar-collapsed:sr-only">{tCommon("signOut")}</span>
           </button>
-        </form>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-controls={SIDEBAR_ID}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? t("expand") : t("collapse")}
-          className={footerButtonClass}
-        >
-          <PanelLeftClose className="size-4 shrink-0 sidebar-collapsed:hidden" aria-hidden="true" />
-          <PanelLeftOpen className="hidden size-4 shrink-0 sidebar-collapsed:block" aria-hidden="true" />
-          <span className="sidebar-collapsed:sr-only">{collapsed ? t("expand") : t("collapse")}</span>
-        </button>
+        </SignOutForm>
+        <SidebarToggle className={footerButtonClass} />
         {/* Too long for the collapsed rail: expand the menu to see them. */}
         <LegalLinks className="px-2.5 pt-2 sidebar-collapsed:hidden" />
       </div>

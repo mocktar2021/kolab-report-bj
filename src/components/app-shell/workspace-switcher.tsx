@@ -30,6 +30,7 @@ import { isManager } from "@/lib/workspaces/roles";
 import type { OrganizationGroup } from "@/lib/workspaces/group";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { cn } from "@/lib/utils";
+import { usePalette } from "./palette";
 import { WorkspaceMark } from "./workspace-mark";
 
 type WorkspaceSwitcherProps = {
@@ -38,7 +39,7 @@ type WorkspaceSwitcherProps = {
   /** Hide the text while the desktop sidebar is collapsed. */
   collapsible?: boolean;
   onNavigate?: () => void;
-  /** Opens the workspace search of the command palette (KRB-206). */
+  /** Opens the workspace search (KRB-206). By default, the one of the app shell's palette. */
   onSearch?: () => void;
 };
 
@@ -54,10 +55,12 @@ export function WorkspaceSwitcher({
   currentWorkspaceId,
   collapsible = false,
   onNavigate,
-  onSearch,
+  onSearch: searchGiven,
 }: WorkspaceSwitcherProps) {
   const t = useTranslations("Workspaces");
   const tShell = useTranslations("AppShell");
+  const palette = usePalette();
+  const onSearch = searchGiven ?? (palette ? () => palette.open("workspaces") : undefined);
   const [pending, startTransition] = useTransition();
   const searchChosen = useRef(false);
   const current = workspaces.find((workspace) => workspace.id === currentWorkspaceId) ?? null;

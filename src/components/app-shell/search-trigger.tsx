@@ -3,10 +3,12 @@
 import { useTranslations } from "next-intl";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePalette } from "./palette";
 import { useShortcutModifier } from "./use-shortcut-label";
 
 type SearchTriggerProps = {
-  onOpen: () => void;
+  /** Opens the palette of the app shell when not given. */
+  onOpen?: () => void;
   /** Hide the label and shortcut when the desktop sidebar is collapsed. */
   collapsible?: boolean;
   className?: string;
@@ -16,11 +18,12 @@ type SearchTriggerProps = {
 export function SearchTrigger({ onOpen, collapsible = false, className }: SearchTriggerProps) {
   const t = useTranslations("AppShell");
   const modifier = useShortcutModifier();
+  const palette = usePalette();
 
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={onOpen ?? (() => palette?.open("all"))}
       aria-label={t("searchLabel")}
       aria-keyshortcuts="Meta+K Control+K"
       className={cn(
@@ -41,6 +44,24 @@ export function SearchTrigger({ onOpen, collapsible = false, className }: Search
         <span>{modifier}</span>
         <span>K</span>
       </kbd>
+    </button>
+  );
+}
+
+/** The same, as an icon in the top bar below lg. */
+export function SearchIconButton({ className }: { className: string }) {
+  const t = useTranslations("AppShell");
+  const palette = usePalette();
+
+  return (
+    <button
+      type="button"
+      onClick={() => palette?.open("all")}
+      aria-label={t("searchLabel")}
+      aria-keyshortcuts="Meta+K Control+K"
+      className={className}
+    >
+      <Search className="size-5" aria-hidden="true" />
     </button>
   );
 }

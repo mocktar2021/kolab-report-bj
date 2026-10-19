@@ -1,7 +1,11 @@
-// Shared by the server layout (inline script) and the client hook in
-// sidebar-state.ts. Keep this module free of "use client".
+// Shared by the server layout (inline script), the server-rendered sidebar
+// and the client hook in sidebar-state.ts. Keep this module free of
+// "use client".
 export const SIDEBAR_STORAGE_KEY = "kolabreport:sidebar";
 export const SIDEBAR_COLLAPSED = "collapsed";
+
+/** The desktop sidebar, which the collapse button controls. */
+export const SIDEBAR_ID = "app-sidebar";
 
 /**
  * Inline script for the layout: sets <html data-sidebar="collapsed"> before
