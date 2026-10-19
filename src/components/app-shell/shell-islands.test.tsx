@@ -1,8 +1,9 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../messages/fr.json";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import type { MyWorkspace } from "@/lib/workspaces/types";
 import { MobileMenu } from "./mobile-menu";
 import { NavItems } from "./nav-items";
@@ -11,8 +12,8 @@ import { SearchIconButton, SearchTrigger } from "./search-trigger";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
 // The client parts of the server-rendered shell (KRB-212): the palette
-// provider and its shortcut, the menu sheet that loads on use, and the nav
-// highlight that loads motion once the sidebar is used.
+// provider and its shortcut, the menus and the menu sheet that load on use,
+// and the nav highlight that loads motion once the sidebar is used.
 
 vi.mock("@/lib/workspaces/actions", () => ({ selectWorkspace: vi.fn() }));
 vi.mock("@/lib/auth/actions", () => ({ signOut: vi.fn() }));
@@ -33,9 +34,17 @@ vi.mock("./command-palette", () => ({
 }));
 
 // Set when the module is first imported, which is when its chunk would load.
-const loaded = { menuSheet: false, navHighlight: false };
+const loaded = { menuSheet: false, navHighlight: false, workspaceMenu: false, themeMenu: false };
 vi.mock("./menu-sheet", async (importOriginal) => {
   loaded.menuSheet = true;
+  return importOriginal();
+});
+vi.mock("./workspace-menu", async (importOriginal) => {
+  loaded.workspaceMenu = true;
+  return importOriginal();
+});
+vi.mock("@/components/theme/theme-menu", async (importOriginal) => {
+  loaded.themeMenu = true;
   return importOriginal();
 });
 vi.mock("./nav-highlight", () => {
@@ -95,6 +104,45 @@ function renderInShell(children: React.ReactNode) {
 
 const palette = () => screen.queryByRole("dialog", { name: "Palette de commandes" });
 
+// First in the file: a module loads once, so later tests would find it loaded.
+describe("Menus of the sidebar", () => {
+  it("load when their button is pointed at or focused, not with the page", async () => {
+    const user = renderInShell(
+      <>
+        <WorkspaceSwitcher workspaces={WORKSPACES} currentWorkspaceId={WORKSPACES[0]!.id} />
+        <ThemeToggle variant="row" />
+      </>,
+    );
+    const switcher = screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
+    expect(switcher).toHaveAttribute("aria-haspopup", "menu");
+    expect(loaded).toMatchObject({ workspaceMenu: false, themeMenu: false });
+
+    await user.hover(switcher);
+    await waitFor(() => expect(loaded.workspaceMenu).toBe(true));
+    expect(loaded.themeMenu).toBe(false);
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole("button", { name: /^Thème/ })).toHaveFocus();
+    await waitFor(() => expect(loaded.themeMenu).toBe(true));
+  });
+
+  it("open from the keyboard and give the focus back to their button", async () => {
+    const user = renderInShell(<ThemeToggle variant="row" />);
+    act(() => screen.getByRole("button", { name: /^Thème/ }).focus());
+    await user.keyboard("{Enter}");
+    const menu = await screen.findByRole("menu", { name: /^Thème/ });
+    expect(
+      within(menu)
+        .getAllByRole("menuitemradio")
+        .map((item) => item.textContent),
+    ).toEqual(["Clair", "Sombre", "Système"]);
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(screen.getByRole("button", { name: /^Thème/ })).toHaveFocus();
+  });
+});
+
 describe("PaletteProvider", () => {
   it("opens the palette on Ctrl+K and Cmd+K, and closes it on the same keys", async () => {
     const user = renderInShell(<SearchTrigger />);
@@ -135,7 +183,13 @@ describe("PaletteProvider", () => {
     const user = renderInShell(
       <WorkspaceSwitcher workspaces={WORKSPACES} currentWorkspaceId={WORKSPACES[0]!.id} />,
     );
-    await user.click(screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ }));
+    const switcher = () =>
+      screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
+    // user-event clicks the element it is given, even once the menu's own
+    // button has replaced it: wait for that one.
+    await user.hover(switcher());
+    await waitFor(() => expect(switcher()).toHaveAttribute("data-state", "closed"));
+    await user.click(switcher());
     await user.click(await screen.findByRole("menuitem", { name: "Rechercher un espace" }));
     expect(await screen.findByRole("dialog", { name: "Palette de commandes" })).toHaveAttribute(
       "data-scope",
