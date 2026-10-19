@@ -1,13 +1,17 @@
 version: 2
 
+# Once a month, without automatic rebases (KRB-220). Dependabot used to rebase
+# every open PR each time master changed, and each rebase ran CI: about 300
+# Actions minutes in 5 days. To bring a PR up to date, comment
+# "@dependabot rebase" on it.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Africa/Lagos
+    rebase-strategy: disabled
     open-pull-requests-limit: 5
     groups:
       # Minor and patch bumps land as one PR per group. Majors stay separate
@@ -22,10 +26,10 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Africa/Lagos
+    rebase-strategy: disabled
     groups:
       actions:
         patterns: ["*"]

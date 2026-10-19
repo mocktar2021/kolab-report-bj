@@ -4,10 +4,12 @@
 # Documentation is docs/ and Markdown files: a change made only of those skips
 # the end-to-end and Lighthouse jobs. When it cannot tell (a manual run, a new
 # branch, a push whose previous commit is gone), it prints code=true and
-# everything runs.
+# everything runs. On a scheduled run it tells whether master changed since
+# the last one (KRB-220).
 #
 #   EVENT=pull_request sh scripts/ci-changed-code.sh   (on the PR merge commit)
 #   EVENT=push BEFORE=<sha> sh scripts/ci-changed-code.sh
+#   EVENT=schedule SINCE_HOURS=25 sh scripts/ci-changed-code.sh
 set -eu
 
 everything() {
@@ -34,6 +36,21 @@ case "${EVENT:-}" in
       git fetch --quiet --no-tags --depth=1 origin "$base" 2>/dev/null ||
         everything "Previous commit $base not found"
     fi
+    ;;
+  schedule)
+    # The nightly end-to-end tests and the Monday Lighthouse run (KRB-220)
+    # go on only when master changed lately: SINCE_HOURS, set by ci.yml. The
+    # last commit of master is the merge of the last PR.
+    hours=${SINCE_HOURS:-25}
+    last=$(git log -1 --format=%ct HEAD)
+    if [ $(($(date +%s) - last)) -le $((hours * 3600)) ]; then
+      echo "Master changed in the last $hours hours, so the scheduled jobs run." >&2
+      echo "code=true"
+    else
+      echo "Nothing merged on master in the last $hours hours: the scheduled jobs are skipped." >&2
+      echo "code=false"
+    fi
+    exit 0
     ;;
   *)
     everything "Event ${EVENT:-unknown}"

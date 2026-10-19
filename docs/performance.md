@@ -1,6 +1,6 @@
 # Performance
 
-Lighthouse checks the sign-in page and the signed-in dashboard on every push to master and on a manual run of CI (KRB-153, KRB-190). This page covers the targets, how to run Lighthouse yourself, the CI job, the budgets, and what KRB-154, KRB-207 and KRB-172 changed.
+Lighthouse checks the sign-in page and the signed-in dashboard on master every Monday, when something was merged that week, and on a manual run of CI (KRB-153, KRB-190, KRB-220). This page covers the targets, how to run Lighthouse yourself, the CI job, the budgets, and what KRB-154, KRB-207 and KRB-172 changed.
 
 ## Targets
 
@@ -53,7 +53,7 @@ The `Lighthouse` job in `.github/workflows/ci.yml` runs next to the end-to-end j
 4. `sh scripts/lighthouse-ci.sh` with `lighthouserc.cjs`, then `scripts/lighthouse-summary.mjs` prints the score of every run in the job log.
 5. The reports go up as the `lighthouse-reports` artifact (14 days), pass or fail.
 
-To measure a branch before the merge, run CI by hand on it with **Lighthouse only** checked (**Actions > CI > Run workflow**). The checks and the end-to-end tests are skipped, so it takes about 7 minutes instead of 25, and a last step traces one dashboard load with `scripts/lighthouse-trace.mjs`. On `master` the option is ignored: every job runs, since a green run there deploys staging.
+To measure a branch before the merge, run CI by hand on it with **Lighthouse only** checked (**Actions > CI > Run workflow**). The checks and the end-to-end tests are skipped, so it takes about 7 minutes instead of 25, and a last step traces one dashboard load with `scripts/lighthouse-trace.mjs`. On `master` the option is ignored: every job runs.
 
 It is its own job because both jobs need about the same setup (stack, build, Chromium). Run in parallel, Lighthouse adds no wall-clock time to CI. As the last step of the end-to-end job it would add about 3.5 minutes to every run (10 Lighthouse runs and the sign-in). It also measures a freshly seeded database, while the end-to-end tests leave their own workspaces and sections behind.
 

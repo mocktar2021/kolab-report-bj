@@ -1,7 +1,8 @@
 name: Deploy
 
 # Staging: after CI passes on master, migrations go to the staging Supabase
-# project, then the app goes to Vercel. Production: on a v* tag or a manual
+# project, then the app goes to Vercel. The nightly and Monday CI runs
+# (KRB-220) deploy nothing: nothing changed since the push that deployed. Production: on a v* tag or a manual
 # run from master, same order. Each deploy ends with the smoke tests
 # (smoke.yml, docs/operations/smoke-tests.md): when they fail, the run fails.
 # Nothing runs until the repository variable DEPLOY_ENABLED is "true".
@@ -36,7 +37,7 @@ jobs:
     name: Deploy to staging
     if: >-
       vars.DEPLOY_ENABLED == 'true' && (
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'schedule') ||
         (github.event_name == 'workflow_dispatch' && inputs.target == 'staging' && github.ref == 'refs/heads/master')
       )
     runs-on: ubuntu-latest
