@@ -1,22 +1,36 @@
 name: CI
 
+# What runs when (KRB-220, docs/ci.md): the end-to-end tests run on pull
+# requests that are not drafts and every night on master, not after each
+# merge. Lighthouse runs on Mondays and by hand. A push to master runs the
+# checks and the build, then deploy.yml deploys staging.
 on:
   pull_request:
+    # ready_for_review: a draft skips the end-to-end tests, so marking it
+    # ready runs them.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [master]
+  schedule:
+    # Each cron is named again in the jobs below: change both together.
+    # Every night, the end-to-end tests, when master changed that day.
+    - cron: "29 0 * * *"
+    # Mondays, Lighthouse, when master changed that week.
+    - cron: "47 0 * * 1"
   workflow_dispatch:
     inputs:
       lighthouse_only:
         # About 7 minutes instead of 25, to measure a branch before the merge
-        # (KRB-172). Only off master: on master every job runs, since a green
-        # run there deploys staging.
+        # (KRB-172). Only off master: on master every job runs.
         description: Lighthouse only (not on master)
         type: boolean
         default: false
 
 # A new push to the same pull request cancels the run that is still going.
+# Scheduled runs have their own group, so they never wait on a push to
+# master or replace one waiting.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'schedule' && 'schedule' || github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -52,11 +66,15 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
+          # A scheduled run goes on when master changed in the last day, or
+          # the last week for the Monday one (170 hours).
+          SINCE_HOURS: ${{ github.event.schedule == '47 0 * * 1' && '170' || '25' }}
         run: sh scripts/ci-changed-code.sh >> "$GITHUB_OUTPUT"
 
   checks:
     name: Lint, typecheck, unit tests, build
-    if: ${{ !(inputs.lighthouse_only && github.ref != 'refs/heads/master') }}
+    # Not on a scheduled run: master passed them when each change was pushed.
+    if: ${{ github.event_name != 'schedule' && !(inputs.lighthouse_only && github.ref != 'refs/heads/master') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -111,9 +129,16 @@ jobs:
   supabase:
     name: Database and end-to-end tests
     needs: changes
+    # On a pull request that is not a draft, every night on master and on a
+    # manual run, not after a merge (KRB-220): the PR ran them already.
     # Skipped when only docs/ or Markdown files changed. Runs when the
     # changes job fails, so a broken check never skips the tests.
-    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && !(inputs.lighthouse_only && github.ref != 'refs/heads/master') }}
+    if: >-
+      ${{ !cancelled() && needs.changes.outputs.code != 'false' && (
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      (github.event_name == 'schedule' && github.event.schedule == '29 0 * * *') ||
+      (github.event_name == 'workflow_dispatch' && !(inputs.lighthouse_only && github.ref != 'refs/heads/master'))
+      ) }}
     runs-on: ubuntu-latest
     # 15 to 20 minutes with 151 tests on one worker, and 30% more on a slow
     # runner. Past 20 minutes on a normal runner, split the Playwright suite
@@ -180,12 +205,16 @@ jobs:
     # Its own job, next to the end-to-end one: both need about the same setup
     # time, so running in parallel adds no wall-clock time to CI. As a last
     # step of the end-to-end job it would add about 2.5 minutes to every run.
-    # Not on PRs, to save 7 minutes per push (KRB-190): it runs on master,
-    # where a failure stops the staging deploy, and on a manual run, which is
-    # how to check a PR before the merge. Skipped for documentation only.
+    # Mondays on master and on a manual run, which is how to check a PR
+    # before the merge. Not on PRs (KRB-190) nor after each merge (KRB-220).
+    # Skipped for documentation only.
     name: Lighthouse
     needs: changes
-    if: ${{ !cancelled() && github.event_name != 'pull_request' && needs.changes.outputs.code != 'false' }}
+    if: >-
+      ${{ !cancelled() && needs.changes.outputs.code != 'false' && (
+      (github.event_name == 'schedule' && github.event.schedule == '47 0 * * 1') ||
+      github.event_name == 'workflow_dispatch'
+      ) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

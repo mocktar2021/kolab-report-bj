@@ -12,6 +12,20 @@ name: Evals on PR
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    # Only PRs that touch these files start a runner (KRB-220). The first step
+    # narrows the migrations to those that change prompt_library. Not a
+    # required check, so a PR without these files merges without it.
+    paths:
+      - "supabase/migrations/**"
+      - "src/lib/ai/schemas.ts"
+      - "src/lib/prompts/catalog.ts"
+      - "src/lib/ai/context/**"
+      - "src/lib/ai/generate.ts"
+      - "src/lib/ai/models.ts"
+      - "evals/**"
+      - "scripts/build-evals.mjs"
+      - ".github/workflows/evals-pr.yml"
+      - ".env.example"
 
 # A new push to the PR cancels the run still going.
 concurrency:
