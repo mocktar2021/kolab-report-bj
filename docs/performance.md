@@ -137,13 +137,28 @@ The sign-in page gives 90 to 95 with one Chrome per run (median 93), against 77 
 
 Also tried and dropped: `experimental.inlineCss`. The HTML of the sign-in page grew from 10 to 56 KiB compressed, and LCP did not move. Lighthouse counts a script that ran before the observed first paint as needed for LCP. On a fast machine the async chunks of Next.js run before the first frame, so LCP sits around 3 s on both pages while first paint is at 1.1 to 1.2 s.
 
+## What KRB-212 changed
+
+`AppShell` and `Sidebar` were Client Components, so every signed-in page hydrated the whole sidebar, with Radix's dropdown menu and motion's layout features in its first-load JavaScript.
+
+1. **The shell renders on the server.** `AppShell` and `Sidebar` are Server Components. What has state or reads the pathname stays in the browser as small islands: the nav links, the bell, the search buttons, the workspace switcher, the theme menu, the install button, the account link, the sign-out form and the collapse button.
+2. **What the page does not show loads on use.** The command palette, the menu sheet below `lg`, the sliding highlight of the nav (motion) and the Radix menus of the workspace switcher and of the theme load when their button is pointed at, focused or used. Until then the page shows a plain button with the same look (`src/components/ui/lazy-menu.tsx`).
+
+| `/fr/tableau-de-bord` | First-load JavaScript (gzip, from the build manifests) | CI median | Single runs |
+| --- | --- | --- | --- |
+| Before | 233 KiB | 81 | 79 to 86 |
+| Item 1 | 216 KiB | 81 | |
+| Items 1 and 2 | 196 KiB | 81 | 78 to 90 |
+
+The score did not move. On the median run, total blocking time is 424 ms and LCP 3.3 s, and the longest task is still hydration: 318 ms in the Next.js runtime chunk, which hydrates the whole page from there, the dashboard's own content included. The shell's islands no longer show among the long tasks.
+
 ## Not fixed yet
 
-The dashboard is still under the performance target: median 81 with one Chrome per run (single runs 79 to 86), against 85. `lighthouserc.cjs` fails it under 75 until the work below lands. About 120 ms less total blocking time would put the median over 85. What is left, largest first:
+The dashboard is still under the performance target: median 81 with one Chrome per run (single runs 78 to 90 after KRB-212), against 85. `lighthouserc.cjs` fails it under 75. About 120 ms less total blocking time would put the median over 85. What is left, largest first:
 
 | Cost | Where | Way out |
 | --- | --- | --- |
-| Hydration of the client app shell. On the median run: a 258 ms task in the React DOM chunk, 117 ms in motion's chunk, 112 and 60 ms in the Next.js runtime (simulated) | `AppShell`, `Sidebar`, Radix dropdowns, motion's `LazyMotion` | Render the sidebar on the server with small client islands. Below `lg` the sidebar is hidden but still rendered and hydrated. |
+| Hydration of the page. On the median run after KRB-212: a 318 ms task in the Next.js runtime chunk (simulated), from which React hydrates the whole page | the Next.js runtime and React DOM (131 KiB compressed together), then the dashboard's own Client Components | The shell is done (KRB-212). Fewer Client Components in the dashboard's content, or a target of 80 for this page on the CI runner. |
 | Server response, about 450 ms | the layout and the page each query Supabase several times (profile, workspaces, notifications, dashboard data, reports), after `getUser` in the proxy | Fewer round trips, or one RPC for the dashboard data. |
 | A second fetch of the page and of every script and stylesheet after load | `cacheOnFrontEndNav` and `aggressiveFrontEndNavCaching` in `next.config.mjs` | The service worker fetches the current page again (a second server render on signed-in pages) and every `<script>` and `<link>` in it, including the `nomodule` polyfills (40 kB) that modern browsers never run. It runs in a worker, but it competes for the network during load. Owned by the PWA work, not changed here. |
 
@@ -157,6 +172,6 @@ Audits that stay red and do not count in the score:
 
 - Content visible on first load never starts at opacity 0. Use `fade-in-50`, or move it with a transform only.
 - A Client Component that calls `useTranslations` needs its namespace in the scope of its route (`src/i18n/client-messages.ts`). The unit test tells you which one.
-- Load large client libraries when they are used: `next/dynamic`, `import()` or `LazyMotion`. cmdk, motion's layout features, the Realtime client, Sentry and the Tiptap editor of the section page (loaded when "Modifier le texte" is hovered, focused or clicked) already work this way.
+- Load large client libraries when they are used: `next/dynamic`, `import()` or `LazyMotion`. cmdk, motion's layout features, the Realtime client, Sentry, the Radix menus of the app shell (`useLazyMenu`) and the Tiptap editor of the section page (loaded when "Modifier le texte" is hovered, focused or clicked) already work this way.
 - No supabase-js in the browser. Realtime goes through `src/lib/realtime/client.ts`, and data through Server Components, Server Actions and route handlers.
 - Keep zod out of modules that Client Components import.

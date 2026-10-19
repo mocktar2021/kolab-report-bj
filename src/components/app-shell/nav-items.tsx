@@ -1,10 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BookText, CreditCard, Gauge, LayoutDashboard } from "lucide-react";
-import { LazyMotion } from "motion/react";
-import * as m from "motion/react-m";
 import { STATUS_DOT_STYLES } from "@/components/status-badge";
 import { Link, usePathname } from "@/i18n/navigation";
 import { SECTION_STATUSES, isSectionStatus } from "@/lib/section-statuses";
@@ -12,18 +11,30 @@ import { cn } from "@/lib/utils";
 
 const DASHBOARD_PATH = "/tableau-de-bord";
 
-// The sliding highlight needs motion's layout features (about 30 kB
-// compressed). They load in their own chunk once the shell has hydrated, so
-// signed-in pages no longer evaluate them on load (KRB-154). Until then the
-// highlight shows in place, without animation.
+// The highlight of the active link is a plain span until the pointer or the
+// focus first reaches the sidebar. Then nav-highlight.tsx loads, with motion
+// and its layout features, and the highlight slides from one link to the next
+// (KRB-212). No motion code runs while the page loads: before, the shell
+// rendered motion components on every signed-in page (KRB-154 had already
+// put the layout features in their own chunk).
 //
 // Only from the lg breakpoint, where the sidebar shows. Below it the nav sits
 // in the menu sheet, which closes on navigation, so the highlight never gets
 // to slide and phones skip the download.
-const loadLayoutFeatures = () =>
-  window.matchMedia("(min-width: 1024px)").matches
-    ? import("@/components/motion/layout-features").then((mod) => mod.default)
-    : new Promise<never>(() => {});
+type Highlight = typeof import("./nav-highlight").SlidingHighlight;
+
+const highlightClassName =
+  "absolute inset-0 rounded-lg bg-highlight/[0.08] ring-1 ring-inset ring-highlight/25";
+const barClassName = "absolute -left-3 bottom-2 top-2 w-[3px] rounded-r-full bg-highlight shadow-glow";
+
+function StillHighlight() {
+  return (
+    <>
+      <span aria-hidden="true" className={highlightClassName} />
+      <span aria-hidden="true" className={barClassName} />
+    </>
+  );
+}
 
 type NavItemsProps = {
   /** "sidebar" hides labels when the desktop sidebar is collapsed; "sheet" never does. */
@@ -38,15 +49,7 @@ type NavItemsProps = {
 };
 
 /** Links of the app navigation, shared by the desktop sidebar and the mobile sheet. */
-export function NavItems(props: NavItemsProps) {
-  return (
-    <LazyMotion features={loadLayoutFeatures}>
-      <NavItemList {...props} />
-    </LazyMotion>
-  );
-}
-
-function NavItemList({
+export function NavItems({
   variant,
   workspaceId,
   manager = false,
@@ -64,15 +67,30 @@ function NavItemList({
   const aiPath = workspaceId && manager ? `/espaces/${workspaceId}/ia` : null;
   const billingPath = billingOrganizationId ? `/organisations/${billingOrganizationId}/abonnement` : null;
   const collapsible = variant === "sidebar";
+  const [Sliding, setSliding] = useState<Highlight | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  function loadSliding() {
+    if (loading || variant !== "sidebar" || !window.matchMedia("(min-width: 1024px)").matches) return;
+    setLoading(true);
+    void import("./nav-highlight").then((mod) => setSliding(() => mod.SlidingHighlight));
+  }
+
+  const highlight = Sliding ? (
+    <Sliding variant={variant} backgroundClassName={highlightClassName} barClassName={barClassName} />
+  ) : (
+    <StillHighlight />
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onPointerEnter={loadSliding} onFocus={loadSliding}>
       <ul className="space-y-0.5">
         <NavItem
           href={DASHBOARD_PATH}
           label={t("dashboard")}
           active={onDashboard && activeStatus === null}
           variant={variant}
+          highlight={highlight}
           onNavigate={onNavigate}
           icon={<LayoutDashboard className="size-4" aria-hidden="true" />}
         />
@@ -82,6 +100,7 @@ function NavItemList({
             label={t("promptLibrary")}
             active={pathname === promptsPath || pathname.startsWith(`${promptsPath}/`)}
             variant={variant}
+            highlight={highlight}
             onNavigate={onNavigate}
             icon={<BookText className="size-4" aria-hidden="true" />}
           />
@@ -92,6 +111,7 @@ function NavItemList({
             label={t("aiDashboard")}
             active={pathname === aiPath || pathname.startsWith(`${aiPath}/`)}
             variant={variant}
+            highlight={highlight}
             onNavigate={onNavigate}
             icon={<Gauge className="size-4" aria-hidden="true" />}
           />
@@ -102,6 +122,7 @@ function NavItemList({
             label={t("billing")}
             active={pathname === billingPath || pathname.startsWith(`${billingPath}/`)}
             variant={variant}
+            highlight={highlight}
             onNavigate={onNavigate}
             icon={<CreditCard className="size-4" aria-hidden="true" />}
           />
@@ -124,6 +145,7 @@ function NavItemList({
               label={tFilters(status)}
               active={onDashboard && activeStatus === status}
               variant={variant}
+              highlight={highlight}
               onNavigate={onNavigate}
               icon={
                 <span className="flex size-4 items-center justify-center" aria-hidden="true">
@@ -144,10 +166,12 @@ type NavItemProps = {
   icon: React.ReactNode;
   active: boolean;
   variant: NavItemsProps["variant"];
+  /** Drawn behind the active link only. */
+  highlight: React.ReactNode;
   onNavigate?: () => void;
 };
 
-function NavItem({ href, label, icon, active, variant, onNavigate }: NavItemProps) {
+function NavItem({ href, label, icon, active, variant, highlight, onNavigate }: NavItemProps) {
   const collapsible = variant === "sidebar";
 
   return (
@@ -162,22 +186,7 @@ function NavItem({ href, label, icon, active, variant, onNavigate }: NavItemProp
           collapsible && "sidebar-collapsed:justify-center sidebar-collapsed:px-0",
         )}
       >
-        {active ? (
-          <>
-            <m.span
-              layoutId={`${variant}-nav-active`}
-              aria-hidden="true"
-              className="absolute inset-0 rounded-lg bg-highlight/[0.08] ring-1 ring-inset ring-highlight/25"
-              transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            />
-            <m.span
-              layoutId={`${variant}-nav-bar`}
-              aria-hidden="true"
-              className="absolute -left-3 bottom-2 top-2 w-[3px] rounded-r-full bg-highlight shadow-glow"
-              transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            />
-          </>
-        ) : null}
+        {active ? highlight : null}
         <span className={cn("relative", active && "text-highlight")}>{icon}</span>
         <span className={cn("relative truncate", collapsible && "sidebar-collapsed:sr-only")}>{label}</span>
         {collapsible ? (

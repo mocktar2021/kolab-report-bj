@@ -65,11 +65,13 @@ async function openSwitcher(workspaces = WORKSPACES, onSearch?: () => void, onNa
       />
     </NextIntlClientProvider>,
   );
-  const trigger = screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
-  trigger.focus();
+  screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ }).focus();
   await user.keyboard("{Enter}");
-  return { user, menu: await screen.findByRole("menu"), trigger };
+  return { user, menu: await screen.findByRole("menu") };
 }
+
+// The button the page renders gives way to the menu's own once loaded (KRB-212).
+const trigger = () => screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
 
 const agenceRow = (menu: HTMLElement) =>
   within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
@@ -107,10 +109,10 @@ describe("WorkspaceSwitcher (KRB-206)", () => {
 
   it("opens the workspace search once the menu has given the focus back", async () => {
     const onSearch = vi.fn();
-    const { user, menu, trigger } = await openSwitcher(WORKSPACES, onSearch);
+    const { user, menu } = await openSwitcher(WORKSPACES, onSearch);
     await user.click(within(menu).getByRole("menuitem", { name: "Rechercher un espace" }));
     await waitFor(() => expect(onSearch).toHaveBeenCalledTimes(1));
-    expect(trigger).toHaveFocus();
+    expect(trigger()).toHaveFocus();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
@@ -161,10 +163,10 @@ describe("WorkspaceSwitcher organizations (KRB-209)", () => {
   });
 
   it("starts over each time the menu opens", async () => {
-    const { user, menu, trigger } = await openSwitcher();
+    const { user, menu } = await openSwitcher();
     await user.click(agenceRow(menu));
     await user.keyboard("{Escape}");
-    trigger.focus();
+    trigger().focus();
     await user.keyboard("{Enter}");
     expect(agenceRow(await screen.findByRole("menu"))).toHaveAttribute("aria-expanded", "false");
   });

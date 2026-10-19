@@ -21,8 +21,9 @@ export const CLIENT_MESSAGE_SCOPES = {
   auth: ["Auth"],
   invitation: ["Invitation", "Workspaces"],
   /**
-   * app/[locale]/(app)/layout.tsx: sidebar, mobile menu (with the legal links),
-   * command palette, and the "Nouveau rapport" dialog of the dashboard.
+   * app/[locale]/(app)/layout.tsx: the client parts of the sidebar, the
+   * mobile menu (with the legal links), the command palette, and the
+   * "Nouveau rapport" dialog of the dashboard.
    */
   appShell: [
     "AppShell",
