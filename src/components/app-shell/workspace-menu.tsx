@@ -50,15 +50,16 @@ export function WorkspaceMenu({
   const [pending, startTransition] = useTransition();
   const searchChosen = useRef(false);
   const groups = groupByOrganization(workspaces, t("noOrganizationName"));
-  const button = useLazyMenuFocus(lazy);
+  const { button, onContentFocus } = useLazyMenuFocus(lazy);
 
   return (
-    <DropdownMenu defaultOpen={lazy.defaultOpen}>
+    <DropdownMenu defaultOpen={lazy.openedWith !== null}>
       <DropdownMenuTrigger asChild>
         <SwitcherButton ref={button} current={current} collapsible={collapsible} aria-busy={pending} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
+        onFocus={onContentFocus}
         className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-64 overflow-y-auto"
         onCloseAutoFocus={() => {
           if (!searchChosen.current) return;

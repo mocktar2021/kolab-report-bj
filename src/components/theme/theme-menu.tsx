@@ -26,14 +26,14 @@ export function ThemeMenu({
   LazyMenuProps) {
   const t = useTranslations("Theme");
   const { choice, setTheme } = useThemeChoice();
-  const button = useLazyMenuFocus(lazy);
+  const { button, onContentFocus } = useLazyMenuFocus(lazy);
 
   return (
-    <DropdownMenu defaultOpen={lazy.defaultOpen}>
+    <DropdownMenu defaultOpen={lazy.openedWith !== null}>
       <DropdownMenuTrigger asChild>
         <ThemeButton ref={button} variant={variant} collapsible={collapsible} className={className} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} side={side}>
+      <DropdownMenuContent align={align} side={side} onFocus={onContentFocus}>
         <DropdownMenuLabel>{t("label")}</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={choice} onValueChange={setTheme}>
           {THEME_CHOICES.map((option) => {
