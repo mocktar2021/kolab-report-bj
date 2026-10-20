@@ -1,0 +1,105 @@
+name: Check settings
+
+# Read-only check of one environment's settings (KRB-157), before the first
+# deploy and after any change: the secrets and variables of the GitHub
+# environment, the Vercel variables of its target, and on production that
+# nothing points at the staging project. It prints names and verdicts, never
+# a value, and never asks Vercel to decrypt a variable
+# (scripts/check-settings.mjs). Run it by hand: Actions > Check settings.
+# Setup and how to read it: docs/deployment.md, "Check the settings".
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Staging references
+    # Only to compare production with it.
+    if: inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment:
+      name: staging
+      deployment: false
+    outputs:
+      project_ref: ${{ vars.SUPABASE_PROJECT_REF }}
+      actions_key: ${{ steps.fingerprint.outputs.actions_key }}
+    steps:
+      # The first 16 hex characters of a SHA-256, enough to tell two random
+      # keys apart, not to learn anything about either.
+      - name: Fingerprint of the server actions key
+        id: fingerprint
+        env:
+          KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "actions_key=$(printf '%s' "$KEY" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+          fi
+
+  check:
+    name: Settings of ${{ inputs.environment }}
+    needs: staging
+    if: ${{ !cancelled() && needs.staging.result != 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Reads the environment's secrets without adding a deployment entry.
+    environment:
+      name: ${{ inputs.environment }}
+      deployment: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Fingerprint of the server actions key
+        id: fingerprint
+        env:
+          KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "actions_key=$(printf '%s' "$KEY" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The script uses Node built-ins only, so no npm ci.
+      - name: Check the settings
+        env:
+          CHECK_ENVIRONMENT: ${{ inputs.environment }}
+          STAGING_PROJECT_REF: ${{ needs.staging.outputs.project_ref }}
+          STAGING_ACTIONS_KEY: ${{ needs.staging.outputs.actions_key }}
+          ACTIONS_KEY: ${{ steps.fingerprint.outputs.actions_key }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # Whether each secret is set, never its value.
+          SECRET_SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+          SECRET_SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD != '' }}
+          SECRET_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN != '' }}
+          SECRET_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY != '' }}
+          SECRET_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL != '' }}
+          SECRET_SMTP_PASS: ${{ secrets.SMTP_PASS != '' }}
+          SECRET_SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL != '' }}
+          SECRET_SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD != '' }}
+          SECRET_SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+          # Variables are not secret.
+          VAR_SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          VAR_VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VAR_VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VAR_BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+          VAR_AUTH_SITE_URL: ${{ vars.AUTH_SITE_URL }}
+          VAR_SMTP_ADMIN_EMAIL: ${{ vars.SMTP_ADMIN_EMAIL }}
+          VAR_SMOKE_BASE_URL: ${{ vars.SMOKE_BASE_URL }}
+          VAR_SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          VAR_SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          VAR_NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+        run: node scripts/check-settings.mjs
