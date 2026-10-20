@@ -16,7 +16,12 @@ export const GITHUB: {
   variables: string[];
   groups: { name: string; why: string; secrets: string[]; variables: string[] }[];
 };
-export const VERCEL: { required: string[]; oneOf: string[][]; recommended: string[]; secrets: string[] };
+export const VERCEL: {
+  required: string[];
+  groups: { name: string; why: string; all: string[]; oneOf: string[] }[];
+  recommended: string[];
+  secrets: string[];
+};
 export function checkGitHub(environment: Environment, env: Env): Finding[];
 export function jwtRef(key: string): string | null;
 export function checkVercel(

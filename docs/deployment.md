@@ -150,7 +150,7 @@ The billing page, the receipts and what the payment e-mail links to need no setu
 **Actions > Check settings > Run workflow**, on `master`, with the environment to check. It takes about a minute and changes nothing. The run summary lists every check, with ✗ for what to fix and ! for what to look at:
 
 - The secrets and variables of the GitHub environment that `deploy.yml` needs (✗ when missing), and the optional groups (! when missing or partly set): database backup, Auth URLs, Auth e-mails, smoke tests and Sentry.
-- The Vercel variables of the matching target, Production or Preview for staging, from the table in step 2: the required ones, an AI key and an e-mail key, no `FEDAPAY_API_BASE_URL` on production, no `NEXT_PUBLIC_*` marked Sensitive, and the secrets marked Sensitive.
+- The Vercel variables of the matching target, Production or Preview for staging, from the table in step 2: the ones the app needs to run (✗ when missing), then payments, e-mails and AI, each off until all its variables are set (! when off, ✗ when half set), no `FEDAPAY_API_BASE_URL` on production, no `NEXT_PUBLIC_*` marked Sensitive, and the secrets marked Sensitive.
 - On production, that `SUPABASE_PROJECT_REF` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` differ from staging's. The key is compared by a short fingerprint, not by its value.
 - `AUTH_SITE_URL` and `SMOKE_BASE_URL`, when set, are the environment's own address.
 

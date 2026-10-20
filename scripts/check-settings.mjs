@@ -63,26 +63,35 @@ export const GITHUB = {
 
 /** Vercel variables of the environment's target, from docs/deployment.md. */
 export const VERCEL = {
+  // The app does not start, or its sign-in or scheduled jobs fail, without them.
   required: [
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
-    "DATABASE_URL",
-    "DIRECT_URL",
     "APP_ENV",
-    "AI_PROVIDER",
-    "AI_MODEL",
-    "EMAIL_PROVIDER",
-    "EMAIL_FROM",
     "CRON_SECRET",
-    "FEDAPAY_ENVIRONMENT",
-    "FEDAPAY_SECRET_KEY",
-    "FEDAPAY_WEBHOOK_SECRET",
   ],
-  oneOf: [
-    ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
-    ["RESEND_API_KEY", "BREVO_API_KEY"],
+  // A feature that stays off without its variables, and breaks with half of them.
+  groups: [
+    {
+      name: "Payments",
+      why: "payments stay off",
+      all: ["FEDAPAY_ENVIRONMENT", "FEDAPAY_SECRET_KEY", "FEDAPAY_WEBHOOK_SECRET"],
+      oneOf: [],
+    },
+    {
+      name: "E-mails",
+      why: "the app shows invitation links to copy instead of sending e-mails",
+      all: ["EMAIL_PROVIDER", "EMAIL_FROM"],
+      oneOf: ["RESEND_API_KEY", "BREVO_API_KEY"],
+    },
+    {
+      name: "AI",
+      why: "AI drafts and the template helper stay off",
+      all: [],
+      oneOf: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+    },
   ],
   recommended: ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", "ACCOUNT_DELETION_LOG_EMAIL", "BILLING_ALERT_EMAIL"],
   // Marked Sensitive, so they cannot be read back from the dashboard.
@@ -205,13 +214,18 @@ export function checkVercel(environment, variables, projectRef) {
         : finding("error", "Vercel", key, `missing on ${target}`),
     );
   }
-  for (const keys of VERCEL.oneOf) {
-    const found = keys.filter((key) => byKey.has(key));
-    findings.push(
-      found.length > 0
-        ? finding("ok", "Vercel", keys.join(" or "), `set (${found.join(", ")})`)
-        : finding("error", "Vercel", keys.join(" or "), `none set on ${target}`),
-    );
+  for (const group of VERCEL.groups) {
+    const missing = group.all.filter((key) => !byKey.has(key));
+    const keyFound = group.oneOf.length === 0 || group.oneOf.some((key) => byKey.has(key));
+    if (!keyFound) missing.push(group.oneOf.join(" or "));
+    const anySet = [...group.all, ...group.oneOf].some((key) => byKey.has(key));
+    if (missing.length === 0) findings.push(finding("ok", "Vercel", group.name, "set"));
+    else if (!anySet)
+      findings.push(finding("warn", "Vercel", group.name, `not set on ${target}: ${group.why}`));
+    else
+      findings.push(
+        finding("error", "Vercel", group.name, `partly set on ${target}, missing ${missing.join(", ")}`),
+      );
   }
   for (const key of VERCEL.recommended) {
     if (!byKey.has(key)) findings.push(finding("warn", "Vercel", key, `not set on ${target}`));

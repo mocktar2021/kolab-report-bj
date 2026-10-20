@@ -83,7 +83,11 @@ describe("checkGitHub (KRB-157)", () => {
 
 /** Every Vercel variable of a target set, the way the API lists them. */
 function fullVercel(target: string, overrides: Record<string, object | null> = {}) {
-  const keys = [...VERCEL.required, "ANTHROPIC_API_KEY", "RESEND_API_KEY", ...VERCEL.recommended];
+  const keys = [
+    ...VERCEL.required,
+    ...VERCEL.groups.flatMap((group) => [...group.all, ...group.oneOf.slice(0, 1)]),
+    ...VERCEL.recommended,
+  ];
   const variables = keys.map((key) => ({
     key,
     target: [target],
@@ -112,17 +116,43 @@ describe("checkVercel (KRB-157)", () => {
     expect(named(findings, "APP_ENV")[0]).toMatchObject({ level: "error", message: "missing on preview" });
   });
 
-  it("fails on a missing variable or provider key, and warns on a missing recommended one", () => {
+  it("fails on a missing required variable, and warns on a missing recommended one", () => {
     const findings = checkVercel(
       "production",
-      fullVercel("production", { CRON_SECRET: null, ANTHROPIC_API_KEY: null, BILLING_ALERT_EMAIL: null }),
+      fullVercel("production", { CRON_SECRET: null, BILLING_ALERT_EMAIL: null }),
       PROD_REF,
     );
-    expect(levels(findings, "error").map((item) => item.name)).toEqual([
-      "CRON_SECRET",
-      "ANTHROPIC_API_KEY or OPENAI_API_KEY",
-    ]);
+    expect(levels(findings, "error").map((item) => item.name)).toEqual(["CRON_SECRET"]);
     expect(levels(findings, "warn").map((item) => item.name)).toEqual(["BILLING_ALERT_EMAIL"]);
+  });
+
+  it("warns on a feature left off, and fails on one set by half", () => {
+    const off = checkVercel(
+      "production",
+      fullVercel("production", {
+        FEDAPAY_ENVIRONMENT: null,
+        FEDAPAY_SECRET_KEY: null,
+        FEDAPAY_WEBHOOK_SECRET: null,
+        ANTHROPIC_API_KEY: null,
+      }),
+      PROD_REF,
+    );
+    expect(levels(off, "error")).toEqual([]);
+    expect(named(off, "Payments")[0]).toMatchObject({
+      level: "warn",
+      message: "not set on production: payments stay off",
+    });
+    expect(named(off, "AI")[0]).toMatchObject({ level: "warn" });
+
+    const half = checkVercel(
+      "production",
+      fullVercel("production", { FEDAPAY_WEBHOOK_SECRET: null, RESEND_API_KEY: null }),
+      PROD_REF,
+    );
+    expect(levels(half, "error").map((item) => [item.name, item.message])).toEqual([
+      ["Payments", "partly set on production, missing FEDAPAY_WEBHOOK_SECRET"],
+      ["E-mails", "partly set on production, missing RESEND_API_KEY or BREVO_API_KEY"],
+    ]);
   });
 
   it("fails on FedaPay's mock URL on production, and on a Sensitive public variable", () => {
