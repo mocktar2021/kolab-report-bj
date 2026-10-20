@@ -70,8 +70,10 @@ export const VERCEL = {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "APP_ENV",
-    "CRON_SECRET",
   ],
+  // Required on production only. Vercel runs the scheduled jobs on production
+  // deployments only, so elsewhere they serve only to run a job by hand.
+  productionOnly: ["CRON_SECRET"],
   // A feature that stays off without its variables, and breaks with half of them.
   groups: [
     {
@@ -213,6 +215,15 @@ export function checkVercel(environment, variables, projectRef) {
         ? finding("ok", "Vercel", key, "set")
         : finding("error", "Vercel", key, `missing on ${target}`),
     );
+  }
+  for (const key of VERCEL.productionOnly) {
+    if (byKey.has(key)) findings.push(finding("ok", "Vercel", key, "set"));
+    else if (environment === "production")
+      findings.push(finding("error", "Vercel", key, `missing on ${target}`));
+    else
+      findings.push(
+        finding("warn", "Vercel", key, `not set on ${target}: only needed to run a scheduled job by hand`),
+      );
   }
   for (const group of VERCEL.groups) {
     const missing = group.all.filter((key) => !byKey.has(key));

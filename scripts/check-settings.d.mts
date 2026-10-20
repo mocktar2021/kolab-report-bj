@@ -18,6 +18,7 @@ export const GITHUB: {
 };
 export const VERCEL: {
   required: string[];
+  productionOnly: string[];
   groups: { name: string; why: string; all: string[]; oneOf: string[] }[];
   recommended: string[];
   secrets: string[];

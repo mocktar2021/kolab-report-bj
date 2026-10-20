@@ -85,6 +85,7 @@ describe("checkGitHub (KRB-157)", () => {
 function fullVercel(target: string, overrides: Record<string, object | null> = {}) {
   const keys = [
     ...VERCEL.required,
+    ...VERCEL.productionOnly,
     ...VERCEL.groups.flatMap((group) => [...group.all, ...group.oneOf.slice(0, 1)]),
     ...VERCEL.recommended,
   ];
@@ -124,6 +125,12 @@ describe("checkVercel (KRB-157)", () => {
     );
     expect(levels(findings, "error").map((item) => item.name)).toEqual(["CRON_SECRET"]);
     expect(levels(findings, "warn").map((item) => item.name)).toEqual(["BILLING_ALERT_EMAIL"]);
+  });
+
+  it("only warns on a missing CRON_SECRET on staging, where Vercel runs no scheduled job", () => {
+    const findings = checkVercel("staging", fullVercel("preview", { CRON_SECRET: null }), STAGING_REF);
+    expect(levels(findings, "error")).toEqual([]);
+    expect(named(findings, "CRON_SECRET")[0]).toMatchObject({ level: "warn" });
   });
 
   it("warns on a feature left off, and fails on one set by half", () => {

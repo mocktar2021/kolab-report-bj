@@ -50,7 +50,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `EMAIL_FROM` | no | Sender on a domain verified with the provider, for example `KolabReport <noreply@email.kolabreport.mocktar.com>` with Resend |
 | `BREVO_API_KEY` or `RESEND_API_KEY` | **yes**, mark Sensitive | API key of the chosen provider |
 | `ACCOUNT_DELETION_LOG_EMAIL` | no | Mailbox, read by operators only, that gets the account id and the date of each account deleted in the app. It is the list to delete again after a backup restore (`docs/gdpr/data-subject-requests.md`, step 7). Set a rule on the mailbox that deletes these e-mails after 35 days. Needs `EMAIL_PROVIDER`. Empty: deletions still work and the app logs a warning once |
-| `CRON_SECRET` | **yes**, mark Sensitive | Random string of at least 16 characters, one per environment (`openssl rand -hex 32`). Vercel Cron sends it to the scheduled jobs (storage cleanup, billing), see [Scheduled jobs](#scheduled-jobs) |
+| `CRON_SECRET` | **yes** on production, mark Sensitive | Random string of at least 16 characters, one per environment (`openssl rand -hex 32`). Vercel Cron sends it to the scheduled jobs (storage cleanup, billing), see [Scheduled jobs](#scheduled-jobs). Vercel runs them on production only, so on staging it only serves to run a job by hand |
 | `FEDAPAY_ENVIRONMENT` | no | `sandbox` for Preview, `live` for Production. Anything else turns payments off, see [FedaPay](#4-fedapay-krb-176) |
 | `FEDAPAY_SECRET_KEY` | **yes**, mark Sensitive | Secret API key of the FedaPay account: the sandbox one for Preview, the live one for Production |
 | `FEDAPAY_WEBHOOK_SECRET` | **yes**, mark Sensitive | Secret of the webhook endpoint created in that FedaPay account |
@@ -150,7 +150,7 @@ The billing page, the receipts and what the payment e-mail links to need no setu
 **Actions > Check settings > Run workflow**, on `master`, with the environment to check. It takes about a minute and changes nothing. The run summary lists every check, with ✗ for what to fix and ! for what to look at:
 
 - The secrets and variables of the GitHub environment that `deploy.yml` needs (✗ when missing), and the optional groups (! when missing or partly set): database backup, Auth URLs, Auth e-mails, smoke tests and Sentry.
-- The Vercel variables of the matching target, Production or Preview for staging, from the table in step 2: the ones the app needs to run (✗ when missing), then payments, e-mails and AI, each off until all its variables are set (! when off, ✗ when half set), no `FEDAPAY_API_BASE_URL` on production, no `NEXT_PUBLIC_*` marked Sensitive, and the secrets marked Sensitive.
+- The Vercel variables of the matching target, Production or Preview for staging, from the table in step 2: the ones the app needs to run (✗ when missing, but only ! for `CRON_SECRET` on staging, where Vercel runs no scheduled job), then payments, e-mails and AI, each off until all its variables are set (! when off, ✗ when half set), no `FEDAPAY_API_BASE_URL` on production, no `NEXT_PUBLIC_*` marked Sensitive, and the secrets marked Sensitive.
 - On production, that `SUPABASE_PROJECT_REF` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` differ from staging's. The key is compared by a short fingerprint, not by its value.
 - `AUTH_SITE_URL` and `SMOKE_BASE_URL`, when set, are the environment's own address.
 
