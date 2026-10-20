@@ -145,6 +145,17 @@ A `review` purchase was paid at FedaPay with an amount, currency, merchant refer
 
 The billing page, the receipts and what the payment e-mail links to need no setup. Who sees what and how to read a customer's receipts: [`docs/operations/billing.md`](operations/billing.md#billing-page-and-receipts).
 
+### Check the settings (KRB-157)
+
+**Actions > Check settings > Run workflow**, on `master`, with the environment to check. It takes about a minute and changes nothing. The run summary lists every check, with ✗ for what to fix and ! for what to look at:
+
+- The secrets and variables of the GitHub environment that `deploy.yml` needs (✗ when missing), and the optional groups (! when missing or partly set): database backup, Auth URLs, Auth e-mails, smoke tests and Sentry.
+- The Vercel variables of the matching target, Production or Preview for staging, from the table in step 2: the required ones, an AI key and an e-mail key, no `FEDAPAY_API_BASE_URL` on production, no `NEXT_PUBLIC_*` marked Sensitive, and the secrets marked Sensitive.
+- On production, that `SUPABASE_PROJECT_REF` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` differ from staging's. The key is compared by a short fingerprint, not by its value.
+- `AUTH_SITE_URL` and `SMOKE_BASE_URL`, when set, are the environment's own address.
+
+It prints names and verdicts, never a value, and never asks Vercel to decrypt a variable (`scripts/check-settings.mjs`). `APP_ENV`, `NEXT_PUBLIC_APP_URL`, `FEDAPAY_ENVIRONMENT` and the Supabase URL and anon key are compared only when the Vercel API returns them in clear; otherwise only their presence is checked. The job fails on a ✗ and passes with ! lines. Run it after each change of settings, and before the first `v*` tag.
+
 ## Secrets rules
 
 - Secrets live in Vercel environment variables (marked Sensitive) and GitHub environment secrets, one value per environment. Never in the repository, never in `.env.example`.
