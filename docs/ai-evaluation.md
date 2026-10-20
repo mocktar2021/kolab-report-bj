@@ -190,7 +190,13 @@ How the comparison works:
 
 ## The nightly run
 
-`.github/workflows/evals.yml` runs every night at 03:17 UTC on the default branch: the full golden set with the judge, compared with `evals/baseline/production.json`. It is skipped with a notice while no API key secret is set. It never comments. The French summary and the run report go to the run's summary page, and the `eval-reports` artifact keeps the reports for 90 days, with `summary.md` and `baseline.json`, the run in the baseline format. The job fails on a threshold or a regression, and GitHub e-mails the failed run to the person who last changed the `schedule` line of the workflow.
+`.github/workflows/evals.yml` runs at 03:17 UTC on the default branch, on a night after an AI change only (KRB-223): the full golden set with the judge, compared with `evals/baseline/production.json`. A full run costs about 1.10 USD. Its first job, **What to run**, finds the last scheduled run that ran the golden set, passed or failed, and compares `master` with that run's commit. The night goes on when one of these changed since then:
+
+- a file the PR gate watches: a migration that touches `prompt_library`, the output schemas, the context builder, the repair logic, `models.ts`, `evals/`, `scripts/build-evals.mjs`, a model id in `.env.example`. `scripts/evals-workflows.test.ts` fails when the gate watches a file the nightly run does not;
+- the version of `ai` or of an `@ai-sdk/` package in `package.json`;
+- one of the variables `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST`, `AI_EVAL_JUDGE_MODEL`, `AI_MAX_INPUT_TOKENS`, `AI_CONTEXT_WINDOW_TOKENS` and `AI_REDACT_PII`. Their fingerprint is in the name of the golden set job, for example "Golden set (settings 1a2b3c4d)", and the next night compares it.
+
+It also goes on when no earlier night ran the golden set. Otherwise it skips the golden set with a notice and costs no API tokens. A failed night counts as a run, so it is not run again on its own: fix what failed, or rerun the failed job from the run's page. A manual run does not count as a night, so the night after an AI change still runs. The workflow is skipped with a notice while no API key secret is set. It never comments. The French summary and the run report go to the run's summary page, and the `eval-reports` artifact keeps the reports for 90 days, with `summary.md` and `baseline.json`, the run in the baseline format. The job fails on a threshold or a regression, and GitHub e-mails the failed run to the person who last changed the `schedule` line of the workflow.
 
 The same workflow runs by hand from the Actions tab, with the tier, the judge and a case list as inputs.
 
