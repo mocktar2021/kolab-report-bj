@@ -57,7 +57,7 @@ A finding that was reviewed and judged safe goes in `.github/codeql/accepted-fin
 
 ## Evals (`.github/workflows/evals-pr.yml`, `.github/workflows/evals.yml`)
 
-On a PR that changes a prompt template migration, an output schema, the context builder, the repair logic, a model id or `evals/`, **Evals on PR** runs the `pr` subset of the AI golden set, posts one comment with the comparison against `evals/baseline/production.json` and fails on a threshold or a regression. Other PRs do not start it: its workflow lists those files in `paths` (KRB-220). It is not a required check, so they merge without it. A migration that does not touch `prompt_library` starts it and gets a notice. Without the API key secret it runs the mock model. **Evals** runs the full set every night and by hand. `docs/ai-evaluation.md` has the triggers, the limits and what to do when it fails.
+On a PR that changes a prompt template migration, an output schema, the context builder, the repair logic, a model id or `evals/`, **Evals on PR** runs the `pr` subset of the AI golden set, posts one comment with the comparison against `evals/baseline/production.json` and fails on a threshold or a regression. Other PRs do not start it: its workflow lists those files in `paths` (KRB-220). It is not a required check, so they merge without it. A migration that does not touch `prompt_library` starts it and gets a notice. Without the API key secret it runs the mock model. **Evals** runs the full set at night after an AI change (KRB-223), and by hand. `docs/ai-evaluation.md` has the triggers, the limits and what to do when it fails.
 
 ## Dependabot (`.github/dependabot.yml`)
 

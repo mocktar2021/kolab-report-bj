@@ -182,7 +182,7 @@ GitHub Actions runs on every PR and every push to `master`:
 - **Lint, typecheck, unit tests, build**: Prettier, ESLint, TypeScript, Vitest, `npm audit` and `next build`.
 - **Database and end-to-end tests**: starts Supabase, runs `db reset` and the pgTAP suite, fails if `database.types.ts` is out of date, then runs Playwright.
 - **CodeQL**: security queries on the TypeScript code.
-- **Evals on PR**: on PRs that change a prompt template, an output schema, the context builder or a model id, runs a subset of the AI golden set, comments the comparison with production and fails on a regression. The full set runs every night. See `docs/ai-evaluation.md`.
+- **Evals on PR**: on PRs that change a prompt template, an output schema, the context builder or a model id, runs a subset of the AI golden set, comments the comparison with production and fails on a regression. The full set runs at night after an AI change. See `docs/ai-evaluation.md`.
 
 Dependabot opens update PRs every Monday. `docs/ci.md` has the details and the branch protection setup.
 

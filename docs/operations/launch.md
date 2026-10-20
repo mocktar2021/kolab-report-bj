@@ -14,7 +14,7 @@ The product owner took every proposal on 2026-10-17. Change a line here when a d
 | Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done | 2026-10-17 |
 | Who tags the release | The product owner | 2026-10-17 |
 | Auth e-mails per hour | `email_sent` in `supabase/config.toml` goes from 30 to 100 for the launch (next section) | 2026-10-17 |
-| Plans for the launch | Free plans, with no budget for paid ones now. Supabase Free: no daily backups, so the nightly dump and the Storage copy are the only ones, and the leaked password check stays off. Sentry Developer: one user, the product owner. GitHub Actions within the free minutes (KRB-220). Runs of the eval suite cost money and wait (KRB-160). Vercel is open, see [Vercel plan](#vercel-plan). To revisit with the first payments: ADR 001, Q16 planned Supabase and Vercel Pro before the first paid customer | 2026-10-20 |
+| Plans for the launch | Free plans, with no budget for paid ones now. Supabase Free: no daily backups, so the nightly dump and the Storage copy are the only ones, and the leaked password check stays off. Sentry Developer: one user, the product owner. GitHub Actions within the free minutes (KRB-220). Runs of the eval suite cost money: the nightly run only runs after an AI change (KRB-223), and the baseline run waits (KRB-160). Vercel is open, see [Vercel plan](#vercel-plan). To revisit with the first payments: ADR 001, Q16 planned Supabase and Vercel Pro before the first paid customer | 2026-10-20 |
 
 ## Before the tag
 

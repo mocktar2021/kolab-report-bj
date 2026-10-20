@@ -1,11 +1,13 @@
 name: Evals
 
 # Runs the golden set (evals/) against the real model and keeps the reports.
-# Every night it runs the full set with the judge and compares it with
-# evals/baseline/production.json; it is skipped while no API key secret is
-# set. It can also be started by hand from the Actions tab. The job fails
-# when a threshold of evals/thresholds.json fails or a metric drops past its
-# regression limit. Release rule: evals/README.md. Playbook:
+# At night it runs the full set with the judge and compares it with
+# evals/baseline/production.json, but only after an AI change since the last
+# night that ran it (KRB-223): a file the PR gate watches, the AI SDK version
+# or a model setting. It is skipped while no API key secret is set. It can
+# also be started by hand from the Actions tab, and then always runs. The job
+# fails when a threshold of evals/thresholds.json fails or a metric drops past
+# its regression limit. Release rule: evals/README.md. Playbook:
 # docs/ai-evaluation.md.
 
 on:
@@ -40,15 +42,20 @@ env:
   HUSKY: "0"
 
 jobs:
-  key:
-    name: API key
+  scope:
+    name: What to run
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # To find the last night that ran the golden set.
+      actions: read
     outputs:
-      ok: ${{ steps.check.outputs.ok }}
+      relevant: ${{ steps.changes.outputs.relevant }}
+      settings: ${{ steps.settings.outputs.settings }}
     steps:
       - name: Check the API key secret
-        id: check
+        id: key
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -66,12 +73,99 @@ jobs:
             echo "::notice title=Evals skipped::No API key secret for provider ${AI_PROVIDER:-anthropic}. Set ANTHROPIC_API_KEY (or OPENAI_API_KEY with AI_PROVIDER=openai) to run the nightly evals."
           fi
 
+      # Goes into the name of the golden set job, so the next night can tell
+      # whether a setting changed. These are variables, not secrets.
+      - name: Fingerprint the model settings
+        id: settings
+        env:
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
+          AI_EVAL_JUDGE_MODEL: ${{ vars.AI_EVAL_JUDGE_MODEL }}
+          AI_MAX_INPUT_TOKENS: ${{ vars.AI_MAX_INPUT_TOKENS }}
+          AI_CONTEXT_WINDOW_TOKENS: ${{ vars.AI_CONTEXT_WINDOW_TOKENS }}
+          AI_REDACT_PII: ${{ vars.AI_REDACT_PII }}
+        run: |
+          settings=$(printf '%s\n' "$AI_PROVIDER" "$AI_MODEL" "$AI_MODEL_FAST" "$AI_EVAL_JUDGE_MODEL" \
+            "$AI_MAX_INPUT_TOKENS" "$AI_CONTEXT_WINDOW_TOKENS" "$AI_REDACT_PII" | sha256sum | cut -c1-8)
+          echo "settings=$settings" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'schedule' && steps.key.outputs.ok == 'true'
+        with:
+          # Full history, to diff with the commit of the last night that ran.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check what changed since the last run
+        id: changes
+        if: github.event_name == 'schedule' && steps.key.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SETTINGS: ${{ steps.settings.outputs.settings }}
+        run: |
+          # The last scheduled run that ran the golden set, passed or failed.
+          # A night that skipped it, or failed before it, does not count.
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/evals.yml/runs?event=schedule&status=completed&per_page=100" \
+            --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')
+          base=""
+          name=""
+          while read -r id sha; do
+            [ -n "$id" ] || continue
+            name=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs" \
+              --jq '[.jobs[] | select((.name | startswith("Golden set")) and (.conclusion == "success" or .conclusion == "failure"))][0].name // ""')
+            if [ -n "$name" ]; then base="$sha"; break; fi
+          done <<< "$runs"
+
+          reasons=""
+          add() { reasons="${reasons:+$reasons, }$1"; }
+          if [ -z "$base" ]; then
+            add "no earlier night ran the golden set"
+          elif ! git cat-file -e "$base^{commit}" 2> /dev/null; then
+            add "the commit of the last run is gone"
+          else
+            echo "Last night that ran the golden set: $base, job \"$name\""
+            changed() { ! git diff --quiet "$base" HEAD -- "$@"; }
+
+            # The same files as the PR gate (evals-pr.yml, "Check what the PR
+            # changes"). scripts/evals-workflows.test.ts checks the list.
+            templates=$(git diff -z --name-only --diff-filter=ACMR "$base" HEAD -- 'supabase/migrations/*.sql' \
+              | xargs -0 -r grep -l -i prompt_library || true)
+            if [ -n "$templates" ]; then add "prompt templates"; fi
+            if changed src/lib/ai/schemas.ts src/lib/prompts/catalog.ts; then add "output schemas"; fi
+            if changed src/lib/ai/context; then add "context builder"; fi
+            if changed src/lib/ai/generate.ts; then add "repair logic"; fi
+            if changed src/lib/ai/models.ts; then add "model settings"; fi
+            if changed evals scripts/build-evals.mjs; then add "evals"; fi
+            if git diff -U0 "$base" HEAD -- .env.example | grep -E '^[+-]AI_MODEL(_FAST)?=' > /dev/null; then
+              add "model ids in .env.example"
+            fi
+
+            # Not watched by the PR gate: the AI SDK version and the variables.
+            if git diff -U0 "$base" HEAD -- package.json | grep -E '^[+-] *"(ai|@ai-sdk/[^"]+)":' > /dev/null; then
+              add "AI SDK version"
+            fi
+            # A job named before KRB-223 has no fingerprint to compare.
+            case "$name" in
+              *"(settings "*) [ "$name" = "Golden set (settings $SETTINGS)" ] || add "AI_* variables" ;;
+            esac
+          fi
+
+          if [ -n "$reasons" ]; then
+            echo "Evals needed: $reasons"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Evals skipped::No AI change since the last night that ran the golden set (${base:0:7}): no prompt template, output schema, context builder, repair logic, model id, eval file, AI SDK version or AI_* variable."
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
   evals:
-    name: Golden set
-    needs: key
-    # A night without a key is skipped. A manual run goes ahead and fails
-    # with a clear error.
-    if: needs.key.outputs.ok == 'true' || github.event_name == 'workflow_dispatch'
+    # The fingerprint in the name is read back by the next night.
+    name: Golden set (settings ${{ needs.scope.outputs.settings }})
+    needs: scope
+    # A night without a key or without an AI change is skipped. A manual run
+    # always goes ahead, and fails with a clear error without a key.
+    if: github.event_name == 'workflow_dispatch' || needs.scope.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
