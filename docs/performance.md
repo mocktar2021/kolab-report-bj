@@ -8,7 +8,7 @@ From story KRB-25, Lighthouse mobile on the production build:
 
 | Category | Target | In CI |
 | --- | --- | --- |
-| Performance | 85 or more | error, fails the job (dashboard: 75 for now, see "Not fixed yet") |
+| Performance | 85 or more, 80 for the dashboard | error, fails the job (dashboard: under 75, see "Not fixed yet") |
 | Accessibility | 95 or more | error, fails the job |
 | Best practices | 95 or more | error, fails the job |
 | JavaScript and total transfer | budgets below | warning only |
@@ -154,11 +154,11 @@ The score did not move. On the median run, total blocking time is 424 ms and LCP
 
 ## Not fixed yet
 
-The dashboard is still under the performance target: median 81 with one Chrome per run (single runs 78 to 90 after KRB-212), against 85. `lighthouserc.cjs` fails it under 75. About 120 ms less total blocking time would put the median over 85. What is left, largest first:
+The dashboard's target on the CI runner is 80, not 85 (decided on 20 October 2026, KRB-212). Its median is 81 with one Chrome per run (single runs 78 to 90), and what is left is the page's own hydration, not the shell. `lighthouserc.cjs` fails it under 75 to catch a regression. About 120 ms less total blocking time would put the median over 85. What is left, largest first:
 
 | Cost | Where | Way out |
 | --- | --- | --- |
-| Hydration of the page. On the median run after KRB-212: a 318 ms task in the Next.js runtime chunk (simulated), from which React hydrates the whole page | the Next.js runtime and React DOM (131 KiB compressed together), then the dashboard's own Client Components | The shell is done (KRB-212). Fewer Client Components in the dashboard's content, or a target of 80 for this page on the CI runner. |
+| Hydration of the page. On the median run after KRB-212: a 318 ms task in the Next.js runtime chunk (simulated), from which React hydrates the whole page | the Next.js runtime and React DOM (131 KiB compressed together), then the dashboard's own Client Components | The shell is done (KRB-212). To reach 85: fewer Client Components in the dashboard's content. |
 | Server response, about 450 ms | the layout and the page each query Supabase several times (profile, workspaces, notifications, dashboard data, reports), after `getUser` in the proxy | Fewer round trips, or one RPC for the dashboard data. |
 | A second fetch of the page and of every script and stylesheet after load | `cacheOnFrontEndNav` and `aggressiveFrontEndNavCaching` in `next.config.mjs` | The service worker fetches the current page again (a second server render on signed-in pages) and every `<script>` and `<link>` in it, including the `nomodule` polyfills (40 kB) that modern browsers never run. It runs in a worker, but it competes for the network during load. Owned by the PWA work, not changed here. |
 
