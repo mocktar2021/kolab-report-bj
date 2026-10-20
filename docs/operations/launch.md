@@ -10,10 +10,11 @@ The product owner took every proposal on 2026-10-17. Change a line here when a d
 | --- | --- | --- |
 | Support channel | `support@mocktar.com`, the address the legal pages and the error messages already give. A WhatsApp Business number as a second channel, if customers ask for one | 2026-10-17 |
 | Support hours during hypercare | Monday to Saturday, 08:00 to 20:00 in Cotonou (07:00 to 19:00 UTC) | 2026-10-17 |
-| Who is on call | The product owner, with Olakounle Akinotcho as backup. She has Vercel access for a rollback. Her Sentry access is checked before the launch day | 2026-10-17 |
+| Who is on call | The product owner, with Olakounle Akinotcho as backup. She has Vercel access for a rollback. Sentry's free plan has one user, the product owner, who forwards her what she needs (2026-10-20) | 2026-10-17 |
 | Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done | 2026-10-17 |
 | Who tags the release | The product owner | 2026-10-17 |
 | Auth e-mails per hour | `email_sent` in `supabase/config.toml` goes from 30 to 100 for the launch (next section) | 2026-10-17 |
+| Plans for the launch | Free plans, with no budget for paid ones now. Supabase Free: no daily backups, so the nightly dump and the Storage copy are the only ones, and the leaked password check stays off. Sentry Developer: one user, the product owner. GitHub Actions within the free minutes (KRB-220). Runs of the eval suite cost money and wait (KRB-160). Vercel is open, see [Vercel plan](#vercel-plan). To revisit with the first payments: ADR 001, Q16 planned Supabase and Vercel Pro before the first paid customer | 2026-10-20 |
 
 ## Before the tag
 
@@ -21,23 +22,43 @@ Every line is checked the day before, and again on the morning of the launch for
 
 | Check | Where | Jira |
 | --- | --- | --- |
-| Supabase organization moved to Pro, as planned for the release day: Free has no daily backups and pauses a project after 7 days without activity | Supabase, organization **Billing** | KRB-130 |
+| Supabase stays on Free (decided 2026-10-20). Free pauses a project after 7 days without activity: use production during the week before the tag, and restore it from the dashboard if it paused | Supabase, project `krsccuejegzqianrzstc` | KRB-130 |
 | GitHub integration of the production project with **Deploy to production** and **Automatic branching** off (Deploy to production checked off on 2026-10-17) | Supabase, project `krsccuejegzqianrzstc`, **Project Settings > Integrations** | KRB-130 |
 | GitHub environment `production`: Supabase ref and password, `AUTH_SITE_URL`, smoke test settings | GitHub, **Settings > Environments** | KRB-132 |
-| Vercel Production variables, `NEXT_PUBLIC_APP_URL` as a plain variable, and Vercel Pro on the release day | Vercel, **Settings > Environment Variables** | KRB-131 |
+| Vercel Production variables, `NEXT_PUBLIC_APP_URL` as a plain variable. The plan is open: see [Vercel plan](#vercel-plan) | Vercel, **Settings > Environment Variables** | KRB-131 |
+| Check settings on `production` with no ✗ | **Actions > Check settings**, [steps below](#production-settings-step-by-step) | KRB-157 |
 | Auth settings applied to production: site URL, redirect URLs, SMTP, French templates, rate limits, captcha | **Actions > Supabase Auth settings**, first with `--dry-run` | KRB-158 |
 | SMTP sender on `kolabreport.com` with SPF, DKIM and DMARC passing | The e-mail provider's domain page | KRB-158 |
 | FedaPay live: fees unticked, live webhook, live keys on Production only | [`deployment.md`](../deployment.md#4-fedapay-krb-176) | KRB-157 |
 | The accountant's answers on VAT, e-MECeF and the receipt mentions | ADR 001, A1 to A6 | KRB-26 |
 | `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` and the `AI_PRICE_*` variables on Production | [AI evaluation](../ai-evaluation.md#cost-alert-and-fallback-model) | KRB-160 |
-| Eval baseline on the production model passed, then `AI_DRAFTS_ENABLED=true` | [AI evaluation](../ai-evaluation.md) | KRB-160 |
-| Sentry alert rules for `production`: new issue, regression, spike, sent to the product owner and the on-call backup. The backup is a member of the Sentry organization | [Monitoring](monitoring.md#alert-rules) | KRB-23 |
+| Eval baseline on the production model passed, then `AI_DRAFTS_ENABLED=true`. A run costs money (the PR subset of 6 cases cost 0.45 USD): it waits on the product owner's go, and AI drafts stay off until then | [AI evaluation](../ai-evaluation.md) | KRB-160 |
+| Sentry alert rules for `production`: new issue, regression, spike, sent to the product owner, the only member on the free plan | [Monitoring](monitoring.md#alert-rules) | KRB-23 |
 | Uptime check on `https://kolabreport.com/api/health` with the `kolabreport-ops` contact point | [Monitoring](monitoring.md#uptime) | KRB-23 |
 | Nightly dump and Storage copy set up for production | [Backups](backups.md#setup) | KRB-23 |
 | Smoke account and workspace created on production | [Smoke tests](smoke-tests.md#setup-once-per-environment) | KRB-161 |
 | `master` green, staging deployed from it, smoke tests green on staging, no open P1 | GitHub Actions | |
 
 **Auth e-mails.** With a custom SMTP sender, Supabase sends at most `email_sent` auth e-mails per hour for the whole project. Sign-up confirmations and password resets share it. At 30, an announcement could bring more sign-ups in an hour than that, and the next ones would get no confirmation e-mail. It is 100 since KRB-162: the merge to `master` pushed it to staging, and the Auth settings workflow for production applies it there.
+
+### Vercel plan
+
+Open (2026-10-20). Vercel's fair use guidelines keep the free Hobby plan to non-commercial personal use, and count "any method of requesting or processing payment from visitors of the site" and "advertising the sale of a product or service" as commercial use. KolabReport sells plans and takes FedaPay payments, so production on Hobby goes against Vercel's terms, and Vercel can stop the project. The ways out: Vercel Pro, 20 USD a month on 2026-10-20, or another host whose free plan allows commercial use, which means moving the deploy (`deploy.yml`, `vercel.json`, the cron jobs). To decide before payments go live.
+
+## Production settings, step by step
+
+For the setup session before the tag (KRB-157, KRB-158). Each step names what to set; the values and the reasons are in [`deployment.md`](../deployment.md). Nothing here needs a paid plan.
+
+1. **Supabase**, project `krsccuejegzqianrzstc`: note the database password, the anon key, the service role key and the session pooler string (**Project Settings > Database** and **API**). In **Integrations**, keep **Deploy to production** and **Automatic branching** off.
+2. **GitHub environment `production`** (**Settings > Environments**):
+   - for `deploy.yml`: the secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (a new one, `openssl rand -base64 32`, never staging's), and the variables `SUPABASE_PROJECT_REF`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`;
+   - for the Auth settings: `AUTH_SITE_URL` set to `https://kolabreport.com`, then `SMTP_PASS` and `SMTP_ADMIN_EMAIL` once the sending domain is verified;
+   - for the nightly backup, the only one on the Free plan: `SUPABASE_DB_URL` and `BACKUP_AGE_RECIPIENT`, then the Storage copy ([backups](backups.md#setup));
+   - for Sentry: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` and `NEXT_PUBLIC_SENTRY_DSN`.
+3. **Vercel**, Production target (**Settings > Environment Variables**), from the table in [`deployment.md`](../deployment.md#2-vercel-project-krb-131): `NEXT_PUBLIC_APP_URL` set to `https://kolabreport.com` (plain, not Sensitive), `APP_ENV` set to `production`, the URL and keys of the production project, and a new `CRON_SECRET`. Payments (`FEDAPAY_*`, with `live`) wait for FedaPay to approve the account, e-mails for the verified domain, and the AI keys for the eval baseline. Each feature stays off until its variables are set.
+4. **Actions > Check settings > Run workflow** on `production`. Fix every ✗. A ! is a feature still off or an optional setting.
+5. **Actions > Supabase Auth settings > Run workflow** on `production`: the French templates, the password policy, the rate limits and, with `AUTH_SITE_URL`, the site URL and the redirect list `https://kolabreport.com/**`. Run it again once the SMTP settings are in.
+6. After the first deploy: the smoke account and workspace ([smoke tests](smoke-tests.md#setup-once-per-environment)), then `SMOKE_BASE_URL` set to `https://kolabreport.com`, `SMOKE_EMAIL` and `SMOKE_PASSWORD` on the environment, and Check settings again.
 
 ## Launch day
 

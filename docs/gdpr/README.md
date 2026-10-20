@@ -71,6 +71,6 @@ Configuration and engineering:
 - [x] Merge KRB-166 (daily storage cleanup and 90-day retention of exports) and describe the job in `retention.md`.
 - [ ] Set `CRON_SECRET` on the Vercel production environment, so the daily storage cleanup runs there.
 - [ ] Decide the retention rules still open in `retention.md`: AI generation content after its section is deleted, notifications, invitations, status history, accounts never confirmed or inactive, and the Supabase Auth audit log.
-- [ ] Set up the nightly backups of production (database dump and Storage copy, `docs/operations/backups.md`), and decide on the Supabase Pro plan and point-in-time recovery. Their retention is in `retention.md`.
+- [ ] Set up the nightly backups of production (database dump and Storage copy, `docs/operations/backups.md`). Supabase stays on the Free plan for the launch (decided on 2026-10-20, `docs/operations/launch.md`), so they are the only backups: no daily backups and no point-in-time recovery. Their retention is in `retention.md`.
 - [x] Build self-service data export and account deletion. Done in KRB-186: `/fr/compte`. An operator still answers what the app can't do, with the runbook in `data-subject-requests.md`.
 - [ ] Keep a log of answered requests (date, type, user id, what was done), so erasures can be applied again after a backup restore.
