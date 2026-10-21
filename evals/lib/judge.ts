@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { LanguageModelV4 } from "@ai-sdk/provider";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { SYSTEM_PROMPT, type BuiltContext } from "@/lib/ai/context";
 import type { GoldenCase } from "./case";
@@ -114,11 +114,13 @@ export async function runJudge(params: {
   markdown: string;
 }): Promise<JudgeResult> {
   const started = performance.now();
-  const result = await generateObject({
+  const result = await generateText({
     model: params.model,
-    schema: judgeSchema,
-    schemaName: "notes",
-    schemaDescription: "Notes du brouillon sur les six critères de la grille.",
+    output: Output.object({
+      schema: judgeSchema,
+      name: "notes",
+      description: "Notes du brouillon sur les six critères de la grille.",
+    }),
     instructions: judgeSystem(params.rubric),
     prompt: judgePrompt(params.value, params.template, params.built, params.markdown),
     temperature: 0,
@@ -128,8 +130,8 @@ export async function runJudge(params: {
   const scores = {} as Record<Criterion, number>;
   const justifications = {} as Record<Criterion, string>;
   for (const { key } of CRITERIA) {
-    scores[key] = result.object[key].score;
-    justifications[key] = result.object[key].justification;
+    scores[key] = result.output[key].score;
+    justifications[key] = result.output[key].justification;
   }
   return {
     scores,
