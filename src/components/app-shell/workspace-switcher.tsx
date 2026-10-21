@@ -18,7 +18,11 @@ export type WorkspaceSwitcherProps = {
   onSearch?: () => void;
 };
 
-/** The switcher's button, before and after its menu loads. */
+/**
+ * The switcher's button, before and after its menu loads. Its name comes from
+ * its text, "Espace de travail actuel : <name>", so that it holds the visible
+ * label (WCAG 2.5.3, KRB-222). The organization or role line stays visual.
+ */
 export function SwitcherButton({
   current,
   collapsible,
@@ -30,7 +34,6 @@ export function SwitcherButton({
   return (
     <button
       type="button"
-      aria-label={t("switcherLabel", { name: current.name })}
       className={cn(
         "flex h-12 w-full items-center gap-3 rounded-lg px-1.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent",
         collapsible && "sidebar-collapsed:justify-center sidebar-collapsed:px-0",
@@ -40,8 +43,11 @@ export function SwitcherButton({
     >
       <WorkspaceMark name={current.name} />
       <span className={cn("min-w-0 flex-1", collapsible && "sidebar-collapsed:sr-only")}>
-        <span className="block truncate text-sm font-medium text-foreground">{current.name}</span>
-        <span className="block truncate text-xs text-muted-foreground">
+        <span className="block truncate text-sm font-medium text-foreground">
+          <span className="sr-only">{t("switcherCurrent")} </span>
+          {current.name}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground" aria-hidden="true">
           {current.organizationName ?? t(`roles.${current.role}`)}
         </span>
       </span>

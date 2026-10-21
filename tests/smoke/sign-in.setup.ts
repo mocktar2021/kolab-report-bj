@@ -54,9 +54,9 @@ async function selectSmokeWorkspace(page: Page, baseURL: string) {
 
   const name = smoke.workspaceName;
   const switcher = page.getByRole("button", { name: /^Espace de travail actuel : / });
-  if (
-    (await switcher.getAttribute("aria-label")) !== `Espace de travail actuel : ${name}. Changer d'espace`
-  ) {
+  // The switcher's name is "Espace de travail actuel : <name>" (KRB-222).
+  const current = page.getByRole("button", { name: `Espace de travail actuel : ${name}`, exact: true });
+  if ((await current.count()) === 0) {
     await switcher.click();
     // The item's name is the workspace name followed by the role.
     const item = page.getByRole("menuitemradio", { name: new RegExp(`^${escapeRegExp(name)}(\\s|$)`) });

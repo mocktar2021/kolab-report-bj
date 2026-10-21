@@ -13,7 +13,7 @@ npm run test:e2e -- tests/e2e/accessibility.spec.ts tests/e2e/keyboard.spec.ts
 
 | Spec | What it checks |
 | --- | --- |
-| `tests/e2e/accessibility.spec.ts` | axe-core 4.13 (`@axe-core/playwright`) with the `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa` rules. Any violation fails the test. Every page runs in the light and the dark theme, set through the `kolabreport:theme` key in localStorage like the theme menu does. |
+| `tests/e2e/accessibility.spec.ts` | axe-core 4.14 (`@axe-core/playwright`) with the `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa` rules. Any violation fails the test. Every page runs in the light and the dark theme, set through the `kolabreport:theme` key in localStorage like the theme menu does. |
 | `tests/e2e/keyboard.spec.ts` | The sign-in, upload and AI draft flows with the keyboard only (Tab, Shift+Tab, Enter, Space, Escape, arrows), plus the skip link, landmarks, page titles, focus indicators, menus, dialogs and French names. |
 | `src/components/auth/password-input.test.tsx` | The show password toggle keeps one name and changes `aria-pressed`. |
 | `src/app/[locale]/(app)/espaces/[workspaceId]/sections/[sectionId]/draft-panel.test.tsx` | The feedback button keeps the focus once the opinion is saved. |
@@ -39,6 +39,16 @@ The keyboard spec checks:
 - AI draft: the generate button is reachable and named, the status line is polite (`role="status"`) and never reads the streamed text, the view tabs work with the arrow keys, rating and comment work from the keyboard, the focus goes to the section text after accepting and to the generate button after discarding, and an error is announced in a `role="alert"` while the focus stays on the button.
 
 The accepted upload test (announcement, then the new file reachable with Tab) needs the Storage container. CI runs it and never skips it; locally it is skipped when Storage does not answer.
+
+axe 4.14 also checks Label in Name (WCAG 2.5.3, `label-content-name-mismatch`) on controls named by an `aria-label`. It compares the name with all the visible text, including text hidden from assistive tech such as the "Ctrl K" shortcut. KRB-222 dropped the `aria-label` on three controls and builds their name from what they show, with the extra words in an `sr-only` span:
+
+| Control | Visible text | Name |
+| --- | --- | --- |
+| Search button | Rechercher Ctrl K | Rechercher (the shortcut stays hidden) |
+| Workspace switcher | Espace Parakou, Cabinet Zinsou | Espace de travail actuel : Espace Parakou |
+| Organization row in the workspace menu | Cabinet Zinsou 2 | Cabinet Zinsou : 2 espaces |
+
+Chromium puts a space before and after an `sr-only` span that sits next to visible text, so its words go before the visible text or are joined with " : ".
 
 Two faded illustration groups on the landing page carry `data-decorative` and axe skips them. They are `aria-hidden` pictures of the product, so their text is incidental and has no contrast requirement (WCAG 1.4.3). Never put this attribute on text people need to read.
 
@@ -83,7 +93,7 @@ Issues found and fixed:
 
 ## Checklist for new components
 
-- Every control has a French name from `messages/fr.json`. Icon-only buttons get an `aria-label`. When a label is visible, the name starts with it.
+- Every control has a French name from `messages/fr.json`. Icon-only buttons get an `aria-label`. When a control shows text, take the name from that text and add any extra words in an `sr-only` span, rather than an `aria-label`. The name must hold all the visible text in the same order, also text that is `aria-hidden`.
 - Use the primitives in `src/components/ui`: `Dialog` and `Sheet` trap the focus and give it back, `DropdownMenu` handles the arrows and Escape, `NativeSelect` leaves the keyboard to the browser.
 - Form errors: `aria-invalid` and `aria-describedby` on the field, then `useFocusOnError` from `src/components/auth/use-focus-on-error.ts` to move the focus. One `role="alert"` for an error that belongs to the whole form.
 - Status changes go in a live region that is already in the page before its text changes: `role="status"` for one line, `role="log"` for a list of events. Never make streamed text or progress percentages live.
