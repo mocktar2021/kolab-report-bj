@@ -58,7 +58,7 @@ The global templates are read from the migrations (`supabase/migrations/*.sql`, 
 
 Each run writes to `evals/reports`:
 
-- `<date>-<template_key>-<prompt version>-<model>.json` and `.md`: one report per template and model, with the aggregates of its cases, one line per case, the problems found (missed key points, invalid refs, unsafe output, judge errors) and the judge calibration against human scores.
+- `<date>-<template_key>-<prompt version>-<model>.json` and `.md`: one report per template and model, with the aggregates of its cases, one line per case, the problems found (missed key points, invalid refs, unsafe output, judge errors), the low judge scores (3 or less, with the reason, also printed in the run log) and the judge calibration against human scores.
 - `<date>-run-<model>.json` and `.md`: the gate over all the cases of the run, and whether the run is release ready.
 
 The JSON keeps everything per case: the context decisions (rows cut, caps, summaries), the raw output, the Markdown, every check and the judge's justifications. Calibration shows, per criterion, the mean absolute difference between the judge and the mean of the human reviewers on the same case, prompt version and model (from `evals/human/*.csv`).

@@ -17,7 +17,14 @@ import { executeCases } from "./lib/execute";
 import { applyGate, loadThresholds, renderGate } from "./lib/gate";
 import { loadRubric } from "./lib/judge";
 import { mockGenerator, mockJudge, mockSummarizer } from "./lib/mock";
-import { aggregate, calibration, REPORTS_DIR, writeReports, type TemplateReport } from "./lib/report";
+import {
+  aggregate,
+  calibration,
+  lowJudgeScores,
+  REPORTS_DIR,
+  writeReports,
+  type TemplateReport,
+} from "./lib/report";
 import type { CaseResult, RunDeps } from "./lib/runner";
 import { loadSubsets, subsetIds } from "./lib/subsets";
 import { summarizeCase } from "./lib/summary";
@@ -181,7 +188,7 @@ function realModel(settings: AiSettings, tier: ModelTier, env: Env, modelId?: st
   return model;
 }
 
-function caseLine(result: CaseResult, index: number, total: number): string {
+function caseLine(result: CaseResult, index: number, total: number, mock: boolean): string {
   const schema = result.generation.schemaValidFirstTry
     ? "schema ok"
     : result.generation.schemaValidAfterRepair
@@ -196,9 +203,14 @@ function caseLine(result: CaseResult, index: number, total: number): string {
     result.truncationOk === false ? "NOT TRUNCATED" : "",
   ].filter(Boolean);
   const why = result.generation.rejections.map((reason) => `\n      refused: ${reason}`).join("");
+  // In the CI log, where the reports artifact can't be read (KRB-224). The
+  // mock judge gives 3 everywhere, with no reason worth printing.
+  const judgeWhy = (mock ? [] : lowJudgeScores(result))
+    .map((low) => `\n      judge ${low.key} ${low.score}/5: ${low.justification}`)
+    .join("");
   return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${(
     result.generation.latencyMs / 1000
-  ).toFixed(1)} s${extra.length > 0 ? `  ${extra.join(" ")}` : ""}${why}`;
+  ).toFixed(1)} s${extra.length > 0 ? `  ${extra.join(" ")}` : ""}${why}${judgeWhy}`;
 }
 
 /** Link to the GitHub Actions run, when the runner is in one. */
@@ -290,7 +302,7 @@ async function evaluate(options: Options, env: Env): Promise<number> {
     concurrency: options.concurrency,
     budget,
     depsFor,
-    onResult: (result, done) => console.log(caseLine(result, done, selected.length)),
+    onResult: (result, done) => console.log(caseLine(result, done, selected.length, mock)),
     onSkip: (value) => console.log(`[skip] ${value.id}: budget reached`),
   });
 
