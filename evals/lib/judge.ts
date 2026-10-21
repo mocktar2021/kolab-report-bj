@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { SYSTEM_PROMPT, type BuiltContext } from "@/lib/ai/context";
@@ -106,7 +106,7 @@ export type JudgeResult = {
 };
 
 export async function runJudge(params: {
-  model: LanguageModelV3;
+  model: LanguageModelV4;
   rubric: string;
   value: GoldenCase;
   template: Pick<EvalTemplate, "key" | "title">;
@@ -119,7 +119,7 @@ export async function runJudge(params: {
     schema: judgeSchema,
     schemaName: "notes",
     schemaDescription: "Notes du brouillon sur les six critères de la grille.",
-    system: judgeSystem(params.rubric),
+    instructions: judgeSystem(params.rubric),
     prompt: judgePrompt(params.value, params.template, params.built, params.markdown),
     temperature: 0,
     maxOutputTokens: JUDGE_MAX_TOKENS,

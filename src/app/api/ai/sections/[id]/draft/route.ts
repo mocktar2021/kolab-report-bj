@@ -19,6 +19,7 @@ import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
 import { estimateCost, estimateFallbackCost, fallbackModel, noThinking } from "@/lib/ai/models";
 import { draftToMarkdown } from "@/lib/ai/schemas";
+import { aiTelemetry } from "@/lib/ai/telemetry";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
 import type {
   ContextDeliverable,
@@ -276,15 +277,9 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
   const templateText = template.template;
   const promptVersion = { id: template.id, key: template.template_key, number: template.version };
   const modelId = mock ? "mock" : settings.models[tier];
-  // Spans of the AI SDK calls, under this generation's trace. Prompts and
-  // outputs stay out of them unless AI_TRACE_CONTENT is on.
-  const telemetry = (functionId: string) => ({
-    isEnabled: settings.tracing.enabled,
-    recordInputs: settings.tracing.recordContent,
-    recordOutputs: settings.tracing.recordContent,
-    functionId,
-    metadata: { generationId, promptVersionId: promptVersion.id },
-  });
+  // Spans of the AI SDK calls, under this generation's trace, whose root span
+  // carries the generation and prompt version ids.
+  const telemetry = (functionId: string) => aiTelemetry(settings.tracing, functionId);
   const startedAt = performance.now();
   const userAbort = new AbortController();
   request.signal.addEventListener("abort", () => userAbort.abort(), { once: true });
@@ -327,17 +322,17 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
       try {
         const result = await generateText({
           model: fast,
-          system,
+          instructions: system,
           prompt,
           maxOutputTokens,
           temperature: 0,
           providerOptions: noThinking(),
           maxRetries: 1,
           abortSignal: signal,
-          experimental_telemetry: telemetry("kolab.summary"),
+          telemetry: telemetry("kolab.summary"),
         });
-        usage.inputTokens += result.totalUsage.inputTokens || 0;
-        usage.outputTokens += result.totalUsage.outputTokens || 0;
+        usage.inputTokens += result.usage.inputTokens || 0;
+        usage.outputTokens += result.usage.outputTokens || 0;
         return [chunk.id, result.text.trim() || null] as const;
       } catch {
         // A stopped call was billed for its prompt all the same.

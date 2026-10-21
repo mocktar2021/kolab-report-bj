@@ -1,4 +1,4 @@
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { generateObject, generateText, NoObjectGeneratedError, type LanguageModelUsage } from "ai";
 import {
   buildPrompt,
@@ -41,10 +41,10 @@ export type RunDeps = {
   /** Model id written in the report. */
   modelId: string;
   /** The model that writes the draft. It gets the refs so the mock can cite them. */
-  generator: (refs: SourceRefs, schema: OutputSchema) => LanguageModelV3;
+  generator: (refs: SourceRefs, schema: OutputSchema) => LanguageModelV4;
   /** The fast model that summarizes overflow chunks. */
-  summarizer: LanguageModelV3;
-  judge: { model: LanguageModelV3; rubric: string } | null;
+  summarizer: LanguageModelV4;
+  judge: { model: LanguageModelV4; rubric: string } | null;
   summaryConcurrency?: number;
 };
 
@@ -140,7 +140,7 @@ type Attempt =
   | { ok: false; invalid: boolean; error: unknown; rawText: string; usage: TokenUsage };
 
 async function attempt(
-  model: LanguageModelV3,
+  model: LanguageModelV4,
   schema: OutputSchema,
   refs: SourceRefs,
   call: { system: string; prompt: string; temperature: number; maxTokens: number },
@@ -151,7 +151,7 @@ async function attempt(
       schema: outputSchemaFor(schema, refs),
       schemaName: "brouillon",
       schemaDescription: "Brouillon de section de rapport d'expertise, en français.",
-      system: call.system,
+      instructions: call.system,
       prompt: call.prompt,
       temperature: call.temperature,
       maxOutputTokens: call.maxTokens,
@@ -199,7 +199,7 @@ async function summarize(
     try {
       const result = await generateText({
         model: deps.summarizer,
-        system: request.system,
+        instructions: request.system,
         prompt: request.prompt,
         maxOutputTokens: request.maxOutputTokens,
         temperature: 0,
@@ -207,7 +207,7 @@ async function summarize(
         maxRetries: 2,
       });
       summaries.set(chunk.id, result.text);
-      usage = addUsage(usage, usageOf(result.totalUsage));
+      usage = addUsage(usage, usageOf(result.usage));
     } catch {
       summaries.set(chunk.id, null);
     }

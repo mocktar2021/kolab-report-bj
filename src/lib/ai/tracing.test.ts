@@ -7,7 +7,14 @@ import {
   type ReadableSpan,
   type SpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
-import { AiSpanFilter, isAiSpan, parseOtlpHeaders, tracingDestination, withDraftSpan } from "./tracing";
+import {
+  AI_SDK_TRACER,
+  AiSpanFilter,
+  isAiSpan,
+  parseOtlpHeaders,
+  tracingDestination,
+  withDraftSpan,
+} from "./tracing";
 
 describe("tracingDestination", () => {
   it("is off unless AI_TRACING is on", () => {
@@ -77,21 +84,22 @@ describe("AiSpanFilter", () => {
       shutdown: vi.fn(),
     } satisfies SpanProcessor;
     const filter = new AiSpanFilter(inner);
-    for (const name of [
-      "kolab.ai.draft",
-      "ai.streamObject",
-      "ai.streamObject.doStream",
-      "GET /fr",
-      "fetch POST",
-    ]) {
-      filter.onEnd({ name } as ReadableSpan);
+    const spans = [
+      { name: "kolab.ai.draft", scope: "kolab-report" },
+      { name: "invoke_agent claude-sonnet-5-5", scope: AI_SDK_TRACER },
+      { name: "chat claude-sonnet-5-5", scope: AI_SDK_TRACER },
+      { name: "GET /fr", scope: "next.js" },
+      { name: "chat other", scope: "gen_ai" },
+    ];
+    for (const { name, scope } of spans) {
+      filter.onEnd({ name, instrumentationScope: { name: scope } } as ReadableSpan);
     }
     expect(inner.onEnd.mock.calls.map(([span]) => (span as ReadableSpan).name)).toEqual([
       "kolab.ai.draft",
-      "ai.streamObject",
-      "ai.streamObject.doStream",
+      "invoke_agent claude-sonnet-5-5",
+      "chat claude-sonnet-5-5",
     ]);
-    expect(isAiSpan("aide")).toBe(false);
+    expect(isAiSpan({ name: "aide", instrumentationScope: { name: "kolab-report" } })).toBe(false);
   });
 });
 

@@ -1,8 +1,8 @@
 import type {
-  LanguageModelV3,
-  LanguageModelV3CallOptions,
-  LanguageModelV3StreamPart,
-  LanguageModelV3Usage,
+  LanguageModelV4,
+  LanguageModelV4CallOptions,
+  LanguageModelV4StreamPart,
+  LanguageModelV4Usage,
 } from "@ai-sdk/provider";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import type { DraftOutputByKey, SourceRefs } from "./schemas";
@@ -25,7 +25,7 @@ function tokens(text: string): number {
   return Math.ceil(text.length / 3);
 }
 
-function promptText(prompt: LanguageModelV3CallOptions["prompt"]): string {
+function promptText(prompt: LanguageModelV4CallOptions["prompt"]): string {
   return prompt
     .map((message) =>
       typeof message.content === "string"
@@ -35,7 +35,7 @@ function promptText(prompt: LanguageModelV3CallOptions["prompt"]): string {
     .join("\n");
 }
 
-function usageFor(prompt: LanguageModelV3CallOptions["prompt"], text: string): LanguageModelV3Usage {
+function usageFor(prompt: LanguageModelV4CallOptions["prompt"], text: string): LanguageModelV4Usage {
   const input = tokens(promptText(prompt));
   const output = tokens(text);
   return {
@@ -47,9 +47,9 @@ function usageFor(prompt: LanguageModelV3CallOptions["prompt"], text: string): L
 const STOP = { unified: "stop", raw: "stop" } as const;
 
 /** A model that always answers `respond()`, streamed in small pieces with a short pause between them. */
-export function mockModel(respond: () => string, modelId = "mock"): LanguageModelV3 {
+export function mockModel(respond: () => string, modelId = "mock"): LanguageModelV4 {
   return {
-    specificationVersion: "v3",
+    specificationVersion: "v4",
     provider: "mock",
     modelId,
     supportedUrls: {},
@@ -67,7 +67,7 @@ export function mockModel(respond: () => string, modelId = "mock"): LanguageMode
       const parts = chunks(text);
       const usage = usageFor(options.prompt, text);
       const signal = options.abortSignal;
-      const stream = new ReadableStream<LanguageModelV3StreamPart>({
+      const stream = new ReadableStream<LanguageModelV4StreamPart>({
         async start(controller) {
           controller.enqueue({ type: "stream-start", warnings: [] });
           controller.enqueue({ type: "text-start", id: "0" });

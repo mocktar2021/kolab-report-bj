@@ -1,5 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { describe, expect, it, vi } from "vitest";
 import { PROMPT_LIMITS } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN } from "./context/tokens";
@@ -20,12 +20,12 @@ const INVALID = JSON.stringify({
   sources: [{ deliverable: "L9", detail: "x" }],
 });
 
-function answers(...texts: string[]): LanguageModelV3 {
+function answers(...texts: string[]): LanguageModelV4 {
   let call = 0;
   return mockModel(() => texts[Math.min(call++, texts.length - 1)] ?? "");
 }
 
-function draftCall(model: LanguageModelV3, overrides: Partial<DraftCall> = {}): DraftCall {
+function draftCall(model: LanguageModelV4, overrides: Partial<DraftCall> = {}): DraftCall {
   return {
     model,
     schema: "section_draft",

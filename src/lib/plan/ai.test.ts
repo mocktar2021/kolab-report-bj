@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { describe, expect, it } from "vitest";
 import { mockModel } from "@/lib/ai/mock";
 import { PII_PLACEHOLDERS } from "@/lib/ai/context/redact";
@@ -18,7 +18,7 @@ async function pdfText(): Promise<string> {
   return result.text;
 }
 
-const call = (model: LanguageModelV3, text = "texte") => ({ model, text, pages: 2, truncated: false });
+const call = (model: LanguageModelV4, text = "texte") => ({ model, text, pages: 2, truncated: false });
 
 describe("readPlanWithAi", () => {
   it("turns the model's answer for the sample PDF into a plan", async () => {
@@ -78,7 +78,7 @@ describe("readPlanWithAi", () => {
   });
 
   it("reports a provider that fails before answering, with nothing billed", async () => {
-    const broken: LanguageModelV3 = {
+    const broken: LanguageModelV4 = {
       ...mockModel(() => ""),
       async doGenerate() {
         throw new Error("service indisponible");

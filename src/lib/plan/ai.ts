@@ -1,4 +1,4 @@
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { generateText, NoObjectGeneratedError, Output } from "ai";
 import { z } from "zod";
 import { redactPii } from "@/lib/ai/context/redact";
@@ -70,7 +70,7 @@ export type PlanReaderResult =
   | { ok: false; error: PlanReaderFailure; usage: TokenUsage; usageEstimated: boolean };
 
 export type PlanReaderCall = {
-  model: LanguageModelV3;
+  model: LanguageModelV4;
   text: string;
   pages: number;
   truncated: boolean;
@@ -98,7 +98,7 @@ export async function readPlanWithAi(call: PlanReaderCall): Promise<PlanReaderRe
   try {
     result = await generateText({
       model: call.model,
-      system: PLAN_SYSTEM_PROMPT,
+      instructions: PLAN_SYSTEM_PROMPT,
       prompt,
       output: Output.object({
         schema: planOutputSchema,
@@ -132,7 +132,7 @@ export async function readPlanWithAi(call: PlanReaderCall): Promise<PlanReaderRe
     };
   }
 
-  const usage = usageOf(result.totalUsage);
+  const usage = usageOf(result.usage);
   let output: PlanOutput;
   try {
     // Throws when the call ended without an object, cut by the length cap for example.

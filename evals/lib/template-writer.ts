@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { z } from "zod";
 import { mockModel } from "@/lib/ai/mock";
 import { estimateCost, providerModel, readAiSettings } from "@/lib/ai/models";
@@ -149,7 +149,7 @@ export type WriterCaseResult = {
 };
 
 export type WriterDeps = {
-  model: LanguageModelV3;
+  model: LanguageModelV4;
   tier: ModelTier;
   settings: ReturnType<typeof readAiSettings>;
 };
@@ -188,7 +188,7 @@ export async function runWriterCase(value: WriterCase, deps: WriterDeps): Promis
 }
 
 /** A model that answers the case's reference, as the writer's JSON. */
-export function mockWriterModel(value: WriterCase): LanguageModelV3 {
+export function mockWriterModel(value: WriterCase): LanguageModelV4 {
   return mockModel(() => JSON.stringify(value.reference), "mock");
 }
 
