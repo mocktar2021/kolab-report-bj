@@ -233,7 +233,7 @@ The flow we recommend:
 
 ## Tracing
 
-Tracing is off unless `AI_TRACING=true`. When it is on, each generation is one trace: a `kolab.ai.draft` span with the prompt version, the model, tokens, latency, cost and error, and the AI SDK's spans (`experimental_telemetry`) below it. A "Rédiger avec l'IA" call on the new template page is a `kolab.ai.template_writer` trace with the same figures. Spans go out over OTLP:
+Tracing is off unless `AI_TRACING=true`. When it is on, each generation is one trace: a `kolab.ai.draft` span with the prompt version, the model, tokens, latency, cost and error, and the AI SDK's spans below it. Since AI SDK 7 those come from `@ai-sdk/otel`, follow the OpenTelemetry GenAI conventions (`invoke_agent <model>`, `chat <model>`, with the call name in `gen_ai.agent.name`) and are sent only for the calls that pass `aiTelemetry()` (`src/lib/ai/telemetry.ts`), so the plan reading sends none. A "Rédiger avec l'IA" call on the new template page is a `kolab.ai.template_writer` trace with the same figures. Spans go out over OTLP:
 
 - to Langfuse Cloud EU with `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` (`LANGFUSE_BASE_URL` defaults to `https://cloud.langfuse.com`);
 - or to any OTLP backend with the standard `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS`.

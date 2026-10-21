@@ -13,7 +13,7 @@ KolabReport is a French-language progressive web app for writing expert reports 
 
 ## Getting started
 
-Requirements: Node.js 20.11 or later, Docker for the local Supabase stack, and Python 3 for the commit message check (optional).
+Requirements: Node.js 22 or later (AI SDK 7), Docker for the local Supabase stack, and Python 3 for the commit message check (optional).
 
 ```bash
 npm install                    # also installs the git hooks

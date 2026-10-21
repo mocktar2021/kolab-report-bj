@@ -1,5 +1,5 @@
-import type { LanguageModelV3 } from "@ai-sdk/provider";
-import { NoObjectGeneratedError, streamObject, type LanguageModelUsage, type TelemetrySettings } from "ai";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
+import { NoObjectGeneratedError, streamObject, type LanguageModelUsage, type TelemetryOptions } from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN, estimateTokens } from "./context/tokens";
 import { noThinking } from "./models";
@@ -37,7 +37,7 @@ export type DraftResult =
   ({ ok: true; output: DraftOutput } & DraftOutcome) | ({ ok: false; error: DraftFailure } & DraftOutcome);
 
 export type DraftCall = {
-  model: LanguageModelV3;
+  model: LanguageModelV4;
   schema: OutputSchema;
   refs: SourceRefs;
   system: string;
@@ -51,9 +51,9 @@ export type DraftCall = {
   onPartial: (partial: unknown) => void;
   onRepair: () => void;
   /** Used once when `model` fails before answering. */
-  fallback?: LanguageModelV3 | null;
+  fallback?: LanguageModelV4 | null;
   /** AI SDK spans (src/lib/ai/tracing.ts). */
-  telemetry?: TelemetrySettings;
+  telemetry?: TelemetryOptions;
 };
 
 /** Longest previous answer quoted back to the model in the repair call. */
@@ -127,7 +127,7 @@ Renvoie l'objet complet, corrigé, dans le format demandé, sans rien ajouter d'
 
 async function attempt(
   call: DraftCall,
-  model: LanguageModelV3,
+  model: LanguageModelV4,
   prompt: string,
   signal: AbortSignal,
 ): Promise<Attempt> {
@@ -155,7 +155,7 @@ async function attempt(
       schema: outputSchemaFor(call.schema, call.refs),
       schemaName: "brouillon",
       schemaDescription: "Brouillon de section de rapport d'expertise, en français.",
-      system: call.system,
+      instructions: call.system,
       prompt,
       temperature: call.temperature,
       maxOutputTokens: call.maxTokens,
@@ -164,7 +164,7 @@ async function attempt(
       abortSignal: signal,
       // Errors arrive in the stream below; this keeps them out of the logs twice.
       onError: () => undefined,
-      experimental_telemetry: call.telemetry,
+      telemetry: call.telemetry,
     });
     for await (const part of result.fullStream) {
       // An error part alone means the provider refused the call, which isn't billed.

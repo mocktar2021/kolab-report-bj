@@ -12,7 +12,7 @@ import type { ReadableSpan, SpanExporter, SpanProcessor } from "@opentelemetry/s
 // registers OpenTelemetry and sends spans over OTLP: to Langfuse when its
 // keys are set, else to OTEL_EXPORTER_OTLP_ENDPOINT. Each generation is one
 // trace: a "kolab.ai.draft" root span with prompt version, model, tokens,
-// latency, cost and error, and the AI SDK's spans below it. Only these
+// latency, cost and error, and the AI SDK's spans below it (telemetry.ts). Only these
 // spans leave the server, not the app's other requests. Prompt and output
 // text stay out unless AI_TRACE_CONTENT=true (it needs a DPA with the vendor).
 
@@ -61,9 +61,18 @@ export function tracingDestination(env: Env): TracingDestination | null {
   return { url, headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS) };
 }
 
+/**
+ * The tracer of the AI SDK's spans (src/lib/ai/telemetry.ts). Since AI SDK 7
+ * they follow the GenAI conventions ("invoke_agent", "chat <model>"), so they
+ * are told apart by their tracer, not their name (KRB-225).
+ */
+export const AI_SDK_TRACER = "kolab.ai-sdk";
+
+type SpanIdentity = Pick<ReadableSpan, "name" | "instrumentationScope">;
+
 /** Spans of AI calls: ours and the AI SDK's. */
-export function isAiSpan(name: string): boolean {
-  return name.startsWith("kolab.ai") || name.startsWith("ai.");
+export function isAiSpan(span: SpanIdentity): boolean {
+  return span.name.startsWith("kolab.ai") || span.instrumentationScope?.name === AI_SDK_TRACER;
 }
 
 /** Passes only AI spans to the exporting processor. */
@@ -71,11 +80,11 @@ export class AiSpanFilter implements SpanProcessor {
   constructor(private readonly inner: SpanProcessor) {}
 
   onStart(span: Parameters<SpanProcessor["onStart"]>[0], parentContext: Context): void {
-    if (isAiSpan(span.name)) this.inner.onStart(span, parentContext);
+    if (isAiSpan(span)) this.inner.onStart(span, parentContext);
   }
 
   onEnd(span: ReadableSpan): void {
-    if (isAiSpan(span.name)) this.inner.onEnd(span);
+    if (isAiSpan(span)) this.inner.onEnd(span);
   }
 
   forceFlush(): Promise<void> {

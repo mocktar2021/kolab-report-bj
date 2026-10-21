@@ -7,6 +7,7 @@ import { checkDailyCost } from "@/lib/ai/generation-store";
 import { mockModel } from "@/lib/ai/mock";
 import { estimateCost } from "@/lib/ai/models";
 import { sampleWrittenTemplate, writeTemplate } from "@/lib/ai/template-writer";
+import { aiTelemetry } from "@/lib/ai/telemetry";
 import { flushTraces, withDraftSpan } from "@/lib/ai/tracing";
 import { getWorkspaceBillingState } from "@/lib/billing/state";
 import { log } from "@/lib/log";
@@ -129,13 +130,7 @@ export async function writeTemplateWithAi(request: WriteTemplateRequest): Promis
             description: settings.redactPii ? redactPii(description).text : description,
             outputSchema,
             signal: AbortSignal.timeout(WRITER_TIMEOUT_MS),
-            telemetry: {
-              isEnabled: settings.tracing.enabled,
-              recordInputs: settings.tracing.recordContent,
-              recordOutputs: settings.tracing.recordContent,
-              functionId: "kolab.template_writer",
-              metadata: { assistCallId: callId, workspaceId },
-            },
+            telemetry: aiTelemetry(settings.tracing, "kolab.template_writer"),
           })
         : ({
             ok: false,

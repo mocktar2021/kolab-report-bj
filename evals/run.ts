@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { CONTEXT_VERSION } from "@/lib/ai/context";
 import { providerModel, readAiSettings, type AiSettings } from "@/lib/ai/models";
 import { OUTPUT_SCHEMA_VERSION } from "@/lib/ai/schemas";
@@ -173,7 +173,7 @@ function templatesFor(options: Options): Map<string, EvalTemplate> {
 
 type Env = Record<string, string | undefined>;
 
-function realModel(settings: AiSettings, tier: ModelTier, env: Env, modelId?: string): LanguageModelV3 {
+function realModel(settings: AiSettings, tier: ModelTier, env: Env, modelId?: string): LanguageModelV4 {
   const chosen = modelId ? { ...settings, models: { ...settings.models, [tier]: modelId } } : settings;
   const model = providerModel(chosen, tier, env);
   if (!model)

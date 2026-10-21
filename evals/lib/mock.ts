@@ -1,4 +1,4 @@
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
 import type { SourceRefs } from "@/lib/ai/schemas";
 import type { OutputSchema } from "@/lib/prompts/catalog";
@@ -11,14 +11,14 @@ import { mockJudgeAnswer } from "./judge";
 export const MOCK_SUMMARY =
   "Cet extrait du livrable reprend des constats de terrain et des relevés chiffrés, résumés ici sans détail.";
 
-export function mockGenerator(refs: SourceRefs, schema: OutputSchema): LanguageModelV3 {
+export function mockGenerator(refs: SourceRefs, schema: OutputSchema): LanguageModelV4 {
   return mockModel(() => JSON.stringify(sampleOutput(schema, refs)), "mock");
 }
 
-export function mockSummarizer(): LanguageModelV3 {
+export function mockSummarizer(): LanguageModelV4 {
   return mockModel(() => MOCK_SUMMARY, "mock-summary");
 }
 
-export function mockJudge(): LanguageModelV3 {
+export function mockJudge(): LanguageModelV4 {
   return mockModel(() => JSON.stringify(mockJudgeAnswer()), "mock-judge");
 }

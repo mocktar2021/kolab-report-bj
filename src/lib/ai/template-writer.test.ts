@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { describe, expect, it } from "vitest";
 import { checkTemplate } from "@/lib/prompts/template";
 import { WRITER_SYSTEM_PROMPT } from "@/lib/prompts/writer";
@@ -13,7 +13,7 @@ const DESCRIPTION =
 function recording(text: string) {
   const calls: { system: string; user: string }[] = [];
   const base = mockModel(() => text);
-  const model: LanguageModelV3 = {
+  const model: LanguageModelV4 = {
     ...base,
     async doGenerate(options) {
       const system = options.prompt.find((message) => message.role === "system");
@@ -95,7 +95,7 @@ describe("writeTemplate", () => {
   });
 
   it("reports a provider error without usage, and a timeout with an estimate", async () => {
-    const broken: LanguageModelV3 = {
+    const broken: LanguageModelV4 = {
       ...mockModel(() => ""),
       async doGenerate() {
         throw new Error("overloaded");

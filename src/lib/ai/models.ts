@@ -1,6 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import type { LanguageModelV3 } from "@ai-sdk/provider";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { z } from "zod";
 import type { ModelTier } from "@/lib/prompts/catalog";
 
@@ -144,7 +144,7 @@ export function readAiSettings(env: Env): AiSettings {
  * by default since AI SDK 6, so the schema is enforced as it was with
  * `structuredOutputs: true`.
  */
-function openAiChat(env: Env, modelId: string): LanguageModelV3 {
+function openAiChat(env: Env, modelId: string): LanguageModelV4 {
   return createOpenAI({ apiKey: env.OPENAI_API_KEY }).chat(modelId);
 }
 
@@ -153,7 +153,7 @@ function openAiChat(env: Env, modelId: string): LanguageModelV3 {
  * provider has no model here: callers build one with mockModel() for the
  * output they expect.
  */
-export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): LanguageModelV3 | null {
+export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): LanguageModelV4 | null {
   if (!settings.configured) return null;
   const modelId = settings.models[tier];
   switch (settings.provider) {
@@ -179,7 +179,7 @@ export function noThinking(): { anthropic: { thinking: { type: "disabled" } } } 
 }
 
 /** The fallback model, or null when none is set. */
-export function fallbackModel(settings: AiSettings, env: Env): LanguageModelV3 | null {
+export function fallbackModel(settings: AiSettings, env: Env): LanguageModelV4 | null {
   if (!settings.fallback) return null;
   const { provider, model } = settings.fallback;
   return provider === "anthropic"

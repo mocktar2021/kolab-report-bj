@@ -1,5 +1,5 @@
-import type { LanguageModelV3 } from "@ai-sdk/provider";
-import { generateText, NoObjectGeneratedError, Output, type TelemetrySettings } from "ai";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
+import { generateText, NoObjectGeneratedError, Output, type TelemetryOptions } from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import {
   readWriterOutput,
@@ -36,12 +36,12 @@ export type TemplateWriterResult =
     };
 
 export type TemplateWriterCall = {
-  model: LanguageModelV3;
+  model: LanguageModelV4;
   description: string;
   /** The type of result chosen in the form, as a hint. */
   outputSchema: OutputSchema | null;
   signal?: AbortSignal;
-  telemetry?: TelemetrySettings;
+  telemetry?: TelemetryOptions;
 };
 
 function usageOf(usage: { inputTokens?: number; outputTokens?: number } | undefined): TokenUsage {
@@ -56,7 +56,7 @@ function usageOf(usage: { inputTokens?: number; outputTokens?: number } | undefi
 function callModel(call: TemplateWriterCall, prompt: string) {
   return generateText({
     model: call.model,
-    system: WRITER_SYSTEM_PROMPT,
+    instructions: WRITER_SYSTEM_PROMPT,
     prompt,
     output: Output.object({
       schema: writerOutputSchema,
@@ -67,7 +67,7 @@ function callModel(call: TemplateWriterCall, prompt: string) {
     providerOptions: noThinking(),
     maxRetries: 1,
     abortSignal: call.signal,
-    experimental_telemetry: call.telemetry,
+    telemetry: call.telemetry,
   });
 }
 
@@ -106,7 +106,7 @@ export async function writeTemplate(call: TemplateWriterCall): Promise<TemplateW
     };
   }
 
-  const usage = usageOf(result.totalUsage);
+  const usage = usageOf(result.usage);
   const failed = (rejection?: WriterRejection): TemplateWriterResult => ({
     ok: false,
     error: "invalidOutput",
