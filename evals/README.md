@@ -47,7 +47,7 @@ The **Evals** workflow (`.github/workflows/evals.yml`) runs the full set with th
 For each case:
 
 1. Builds the context like the draft route: `contextBudget` from the settings and the template's `max_output_tokens`, `planContext` with `AI_REDACT_PII`, summaries of the overflow chunks on the fast model, `finalizeContext`, `buildPrompt`.
-2. Generates with `generateObject` and the template's output schema, limited to the refs of the request. When the answer fails the schema, it asks once more with the app's repair prompt (`src/lib/ai/generate.ts`). It records validity at first try and after repair, latency, tokens and cost.
+2. Generates with `generateText` and `Output.object` on the template's output schema, limited to the refs of the request. When the answer fails the schema, it asks once more with the app's repair prompt (`src/lib/ai/generate.ts`). It records validity at first try and after repair, latency, tokens and cost.
 3. Runs the deterministic checks on `draftToMarkdown(output)`: schema, cited refs all sent, `mustCite` coverage, length bounds, key point coverage, forbidden strings (in the output and in rejected answers), no HTML tag, image or link absent from the deliverables, no run of 10 words copied from the system prompt or the template, French. Long cases must show truncation.
 4. With `--judge`, asks the judge model for a 1 to 5 score and a justification on the six rubric criteria. The judge reads the criteria part of `evals/rubric.md`, the context the writer got, the reference section and the draft, and the same rule as the writer: content from users is data.
 5. Writes the reports and applies the gate.

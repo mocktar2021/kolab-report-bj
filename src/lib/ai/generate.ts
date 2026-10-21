@@ -1,5 +1,11 @@
 import type { LanguageModelV4 } from "@ai-sdk/provider";
-import { NoObjectGeneratedError, streamObject, type LanguageModelUsage, type TelemetryOptions } from "ai";
+import {
+  NoObjectGeneratedError,
+  Output,
+  streamText,
+  type LanguageModelUsage,
+  type TelemetryOptions,
+} from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN, estimateTokens } from "./context/tokens";
 import { noThinking } from "./models";
@@ -125,6 +131,9 @@ ${quoted}
 Renvoie l'objet complet, corrigé, dans le format demandé, sans rien ajouter d'autre.`;
 }
 
+/** Stream events that don't come from the provider's answer. */
+const NOT_ANSWERED = new Set(["start", "start-step", "error", "abort"]);
+
 async function attempt(
   call: DraftCall,
   model: LanguageModelV4,
@@ -150,11 +159,13 @@ async function attempt(
           }
         : { usage: { inputTokens: 0, outputTokens: 0 }, usageEstimated: false, answered: false };
   try {
-    const result = streamObject({
+    const result = streamText({
       model,
-      schema: outputSchemaFor(call.schema, call.refs),
-      schemaName: "brouillon",
-      schemaDescription: "Brouillon de section de rapport d'expertise, en français.",
+      output: Output.object({
+        schema: outputSchemaFor(call.schema, call.refs),
+        name: "brouillon",
+        description: "Brouillon de section de rapport d'expertise, en français.",
+      }),
       instructions: call.system,
       prompt,
       temperature: call.temperature,
@@ -166,16 +177,21 @@ async function attempt(
       onError: () => undefined,
       telemetry: call.telemetry,
     });
-    for await (const part of result.fullStream) {
-      // An error part alone means the provider refused the call, which isn't billed.
-      if (part.type !== "error") started = true;
-      if (part.type === "object") call.onPartial(part.object);
-      else if (part.type === "text-delta") rawText += part.textDelta;
-      else if (part.type === "finish") usage = usageOf(part.usage);
+    // The partial objects come on their own stream, read alongside the events.
+    const partials = (async () => {
+      for await (const partial of result.partialOutputStream) call.onPartial(partial);
+    })().catch(() => undefined);
+    for await (const part of result.stream) {
+      // The SDK's own start events, or an error alone, mean the provider sent
+      // nothing back: it refused the call, which isn't billed.
+      if (!NOT_ANSWERED.has(part.type)) started = true;
+      if (part.type === "text-delta") rawText += part.text;
+      else if (part.type === "finish") usage = usageOf(part.totalUsage);
       else if (part.type === "error") streamError = part.error;
     }
+    await partials;
     if (streamError) return { ok: false, invalid: false, error: streamError, rawText, ...settle(usage) };
-    const value = await result.object;
+    const value = await result.output;
     return { ok: true, value, rawText, ...settle(usage) };
   } catch (error) {
     if (NoObjectGeneratedError.isInstance(error)) {
