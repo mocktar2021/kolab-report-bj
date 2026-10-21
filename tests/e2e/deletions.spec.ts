@@ -282,9 +282,7 @@ test("an owner deletes a workspace from its settings, then the last one", async 
 
   // The owner opens the settings from the switcher.
   const page = await pageFor(browser, owner);
-  await page
-    .getByRole("button", { name: "Espace de travail actuel : Espace Parakou", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Espace de travail actuel : Espace Parakou", exact: true }).click();
   await page.getByRole("menuitem", { name: "Paramètres de l'espace" }).click();
   await expect(page).toHaveURL(new RegExp(`/fr/espaces/${firstId}/parametres$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Paramètres de Espace Parakou");
