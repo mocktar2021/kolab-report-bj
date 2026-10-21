@@ -24,7 +24,6 @@ export function SearchTrigger({ onOpen, collapsible = false, className }: Search
     <button
       type="button"
       onClick={onOpen ?? (() => palette?.open("all"))}
-      aria-label={t("searchLabel")}
       aria-keyshortcuts="Meta+K Control+K"
       className={cn(
         "group flex h-9 w-full items-center gap-2.5 rounded-lg border bg-background/70 px-2.5 text-sm text-muted-foreground shadow-sm outline-none transition-[color,border-color,box-shadow] hover:border-foreground/20 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",

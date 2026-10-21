@@ -398,7 +398,8 @@ test("menus, dialogs and the command palette are labelled and give the focus bac
 
   await test.step("workspace menu", async () => {
     const trigger = banner.getByRole("button", {
-      name: "Espace de travail actuel : Clavier Abomey. Changer d'espace",
+      name: "Espace de travail actuel : Clavier Abomey",
+      exact: true,
     });
     await tabTo(page, trigger, { backwards: true });
     await page.keyboard.press("Enter");
@@ -414,7 +415,7 @@ test("menus, dialogs and the command palette are labelled and give the focus bac
   });
 
   await test.step("command palette", async () => {
-    const trigger = banner.getByRole("button", { name: "Rechercher : ouvrir la palette de commandes" });
+    const trigger = banner.getByRole("button", { name: "Rechercher", exact: true });
     await tabTo(page, trigger);
     await page.keyboard.press("Enter");
     const palette = page.getByRole("dialog", { name: "Palette de commandes" });

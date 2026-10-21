@@ -38,7 +38,7 @@ test.beforeAll(async () => {
 });
 
 function switcher(page: Page, name: string) {
-  return page.getByRole("button", { name: `Espace de travail actuel : ${name}. Changer d'espace` });
+  return page.getByRole("button", { name: `Espace de travail actuel : ${name}`, exact: true });
 }
 
 test("the switcher groups the workspaces by organization", async ({ page }) => {
@@ -46,9 +46,9 @@ test("the switcher groups the workspaces by organization", async ({ page }) => {
   await switcher(page, "Mission Parakou").click();
   const menu = page.getByRole("menu", { name: /^Espace de travail actuel/ });
   // Only the current workspace's organization is open (KRB-209).
-  const agence = menu.getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
+  const agence = menu.getByRole("menuitem", { name: "Agence Ahouandjinou : 1 espace" });
   await expect(agence).toHaveAttribute("aria-expanded", "false");
-  await expect(menu.getByRole("menuitem", { name: "Cabinet Zinsou, 2 espaces" })).toHaveAttribute(
+  await expect(menu.getByRole("menuitem", { name: "Cabinet Zinsou : 2 espaces" })).toHaveAttribute(
     "aria-expanded",
     "true",
   );
@@ -125,7 +125,7 @@ test("with the keyboard, an organization opens and leads to its reports", async 
   await expect(page.getByRole("menuitem", { name: "Rechercher un espace" })).toBeFocused();
   // The first organization by name comes right after the search, closed.
   await page.keyboard.press("ArrowDown");
-  const agence = page.getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
+  const agence = page.getByRole("menuitem", { name: "Agence Ahouandjinou : 1 espace" });
   await expect(agence).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(agence).toHaveAttribute("aria-expanded", "true");

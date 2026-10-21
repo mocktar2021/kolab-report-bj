@@ -178,7 +178,6 @@ function WorkspaceGroups({
         {collapsible ? (
           <DropdownMenuItem
             aria-expanded={expanded}
-            aria-label={t("organizationToggleLabel", { organization: name, count: group.workspaces.length })}
             className="h-8 text-xs font-medium text-muted-foreground"
             // The menu stays open: the click only opens or closes the group.
             onSelect={(event) => {
@@ -202,7 +201,13 @@ function WorkspaceGroups({
             <span id={labelId} className="min-w-0 truncate">
               {name}
             </span>
-            <span className="ml-auto shrink-0 font-normal tabular-nums">{group.workspaces.length}</span>
+            {/* Name from the text, "<organization> : 2 espaces", which holds the visible label (KRB-222). */}
+            <span className="ml-auto shrink-0 font-normal tabular-nums">
+              {t.rich("organizationToggleCount", {
+                count: group.workspaces.length,
+                hidden: (chunks) => <span className="sr-only">{chunks}</span>,
+              })}
+            </span>
           </DropdownMenuItem>
         ) : (
           <DropdownMenuLabel id={labelId} className="truncate">

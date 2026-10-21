@@ -74,9 +74,9 @@ async function openSwitcher(workspaces = WORKSPACES, onSearch?: () => void, onNa
 const trigger = () => screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
 
 const agenceRow = (menu: HTMLElement) =>
-  within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou, 1 espace" });
+  within(menu).getByRole("menuitem", { name: "Agence Ahouandjinou : 1 espace" });
 const zinsouRow = (menu: HTMLElement) =>
-  within(menu).getByRole("menuitem", { name: "Cabinet Zinsou, 2 espaces" });
+  within(menu).getByRole("menuitem", { name: "Cabinet Zinsou : 2 espaces" });
 
 describe("WorkspaceSwitcher (KRB-206)", () => {
   it("groups the workspaces under their organization, both sorted by name", async () => {
@@ -127,9 +127,9 @@ describe("WorkspaceSwitcher organizations (KRB-209)", () => {
   it("opens only the current workspace's organization, and shows a count for each", async () => {
     const { menu } = await openSwitcher();
     expect(zinsouRow(menu)).toHaveAttribute("aria-expanded", "true");
-    expect(zinsouRow(menu)).toHaveTextContent("Cabinet Zinsou2");
+    expect(zinsouRow(menu)).toHaveTextContent("Cabinet Zinsou : 2 espaces");
     expect(agenceRow(menu)).toHaveAttribute("aria-expanded", "false");
-    expect(agenceRow(menu)).toHaveTextContent("Agence Ahouandjinou1");
+    expect(agenceRow(menu)).toHaveTextContent("Agence Ahouandjinou : 1 espace");
     expect(within(menu).queryByRole("group", { name: "Agence Ahouandjinou" })).not.toBeInTheDocument();
     expect(within(menu).getAllByRole("menuitemradio")).toHaveLength(2);
   });

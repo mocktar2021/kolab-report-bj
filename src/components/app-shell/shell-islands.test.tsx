@@ -166,16 +166,16 @@ describe("PaletteProvider", () => {
         <SearchIconButton className="" />
       </>,
     );
-    const [trigger, icon] = screen.getAllByRole("button", {
-      name: "Rechercher : ouvrir la palette de commandes",
-    });
-    await user.click(trigger!);
+    // The sidebar button is named by its visible text, the icon button by its label.
+    const trigger = screen.getByRole("button", { name: "Rechercher" });
+    const icon = screen.getByRole("button", { name: "Rechercher : ouvrir la palette de commandes" });
+    await user.click(trigger);
     expect(await screen.findByRole("dialog", { name: "Palette de commandes" })).toHaveAttribute(
       "data-scope",
       "all",
     );
     await user.keyboard("{Control>}k{/Control}");
-    await user.click(icon!);
+    await user.click(icon);
     expect(await screen.findByRole("dialog", { name: "Palette de commandes" })).toBeInTheDocument();
   });
 
