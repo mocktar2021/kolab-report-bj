@@ -10,7 +10,7 @@ Only from a run on what production uses: the production provider and model ids, 
 
 1. Take a nightly run of the **Evals** workflow on `master`, or start one by hand on `master` with the judge and no case list.
 2. Check its summary: gate passed, every case ran, and the model is the production one.
-3. Download its `eval-reports` artifact and copy `baseline.json` to `evals/baseline/production.json`.
+3. Copy `baseline.json` to `evals/baseline/production.json`. It is in the `eval-reports` artifact, and in the run log: the **Summary** step prints it in a folded `baseline.json` group.
 4. Open a PR with only that file and the link to the run.
 
 From a terminal with the production settings, `npm run eval -- --judge --write-baseline evals/baseline/production.json` writes the same file, but a CI run leaves a record anyone can check.

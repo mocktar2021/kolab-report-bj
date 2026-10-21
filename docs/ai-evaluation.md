@@ -205,7 +205,7 @@ The same workflow runs by hand from the Actions tab, with the tier, the judge an
 `evals/baseline/production.json` is the run every PR is compared with. Write it only from a run on what production uses: the production provider and model ids, the prompt versions on `master`, and the production `AI_MAX_INPUT_TOKENS` and `AI_REDACT_PII`. In practice that is a nightly run on `master`, or a manual run of the Evals workflow on `master` with the whole set and the judge.
 
 1. Check the run: gate passed, every case ran (no budget skip), full set, judge on, and the model in the summary is the production one.
-2. Download its `eval-reports` artifact and take `baseline.json`.
+2. Take `baseline.json`: from its `eval-reports` artifact, or from the run log, where the **Summary** step prints it in a folded `baseline.json` group (KRB-160).
 3. Copy it to `evals/baseline/production.json` and open a PR that contains only that file, with the link to the run.
 
 Refresh it after a prompt or model change has shipped to production, after adding golden cases, and after changing the judge model. Never to get a failing PR through. `evals/baseline/README.md` has the same steps.
