@@ -123,6 +123,37 @@ describe("WorkspaceSwitcher (KRB-206)", () => {
   });
 });
 
+describe("WorkspaceSwitcher name (KRB-222)", () => {
+  function renderSwitcher(currentWorkspaceId: string) {
+    render(
+      <NextIntlClientProvider locale="fr" messages={messages} timeZone="Africa/Porto-Novo">
+        <WorkspaceSwitcher workspaces={WORKSPACES} currentWorkspaceId={currentWorkspaceId} />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it("takes its name from its text and reads the organization after it, before and after the menu loads", async () => {
+    const user = userEvent.setup();
+    renderSwitcher(WORKSPACES[0]!.id);
+    const placeholder = screen.getByRole("button", { name: "Espace de travail actuel : Mission Parakou" });
+    expect(placeholder).toHaveAccessibleDescription("Cabinet Zinsou");
+    expect(placeholder).toHaveAttribute("aria-haspopup", "menu");
+
+    placeholder.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("menu");
+    expect(trigger()).toHaveAccessibleDescription("Cabinet Zinsou");
+    expect(trigger()).toHaveAttribute("aria-haspopup", "menu");
+  });
+
+  it("reads the member's role when the workspace has no organization name", () => {
+    renderSwitcher(WORKSPACES[2]!.id);
+    expect(
+      screen.getByRole("button", { name: "Espace de travail actuel : Audit Abomey" }),
+    ).toHaveAccessibleDescription("Administrateur");
+  });
+});
+
 describe("WorkspaceSwitcher organizations (KRB-209)", () => {
   it("opens only the current workspace's organization, and shows a count for each", async () => {
     const { menu } = await openSwitcher();

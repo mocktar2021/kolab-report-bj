@@ -45,7 +45,7 @@ axe 4.14 also checks Label in Name (WCAG 2.5.3, `label-content-name-mismatch`) o
 | Control | Visible text | Name |
 | --- | --- | --- |
 | Search button | Rechercher Ctrl K | Rechercher (the shortcut stays hidden) |
-| Workspace switcher | Espace Parakou, Cabinet Zinsou | Espace de travail actuel : Espace Parakou |
+| Workspace switcher | Espace Parakou, Cabinet Zinsou | Espace de travail actuel : Espace Parakou (the organization, or the role without one, is its description) |
 | Organization row in the workspace menu | Cabinet Zinsou 2 | Cabinet Zinsou : 2 espaces |
 
 Chromium puts a space before and after an `sr-only` span that sits next to visible text, so its words go before the visible text or are joined with " : ".
