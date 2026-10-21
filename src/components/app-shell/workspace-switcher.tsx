@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { useLazyMenu } from "@/components/ui/lazy-menu";
@@ -21,7 +22,8 @@ export type WorkspaceSwitcherProps = {
 /**
  * The switcher's button, before and after its menu loads. Its name comes from
  * its text, "Espace de travail actuel : <name>", so that it holds the visible
- * label (WCAG 2.5.3, KRB-222). The organization or role line stays visual.
+ * label (WCAG 2.5.3, KRB-222). The organization or role line is its
+ * description: hidden from the name, still read after it.
  */
 export function SwitcherButton({
   current,
@@ -30,10 +32,12 @@ export function SwitcherButton({
   ...props
 }: React.ComponentProps<"button"> & { current: MyWorkspace; collapsible: boolean }) {
   const t = useTranslations("Workspaces");
+  const descriptionId = useId();
 
   return (
     <button
       type="button"
+      aria-describedby={descriptionId}
       className={cn(
         "flex h-12 w-full items-center gap-3 rounded-lg px-1.5 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent",
         collapsible && "sidebar-collapsed:justify-center sidebar-collapsed:px-0",
@@ -47,7 +51,7 @@ export function SwitcherButton({
           <span className="sr-only">{t("switcherCurrent")} </span>
           {current.name}
         </span>
-        <span className="block truncate text-xs text-muted-foreground" aria-hidden="true">
+        <span id={descriptionId} className="block truncate text-xs text-muted-foreground" aria-hidden="true">
           {current.organizationName ?? t(`roles.${current.role}`)}
         </span>
       </span>
