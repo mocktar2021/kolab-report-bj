@@ -1,5 +1,5 @@
 import type { LanguageModelV4 } from "@ai-sdk/provider";
-import { generateObject, generateText, NoObjectGeneratedError, type LanguageModelUsage } from "ai";
+import { generateText, NoObjectGeneratedError, Output, type LanguageModelUsage } from "ai";
 import {
   buildPrompt,
   contextBudget,
@@ -146,11 +146,13 @@ async function attempt(
   call: { system: string; prompt: string; temperature: number; maxTokens: number },
 ): Promise<Attempt> {
   try {
-    const result = await generateObject({
+    const result = await generateText({
       model,
-      schema: outputSchemaFor(schema, refs),
-      schemaName: "brouillon",
-      schemaDescription: "Brouillon de section de rapport d'expertise, en français.",
+      output: Output.object({
+        schema: outputSchemaFor(schema, refs),
+        name: "brouillon",
+        description: "Brouillon de section de rapport d'expertise, en français.",
+      }),
       instructions: call.system,
       prompt: call.prompt,
       temperature: call.temperature,
@@ -160,8 +162,8 @@ async function attempt(
     });
     return {
       ok: true,
-      value: result.object,
-      rawText: JSON.stringify(result.object),
+      value: result.output,
+      rawText: JSON.stringify(result.output),
       usage: usageOf(result.usage),
     };
   } catch (error) {
