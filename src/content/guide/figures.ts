@@ -49,6 +49,10 @@ export const GUIDE_FIGURES = {
     "tableau-de-bord.webp",
     "Tableau de bord d'une propriétaire : le nombre de sections non commencées, en cours et terminées, l'avancement global, puis les rapports de l'espace avec leur avancement et le bouton « Nouveau rapport ».",
   ),
+  menuDuCompte: figure(
+    "menu-du-compte.webp",
+    "Menu du compte ouvert en haut à droite du tableau de bord : le nom et l'adresse e-mail, Mon compte, Guide d'utilisation, Thème, Réduire le menu, Se déconnecter, puis les pages d'informations légales.",
+  ),
   nouveauModele: figure(
     "nouveau-modele.webp",
     "Page « Nouveau modèle » : le cadre « Décrire ce que vous attendez » avec le bouton « Décrire le modèle », puis la liste « Copier un modèle KolabReport » avec un bouton Copier par modèle.",

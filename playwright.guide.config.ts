@@ -13,7 +13,9 @@ try {
  * The spec seeds demo data in the local Supabase stack, signs in and writes
  * public/guide/*.webp. Run it on a production build:
  *   npm run build && npm run guide:screenshots
- * Then make the PDF with npm run guide:pdf (README, "User guide").
+ * Then make the PDF with npm run guide:pdf (README, "User guide"). Without
+ * the local stack, .github/workflows/guide-screenshots.yml does both on a
+ * runner and commits them to the branch.
  */
 export default defineConfig({
   testDir: "./tests/guide",

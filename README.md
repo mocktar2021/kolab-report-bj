@@ -143,6 +143,8 @@ npx vitest run src/content/guide
 npx playwright test tests/e2e/guide.spec.ts
 ```
 
+Without the local stack, the "Guide screenshots" workflow takes the screenshots and the PDF on a runner and commits them to the branch: push a branch named `guide-screenshots/<name>`, or run it by hand on a branch from the Actions tab (about 15 minutes of Actions).
+
 `guide:screenshots` needs the local Supabase stack and the `.env.local` of the end-to-end tests, with `AI_PROVIDER=mock` and `AI_DRAFTS_ENABLED=true` for the AI draft. It deletes then recreates the demo accounts ending in `@demo.kolabreport.test` and their organization "Cabinet Lagune Études", so never point it at staging or production. The names, the organization and the reports are invented. A screenshot over 150 KB fails the run. `guide:pdf` needs no database: set `GUIDE_BASE_URL` to print from a server you already run, or `GUIDE_PDF_PORT` to use another port.
 
 ## Authentication

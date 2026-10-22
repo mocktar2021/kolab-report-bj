@@ -25,14 +25,23 @@ test.beforeAll(async () => {
 
 test.beforeEach(async ({ page }) => {
   await useTheme(page, "light");
+  // No install item in the account menu: Chromium offers the install when it
+  // likes, and the screenshots would change from one run to the next.
+  await page.addInitScript(() =>
+    window.addEventListener("beforeinstallprompt", (event) => event.stopImmediatePropagation(), true),
+  );
 });
 
-/** Scrolls so that `target` sits near the top of the window. */
+// The account bar is fixed at the top of the window (KRB-227): what scrolls
+// up goes under it.
+const ACCOUNT_BAR_HEIGHT = 64;
+
+/** Scrolls so that `target` sits near the top of the window, below the account bar. */
 async function scrollTo(target: Locator, offset = 24) {
   await target.evaluate((element, gap) => {
     const top = element.getBoundingClientRect().top + window.scrollY - gap;
     window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
-  }, offset);
+  }, offset + ACCOUNT_BAR_HEIGHT);
 }
 
 /** Saves the window as WebP, as small as needed to stay under FIGURE_MAX_BYTES. */
@@ -131,6 +140,14 @@ test("the owner's screens: workspace, members, report, plan, templates and billi
   await heading(page, "Tableau de bord");
   await expect(main.getByText(REPORT).first()).toBeVisible();
   await capture(page, "tableauDeBord");
+
+  // The account menu, top right (KRB-227).
+  await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+  const accountMenu = page.getByRole("menu", { name: "Menu du compte" });
+  await expect(accountMenu).toBeVisible();
+  await capture(page, "menuDuCompte");
+  await page.keyboard.press("Escape");
+  await expect(accountMenu).toHaveCount(0);
 
   await main.getByRole("button", { name: "Nouveau rapport" }).click();
   const dialog = page.getByRole("dialog", { name: "Nouveau rapport" });

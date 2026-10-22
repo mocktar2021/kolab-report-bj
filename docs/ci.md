@@ -59,6 +59,10 @@ A finding that was reviewed and judged safe goes in `.github/codeql/accepted-fin
 
 On a PR that changes a prompt template migration, an output schema, the context builder, the repair logic, a model id or `evals/`, **Evals on PR** runs the `pr` subset of the AI golden set, posts one comment with the comparison against `evals/baseline/production.json` and fails on a threshold or a regression. Other PRs do not start it: its workflow lists those files in `paths` (KRB-220). It is not a required check, so they merge without it. A migration that does not touch `prompt_library` starts it and gets a notice. Without the API key secret it runs the mock model. **Evals** runs the full set at night after an AI change (KRB-223), and by hand. `docs/ai-evaluation.md` has the triggers, the limits and what to do when it fails.
 
+## Guide screenshots (`.github/workflows/guide-screenshots.yml`)
+
+The screenshots of the user guide and its PDF (KRB-199) need the Supabase stack with demo data. This workflow starts the stack like the end-to-end job, runs `npm run guide:screenshots` and `npm run guide:pdf`, then commits `public/guide/` to the branch it ran on. It never runs on `master`. Start it by pushing a branch named `guide-screenshots/<name>`, or by hand on a branch from the Actions tab, then open the pull request once the images are in. A run takes about 15 minutes of Actions, so run it only when a screen of the guide changed.
+
 ## Dependabot (`.github/dependabot.yml`)
 
 Checks npm packages and GitHub Actions once a month (KRB-220). Minor and patch bumps come grouped in one PR for production packages and one for dev packages. Majors come one by one, at most 5 open at a time. Actions are pinned to a commit SHA with the version in a comment, and Dependabot keeps both up to date.
