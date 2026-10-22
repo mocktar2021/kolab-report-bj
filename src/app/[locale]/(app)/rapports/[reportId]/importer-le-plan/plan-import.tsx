@@ -89,6 +89,7 @@ function PlanSourceForm({
   const t = useTranslations("PlanImport");
   const [busy, setBusy] = useState<"file" | "text" | "pdf" | null>(null);
   const [error, setError] = useState<{ from: "file" | "text"; error: ReadError } | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const id = useId();
@@ -167,17 +168,39 @@ function PlanSourceForm({
         <Label htmlFor={`${id}-file`} className="mt-4 block">
           {t("fileLabel")}
         </Label>
-        <input
-          ref={fileRef}
-          id={`${id}-file`}
-          name="plan"
-          type="file"
-          accept={accept}
-          className="mt-2 block w-full cursor-pointer rounded-lg border border-input bg-card text-sm shadow-sm file:mr-3 file:cursor-pointer file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15"
-          aria-invalid={Boolean(fileError)}
-          aria-describedby={`${id}-file-help${fileError ? ` ${id}-file-error` : ""}`}
-          onChange={() => setError(null)}
-        />
+        {/* The browser writes its file button in its own language, so the field
+            is only visually hidden: it keeps the label, the keyboard focus and
+            the error focus, and a French button opens it (KRB-230). */}
+        <div className="mt-2 flex min-w-0 items-center gap-3">
+          <input
+            ref={fileRef}
+            id={`${id}-file`}
+            name="plan"
+            type="file"
+            accept={accept}
+            className="peer sr-only"
+            aria-invalid={Boolean(fileError)}
+            aria-describedby={`${id}-file-help${fileError ? ` ${id}-file-error` : ""}`}
+            onChange={(event) => {
+              setError(null);
+              setFileName(event.target.files?.[0]?.name ?? null);
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            shape="pill"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="shrink-0 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-aria-[invalid=true]:border-destructive"
+            onClick={() => fileRef.current?.click()}
+          >
+            {t("fileChoose")}
+          </Button>
+          <span aria-hidden="true" className="min-w-0 truncate text-sm text-muted-foreground">
+            {fileName ?? t("fileNone")}
+          </span>
+        </div>
         <div id={`${id}-file-help`} className="mt-2 space-y-1 text-xs text-muted-foreground">
           <p>{pdfEnabled ? t("fileHelp") : t("fileHelpNoPdf")}</p>
           <p>{pdfEnabled ? t("pdfNote") : t("pdfOff")}</p>
