@@ -145,7 +145,7 @@ describe("BatchQueue", () => {
     expect(api.runs[0]?.requests).toHaveLength(3);
     expect(api.runs[0]?.requests[0]?.modelId).toBe("claude-test");
     expect(api.runs[0]?.requests[0]?.options.responseFormat).toMatchObject({ type: "json" });
-    expect(queue.stats).toEqual({ batches: 1, batched: 3, direct: 0 });
+    expect(queue.stats).toEqual({ batches: 1, batched: 3, failed: 0, direct: 0 });
   });
 
   it("puts a call made after the queue went out in the next batch", async () => {
@@ -178,7 +178,12 @@ describe("BatchQueue", () => {
         },
       }),
     });
-    const queue = new BatchQueue(api, { ...FAST, deadline: Date.now() + 60_000 });
+    const logs: string[] = [];
+    const queue = new BatchQueue(api, {
+      ...FAST,
+      deadline: Date.now() + 60_000,
+      log: (line) => logs.push(line),
+    });
     const [bad, busy] = await Promise.allSettled([ask(queue, 1), ask(queue, 2)]);
     expect(bad.status).toBe("rejected");
     expect(busy.status).toBe("rejected");
@@ -192,6 +197,10 @@ describe("BatchQueue", () => {
       529,
       true,
     ]);
+    // Counted apart from the answers, each with its reason in the log.
+    expect(queue.stats).toEqual({ batches: 1, batched: 0, failed: 2, direct: 0 });
+    expect(logs.join("\n")).toMatch(/failed: Batch request failed: invalid_request_error: non/);
+    expect(logs.join("\n")).toMatch(/0 answered, 2 failed/);
   });
 
   it("past the wait cap, cancels the batch and sends what it did not finish to the real model", async () => {
@@ -214,7 +223,7 @@ describe("BatchQueue", () => {
     const [one, two] = await Promise.all([ask(queue, 1), ask(queue, 2)]);
     expect([one.output.n, two.output.n]).toEqual([1, 99]);
     expect(api.runs[0]?.cancelled).toBe(true);
-    expect(queue.stats).toEqual({ batches: 1, batched: 1, direct: 1 });
+    expect(queue.stats).toEqual({ batches: 1, batched: 1, failed: 0, direct: 1 });
     expect(logs.join("\n")).toMatch(/wait cap reached, batch cancelled/);
   });
 
@@ -229,7 +238,7 @@ describe("BatchQueue", () => {
     });
     const [one, two] = await Promise.all([ask(queue, 1), ask(queue, 2)]);
     expect([one.output.n, two.output.n]).toEqual([99, 99]);
-    expect(queue.stats).toEqual({ batches: 1, batched: 0, direct: 2 });
+    expect(queue.stats).toEqual({ batches: 1, batched: 0, failed: 0, direct: 2 });
   });
 
   it("after the wait cap, sends new calls straight to the real model", async () => {
@@ -261,7 +270,7 @@ describe("BatchQueue", () => {
     const queue = new BatchQueue(api, { ...FAST, deadline: Date.now() + 60_000 });
     const [one, two] = await Promise.all([ask(queue, 1), ask(queue, 2)]);
     expect([one.output.n, two.output.n]).toEqual([99, 99]);
-    expect(queue.stats).toEqual({ batches: 0, batched: 0, direct: 2 });
+    expect(queue.stats).toEqual({ batches: 0, batched: 0, failed: 0, direct: 2 });
   });
 
   it("sends the calls to the real model when the batch fails", async () => {
@@ -269,7 +278,7 @@ describe("BatchQueue", () => {
     const queue = new BatchQueue(api, { ...FAST, deadline: Date.now() + 60_000 });
     const result = await ask(queue, 6);
     expect(result.output.n).toBe(99);
-    expect(queue.stats).toEqual({ batches: 1, batched: 0, direct: 1 });
+    expect(queue.stats).toEqual({ batches: 1, batched: 0, failed: 0, direct: 1 });
   });
 });
 

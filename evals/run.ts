@@ -225,11 +225,14 @@ function caseLine(result: CaseResult, index: number, total: number, mock: boolea
   const judgeWhy = (mock ? [] : lowJudgeScores(result))
     .map((low) => `\n      judge ${low.key} ${low.score}/5: ${low.justification}`)
     .join("");
+  // A judge that failed leaves the case unscored: say why (KRB-229).
+  const judgeError =
+    result.judge && "error" in result.judge ? `\n      judge failed: ${result.judge.error}` : "";
   const latency =
     result.generation.latencyMs === null ? "batch" : `${(result.generation.latencyMs / 1000).toFixed(1)} s`;
   return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${latency}${
     extra.length > 0 ? `  ${extra.join(" ")}` : ""
-  }${why}${judgeWhy}`;
+  }${why}${judgeWhy}${judgeError}`;
 }
 
 /** Link to the GitHub Actions run, when the runner is in one. */
@@ -348,9 +351,11 @@ async function evaluate(options: Options, env: Env): Promise<number> {
     onSkip: (value) => console.log(`[skip] ${value.id}: budget reached`),
   });
   if (queue) {
-    const { batches, batched, direct } = queue.stats;
+    const { batches, batched, failed, direct } = queue.stats;
     console.log(
       `Batch API: ${batches} batch(es), ${batched} call(s) answered at half price${
+        failed > 0 ? `, ${failed} failed` : ""
+      }${
         direct > 0
           ? `, ${direct} sent to the standard API at full price (the cost estimate counts them at half)`
           : ""
@@ -420,6 +425,8 @@ async function evaluate(options: Options, env: Env): Promise<number> {
         );
   const regression = hasRegression(comparison);
   const budgetSummary = budget.summary();
+  if (budgetSummary.spent.usd !== null)
+    console.log(`Estimated cost: ${budgetSummary.spent.usd.toFixed(3)} USD, judge included.`);
 
   const outDir = resolve(options.out);
   const written = writeReports(outDir, templateReports, {

@@ -39,6 +39,8 @@ export type BatchStats = {
   batches: number;
   /** Calls answered by a batch. */
   batched: number;
+  /** Calls a batch answered with an error, given back to the caller as an API error. */
+  failed: number;
   /** Calls sent to the real model: past the deadline, or after a batch problem. */
   direct: number;
 };
@@ -103,7 +105,7 @@ function minutes(ms: number): string {
 }
 
 export class BatchQueue {
-  readonly stats: BatchStats = { batches: 0, batched: 0, direct: 0 };
+  readonly stats: BatchStats = { batches: 0, batched: 0, failed: 0, direct: 0 };
   private queue: Pending[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private firstQueuedAt = 0;
@@ -248,6 +250,8 @@ export class BatchQueue {
     const byId = new Map(items.map((item) => [item.id, item]));
     const settle: (() => void)[] = [];
     const retry: Pending[] = [];
+    let answered = 0;
+    let failed = 0;
     const reader = (await this.api.doGetBatchResults({ batchId })).getReader();
     for (;;) {
       const { done, value } = await reader.read();
@@ -257,9 +261,12 @@ export class BatchQueue {
       byId.delete(value.id);
       if (value.status === "succeeded") {
         const result = value.result;
+        answered++;
         settle.push(() => item.resolve(result));
       } else if (value.status === "failed") {
         const error = itemError(value.error, batchId, value.id);
+        failed++;
+        this.log(`Batch ${batchId}: call ${value.id} failed: ${error.message}`);
         settle.push(() => item.reject(error));
       } else {
         // Cancelled at the wait cap, or expired.
@@ -267,11 +274,12 @@ export class BatchQueue {
       }
     }
     retry.push(...byId.values());
-    this.stats.batched += settle.length;
+    this.stats.batched += answered;
+    this.stats.failed += failed;
     this.log(
-      `Batch ${batchId}: ended in ${minutes(this.now() - startedAt)}, ${settle.length} answered${
-        retry.length > 0 ? `, ${retry.length} sent directly` : ""
-      }.`,
+      `Batch ${batchId}: ended in ${minutes(this.now() - startedAt)}, ${answered} answered${
+        failed > 0 ? `, ${failed} failed` : ""
+      }${retry.length > 0 ? `, ${retry.length} sent directly` : ""}.`,
     );
     // All at once, so the cases go on together and their next calls share a batch.
     for (const done of settle) done();
