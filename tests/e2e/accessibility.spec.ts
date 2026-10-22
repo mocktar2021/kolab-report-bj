@@ -233,13 +233,14 @@ for (const theme of THEMES) {
         await expect(page.getByRole("dialog")).toHaveCount(0);
       });
 
-      await test.step("theme menu", async () => {
+      await test.step("account menu and its theme submenu", async () => {
+        await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
         await page
-          .getByRole("banner")
-          .getByRole("button", { name: /^Thème/ })
+          .getByRole("menu", { name: "Menu du compte" })
+          .getByRole("menuitem", { name: /^Thème/ })
           .click();
-        await expect(page.getByRole("menu")).toBeVisible();
-        await expectNoAxeViolations(page, `theme menu (${theme})`);
+        await expect(page.getByRole("menu", { name: /^Thème/ })).toBeVisible();
+        await expectNoAxeViolations(page, `account and theme menus (${theme})`);
         await page.keyboard.press("Escape");
         // The menu fades out before it leaves the page.
         await expect(page.getByRole("menu")).toHaveCount(0);

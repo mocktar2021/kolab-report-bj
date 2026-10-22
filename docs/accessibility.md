@@ -25,14 +25,14 @@ The axe audit covers:
 
 - Public pages: `/fr`, `/fr/connexion` (also with a sign-in error), `/fr/inscription`, `/fr/mot-de-passe-oublie`, `/fr/hors-ligne`.
 - Signed-in pages: dashboard, workspace members, master report, section page (upload zone, file list, AI draft panel), prompt library, AI dashboard, notifications with an unread item, new workspace wizard (with its organization choice), and the dashboard at phone width.
-- Interactive states: file preview open, delete dialog, AI draft proposal (preview, differences, editor), section editor ("Texte" tab with a table and the link form, "Markdown" tab), command palette, theme menu, workspace menu, new report dialog with a title error, remove member dialog, phone menu.
+- Interactive states: file preview open, delete dialog, AI draft proposal (preview, differences, editor), section editor ("Texte" tab with a table and the link form, "Markdown" tab), command palette, account menu with its theme submenu, workspace menu, new report dialog with a title error, remove member dialog, phone menu.
 
 The keyboard spec checks:
 
 - Sign-in: the tab order (logo, e-mail, forgotten password link, password, show password, submit, sign-up link, back home), submit with Enter, the error in a `role="alert"` tied to the fields with `aria-invalid` and `aria-describedby`, the focus back on the field to fix, and the new page title read by the Next.js route announcer.
 - Sign-up and forgotten password: the focus goes to the first field in error, which carries its message as description.
 - Signed-in pages: "Aller au contenu principal" is the first tab stop and moves the focus to `main`, one banner, one named navigation and one main, unique French titles, and a visible focus indicator on every tab stop of the dashboard, the report and the section page.
-- Menus and dialogs: the theme menu, the workspace menu, the command palette (also with Ctrl+K), the phone menu and the remove member dialog have a French name and give the focus back to the control that opened them. Removing a member moves the focus to the list and says who left.
+- Menus and dialogs: the account menu and its theme submenu (arrows in and out), the workspace menu, the command palette (also with Ctrl+K), the phone menu and the remove member dialog have a French name and give the focus back to the control that opened them. Removing a member moves the focus to the list and says who left.
 - Report: a manager adds a section and assigns it to an expert from the keyboard. The new section is announced and the focus stays on the field, then on the save button.
 - No English in the accessibility tree or in `aria-label`, `title`, `alt` and `placeholder` values, on the main pages and in the portals.
 - Upload: the file chooser opens with Enter and with Space, refusals are announced with their reason in a `role="log"`, the progress list is not a live region, a deleted file is confirmed in a dialog, the focus then goes to the list title, and the end of a file's read is announced.
@@ -67,7 +67,7 @@ Issues found and fixed:
 | --- | --- | --- | --- |
 | Command palette | 1.3.1, 4.1.2, 3.1.2 | cmdk named the result list "Suggestions" in English and left the search field with no name. A separator sat inside the listbox. | French names for the field and the list, separator hidden from assistive tech. |
 | Palette, phone menu, every dialog | 2.4.3 | Radix only returns the focus to a `DialogTrigger`. Our dialogs open from plain buttons or Ctrl+K, so the focus fell to the page on close. | `DialogContent` and `SheetContent` give the focus back to the element that opened them. |
-| Theme and workspace menus | 4.1.2 | Modal menus set `aria-hidden` on the page, including the focusable trigger. | Menus are not modal. |
+| Account and workspace menus | 4.1.2 | Modal menus set `aria-hidden` on the page, including the focusable trigger. | Menus are not modal. |
 | Sign-in | 3.3.1, 1.3.1, 2.4.3 | The error was not tied to the fields, and the focus fell to the page after a failed submit. | `aria-invalid` and `aria-describedby` on the fields, focus on the field to fix. |
 | Sign-up, forgotten and new password | 2.4.3 | Same focus loss after a failed submit, and after the confirmation replaced the form. | Focus on the first field in error, or on the confirmation message. |
 | Show password button | 4.1.2 | The name changed and `aria-pressed` changed too, so the state was given twice. | One name, the state in `aria-pressed`. |

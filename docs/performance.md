@@ -142,7 +142,7 @@ Also tried and dropped: `experimental.inlineCss`. The HTML of the sign-in page g
 `AppShell` and `Sidebar` were Client Components, so every signed-in page hydrated the whole sidebar, with Radix's dropdown menu and motion's layout features in its first-load JavaScript.
 
 1. **The shell renders on the server.** `AppShell` and `Sidebar` are Server Components. What has state or reads the pathname stays in the browser as small islands: the nav links, the bell, the search buttons, the workspace switcher, the theme menu, the install button, the account link, the sign-out form and the collapse button.
-2. **What the page does not show loads on use.** The command palette, the menu sheet below `lg`, the sliding highlight of the nav (motion) and the Radix menus of the workspace switcher and of the theme load when their button is pointed at, focused or used. Until then the page shows a plain button with the same look (`src/components/ui/lazy-menu.tsx`).
+2. **What the page does not show loads on use.** The command palette, the menu sheet below `lg`, the sliding highlight of the nav (motion) and the Radix menus of the workspace switcher and of the account menu load when their button is pointed at, focused or used. Until then the page shows a plain button with the same look (`src/components/ui/lazy-menu.tsx`).
 
 | `/fr/tableau-de-bord` | First-load JavaScript (gzip, from the build manifests) | CI median | Single runs |
 | --- | --- | --- | --- |

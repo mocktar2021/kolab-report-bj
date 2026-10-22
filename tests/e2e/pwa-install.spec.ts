@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { expectNoAxeViolations, signIn } from "./a11y";
 import { createTestUser, createWorkspaceFor, type TestUser } from "./supabase";
 
-// KRB-205: "Installer l'application" in the menu. Chromium browsers get their
+// KRB-205: "Installer l'application" in the account menu. Chromium browsers get their
 // own install dialog through the saved `beforeinstallprompt` event; iPhones
 // get the steps of Safari's share menu.
 test.describe.configure({ mode: "serial" });
@@ -51,15 +51,21 @@ async function fireInstallEvent(page: Page) {
 test("Chromium: the item opens the browser's install dialog and goes once installed", async ({ page }) => {
   await controlInstallEvents(page);
   await signIn(page, user);
-  const banner = page.getByRole("banner");
-  const install = banner.getByRole("button", { name: "Installer l'application" });
-  await expect(banner.getByRole("link", { name: "Guide d'utilisation" })).toBeVisible();
+  const accountMenu = page.getByRole("banner").getByRole("button", { name: "Menu du compte" });
+  const menu = page.getByRole("menu", { name: "Menu du compte" });
+  const install = menu.getByRole("menuitem", { name: "Installer l'application" });
+  await accountMenu.click();
+  await expect(menu.getByRole("menuitem", { name: "Guide d'utilisation" })).toBeVisible();
   await expect(install).toHaveCount(0);
+  await page.keyboard.press("Escape");
 
   await fireInstallEvent(page);
+  await accountMenu.click();
   await install.click();
   expect(await page.evaluate(() => (window as Window & { prompted?: number }).prompted)).toBe(1);
   // The event prompts once: the item waits for the browser's next one.
+  await accountMenu.click();
+  await expect(menu).toBeVisible();
   await expect(install).toHaveCount(0);
 
   await fireInstallEvent(page);
@@ -73,10 +79,13 @@ test.describe("iPhone", () => {
 
   test("the item shows the share menu steps and gives the focus back", async ({ page }) => {
     await signIn(page, user);
-    await page.getByRole("button", { name: "Ouvrir le menu" }).click();
-    const menu = page.getByRole("dialog", { name: "Menu" });
-    const install = menu.getByRole("button", { name: "Installer l'application" });
-    await install.click();
+    // The avatar, at the right end of the phone's top bar.
+    const accountMenu = page.getByRole("banner").getByRole("button", { name: "Menu du compte" });
+    await accountMenu.click();
+    await page
+      .getByRole("menu", { name: "Menu du compte" })
+      .getByRole("menuitem", { name: "Installer l'application" })
+      .click();
 
     const steps = page.getByRole("dialog", { name: "Installer KolabReport" });
     await expect(steps).toBeVisible();
@@ -86,6 +95,7 @@ test.describe("iPhone", () => {
 
     await page.keyboard.press("Escape");
     await expect(steps).toHaveCount(0);
-    await expect(install).toBeFocused();
+    // The item left with its menu: the focus goes back to the menu button.
+    await expect(accountMenu).toBeFocused();
   });
 });

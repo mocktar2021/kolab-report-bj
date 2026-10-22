@@ -4,10 +4,8 @@ import { LEGAL_PAGES, MAIN_LEGAL_PAGE_KEYS, type LegalPageKey } from "@/content/
 import { cn } from "@/lib/utils";
 
 /**
- * A row of links to the legal pages, for the sign-in pages and the app.
- * Shared component: the menu sheet below lg renders it in the browser, so
- * the appShell scope sends Legal.nav (src/i18n/client-messages.ts). The
- * sidebar renders it on the server (KRB-212).
+ * A row of links to the legal pages, for the sign-in pages. In the app, the
+ * account menu lists the same pages as menu items (KRB-227).
  */
 export function LegalLinks({
   pages = MAIN_LEGAL_PAGE_KEYS,

@@ -114,21 +114,26 @@ test("the public footer links to the guide", async ({ page }) => {
   }
 });
 
-test("signed-in users open the guide from the app menu, on a computer and a phone", async ({ page }) => {
+test("signed-in users open the guide from the account menu, on a computer and a phone", async ({ page }) => {
   const user = await createTestUser("Gisele Guide");
   await signIn(page, user);
 
-  const banner = page.getByRole("banner");
-  await banner.getByRole("link", { name: "Guide d'utilisation" }).click();
+  // Top right: the menu icon and the avatar on a computer, the avatar alone on a phone.
+  const openGuide = async () => {
+    await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+    await page
+      .getByRole("menu", { name: "Menu du compte" })
+      .getByRole("menuitem", { name: "Guide d'utilisation" })
+      .click();
+  };
+  await openGuide();
   // The proxy lets a signed-in user stay on the page.
   await expect(page).toHaveURL("/fr/guide");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Guide d'utilisation");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/fr/tableau-de-bord");
-  await page.getByRole("button", { name: "Ouvrir le menu" }).click();
-  const menu = page.getByRole("dialog", { name: "Menu" });
-  await menu.getByRole("link", { name: "Guide d'utilisation" }).click();
+  await openGuide();
   await expect(page).toHaveURL("/fr/guide");
 });
 
