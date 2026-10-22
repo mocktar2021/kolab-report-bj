@@ -113,7 +113,7 @@ The options combine: the PR job runs `--subset pr --judge --budget-usd 2 --budge
 **Reports.** Each run writes to `evals/reports` (or `--out`):
 
 - `<date>-run-<model>.md` and `.json`: the gate, "Release ready", the budget and spend, the skipped cases and the comparison with the baseline.
-- `<date>-<template>-<prompt version>-<model>.md` and `.json`: per template, the aggregates, one line per case, the problems found (missed key points, invalid refs, unsafe output) and the judge calibration. The JSON keeps each draft, every check and the judge's justifications.
+- `<date>-<template>-<prompt version>-<model>.md` and `.json`: per template, the aggregates, one line per case, the problems found (missed key points, invalid refs, unsafe output), the low judge scores (a criterion at 3 or less, with the judge's reason) and the judge calibration. The JSON keeps each draft, every check and all the judge's justifications. The run log also prints the low judge scores under each case, so a failed night can be read from the CI log without the artifact.
 
 **The PR comment** starts with a verdict in bold: "Aucune régression", "Régression : …" with each metric and its drop, "Seuil non atteint : …" for an absolute threshold, or "Évaluation qualité non lancée : pas de clé API" on the mock model. A line "À surveiller" lists what only warns, and "Run incomplet" what the budget skipped. Then:
 

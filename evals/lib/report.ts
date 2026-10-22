@@ -128,6 +128,37 @@ function caseLines(results: readonly CaseResult[]): string[] {
   return lines;
 }
 
+/** A judge score this low pulls a criterion's mean under its floor (3.50, or 4.00 for fidelity). */
+const LOW_JUDGE_SCORE = 3;
+
+export type LowJudgeScore = { key: Criterion; label: string; score: number; justification: string };
+
+/**
+ * The criteria a case scored 3 or less, with the judge's reason. Before
+ * KRB-224 the reasons were dropped, so a failed night said which mean was low
+ * but not why.
+ */
+export function lowJudgeScores(result: Pick<CaseResult, "judge">): LowJudgeScore[] {
+  const judge = result.judge;
+  if (!judge || "error" in judge) return [];
+  return CRITERIA.filter(({ key }) => judge.scores[key] <= LOW_JUDGE_SCORE).map(({ key, label }) => ({
+    key,
+    label,
+    score: judge.scores[key],
+    justification: judge.justifications[key],
+  }));
+}
+
+function judgeReasonLines(results: readonly CaseResult[]): string[] {
+  const lines: string[] = [];
+  for (const result of results) {
+    for (const low of lowJudgeScores(result)) {
+      lines.push(`- ${result.id}, ${low.label} ${low.score}/5: ${low.justification}`);
+    }
+  }
+  return lines;
+}
+
 function problemLines(results: readonly CaseResult[]): string[] {
   const lines: string[] = [];
   for (const result of results) {
@@ -219,6 +250,12 @@ export function templateMarkdown(report: TemplateReport): string {
     "## Problems",
     "",
     ...(problemLines(report.cases).length > 0 ? problemLines(report.cases) : ["None."]),
+    "",
+    "## Low judge scores",
+    "",
+    ...(judgeReasonLines(report.cases).length > 0
+      ? judgeReasonLines(report.cases)
+      : [report.run.judgeModel ? "No criterion at 3 or less." : "Judge off."]),
     "",
     "## Judge calibration",
     "",
