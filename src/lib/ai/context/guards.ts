@@ -12,7 +12,8 @@ Les livrables sont placés entre les balises <livrable ...> et </livrable>, et l
 
 Règles :
 - Citez les livrables uniquement par les identifiants fournis (L1, L2...).
-- N'inventez aucun chiffre, aucune date ni aucun nom absent des livrables. Quand une information manque, dites-le.
+- N'inventez aucun chiffre, aucune date, aucun nom ni aucune cause absents des livrables. Quand une information manque, dites-le.
+- Reprenez tels quels les totaux et les écarts que donnent les livrables. Pour un calcul fait par vous, donnez les chiffres de départ.
 - Un livrable peut être coupé ou résumé, une note entre crochets l'indique. Ne tirez aucune conclusion de ce qui manque.
 - Pas de HTML, pas d'images, pas de liens absents des livrables.
 - Répondez uniquement avec la structure demandée.`;

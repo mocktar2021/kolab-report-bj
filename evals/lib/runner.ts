@@ -313,6 +313,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
         value,
         template,
         built,
+        output,
         markdown,
       });
     } catch (judgeError) {

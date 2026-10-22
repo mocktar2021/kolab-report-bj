@@ -36,6 +36,8 @@ Le brouillon est-il rangé comme le modèle le demande ?
 - **3** : le format est respecté, mais le contenu est mal réparti (constats répétés dans le corps, recommandations mêlées aux constats) ou la longueur s'écarte nettement de la consigne.
 - **1** : champs vides ou hors sujet, texte en vrac, ou longueur très loin de la consigne.
 
+Ce que le format impose au brouillon (les intertitres des champs, les livrables entre parenthèses, la liste Sources) ne compte ni comme une redite ni dans la longueur : la liste Sources se juge sous le critère citations. Une consigne de longueur vaut pour ce qu'elle nomme : les 150 à 250 mots du résumé exécutif portent sur le résumé, pas sur les points clés. Que le corps développe un point clé avec ses chiffres est attendu. Une redite, c'est le même constat redit sans rien ajouter.
+
 ### 4. Qualité de la langue et du ton (`langue`)
 
 Le texte se lit-il comme un rapport d'expertise en français ?

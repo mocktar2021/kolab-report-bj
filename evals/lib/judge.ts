@@ -4,14 +4,18 @@ import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { SYSTEM_PROMPT, type BuiltContext } from "@/lib/ai/context";
+import type { DraftOutput } from "@/lib/ai/schemas";
+import type { OutputSchema } from "@/lib/prompts/catalog";
 import type { GoldenCase } from "./case";
 import { CRITERIA, SCORE_MAX, SCORE_MIN, type Criterion } from "./criteria";
 import type { EvalTemplate } from "./templates";
+import { countWords } from "./text";
 
 // LLM-as-judge: a second model scores each draft on the six criteria of
-// evals/rubric.md. It reads the same context as the writer, the reference
-// section and the draft, under the same rule: what comes from users is data.
-// Its scores are compared with human scores in the report (calibration).
+// evals/rubric.md. It reads the same context as the writer, the template the
+// writer followed, the reference section and the draft, under the same rule:
+// what comes from users is data. Its scores are compared with human scores in
+// the report (calibration).
 
 export const RUBRIC_FILE = "evals/rubric.md";
 
@@ -68,11 +72,63 @@ ${rubric}
 Notez le brouillon pour ce qu'il est, sans le comparer mot à mot à la référence : un brouillon peut être bon avec une autre structure. Répondez uniquement avec la structure demandée.`;
 }
 
+// What the format puts around the writer's text: the labels and headings of
+// draftToMarkdown, and the Sources list built from the sources field. Without
+// this, the judge scored the Sources list as the writer's repeat and counted
+// it in the length (KRB-224).
+const SOURCES = "la liste « Sources » à la fin, une ligne par livrable avec ce qui en est repris";
+const FORMAT_PARTS: Record<OutputSchema, string> = {
+  section_draft: `le libellé « Résumé. », les intertitres « Points clés » et « Recommandations », et ${SOURCES}`,
+  executive_summary: `l'intertitre « Points clés » et ${SOURCES}`,
+  recommendations: `la numérotation des titres, le libellé de priorité, la ligne « Sources : » de chaque recommandation et ${SOURCES}`,
+  data_analysis: `les intertitres « Observations » et « Limites des données », les livrables entre parenthèses après chaque observation et ${SOURCES}`,
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  summary: "résumé",
+  key_findings: "points clés",
+  key_points: "points clés",
+  body_markdown: "corps",
+  introduction: "introduction",
+  recommendations: "recommandations",
+  observations: "observations",
+  limits: "limites",
+};
+
+// Not written as text: refs and a priority are rendered by the app. The
+// section title is not shown in the draft.
+const NOT_TEXT = new Set(["sources", "priority"]);
+
+function fieldWords(value: unknown): number {
+  if (typeof value === "string") return countWords(value);
+  if (Array.isArray(value)) return value.reduce<number>((sum, item) => sum + fieldWords(item), 0);
+  if (value && typeof value === "object")
+    return Object.entries(value).reduce<number>(
+      (sum, [key, item]) => (NOT_TEXT.has(key) ? sum : sum + fieldWords(item)),
+      0,
+    );
+  return 0;
+}
+
+const plural = (count: number) => `${count} mot${count > 1 ? "s" : ""}`;
+
+/**
+ * Words the writer wrote, per field and in all, without what the app adds.
+ * A model counts words badly, so the judge gets the count (KRB-224).
+ */
+export function draftLengths(output: DraftOutput): string {
+  const parts = Object.entries(output.value)
+    .filter(([key]) => key in FIELD_LABELS)
+    .map(([key, item]) => ({ label: FIELD_LABELS[key], words: fieldWords(item) }));
+  const total = parts.reduce((sum, part) => sum + part.words, 0);
+  return `${parts.map((part) => `${part.label} ${plural(part.words)}`).join(", ")} ; ${plural(total)} en tout`;
+}
+
 export function judgePrompt(
   value: GoldenCase,
-  template: Pick<EvalTemplate, "key" | "title">,
+  template: Pick<EvalTemplate, "key" | "title" | "text">,
   built: Pick<BuiltContext, "variables" | "names">,
-  markdown: string,
+  draft: { output: DraftOutput; markdown: string },
 ): string {
   const names = [...built.names].map(([ref, name]) => `${ref} = ${name}`).join(", ");
   const keyPoints = value.reference.keyPoints.map((point) => `- ${point.text}`).join("\n");
@@ -80,6 +136,11 @@ export function judgePrompt(
 Rapport : ${value.report.title}
 Section : ${value.section.title}
 Consignes de la section : ${value.section.instructions ?? "aucune"}
+
+Consignes du modèle de rédaction, telles que le rédacteur les a reçues. Les {{variables}} y sont remplacées par les informations ci-dessus et par les livrables ci-dessous :
+<modele>
+${template.text}
+</modele>
 
 Livrables envoyés au rédacteur (${names}) :
 ${built.variables.deliverables}
@@ -92,9 +153,10 @@ ${value.reference.markdown}
 Points clés que la section devrait couvrir :
 ${keyPoints}
 
-Brouillon à noter, tel que l'expert le recevrait. Les sources y sont nommées par leur fichier (${names}) :
+Brouillon à noter, tel que l'expert le recevrait. Les sources y sont nommées par leur fichier (${names}). Le format impose ${FORMAT_PARTS[draft.output.schema]}, que l'application met en forme à partir des champs du rédacteur : ce n'est pas une redite, et la longueur ci-dessous ne les compte pas.
+Longueur du texte du rédacteur, comptée par l'application : ${draftLengths(draft.output)}.
 <brouillon>
-${markdown}
+${draft.markdown}
 </brouillon>`;
 }
 
@@ -109,8 +171,9 @@ export async function runJudge(params: {
   model: LanguageModelV4;
   rubric: string;
   value: GoldenCase;
-  template: Pick<EvalTemplate, "key" | "title">;
+  template: Pick<EvalTemplate, "key" | "title" | "text">;
   built: Pick<BuiltContext, "variables" | "names">;
+  output: DraftOutput;
   markdown: string;
 }): Promise<JudgeResult> {
   const started = performance.now();
@@ -122,7 +185,10 @@ export async function runJudge(params: {
       description: "Notes du brouillon sur les six critères de la grille.",
     }),
     instructions: judgeSystem(params.rubric),
-    prompt: judgePrompt(params.value, params.template, params.built, params.markdown),
+    prompt: judgePrompt(params.value, params.template, params.built, {
+      output: params.output,
+      markdown: params.markdown,
+    }),
     temperature: 0,
     maxOutputTokens: JUDGE_MAX_TOKENS,
     maxRetries: 2,
