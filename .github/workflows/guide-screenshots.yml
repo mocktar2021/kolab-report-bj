@@ -1,0 +1,82 @@
+name: Guide screenshots
+
+# The screenshots of the user guide and its PDF (KRB-199) need the Supabase
+# stack with demo data, like the end-to-end tests. This job takes them on a
+# runner and commits public/guide/ to the branch it ran on.
+#
+# Run it by hand on a branch (Actions, "Guide screenshots", Run workflow), or
+# push a branch named guide-screenshots/<anything>. Never on master: open a
+# pull request from the branch once the job committed the images. Its own
+# commit does not start another run (GITHUB_TOKEN pushes start no workflow).
+on:
+  workflow_dispatch:
+  push:
+    branches: ["guide-screenshots/**"]
+
+concurrency:
+  group: guide-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  HUSKY: "0"
+  NEXT_TELEMETRY_DISABLED: "1"
+  # Same list as ci.yml: nothing in the screenshots needs these services.
+  SUPABASE_EXCLUDE: studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
+
+jobs:
+  screenshots:
+    name: Screenshots and PDF
+    if: github.ref != 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start Supabase
+        run: npx supabase start -x "$SUPABASE_EXCLUDE"
+
+      - name: Point the app at the local stack
+        run: sh scripts/ci-env-local.sh
+
+      - run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Screenshots
+        run: npm run guide:screenshots
+
+      - name: PDF
+        run: npm run guide:pdf
+
+      - name: Keep the Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: guide-traces
+          path: test-results/guide/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Commit the screenshots and the PDF
+        run: |
+          git add public/guide
+          if git diff --cached --quiet; then
+            echo "The screenshots and the PDF did not change." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --stat >> "$GITHUB_STEP_SUMMARY"
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "KRB-199 take the guide screenshots and the PDF again"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

@@ -34,6 +34,10 @@ export const faqPart: GuidePart = {
       body: [
         "Dans le menu de votre compte, en haut à droite de l'écran. Sur ordinateur, cliquez sur le bouton avec les trois barres et votre avatar. Sur téléphone, touchez votre avatar, à droite de la barre du haut.",
         {
+          figure: "menuDuCompte",
+          caption: "Le menu du compte, ouvert sur le tableau de bord.",
+        },
+        {
           list: [
             "**Mon compte** : votre nom, vos données, vos organisations et la suppression de votre compte.",
             "**Guide d'utilisation** : ce guide.",
