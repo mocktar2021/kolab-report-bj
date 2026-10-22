@@ -14,7 +14,12 @@ teardown("sign out the smoke account", { tag: ["@signed-in", "@ai"] }, async ({ 
   try {
     const page = await context.newPage();
     await page.goto("/fr/tableau-de-bord");
-    await page.getByRole("button", { name: "Se déconnecter" }).click();
+    // Se déconnecter is in the account menu, top right (KRB-227).
+    await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+    await page
+      .getByRole("menu", { name: "Menu du compte" })
+      .getByRole("menuitem", { name: "Se déconnecter" })
+      .click();
     await expect(page).toHaveURL(/\/fr\/connexion$/);
   } finally {
     await context.close();
