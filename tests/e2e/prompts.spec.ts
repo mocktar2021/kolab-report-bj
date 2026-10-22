@@ -180,7 +180,8 @@ test("an owner customizes a global template, adds a version and publishes an old
       version: 1,
       status: "published",
       created_by: setup.owner.id,
-      changelog: "Repris de « Rédaction de section », version 1.",
+      // The global template's version changes with each new prompt (KRB-224).
+      changelog: expect.stringMatching(/^Repris de « Rédaction de section », version \d+\.$/),
     },
     {
       id: secondId,

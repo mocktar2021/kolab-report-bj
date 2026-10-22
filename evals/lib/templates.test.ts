@@ -59,6 +59,23 @@ describe("global templates", () => {
     }
   });
 
+  it("picks up the section template of KRB-224: new text, same settings", () => {
+    const seeded = migration("20261013210100_global_prompt_templates.sql").find(
+      (template) => template.key === "synthese-section",
+    );
+    const [structured, ...others] = migration("20261022220000_synthese_section_structure.sql");
+    if (!seeded || !structured) throw new Error("missing synthese-section");
+    expect(others).toEqual([]);
+    expect(templates.get("synthese-section")).toEqual(structured);
+    expect(structured.version).not.toBe(seeded.version);
+    expect(structured.text).toContain("Dis chaque constat une seule fois");
+    expect(structured.text).toContain("Vise 200 à 500 mots");
+    // Title, schema, tier, temperature and output cap are those of version 1.
+    expect({ ...structured, text: seeded.text, version: seeded.version, source: seeded.source }).toEqual(
+      seeded,
+    );
+  });
+
   it("gives each text a stable 8-character version", () => {
     expect(promptVersion("abc")).toBe("ba7816bf");
     for (const template of templates.values()) expect(template.version).toMatch(/^[0-9a-f]{8}$/);

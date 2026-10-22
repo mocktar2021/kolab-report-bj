@@ -54,7 +54,9 @@ function sourcesSchema(refs: SourceRefs) {
     )
     .min(1)
     .max(OUTPUT_LIMITS.sources)
-    .describe("Livrables sur lesquels s'appuie le texte. Ne cite que des identifiants fournis.");
+    .describe(
+      "Livrables sur lesquels s'appuie le texte, chacun une seule fois. Ne cite que des identifiants fournis.",
+    );
 }
 
 function itemRefs(refs: SourceRefs) {
@@ -68,19 +70,23 @@ function itemRefs(refs: SourceRefs) {
 export function sectionDraftSchema(refs: SourceRefs) {
   return z.object({
     title: text(OUTPUT_LIMITS.title, "Titre proposé pour la section."),
-    summary: text(OUTPUT_LIMITS.summary, "Résumé de la section en deux à quatre phrases."),
+    summary: text(OUTPUT_LIMITS.summary, "L'essentiel de la section en deux à quatre phrases."),
     key_findings: z
-      .array(text(OUTPUT_LIMITS.item, "Un constat, en une phrase, appuyé sur les livrables."))
+      .array(text(OUTPUT_LIMITS.item, "Un constat principal, en une phrase, appuyé sur les livrables."))
       .max(OUTPUT_LIMITS.findings)
-      .describe("Constats principaux de la section."),
+      .describe(
+        "Les constats principaux de la section, trois à cinq. Le corps les explique sans les recopier.",
+      ),
     body_markdown: text(
       OUTPUT_LIMITS.body,
-      "Corps de la section en Markdown. Intertitres de niveau 3 (###) au plus, listes et tableaux permis. Ni HTML ni images.",
+      "Corps de la section en Markdown : ce qui explique et chiffre les constats, sans recopier le résumé ni les points clés. Pas de partie Sources ni Recommandations, qui ont leur propre champ. Intertitres de niveau 3 (###) au plus, listes et tableaux permis. Ni HTML ni images.",
     ),
     recommendations: z
       .array(text(OUTPUT_LIMITS.item, "Une recommandation concrète, en une ou deux phrases."))
       .max(OUTPUT_LIMITS.recommendations)
-      .describe("Recommandations qui découlent des constats. Liste vide si la section n'en appelle pas."),
+      .describe(
+        "Recommandations qui découlent des constats, seulement si les consignes de la section en demandent. Sinon, liste vide.",
+      ),
     sources: sourcesSchema(refs),
   });
 }
