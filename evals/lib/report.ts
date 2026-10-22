@@ -72,6 +72,8 @@ export type RunInfo = {
   provider: string;
   model: string;
   judgeModel: string | null;
+  /** The calls went through the provider's Batch API (KRB-229): half price, latency not measured. */
+  batch: boolean;
   settings: { maxInputTokens: number; contextWindowTokens: number; redactPii: boolean };
 };
 
@@ -280,7 +282,7 @@ export function runMarkdown(report: RunReport): string {
   return [
     `# Eval run ${run.date}, ${run.model}`,
     "",
-    `Provider ${run.provider}, model ${run.model}, judge ${run.judgeModel ?? "off"}, input budget ${run.settings.maxInputTokens} tokens, PII redaction ${run.settings.redactPii ? "on" : "off"}.`,
+    `Provider ${run.provider}, model ${run.model}, judge ${run.judgeModel ?? "off"}, input budget ${run.settings.maxInputTokens} tokens, PII redaction ${run.settings.redactPii ? "on" : "off"}${run.batch ? ", Batch API (half price, latency not measured)" : ""}.`,
     "",
     ...(notes.length > 0 ? [...notes.map((note) => `- ${note}`), ""] : []),
     "## Gate",

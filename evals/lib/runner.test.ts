@@ -88,6 +88,7 @@ describe("runCase with the mock model", () => {
         provider: "mock",
         model: "mock",
         judgeModel: null,
+        batch: false,
         settings: { maxInputTokens: 60_000, contextWindowTokens: 200_000, redactPii: true },
       };
       const byTemplate = [...new Set(results.map((result) => result.template))].map((key) => {

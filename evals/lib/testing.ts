@@ -88,6 +88,7 @@ export function runInfo(overrides: Partial<RunInfo> = {}): RunInfo {
     provider: "anthropic",
     model: "claude-test",
     judgeModel: null,
+    batch: false,
     settings: { maxInputTokens: 60_000, contextWindowTokens: 200_000, redactPii: true },
     ...overrides,
   };
