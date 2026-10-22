@@ -221,6 +221,13 @@ jobs:
           for file in evals/reports/*-run-*.md; do
             [ -f "$file" ] && cat "$file" >> "$GITHUB_STEP_SUMMARY"
           done
+          # Also in the log, folded, so the baseline can be taken without the
+          # artifact (KRB-160). Scores and ids only, no draft text.
+          if [ -f evals/reports/baseline.json ]; then
+            echo "::group::baseline.json (evals/baseline/production.json)"
+            cat evals/reports/baseline.json
+            echo "::endgroup::"
+          fi
           true
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
