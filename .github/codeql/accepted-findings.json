@@ -8,5 +8,10 @@
     "rule": "js/insufficient-password-hash",
     "path": "src/lib/pdf/test-pdf.ts",
     "reason": "Test helper only. It builds a password-locked PDF for the reader tests, and the PDF standard security handler (PDF 1.7, algorithms 2 to 4) is defined with MD5 and RC4. No user password is stored or hashed."
+  },
+  {
+    "rule": "js/http-to-file-access",
+    "path": "scripts/check-settings.mjs",
+    "reason": "The settings check (KRB-157) writes its report to the GitHub job summary. The data CodeQL tracks comes from the Vercel API of our own project, read with our token and never decrypted. The report holds our own fixed messages and expected values and the names of the project's variables, never a value read from Vercel, and only the repository's collaborators see the summary."
   }
 ]
