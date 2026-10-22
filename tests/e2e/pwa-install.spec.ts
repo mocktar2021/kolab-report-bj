@@ -57,12 +57,16 @@ test("Chromium: the item opens the browser's install dialog and goes once instal
   await accountMenu.click();
   await expect(menu.getByRole("menuitem", { name: "Guide d'utilisation" })).toBeVisible();
   await expect(install).toHaveCount(0);
+  // The menu fades out before it leaves the page: a click on its button
+  // before then counts as a click outside the closing menu.
   await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
 
   await fireInstallEvent(page);
   await accountMenu.click();
   await install.click();
   expect(await page.evaluate(() => (window as Window & { prompted?: number }).prompted)).toBe(1);
+  await expect(menu).toHaveCount(0);
   // The event prompts once: the item waits for the browser's next one.
   await accountMenu.click();
   await expect(menu).toBeVisible();

@@ -33,7 +33,6 @@ export function AccountButton({
   return (
     <button
       type="button"
-      aria-label={t("accountMenu")}
       className={cn(
         "flex shrink-0 items-center rounded-full outline-none transition-[background-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring",
         variant === "pill"
@@ -43,6 +42,9 @@ export function AccountButton({
       )}
       {...props}
     >
+      {/* The name comes from this text, not aria-label: axe wants a label to
+          contain the visible text, here the initials of the avatar. */}
+      <span className="sr-only">{t("accountMenu")}</span>
       {variant === "pill" ? <Menu className="size-4" aria-hidden="true" /> : null}
       <UserAvatar name={user.name} />
     </button>
