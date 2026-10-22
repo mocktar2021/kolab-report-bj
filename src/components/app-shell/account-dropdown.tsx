@@ -146,7 +146,12 @@ export function AccountDropdown({
           <DropdownMenuGroup aria-label={tLegal("label")} className="grid grid-cols-2">
             {MAIN_LEGAL_PAGE_KEYS.map((key) => (
               // No prefetch: these links are on every page and rarely followed.
-              <DropdownMenuItem key={key} asChild className="h-8 text-xs text-muted-foreground">
+              // A long name wraps on two lines: the item grows with it.
+              <DropdownMenuItem
+                key={key}
+                asChild
+                className="h-auto min-h-8 py-1.5 text-xs text-muted-foreground"
+              >
                 <Link href={LEGAL_PAGES[key]} prefetch={false}>
                   {tLegal(key)}
                 </Link>

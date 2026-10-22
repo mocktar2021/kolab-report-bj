@@ -15,6 +15,12 @@ function DropdownMenu({ modal = false, ...props }: React.ComponentProps<typeof D
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
+// On the dark theme a menu is barely lighter than the cards under it, and the
+// usual shadow does not show on black: the card below read as part of the
+// menu. A lighter edge and a deep shadow set the menu apart (KRB-227).
+const MENU_EDGE =
+  "dark:border-white/15 dark:shadow-[0_0_0_1px_rgb(0_0_0/0.6),0_24px_48px_-12px_rgb(0_0_0/0.9)]";
+
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
@@ -25,6 +31,7 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-50 min-w-[11rem] overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg outline-none",
+        MENU_EDGE,
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-100 data-[state=open]:duration-150",
         "motion-safe:data-[state=open]:zoom-in-[0.97] motion-safe:data-[side=bottom]:slide-in-from-top-1 motion-safe:data-[side=top]:slide-in-from-bottom-1 motion-safe:data-[side=right]:slide-in-from-left-1",
         className,
@@ -116,6 +123,7 @@ const DropdownMenuSubContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-50 min-w-[10rem] overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg outline-none",
+        MENU_EDGE,
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-100 data-[state=open]:duration-150",
         className,
       )}
