@@ -29,6 +29,25 @@ export const faqPart: GuidePart = {
       ],
     },
     {
+      id: "menu-du-compte",
+      title: "Où sont mon compte, le thème et la déconnexion ?",
+      body: [
+        "Dans le menu de votre compte, en haut à droite de l'écran. Sur ordinateur, cliquez sur le bouton avec les trois barres et votre avatar. Sur téléphone, touchez votre avatar, à droite de la barre du haut.",
+        {
+          list: [
+            "**Mon compte** : votre nom, vos données, vos organisations et la suppression de votre compte.",
+            "**Guide d'utilisation** : ce guide.",
+            "**Installer l'application**, quand votre navigateur sait le faire.",
+            "**Thème** : **Clair**, **Sombre**, ou **Système** pour suivre le réglage de votre appareil.",
+            "**Réduire le menu**, sur ordinateur : le menu de gauche ne garde que ses icônes. **Déployer le menu** le rouvre.",
+            "**Se déconnecter**.",
+            "En bas, les mentions légales, la politique de confidentialité et les conditions d'utilisation et de vente.",
+          ],
+        },
+        "Le menu de gauche sert à naviguer : tableau de bord, modèles de prompts, pilotage de l'IA et sections. Sur téléphone, il s'ouvre avec le bouton à gauche de la barre du haut.",
+      ],
+    },
+    {
       id: "installer-l-application",
       title: "Comment installer KolabReport sur mon téléphone ?",
       body: [
@@ -36,7 +55,7 @@ export const faqPart: GuidePart = {
         "**Sur Android** (Chrome, Edge ou Samsung Internet) **et sur ordinateur** (Chrome ou Edge) :",
         {
           steps: [
-            "Dans le menu, cliquez sur **Installer l'application**, sous **Guide d'utilisation**.",
+            "En haut à droite, ouvrez le menu de votre compte et cliquez sur **Installer l'application**.",
             "Confirmez dans la fenêtre du navigateur. L'icône KolabReport arrive sur l'écran d'accueil ou parmi vos applications.",
           ],
         },
@@ -48,7 +67,7 @@ export const faqPart: GuidePart = {
             "Touchez **Ajouter**.",
           ],
         },
-        "Sur iPhone et iPad, **Installer l'application** rappelle ces étapes. Le bouton n'apparaît plus une fois l'application installée, ni dans un navigateur qui ne sait pas l'installer : ouvrez alors KolabReport dans Chrome, Edge ou Safari.",
+        "Sur iPhone et iPad, **Installer l'application** rappelle ces étapes. Cette ligne du menu disparaît une fois l'application installée, et dans un navigateur qui ne sait pas l'installer : ouvrez alors KolabReport dans Chrome, Edge ou Safari.",
       ],
     },
     {

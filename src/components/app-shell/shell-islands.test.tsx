@@ -105,12 +105,12 @@ function renderInShell(children: React.ReactNode) {
 const palette = () => screen.queryByRole("dialog", { name: "Palette de commandes" });
 
 // First in the file: a module loads once, so later tests would find it loaded.
-describe("Menus of the sidebar", () => {
+describe("Workspace and theme menus", () => {
   it("load when their button is pointed at or focused, not with the page", async () => {
     const user = renderInShell(
       <>
         <WorkspaceSwitcher workspaces={WORKSPACES} currentWorkspaceId={WORKSPACES[0]!.id} />
-        <ThemeToggle variant="row" />
+        <ThemeToggle />
       </>,
     );
     const switcher = screen.getByRole("button", { name: /^Espace de travail actuel : Mission Parakou/ });
@@ -127,7 +127,7 @@ describe("Menus of the sidebar", () => {
   });
 
   it("open from the keyboard and give the focus back to their button", async () => {
-    const user = renderInShell(<ThemeToggle variant="row" />);
+    const user = renderInShell(<ThemeToggle />);
     act(() => screen.getByRole("button", { name: /^Thème/ }).focus());
     await user.keyboard("{Enter}");
     const menu = await screen.findByRole("menu", { name: /^Thème/ });
@@ -203,7 +203,6 @@ describe("MobileMenu", () => {
     return renderInShell(
       <MobileMenu
         className=""
-        user={{ name: "Awa Dossou", email: "awa@example.com" }}
         workspaces={WORKSPACES}
         currentWorkspaceId={WORKSPACES[0]!.id}
         manager
@@ -224,7 +223,8 @@ describe("MobileMenu", () => {
     expect(loaded.menuSheet).toBe(true);
     expect(button).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("navigation", { name: "Navigation de l'application" })).toBeInTheDocument();
-    expect(menu).toHaveTextContent("Awa Dossou");
+    // The account items moved to the account menu, top right (KRB-227).
+    expect(within(menu).queryByRole("link", { name: "Mon compte" })).toBeNull();
   });
 
   it("closes when the palette opens, as it did when one component held both", async () => {

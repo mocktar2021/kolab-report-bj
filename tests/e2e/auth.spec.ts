@@ -16,7 +16,11 @@ async function signIn(page: Page, password: string) {
 }
 
 async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+  await page
+    .getByRole("menu", { name: "Menu du compte" })
+    .getByRole("menuitem", { name: "Se déconnecter" })
+    .click();
   await expect(page).toHaveURL(/\/fr\/connexion$/);
 }
 

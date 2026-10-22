@@ -14,16 +14,7 @@ import { THEME_CHOICES } from "./theme-config";
 import { THEME_ICONS, ThemeButton, useThemeChoice, type ThemeToggleProps } from "./theme-toggle";
 
 /** The theme menu itself, loaded by ThemeToggle when its button is used. */
-export function ThemeMenu({
-  variant,
-  collapsible,
-  className,
-  align,
-  side,
-  ...lazy
-}: Required<Pick<ThemeToggleProps, "variant" | "collapsible">> &
-  Pick<ThemeToggleProps, "className" | "align" | "side"> &
-  LazyMenuProps) {
+export function ThemeMenu({ className, align, side, ...lazy }: ThemeToggleProps & LazyMenuProps) {
   const t = useTranslations("Theme");
   const { choice, setTheme } = useThemeChoice();
   const { button, onContentFocus } = useLazyMenuFocus(lazy);
@@ -31,7 +22,7 @@ export function ThemeMenu({
   return (
     <DropdownMenu defaultOpen={lazy.openedWith !== null}>
       <DropdownMenuTrigger asChild>
-        <ThemeButton ref={button} variant={variant} collapsible={collapsible} className={className} />
+        <ThemeButton ref={button} className={className} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} side={side} onFocus={onContentFocus}>
         <DropdownMenuLabel>{t("label")}</DropdownMenuLabel>

@@ -12,11 +12,12 @@ const PARTS = ["1. Propriétaire et administrateur", "2. Expert", "3. Questions 
 
 const QUESTIONS = [
   "3.1 J'ai oublié mon mot de passe",
-  "3.2 Comment installer KolabReport sur mon téléphone ?",
-  "3.3 Quels sont les rôles ?",
-  "3.4 Où sont mes données et qui peut les voir ?",
-  "3.5 Que fait l'IA, et que ne fait-elle pas ?",
-  "3.6 Quelles sont les limites de chaque offre ?",
+  "3.2 Où sont mon compte, le thème et la déconnexion ?",
+  "3.3 Comment installer KolabReport sur mon téléphone ?",
+  "3.4 Quels sont les rôles ?",
+  "3.5 Où sont mes données et qui peut les voir ?",
+  "3.6 Que fait l'IA, et que ne fait-elle pas ?",
+  "3.7 Quelles sont les limites de chaque offre ?",
 ];
 
 test("/fr/guide opens signed out with its parts, its questions and a table of contents", async ({ page }) => {
@@ -114,21 +115,26 @@ test("the public footer links to the guide", async ({ page }) => {
   }
 });
 
-test("signed-in users open the guide from the app menu, on a computer and a phone", async ({ page }) => {
+test("signed-in users open the guide from the account menu, on a computer and a phone", async ({ page }) => {
   const user = await createTestUser("Gisele Guide");
   await signIn(page, user);
 
-  const banner = page.getByRole("banner");
-  await banner.getByRole("link", { name: "Guide d'utilisation" }).click();
+  // Top right: the menu icon and the avatar on a computer, the avatar alone on a phone.
+  const openGuide = async () => {
+    await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+    await page
+      .getByRole("menu", { name: "Menu du compte" })
+      .getByRole("menuitem", { name: "Guide d'utilisation" })
+      .click();
+  };
+  await openGuide();
   // The proxy lets a signed-in user stay on the page.
   await expect(page).toHaveURL("/fr/guide");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Guide d'utilisation");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/fr/tableau-de-bord");
-  await page.getByRole("button", { name: "Ouvrir le menu" }).click();
-  const menu = page.getByRole("dialog", { name: "Menu" });
-  await menu.getByRole("link", { name: "Guide d'utilisation" }).click();
+  await openGuide();
   await expect(page).toHaveURL("/fr/guide");
 });
 

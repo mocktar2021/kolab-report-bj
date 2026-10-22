@@ -291,6 +291,7 @@
     "billing": "Abonnement",
     "account": "Mon compte",
     "guide": "Guide d'utilisation",
+    "accountMenu": "Menu du compte",
     "install": {
       "button": "Installer l'application",
       "title": "Installer KolabReport",

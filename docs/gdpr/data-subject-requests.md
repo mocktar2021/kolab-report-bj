@@ -369,7 +369,7 @@ Files that are not read (PowerPoint, images, diagrams, PDFs without text or lock
 
 ## Self-service in the app
 
-`/fr/compte` (KRB-186), linked as "Mon compte" under the user's name in the app menu. Every action works on the user of the session (`getUser()`), never on an id from the form or the URL.
+`/fr/compte` (KRB-186), linked as "Mon compte" in the account menu, at the top right of the app. Every action works on the user of the session (`getUser()`), never on an id from the form or the URL.
 
 - **Change my name**: writes `profiles.full_name` with the user's client, then the `full_name` of the Auth metadata.
 - **Download my data**: `GET /api/account/export` answers with the JSON of [Access and export](#access-and-export), as an attachment that is never cached (`Cache-Control: private, no-store`). The user's client reads what RLS lets them read: profile, sessions (through `my_account_sessions()`), owned organizations, memberships, assigned sections and notifications. The service role reads the rows that name the person but that RLS may hide, such as a report they created in a workspace they left, an invitation sent to their address, or a purchase they made (`billing_purchases.created_by`, with the numbers of its receipts and none of the FedaPay details). Each of those queries is filtered on the session's user id or e-mail. The file never holds the text of reports, sections, files or drafts.

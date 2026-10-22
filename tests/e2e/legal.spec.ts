@@ -118,15 +118,18 @@ test("the sign-in, sign-up and password pages link to the legal pages", async ({
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Politique de confidentialité");
 });
 
-test("signed-in users open the legal pages from the app menu", async ({ page }) => {
+test("signed-in users open the legal pages from the account menu", async ({ page }) => {
   const user = await createTestUser("Lea Legal");
   await signIn(page, user);
 
-  const legal = page.getByRole("banner").getByRole("navigation", { name: "Informations légales" });
+  await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+  const legal = page
+    .getByRole("menu", { name: "Menu du compte" })
+    .getByRole("group", { name: "Informations légales" });
   for (const { url, link } of MAIN_PAGES) {
-    await expect(legal.getByRole("link", { name: link, exact: true })).toHaveAttribute("href", url);
+    await expect(legal.getByRole("menuitem", { name: link, exact: true })).toHaveAttribute("href", url);
   }
-  await legal.getByRole("link", { name: "Conditions d'utilisation", exact: true }).click();
+  await legal.getByRole("menuitem", { name: "Conditions d'utilisation", exact: true }).click();
   // The proxy lets a signed-in user stay on the page.
   await expect(page).toHaveURL("/fr/cgu");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Conditions générales d'utilisation");

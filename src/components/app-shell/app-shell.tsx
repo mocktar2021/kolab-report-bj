@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { billingOrganizationOf } from "@/lib/billing/navigation";
 import { isManager } from "@/lib/workspaces/roles";
 import type { MyWorkspace } from "@/lib/workspaces/types";
+import { AccountMenu } from "./account-menu";
 import { MobileMenu } from "./mobile-menu";
 import { NotificationBell } from "./notification-bell";
 import { PaletteProvider } from "./palette";
@@ -28,7 +29,8 @@ const iconButtonClass =
 
 /**
  * Frame for signed-in pages: sidebar from lg up, a top bar with a sheet menu
- * below lg, and the command palette on Cmd+K or Ctrl+K.
+ * below lg, the account menu top right at every width (KRB-227), and the
+ * command palette on Cmd+K or Ctrl+K.
  *
  * A Server Component (KRB-212), like the sidebar. The palette, the menu
  * button and the controls with state are client islands.
@@ -67,7 +69,6 @@ export function AppShell({
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md lg:hidden">
           <MobileMenu
             className={iconButtonClass}
-            user={user}
             workspaces={workspaces}
             currentWorkspaceId={currentWorkspaceId}
             manager={current ? isManager(current.role) : false}
@@ -78,10 +79,12 @@ export function AppShell({
           </Link>
           <NotificationBell unread={unreadNotifications} className="ml-auto" />
           <SearchIconButton className={iconButtonClass} />
+          <AccountMenu user={user} variant="avatar" />
         </header>
       </PaletteProvider>
 
-      <div className="transition-[padding] duration-300 ease-out-expo lg:pl-64 lg:sidebar-collapsed:pl-[4.5rem]">
+      {/* lg:pt-16 makes room for the account bar, fixed top right. */}
+      <div className="transition-[padding] duration-300 ease-out-expo lg:pl-64 lg:pt-16 lg:sidebar-collapsed:pl-[4.5rem]">
         {banner}
         <main id="contenu" tabIndex={-1} className="outline-none">
           {children}

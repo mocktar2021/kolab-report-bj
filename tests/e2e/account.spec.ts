@@ -72,7 +72,11 @@ test("the account page downloads the user's data and nothing from another worksp
   const bioPurchase = await purchaseFor(bio, theirs.organization_id);
 
   await signIn(page, awa);
-  await page.getByRole("banner").getByRole("link", { name: "Mon compte" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
+  await page
+    .getByRole("menu", { name: "Menu du compte" })
+    .getByRole("menuitem", { name: "Mon compte" })
+    .click();
   await expect(page).toHaveURL(/\/fr\/compte$/);
   await expect(page).toHaveTitle("Mon compte · KolabReport");
   const main = page.getByRole("main");

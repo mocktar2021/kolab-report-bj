@@ -39,31 +39,20 @@ function ResolvedThemeIcon({ className }: { className?: string }) {
   );
 }
 
+// In the app, the theme is a submenu of the account menu (KRB-227).
 export type ThemeToggleProps = {
-  /**
-   * "icon": round button for headers. "row": full-width row with the current
-   * choice, for the sidebar and the mobile menu.
-   */
-  variant?: "icon" | "row";
-  /** Row only: hide the text while the desktop sidebar is collapsed. */
-  collapsible?: boolean;
   className?: string;
   align?: "start" | "center" | "end";
   side?: "top" | "right" | "bottom" | "left";
 };
 
-/** The button of the theme menu, before and after the menu loads. */
-export function ThemeButton({
-  variant,
-  collapsible,
-  className,
-  ...props
-}: React.ComponentProps<"button"> & Required<Pick<ThemeToggleProps, "variant" | "collapsible">>) {
+/** The round button of the theme menu, before and after the menu loads. */
+export function ThemeButton({ className, ...props }: React.ComponentProps<"button">) {
   const t = useTranslations("Theme");
   const { choice } = useThemeChoice();
   const currentLabel = choice ? t(choice) : null;
 
-  return variant === "icon" ? (
+  return (
     <button
       type="button"
       aria-label={currentLabel ? t("current", { theme: currentLabel }) : t("label")}
@@ -75,24 +64,6 @@ export function ThemeButton({
     >
       <ResolvedThemeIcon />
     </button>
-  ) : (
-    <button
-      type="button"
-      className={cn(
-        "flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground",
-        collapsible && "sidebar-collapsed:justify-center sidebar-collapsed:px-0",
-        className,
-      )}
-      {...props}
-    >
-      <ResolvedThemeIcon />
-      <span className={cn("truncate", collapsible && "sidebar-collapsed:sr-only")}>{t("label")}</span>
-      <span
-        className={cn("ml-auto truncate text-xs font-normal", collapsible && "sidebar-collapsed:sr-only")}
-      >
-        {currentLabel}
-      </span>
-    </button>
   );
 }
 
@@ -100,25 +71,12 @@ export function ThemeButton({
 const loadThemeMenu = () => import("./theme-menu").then((mod) => mod.ThemeMenu);
 
 /** Menu with the Clair, Sombre and Système options. The choice is kept per device. */
-export function ThemeToggle({
-  variant = "icon",
-  collapsible = false,
-  className,
-  align = "end",
-  side = "bottom",
-}: ThemeToggleProps) {
+export function ThemeToggle({ className, align = "end", side = "bottom" }: ThemeToggleProps) {
   const { Menu, menuProps, placeholderProps } = useLazyMenu(loadThemeMenu);
 
   return Menu ? (
-    <Menu
-      variant={variant}
-      collapsible={collapsible}
-      className={className}
-      align={align}
-      side={side}
-      {...menuProps}
-    />
+    <Menu className={className} align={align} side={side} {...menuProps} />
   ) : (
-    <ThemeButton variant={variant} collapsible={collapsible} className={className} {...placeholderProps} />
+    <ThemeButton className={className} {...placeholderProps} />
   );
 }

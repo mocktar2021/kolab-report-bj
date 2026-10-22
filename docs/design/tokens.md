@@ -1,6 +1,6 @@
 # Design tokens
 
-KolabReport has two themes with the same layout and type: light and dark. The default theme follows the device setting (`DEFAULT_THEME = "system"` in `src/components/theme/theme-config.ts`). Visitors switch between Clair, Sombre and Système from the landing header, the sidebar footer, the mobile menu or the command palette. The choice is stored per device under `kolabreport:theme`.
+KolabReport has two themes with the same layout and type: light and dark. The default theme follows the device setting (`DEFAULT_THEME = "system"` in `src/components/theme/theme-config.ts`). Visitors switch between Clair, Sombre and Système from the landing header, the account menu at the top right of the app or the command palette. The choice is stored per device under `kolabreport:theme`.
 
 Tokens live in `src/app/globals.css` as HSL values (`:root` for light, `.dark` for dark) and are exposed to Tailwind in `tailwind.config.ts`. Components use the Tailwind names, never raw hex values.
 

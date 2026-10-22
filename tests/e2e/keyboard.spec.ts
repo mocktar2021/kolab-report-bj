@@ -312,11 +312,7 @@ test("signed-in pages have a skip link, landmarks, French titles and visible foc
               - link "En cours"
             - listitem:
               - link "Terminées"
-        - link "Mon compte"
-        - link "Guide d'utilisation"
-        - button /^Thème/
-        - button "Se déconnecter"
-        - button "Réduire le menu" [expanded]
+        - button "Menu du compte"
     `);
   });
 
@@ -384,13 +380,22 @@ test("menus, dialogs and the command palette are labelled and give the focus bac
   await page.goto("/fr/tableau-de-bord");
   const banner = page.getByRole("banner");
 
-  await test.step("theme menu", async () => {
-    const trigger = banner.getByRole("button", { name: /^Thème/ });
+  await test.step("account menu and its theme submenu", async () => {
+    const trigger = banner.getByRole("button", { name: "Menu du compte" });
     await tabTo(page, trigger);
     await page.keyboard.press("Enter");
-    const menu = page.getByRole("menu", { name: /^Thème/ });
+    const menu = page.getByRole("menu", { name: "Menu du compte" });
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole("menuitemradio")).toHaveText(["Clair", "Sombre", "Système"]);
+    await expect(menu.getByRole("menuitem", { name: "Mon compte" })).toBeFocused();
+    const theme = menu.getByRole("menuitem", { name: /^Thème/ });
+    for (let step = 0; step < 5 && !(await isFocused(theme)); step++) await page.keyboard.press("ArrowDown");
+    await expect(theme).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    const themes = page.getByRole("menu", { name: /^Thème/ });
+    await expect(themes.getByRole("menuitemradio")).toHaveText(["Clair", "Sombre", "Système"]);
+    await page.keyboard.press("ArrowLeft");
+    await expect(themes).toHaveCount(0);
+    await expect(theme).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(menu).toHaveCount(0);
     await expect(trigger).toBeFocused();
@@ -518,11 +523,13 @@ test("nothing in English reaches assistive tech", async ({ page }) => {
   }
   // Menus and dialogs render in portals, outside the page content.
   await page.goto("/fr/tableau-de-bord");
+  await page.getByRole("banner").getByRole("button", { name: "Menu du compte" }).click();
   await page
-    .getByRole("banner")
-    .getByRole("button", { name: /^Thème/ })
+    .getByRole("menu", { name: "Menu du compte" })
+    .getByRole("menuitem", { name: /^Thème/ })
     .click();
-  await expectNoEnglish(page, "the theme menu");
+  await expect(page.getByRole("menu", { name: /^Thème/ })).toBeVisible();
+  await expectNoEnglish(page, "the account and theme menus");
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Ouvrir le menu" }).click();

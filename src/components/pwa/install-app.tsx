@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { Download, Share } from "lucide-react";
+import { Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { installMode, promptInstall, subscribeToInstall, type InstallMode } from "@/lib/pwa/install";
-import { cn } from "@/lib/utils";
+import { installMode, subscribeToInstall, type InstallMode } from "@/lib/pwa/install";
 
 const serverMode = (): InstallMode => "none";
 
@@ -15,54 +14,21 @@ export function useInstallMode() {
   return useSyncExternalStore(subscribeToInstall, installMode, serverMode);
 }
 
-type InstallAppButtonProps = {
-  className: string;
-  /** Hide the text while the desktop sidebar is collapsed. */
-  collapsible?: boolean;
-};
-
-/**
- * "Installer l'application" in the account part of the menu. Chrome, Edge and
- * Samsung Internet show their install dialog; on iPhone and iPad it opens the
- * steps of Safari's share menu. Hidden once installed, and in browsers that
- * cannot install the app.
- */
-export function InstallAppButton({ className, collapsible = false }: InstallAppButtonProps) {
-  const t = useTranslations("AppShell.install");
-  const mode = useInstallMode();
-  const [stepsOpen, setStepsOpen] = useState(false);
-
-  if (mode === "none") return null;
-
-  return (
-    <>
-      <button
-        type="button"
-        className={className}
-        aria-label={t("button")}
-        aria-haspopup={mode === "ios" ? "dialog" : undefined}
-        onClick={() => (mode === "prompt" ? void promptInstall() : setStepsOpen(true))}
-      >
-        <Download className="size-4 shrink-0" aria-hidden="true" />
-        <span className={cn(collapsible && "sidebar-collapsed:sr-only")}>{t("button")}</span>
-      </button>
-      {mode === "ios" ? <IosInstallSteps open={stepsOpen} onOpenChange={setStepsOpen} /> : null}
-    </>
-  );
-}
-
 /** The three steps of Safari's share menu, which iOS uses to install a web app. */
 export function IosInstallSteps({
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Where the focus goes on close: the item that opened the dialog is gone with its menu. */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const t = useTranslations("AppShell.install");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-6">
+      <DialogContent className="p-6" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogTitle>{t("title")}</DialogTitle>
         <DialogDescription className="mt-2">{t("description")}</DialogDescription>
         <ol className="mt-5 space-y-3 text-sm">
