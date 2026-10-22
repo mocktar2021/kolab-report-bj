@@ -96,6 +96,18 @@ describe("PlanImport, reading", () => {
     );
   });
 
+  it("opens the file field from a French button and shows the chosen name", () => {
+    renderImport();
+    const input = screen.getByLabelText("Fichier du plan");
+    expect(screen.getByText("Aucun fichier choisi")).toBeInTheDocument();
+    const click = vi.spyOn(input, "click");
+    fireEvent.click(screen.getByText("Choisir un fichier"));
+    expect(click).toHaveBeenCalledOnce();
+    fireEvent.change(input, { target: { files: [new File(["# Plan"], "plan.md")] } });
+    expect(screen.getByText("plan.md")).toBeInTheDocument();
+    expect(screen.queryByText("Aucun fichier choisi")).not.toBeInTheDocument();
+  });
+
   it("checks the file before sending it", () => {
     renderImport(false);
     expect(screen.getByLabelText("Fichier du plan")).toHaveAttribute("accept", ".docx,.txt,.md");

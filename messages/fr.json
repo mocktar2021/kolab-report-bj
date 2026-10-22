@@ -2310,6 +2310,8 @@
     "readOnly": "Cet espace de travail est en lecture seule : aucun plan ne peut être importé.",
     "fileTitle": "Depuis un fichier",
     "fileLabel": "Fichier du plan",
+    "fileChoose": "Choisir un fichier",
+    "fileNone": "Aucun fichier choisi",
     "fileHelp": "Word (.docx), texte (.txt), Markdown (.md) ou PDF, 4 Mo au plus. Le fichier sert à lire le plan et n'est pas conservé.",
     "fileHelpNoPdf": "Word (.docx), texte (.txt) ou Markdown (.md), 4 Mo au plus. Le fichier sert à lire le plan et n'est pas conservé.",
     "pdfNote": "Un PDF est lu par l'IA : la lecture compte comme un brouillon IA du mois.",
