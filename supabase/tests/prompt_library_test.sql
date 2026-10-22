@@ -9,7 +9,8 @@ select is(
      and template_key in ('synthese-section', 'resume-executif', 'recommandations', 'analyse-donnees')),
   4, 'the four global templates are published, with no author');
 select is(
-  (select variables from public.prompt_library where workspace_id is null and template_key = 'synthese-section'),
+  (select variables from public.prompt_library
+   where workspace_id is null and template_key = 'synthese-section' and status = 'published'),
   '["report_title", "report_context", "section_title", "section_instructions", "deliverables"]'::jsonb,
   'a global template lists the variables it uses, in order');
 
