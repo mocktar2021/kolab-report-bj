@@ -7,8 +7,11 @@ name: Evals
 # or a model setting. It is skipped while no API key secret is set. It can
 # also be started by hand from the Actions tab, and then always runs. The job
 # fails when a threshold of evals/thresholds.json fails or a metric drops past
-# its regression limit. Release rule: evals/README.md. Playbook:
-# docs/ai-evaluation.md.
+# its regression limit. The calls go through the Batch API at half price
+# (KRB-229): nobody waits for this run. Past EVAL_BATCH_WAIT_MINUTES (20 by
+# default) the run stops waiting on batches and sends the rest to the
+# standard API, so a slow batch can't burn Actions minutes. Release rule:
+# evals/README.md. Playbook: docs/ai-evaluation.md.
 
 on:
   schedule:
@@ -30,6 +33,11 @@ on:
         description: Case ids, comma-separated (empty runs the whole golden set)
         type: string
         default: ""
+      batch:
+        description: Send the calls through the Batch API (half price, a few minutes slower)
+        type: choice
+        options: ["yes", "no"]
+        default: "yes"
 
 concurrency:
   group: evals-${{ github.ref }}
@@ -198,11 +206,14 @@ jobs:
           # Optional caps. Empty means no cap; an incomplete run is not valid for a release.
           BUDGET_USD: ${{ vars.EVAL_NIGHTLY_BUDGET_USD }}
           BUDGET_TOKENS: ${{ vars.EVAL_NIGHTLY_BUDGET_TOKENS }}
+          # Minutes the run waits on batches before it sends the rest directly. Empty: 20.
+          BATCH_WAIT_MINUTES: ${{ vars.EVAL_BATCH_WAIT_MINUTES }}
           # Inputs go through the environment, never straight into the script.
           # A scheduled run has no inputs: it takes the defaults.
           TIER: ${{ inputs.tier || 'template' }}
           JUDGE: ${{ inputs.judge || 'yes' }}
           CASES: ${{ inputs.cases }}
+          BATCH: ${{ inputs.batch || 'yes' }}
         run: |
           set --
           if [ "$TIER" != "template" ]; then set -- "$@" --tier "$TIER"; fi
@@ -210,6 +221,10 @@ jobs:
           if [ -n "$CASES" ]; then set -- "$@" --cases "$CASES"; fi
           if [ -n "$BUDGET_USD" ]; then set -- "$@" --budget-usd "$BUDGET_USD"; fi
           if [ -n "$BUDGET_TOKENS" ]; then set -- "$@" --budget-tokens "$BUDGET_TOKENS"; fi
+          if [ "$BATCH" = "yes" ]; then
+            set -- "$@" --batch
+            if [ -n "$BATCH_WAIT_MINUTES" ]; then set -- "$@" --batch-wait-minutes "$BATCH_WAIT_MINUTES"; fi
+          fi
           # baseline.json in the artifact is ready to become evals/baseline/production.json.
           npm run eval -- "$@" --compare evals/baseline/production.json \
             --write-baseline evals/reports/baseline.json --comment evals/reports/summary.md

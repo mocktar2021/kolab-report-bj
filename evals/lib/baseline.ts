@@ -93,7 +93,7 @@ const caseSummarySchema = z.object({
   truncationOk: z.boolean().nullable(),
   judge: criterionMap(z.number().min(1).max(5)).nullable(),
   error: z.string().nullable(),
-  latencyMs: z.number().nonnegative(),
+  latencyMs: z.number().nonnegative().nullable(),
   tokens: z.object({ input: z.number().nonnegative(), output: z.number().nonnegative() }),
   costUsd: z.number().nonnegative().nullable(),
 });

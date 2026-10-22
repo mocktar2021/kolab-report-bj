@@ -428,13 +428,15 @@ function costSection(input: CommentInput): string[] {
   const spent =
     budget.spent.usd === null
       ? "Coût : n/a, pas de prix `AI_PRICE_*` pour les deux niveaux de modèle."
-      : `Coût estimé du run : ${usd(budget.spent.usd)}${withJudge}.`;
+      : `Coût estimé du run : ${usd(budget.spent.usd)}${withJudge}${run.batch ? ", au prix de la Batch API (moitié prix)" : ""}.`;
   return [
     spent,
     `Tokens : ${int(aggregates.tokens.input)} en entrée, ${int(aggregates.tokens.output)} en sortie${withJudge}.`,
-    `Latence de génération : p50 ${
-      aggregates.latencyMs.p50 === null ? "n/a" : seconds(aggregates.latencyMs.p50)
-    }, p95 ${aggregates.latencyMs.p95 === null ? "n/a" : seconds(aggregates.latencyMs.p95)}.`,
+    run.batch
+      ? "Latence de génération : non mesurée, les appels passent par la Batch API."
+      : `Latence de génération : p50 ${
+          aggregates.latencyMs.p50 === null ? "n/a" : seconds(aggregates.latencyMs.p50)
+        }, p95 ${aggregates.latencyMs.p95 === null ? "n/a" : seconds(aggregates.latencyMs.p95)}.`,
   ];
 }
 

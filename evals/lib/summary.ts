@@ -30,8 +30,8 @@ export type CaseSummary = {
   judge: Record<Criterion, number> | null;
   /** Generation error, if the draft failed. */
   error: string | null;
-  /** Generation latency, repair included. */
-  latencyMs: number;
+  /** Generation latency, repair included. Null when not measured (Batch API). */
+  latencyMs: number | null;
   /** Draft, summaries and judge. */
   tokens: { input: number; output: number };
   /** Draft and summaries, null when no price is set. The judge is left out, as in the reports. */
@@ -111,7 +111,7 @@ export function aggregateSummaries(cases: readonly CaseSummary[]): Aggregates {
   const input = cases.reduce((sum, value) => sum + value.tokens.input, 0);
   const output = cases.reduce((sum, value) => sum + value.tokens.output, 0);
   const costs = cases.map((value) => value.costUsd).filter((cost) => cost !== null);
-  const latencies = cases.map((value) => value.latencyMs);
+  const latencies = cases.map((value) => value.latencyMs).filter((value) => value !== null);
 
   return {
     cases: cases.length,

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { CONTEXT_VERSION } from "@/lib/ai/context";
 import { providerModel, readAiSettings, type AiSettings } from "@/lib/ai/models";
@@ -8,6 +9,7 @@ import { OUTPUT_SCHEMA_VERSION } from "@/lib/ai/schemas";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier, type OutputSchema } from "@/lib/prompts/catalog";
 import { agreementCli, loadHumanScores } from "./human/agreement";
 import { buildBaseline, readBaseline, writeBaseline } from "./lib/baseline";
+import { BatchQueue, batchPrices } from "./lib/batch";
 import { Budget, hasPrices } from "./lib/budget";
 import { CaseError, loadCases, type LoadedCase } from "./lib/case";
 import { renderComment, renderErrorComment } from "./lib/comment";
@@ -38,6 +40,9 @@ import { loadGlobalTemplates, templateFromFile, type EvalTemplate } from "./lib/
 // `npm run eval:template-writer` the cases of "Rédiger avec l'IA" (KRB-198).
 // See evals/README.md and docs/ai-evaluation.md.
 
+/** How long a run waits on batches by default. Past it, a CI runner spends minutes for nothing. */
+const BATCH_WAIT_MINUTES = 20;
+
 const USAGE = `Usage: npm run eval -- [options]
        npm run eval:agreement -- [scores.csv ...]
        npm run eval:template-writer -- [--mock] [--cases a,b] [--tier fast|standard]
@@ -51,7 +56,10 @@ Options:
   --prompt-file path     Evaluate this template text instead of the shipped one...
   --prompt-schema key    ...for the templates with this output schema (${OUTPUT_SCHEMAS.join(", ")})
   --out dir              Report folder (default ${REPORTS_DIR})
-  --concurrency n        Cases run at the same time (default 3)
+  --concurrency n        Cases run at the same time (default 3; with --batch, all of them)
+  --batch                Send the calls through the Batch API: half price, slower (Anthropic only)
+  --batch-wait-minutes n Stop waiting on batches n minutes after the start: the rest goes to
+                         the standard API at full price (default ${BATCH_WAIT_MINUTES})
   --budget-usd n         Start no case once the estimated spend would pass n USD (needs AI_PRICE_*)
   --budget-tokens n      Same, in tokens
   --compare file         Compare with a baseline run file (missing file: absolute thresholds only)
@@ -74,6 +82,8 @@ type Options = {
   promptSchema: OutputSchema | null;
   out: string;
   concurrency: number;
+  batch: boolean;
+  batchWaitMinutes: number;
   budgetUsd: number | null;
   budgetTokens: number | null;
   compare: string | null;
@@ -113,6 +123,8 @@ function parseOptions(args: string[]): Options {
       "prompt-schema": { type: "string" },
       out: { type: "string", default: REPORTS_DIR },
       concurrency: { type: "string", default: "3" },
+      batch: { type: "boolean", default: false },
+      "batch-wait-minutes": { type: "string" },
       "budget-usd": { type: "string" },
       "budget-tokens": { type: "string" },
       compare: { type: "string" },
@@ -145,6 +157,9 @@ function parseOptions(args: string[]): Options {
   const subset = values.subset?.trim() || null;
   if (values.subset !== undefined && subset === null) throw new UsageError("--subset needs a name");
   if (subset !== null && cases !== null) throw new UsageError("use --subset or --cases, not both");
+  const batch = values.batch ?? false;
+  const batchWaitMinutes = positive(values["batch-wait-minutes"], "--batch-wait-minutes", false);
+  if (batchWaitMinutes !== null && !batch) throw new UsageError("--batch-wait-minutes goes with --batch");
   return {
     mock: values.mock ?? false,
     tier: tier as ModelTier | null,
@@ -155,6 +170,8 @@ function parseOptions(args: string[]): Options {
     promptSchema: schema as OutputSchema | null,
     out: values.out ?? REPORTS_DIR,
     concurrency,
+    batch,
+    batchWaitMinutes: batchWaitMinutes ?? BATCH_WAIT_MINUTES,
     budgetUsd: positive(values["budget-usd"], "--budget-usd", false),
     budgetTokens: positive(values["budget-tokens"], "--budget-tokens", true),
     compare: path(values.compare, "--compare"),
@@ -208,9 +225,11 @@ function caseLine(result: CaseResult, index: number, total: number, mock: boolea
   const judgeWhy = (mock ? [] : lowJudgeScores(result))
     .map((low) => `\n      judge ${low.key} ${low.score}/5: ${low.justification}`)
     .join("");
-  return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${(
-    result.generation.latencyMs / 1000
-  ).toFixed(1)} s${extra.length > 0 ? `  ${extra.join(" ")}` : ""}${why}${judgeWhy}`;
+  const latency =
+    result.generation.latencyMs === null ? "batch" : `${(result.generation.latencyMs / 1000).toFixed(1)} s`;
+  return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${latency}${
+    extra.length > 0 ? `  ${extra.join(" ")}` : ""
+  }${why}${judgeWhy}`;
 }
 
 /** Link to the GitHub Actions run, when the runner is in one. */
@@ -263,27 +282,47 @@ async function evaluate(options: Options, env: Env): Promise<number> {
   // Read the baseline before spending anything: a broken file is a setup error.
   const baseline = options.compare !== null ? readBaseline(options.compare) : null;
 
+  // The Batch API (KRB-229): every call waits in a queue that goes out as one
+  // batch, at half price. Only the Anthropic provider is wired for it.
+  const batching = options.batch && !mock && settings.provider === "anthropic";
+  if (options.batch && !batching)
+    console.log(
+      `--batch: ${mock ? "mock model" : `provider ${settings.provider}`}, the calls go to the standard API.`,
+    );
+  const queue = batching
+    ? new BatchQueue(createAnthropic({ apiKey: env.ANTHROPIC_API_KEY }).experimental_batch(), {
+        deadline: Date.now() + options.batchWaitMinutes * 60_000,
+        log: (line) => console.log(line),
+      })
+    : null;
+  const live = (model: LanguageModelV4) => (queue ? queue.model(model) : model);
+  // Prices only feed the cost estimates and the budget: batches cost half.
+  const costSettings = batching ? batchPrices(settings) : settings;
+
   const judgeModelId = env.AI_EVAL_JUDGE_MODEL?.trim() || null;
   const judgeModel = !options.judge
     ? null
     : mock
       ? mockJudge()
-      : realModel(settings, "standard", env, judgeModelId ?? undefined);
+      : live(realModel(settings, "standard", env, judgeModelId ?? undefined));
   const judge = judgeModel ? { model: judgeModel, rubric: loadRubric() } : null;
-  const summarizer = mock ? mockSummarizer() : realModel(settings, "fast", env);
+  const summarizer = mock ? mockSummarizer() : live(realModel(settings, "fast", env));
 
   const depsFor = (value: LoadedCase): RunDeps => {
     const template = templates.get(value.template);
     if (!template) throw new Error(`no template ${value.template}`);
     const tier = options.tier ?? template.tier;
     return {
-      settings,
+      settings: costSettings,
       template,
       tier,
       modelId: mock ? "mock" : settings.models[tier],
-      generator: mock ? mockGenerator : () => realModel(settings, tier, env),
+      generator: mock ? mockGenerator : () => live(realModel(settings, tier, env)),
       summarizer,
       judge,
+      // All the overflow chunks of a case in one batch, not three at a time.
+      summaryConcurrency: batching ? Number.MAX_SAFE_INTEGER : undefined,
+      timed: !batching,
     };
   };
 
@@ -291,7 +330,9 @@ async function evaluate(options: Options, env: Env): Promise<number> {
   console.log(
     `Golden set: ${selected.length} case(s)${options.subset ? ` (subset ${options.subset})` : ""}, ${
       mock ? "mock model" : `${settings.provider} ${models.join(", ")}`
-    }${judge ? `, judge ${mock ? "mock" : (judgeModelId ?? settings.models.standard)}` : ""}`,
+    }${judge ? `, judge ${mock ? "mock" : (judgeModelId ?? settings.models.standard)}` : ""}${
+      batching ? `, Batch API (wait cap ${options.batchWaitMinutes} min)` : ""
+    }`,
   );
   if (options.budgetUsd !== null && !priced)
     console.log("No AI_PRICE_* for both tiers: the USD budget can't be checked, the token budget applies.");
@@ -299,12 +340,23 @@ async function evaluate(options: Options, env: Env): Promise<number> {
   const startedAt = new Date().toISOString();
   const budget = new Budget({ usd: options.budgetUsd, tokens: options.budgetTokens }, priced);
   const { results, skipped } = await executeCases(selected, {
-    concurrency: options.concurrency,
+    // With batches, every case runs at once so their calls share each batch.
+    concurrency: batching ? selected.length : options.concurrency,
     budget,
     depsFor,
     onResult: (result, done) => console.log(caseLine(result, done, selected.length, mock)),
     onSkip: (value) => console.log(`[skip] ${value.id}: budget reached`),
   });
+  if (queue) {
+    const { batches, batched, direct } = queue.stats;
+    console.log(
+      `Batch API: ${batches} batch(es), ${batched} call(s) answered at half price${
+        direct > 0
+          ? `, ${direct} sent to the standard API at full price (the cost estimate counts them at half)`
+          : ""
+      }.`,
+    );
+  }
 
   const humans = loadHumanScores();
   for (const error of humans.errors) console.warn(`Human scores: ${error}`);
@@ -318,6 +370,7 @@ async function evaluate(options: Options, env: Env): Promise<number> {
     provider: mock ? "mock" : settings.provider,
     model: models.join("+"),
     judgeModel: judge ? (mock ? "mock" : (judgeModelId ?? settings.models.standard)) : null,
+    batch: batching,
     settings: {
       maxInputTokens: settings.maxInputTokens,
       contextWindowTokens: settings.contextWindowTokens,

@@ -26,7 +26,9 @@ npx vitest run evals                    # unit tests: cases, checks, kappa, gate
 | `--judge` | Scores each draft with the judge model. |
 | `--prompt-file path` with `--prompt-schema key` | Runs the cases whose template has this output schema with the text of `path`, to test a new template version before it ships. |
 | `--out dir` | Report folder. Default `evals/reports` (git-ignored). |
-| `--concurrency n` | Cases run at the same time. Default 3. |
+| `--concurrency n` | Cases run at the same time. Default 3. With `--batch`, every case runs at once. |
+| `--batch` | Sends the calls through the provider's Batch API, at half price (KRB-229). Anthropic only; with another provider or the mock model the run says so and uses the standard API. Latency is not measured and the cost estimate uses half the `AI_PRICE_*` prices. See [the Batch API](../docs/ai-evaluation.md#the-batch-api). |
+| `--batch-wait-minutes n` | With `--batch`: n minutes after the start, the run stops waiting on batches and sends what is left to the standard API at full price. Default 20. |
 | `--budget-usd n`, `--budget-tokens n` | Start no new case once the estimated spend (judge included) would pass the cap. USD needs the four `AI_PRICE_*` variables. Skipped cases are listed and make the run incomplete. |
 | `--compare file` | Compare with a baseline run, overall and per template, on the cases both runs have. A missing file only means no baseline yet. |
 | `--write-baseline file` | Write this run as a baseline (see `baseline/README.md`). |
@@ -40,7 +42,7 @@ npx vitest run evals                    # unit tests: cases, checks, kappa, gate
 | `AI_MAX_INPUT_TOKENS`, `AI_CONTEXT_WINDOW_TOKENS`, `AI_REDACT_PII` | Context budget and PII masking, as in the app. Use the values of the environment you want to release. |
 | `AI_PRICE_*_PER_MTOK` | Prices for the cost estimate. Without them the cost shows as n/a. |
 
-The **Evals** workflow (`.github/workflows/evals.yml`) runs the full set with the judge every night and compares it with `baseline/production.json`, and runs by hand from the Actions tab with the tier, judge and case list as inputs. It needs the `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` secret and the `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST` variables (optionally `AI_EVAL_JUDGE_MODEL` and the prices); the nightly run is skipped while the secret is missing. The reports are kept as the `eval-reports` artifact for 90 days. The **Evals on PR** workflow (`.github/workflows/evals-pr.yml`) runs the `pr` subset on pull requests that change a prompt template, an output schema, the context builder, the repair logic, a model id or the evals, and comments the comparison on the PR. See [`docs/ai-evaluation.md`](../docs/ai-evaluation.md).
+The **Evals** workflow (`.github/workflows/evals.yml`) runs the full set with the judge every night and compares it with `baseline/production.json`, and runs by hand from the Actions tab with the tier, judge, case list and Batch API as inputs. Both send the calls through the Batch API at half price unless the manual run turns it off. It needs the `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` secret and the `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST` variables (optionally `AI_EVAL_JUDGE_MODEL` and the prices); the nightly run is skipped while the secret is missing. The reports are kept as the `eval-reports` artifact for 90 days. The **Evals on PR** workflow (`.github/workflows/evals-pr.yml`) runs the `pr` subset on pull requests that change a prompt template, an output schema, the context builder, the repair logic, a model id or the evals, and comments the comparison on the PR. See [`docs/ai-evaluation.md`](../docs/ai-evaluation.md).
 
 ## What a run does
 

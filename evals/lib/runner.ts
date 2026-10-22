@@ -46,6 +46,8 @@ export type RunDeps = {
   summarizer: LanguageModelV4;
   judge: { model: LanguageModelV4; rubric: string } | null;
   summaryConcurrency?: number;
+  /** Measure the generation latency. Off with the Batch API, where it would measure the queue. */
+  timed?: boolean;
 };
 
 export type CaseResult = {
@@ -71,7 +73,8 @@ export type CaseResult = {
     error: string | null;
     /** Why each refused answer was refused: the finish reason and the first problem. */
     rejections: string[];
-    latencyMs: number;
+    /** Null when not measured (Batch API). */
+    latencyMs: number | null;
     usage: TokenUsage;
     costUsd: number | null;
   };
@@ -273,7 +276,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
       }
     }
   }
-  const latencyMs = Math.round(performance.now() - started);
+  const latencyMs = deps.timed === false ? null : Math.round(performance.now() - started);
 
   const markdown = output ? draftToMarkdown(output, built.names) : null;
   const outputText = output ? allStrings(output.value) : "";

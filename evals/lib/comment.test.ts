@@ -134,6 +134,15 @@ describe("renderComment", () => {
     expect(text).toContain("+100 % (alerte au-delà de +30 %, à surveiller)");
   });
 
+  it("skips the latency of a batch run instead of warning about it", () => {
+    const text = renderComment(
+      input(prCases({ latencyMs: null }), { baseline: prCases(), run: { batch: true } }),
+    );
+    expect(verdict(text)).toBe("**Aucune régression.**");
+    expect(text).not.toContain("À surveiller");
+    expect(text).toContain("Latence de génération : non mesurée, les appels passent par la Batch API.");
+  });
+
   it("lists the cases the budget skipped and calls the run incomplete", () => {
     const budget = new Budget({ usd: 2, tokens: null }, true);
     const text = renderComment(

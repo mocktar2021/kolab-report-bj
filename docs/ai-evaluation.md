@@ -101,6 +101,7 @@ Then:
 | `npm run eval -- --cases a,b` | These case ids only. |
 | `npm run eval -- --judge` | Adds the judge. Needed for a release, and for any judge comparison. |
 | `npm run eval -- --budget-usd 2 --budget-tokens 500000` | Starts no new case once the estimated spend would pass a cap. |
+| `npm run eval -- --batch --judge` | Sends the calls through the Batch API at half price, for runs nobody waits for. See [the Batch API](#the-batch-api). |
 | `npm run eval -- --compare evals/baseline/production.json` | Compares with the production baseline. A missing file is not an error. |
 | `npm run eval -- --write-baseline file.json` | Writes this run in the baseline format. |
 | `npm run eval -- --comment eval-comment.md` | Writes the PR comment, in French. |
@@ -154,6 +155,7 @@ Repository settings it reads:
 | `EVAL_PR_BUDGET_USD` | Variable | USD cap of a PR run. Default 2. |
 | `EVAL_PR_BUDGET_TOKENS` | Variable | Token cap of a PR run. Default 500000, more than twice the upfront estimate of the `pr` subset with the judge (about 220,000 tokens). |
 | `EVAL_NIGHTLY_BUDGET_USD`, `EVAL_NIGHTLY_BUDGET_TOKENS` | Variable | Optional caps of the nightly run. Empty means no cap. |
+| `EVAL_BATCH_WAIT_MINUTES` | Variable | How long the nightly and manual runs wait on batches before they send the rest to the standard API. Default 20. |
 
 ### Regression limits
 
@@ -190,7 +192,7 @@ How the comparison works:
 
 ## The nightly run
 
-`.github/workflows/evals.yml` runs at 03:17 UTC on the default branch, on a night after an AI change only (KRB-223): the full golden set with the judge, compared with `evals/baseline/production.json`. A full run costs about 1.10 USD. Its first job, **What to run**, finds the last scheduled run that ran the golden set, passed or failed, and compares `master` with that run's commit. The night goes on when one of these changed since then:
+`.github/workflows/evals.yml` runs at 03:17 UTC on the default branch, on a night after an AI change only (KRB-223): the full golden set with the judge, compared with `evals/baseline/production.json`. A full run costs about 0.55 USD through the Batch API (about 1.10 USD at standard prices). Its first job, **What to run**, finds the last scheduled run that ran the golden set, passed or failed, and compares `master` with that run's commit. The night goes on when one of these changed since then:
 
 - a file the PR gate watches: a migration that touches `prompt_library`, the output schemas, the context builder, the repair logic, `models.ts`, `evals/`, `scripts/build-evals.mjs`, a model id in `.env.example`. `scripts/evals-workflows.test.ts` fails when the gate watches a file the nightly run does not;
 - the version of `ai` or of an `@ai-sdk/` package in `package.json`;
@@ -198,7 +200,19 @@ How the comparison works:
 
 It also goes on when no earlier night ran the golden set. Otherwise it skips the golden set with a notice and costs no API tokens. A failed night counts as a run, so it is not run again on its own: fix what failed, or rerun the failed job from the run's page. A manual run does not count as a night, so the night after an AI change still runs. The workflow is skipped with a notice while no API key secret is set. It never comments. The French summary and the run report go to the run's summary page, and the `eval-reports` artifact keeps the reports for 90 days, with `summary.md` and `baseline.json`, the run in the baseline format. The job fails on a threshold or a regression, and GitHub e-mails the failed run to the person who last changed the `schedule` line of the workflow.
 
-The same workflow runs by hand from the Actions tab, with the tier, the judge and a case list as inputs.
+The same workflow runs by hand from the Actions tab, with the tier, the judge, a case list and the Batch API as inputs.
+
+### The Batch API
+
+Nobody waits for the nightly run, so it sends its calls through the Anthropic Message Batches API, which costs half the standard price (KRB-229). A manual run does too, unless its `batch` input is set to `no`. The PR gate keeps the standard API: someone is waiting on it.
+
+How it works (`evals/lib/batch.ts`):
+
+- Every case runs at once. Each call (overflow summary, draft, repair, judge) waits in a queue, and after two quiet seconds the queue goes out as one batch, through the AI SDK provider's batch interface. The request is the one a direct call sends: same prompt, output schema, output cap and thinking setting. Each result goes back to its caller unchanged, so the schema check, the repair and the judge work as with the standard API.
+- A full run takes about three batches in a row: the summaries and the drafts of the short cases, then the drafts of the long cases and the first judges, then the last judges. A repair adds one.
+- The job checks each batch every 15 seconds. A batch usually ends within minutes, but Anthropic allows up to 24 hours, and the runner bills Actions minutes while it waits. So `EVAL_BATCH_WAIT_MINUTES` (20 by default) after the start, the run cancels the open batch and sends what it did not finish to the standard API at full price. The log says how many calls went that way.
+- A failed request comes back as the error a direct call would get, so the AI SDK retries what it would retry. A batch that can't start or fails sends its calls directly.
+- The latency is not measured: it would measure the queue. The reports and the comment say so, and the comparison skips the latency row when either run has none. The cost estimate and the budget use half the `AI_PRICE_*` prices; calls sent directly after the wait cap are counted at that price too.
 
 ## Refreshing the production baseline
 
