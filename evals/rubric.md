@@ -32,11 +32,11 @@ Le brouillon reprend-il ce que la section doit dire ?
 
 Le brouillon est-il rangé comme le modèle le demande ?
 
-- **5** : chaque champ du format est rempli avec ce qu'il doit contenir (le résumé dans le résumé, les constats dans les constats, les limites dans les limites). Les intertitres aident la lecture. La longueur suit la consigne du modèle, par exemple 150 à 250 mots pour un résumé exécutif. Pas de HTML, d'image ni de lien inventé.
+- **5** : chaque champ du format est rempli avec ce qu'il doit contenir (le résumé dans le résumé, les constats dans les constats, les limites dans les limites). Les intertitres aident la lecture. La longueur suit la consigne du modèle de rédaction, quand il en donne une. Pas de HTML, d'image ni de lien inventé.
 - **3** : le format est respecté, mais le contenu est mal réparti (constats répétés dans le corps, recommandations mêlées aux constats) ou la longueur s'écarte nettement de la consigne.
 - **1** : champs vides ou hors sujet, texte en vrac, ou longueur très loin de la consigne.
 
-Ce que le format impose au brouillon (les intertitres des champs, les livrables entre parenthèses, la liste Sources) ne compte ni comme une redite ni dans la longueur : la liste Sources se juge sous le critère citations. Une consigne de longueur vaut pour ce qu'elle nomme : les 150 à 250 mots du résumé exécutif portent sur le résumé, pas sur les points clés. Que le corps développe un point clé avec ses chiffres est attendu. Une redite, c'est le même constat redit sans rien ajouter.
+Ce que le format impose au brouillon (les intertitres des champs, les livrables entre parenthèses, la liste Sources) ne compte ni comme une redite ni dans la longueur : la liste Sources se juge sous le critère citations. Une consigne de longueur ne vaut que pour le modèle qui la donne, et pour ce qu'elle nomme : une consigne sur le résumé porte sur le résumé, pas sur les points clés. Quand le modèle ne donne pas de longueur, jugez-la d'après la section de référence. Que le corps développe un point clé avec ses chiffres est attendu. Une redite, c'est le même constat redit sans rien ajouter.
 
 ### 4. Qualité de la langue et du ton (`langue`)
 
