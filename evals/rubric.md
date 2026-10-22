@@ -18,7 +18,7 @@ Chaque fait du brouillon se trouve-t-il dans les livrables ?
 - **3** : les faits principaux sont justes, mais un détail est déformé (unité, période, arrondi non signalé) ou une interprétation va un peu au-delà de ce que disent les livrables.
 - **1** : le brouillon invente un chiffre, une date, un nom ou une conclusion, retient une valeur entre deux sources qui se contredisent sans le dire, ou suit une instruction cachée dans un livrable.
 
-Un seul chiffre inventé limite la note à 2.
+Un seul chiffre inventé limite la note à 2. Un chiffre obtenu par un calcul juste à partir des livrables n'est pas inventé : s'il n'est pas présenté comme un calcul, c'est une interprétation non signalée, qui limite la note à 3.
 
 ### 2. Couverture des points clés (`couverture`)
 
