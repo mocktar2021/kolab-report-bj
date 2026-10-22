@@ -123,6 +123,19 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           for bucket in $BUCKETS; do
+            # The buckets come from the migrations, so they don't exist before
+            # the first deploy (KRB-231). rclone exits with 3 when a directory,
+            # here the bucket, is not found. Any other error stops the job.
+            status=0
+            rclone lsf "supabase:$bucket" --max-depth 1 > /dev/null || status=$?
+            if [ "$status" = 3 ]; then
+              echo "::notice title=Storage backup::The $bucket bucket does not exist on $TARGET yet: skipped."
+              echo "| $bucket | not created yet | | |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            elif [ "$status" != 0 ]; then
+              exit "$status"
+            fi
+
             echo "::group::$bucket"
             # The log level stays at NOTICE, so file names (which can hold
             # personal data) only appear in errors.

@@ -148,7 +148,7 @@ Do this on the `production` environment first, then on `staging` if you want sta
    - Not the direct connection `db.<project-ref>.supabase.co`: it is IPv6 only without the IPv4 add-on, and GitHub runners have no IPv6.
    - Not the transaction pooler on port 6543: `pg_dump` needs a session.
    - Percent-encode special characters of the password (`@` becomes `%40`, `/` becomes `%2F`).
-4. **Actions > Backup database > Run workflow**, from `master`, environment `production`. Check the summary and download the artifact once to try the key: `age -d -i kolabreport-backup.key <file> | tar -tzf -`.
+4. **Actions > Backup database > Run workflow**, from `master`, environment `production`. Check the summary and download the artifact once to try the key: `age -d -i kolabreport-backup.key <file> | tar -tzf -`. Before the first deploy of the environment, the database has no migration history: the job ends with the notice "Database backup skipped" and uploads nothing. Run it again after the deploy.
 
 ### Storage copy
 
@@ -178,7 +178,7 @@ Do this on the `production` environment first, then on `staging` if you want sta
    | `BACKUP_S3_BUCKET` | `kolabreport-backup-production` |
 
    Another S3-compatible service works too: set the variable `BACKUP_S3_PROVIDER` to its rclone provider name (the default is `Cloudflare`). Keep it in the EU.
-6. **Actions > Backup storage > Run workflow**, from `master`, environment `production`. Check the counts in the summary.
+6. **Actions > Backup storage > Run workflow**, from `master`, environment `production`. Check the counts in the summary. Before the first deploy, the buckets don't exist yet: the summary says "not created yet" for each one.
 
 ### Environment rules
 
