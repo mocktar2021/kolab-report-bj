@@ -101,7 +101,7 @@ Migrations are not rolled back. They are expand-only, so the previous app versio
 | P2 | One feature broken with a way around it: export, upload, AI draft, a reminder not sent | Same day | Jira bug, fix within 2 working days |
 | P3 | Wrong text, layout issue, a question | Next working day | Jira item in the backlog |
 
-Data visible to the wrong workspace is also a personal data breach. Firms are told without undue delay, and the authority within 72 hours where KolabReport is the controller. The full breach procedure is still an open item in [`docs/gdpr/README.md`](../gdpr/README.md).
+Data visible to the wrong workspace is also a personal data breach. Firms are told without undue delay, and the authority within 72 hours where KolabReport is the controller. Follow the [breach procedure](../gdpr/breach.md): who decides, the first hour, and who to tell.
 
 ## Support
 
