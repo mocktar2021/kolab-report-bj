@@ -47,6 +47,7 @@ Before the release tag, for production:
 - FedaPay live account verified, every box of **Préférences > Frais** unticked (next section), live keys and webhook secret on Vercel Production only, live webhook created with auto-disable unticked ([`docs/deployment.md`](../deployment.md#4-fedapay-krb-176)).
 - Vercel Pro, the day before the tag ([launch](launch.md#vercel-plan)). Supabase stays on Free for now, against ADR 001, Q16 (decided 2026-10-20). Terms of sale online at `/fr/cgv`.
 - The sandbox checklist of ADR 001, section 13, passed on staging.
+- An account on SFE en ligne to issue the normalized invoices (done on 2026-10-23, [Normalized invoice](#normalized-invoice-e-mecef)).
 - The launch e-mail to existing owners, written by the product owner, when production has any.
 
 After the release:
@@ -65,7 +66,7 @@ Receipts need no setup: no bucket, no job. `GET /api/billing/receipts/<id>` draw
 - The seller on the receipts is `private.billing_settings.seller` at the time of the payment. To change it (new address, for example), update that row in the SQL editor of each Supabase project. Only the next receipts change.
 - The buyer is the organization's billing details at the time of the payment. A customer who wants another name on a receipt already issued needs a credit note (`AV-` numbers, not built yet, ADR 001 question A3).
 - Receipts paid on staging (FedaPay sandbox) and locally (mock) say "Reçu de test, sans valeur comptable".
-- The e-MECeF number goes in `external_invoice_number`, the only column besides `external_invoice_data` that may change. The PDF shows "non émise" until it is set.
+- The e-MECeF number goes in `external_invoice_number`, the only column besides `external_invoice_data` that may change. The PDF shows "non émise" until it is set ([Normalized invoice](#normalized-invoice-e-mecef)).
 - The payment confirmation e-mail links to the receipts of the billing page (`/fr/organisations/<id>/abonnement#recus`), not to the PDF route as ADR 001, section 9 suggests: a reader who is signed out gets a bare 401 from the route, while the page sends them to the sign-in first.
 
 To read a customer's receipts as the operator, in the SQL editor:
@@ -85,6 +86,26 @@ from public.billing_receipts r
 where r.organization_id is null and r.buyer ->> 'organization_id' = '<organization id>'
 order by r.issued_at desc;
 ```
+
+### Normalized invoice (e-MECeF)
+
+Mocktar Technologies issues its normalized invoices (factures normalisées) on SFE en ligne, the e-MECeF site of the DGI, since 2026-10-23. The receipt of the app is not that invoice: it records the payment and gives the invoice's number once it exists.
+
+After each live payment, the same day:
+
+1. On SFE en ligne, create a "Facture de vente": the buyer's name and IFU from the receipt, one line per receipt line with its price (T.T.C.) and quantity, the tax group the accountant gives (ADR 001, A1), and the payment type, mobile money or card, as the FedaPay transaction shows.
+2. Finalize it. The block "Éléments de sécurité de la facture normalisée" then shows the invoice's codes and QR code instead of "La facture n'est pas traitée !".
+3. Copy the invoice's reference from that block (the code MECeF/DGI) to the receipt, on production:
+
+   ```sql
+   update public.billing_receipts
+   set external_invoice_number = '<code MECeF/DGI>'
+   where number = 'KR-2026-000001';
+   ```
+
+   The receipt PDF then reads "Facture normalisée (e-MECeF) : <code>" instead of "non émise". The trigger refuses a change to any other column.
+
+A refund needs a facture d'avoir on SFE en ligne that refers to the first invoice. Our own credit notes (`AV-` numbers) wait for the accountant (A3). Receipts of staging and of the mock provider are test receipts and never get one.
 
 ## Prices, the pricing page and the FedaPay fee
 
@@ -383,7 +404,7 @@ The rules, decided by the product owner (ADR 001, Q10): no refund of a started p
    ```
 
    A refunded Pack IA has no script: `update public.billing_ai_packs set revoked_at = now() where purchase_id = '<purchase_id>';`, then a `manual_revoke` event in `private.billing_events` with your name, the reason and the purchase id.
-4. The receipt stays as it is: receipts never change. Credit notes wait for the accountant (ADR 001, A3).
+4. The receipt stays as it is: receipts never change. Issue the facture d'avoir on SFE en ligne ([Normalized invoice](#normalized-invoice-e-mecef)). Our own credit notes wait for the accountant (ADR 001, A3).
 
 ### Two payments for the same offer
 
