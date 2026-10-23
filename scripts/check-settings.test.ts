@@ -162,6 +162,95 @@ describe("checkVercel (KRB-157)", () => {
     ]);
   });
 
+  describe("AI switch, prices and cost alert (KRB-235)", () => {
+    const AI_NAMES = [
+      "AI_DRAFTS_ENABLED",
+      "AI_PRICE_INPUT_PER_MTOK",
+      "AI_PRICE_OUTPUT_PER_MTOK",
+      "AI_PRICE_FAST_INPUT_PER_MTOK",
+      "AI_PRICE_FAST_OUTPUT_PER_MTOK",
+      "AI_DAILY_COST_ALERT_USD",
+      "AI_ALERT_EMAIL",
+    ];
+    const without = (...keys: string[]) => Object.fromEntries(keys.map((key) => [key, null]));
+    const aiLines = (findings: { name: string }[]) =>
+      findings.filter((item) => item.name.startsWith("AI")).map((item) => item.name);
+
+    it("says nothing more than the AI line when there is no AI key", () => {
+      const findings = checkVercel(
+        "production",
+        fullVercel("production", without("ANTHROPIC_API_KEY", ...AI_NAMES)),
+        PROD_REF,
+      );
+      expect(aiLines(findings)).toEqual(["AI"]);
+      expect(levels(findings, "error")).toEqual([]);
+    });
+
+    it("warns on each part left off when the key is set", () => {
+      const findings = checkVercel("production", fullVercel("production", without(...AI_NAMES)), PROD_REF);
+      expect(levels(findings, "error")).toEqual([]);
+      expect(levels(findings, "warn").map((item) => [item.name, item.message])).toEqual([
+        [
+          "AI drafts",
+          "not set on production: AI drafts, the template helper and the PDF plan import stay off",
+        ],
+        [
+          "AI prices",
+          "not set on production: generations get no cost, so the AI dashboard shows tokens only and the cost alert never sends",
+        ],
+        [
+          "AI cost alert",
+          "not set on production: no e-mail when a day of AI generations costs more than planned",
+        ],
+      ]);
+    });
+
+    it("fails on prices or an alert set by half", () => {
+      const findings = checkVercel(
+        "production",
+        fullVercel("production", without("AI_PRICE_FAST_OUTPUT_PER_MTOK", "AI_ALERT_EMAIL")),
+        PROD_REF,
+      );
+      expect(levels(findings, "error").map((item) => [item.name, item.message])).toEqual([
+        ["AI prices", "partly set on production, missing AI_PRICE_FAST_OUTPUT_PER_MTOK"],
+        ["AI cost alert", "partly set on production, missing AI_ALERT_EMAIL"],
+      ]);
+    });
+
+    it("fails on an alert set without any price, since it would never send", () => {
+      const findings = checkVercel(
+        "production",
+        fullVercel(
+          "production",
+          without(
+            "AI_PRICE_INPUT_PER_MTOK",
+            "AI_PRICE_OUTPUT_PER_MTOK",
+            "AI_PRICE_FAST_INPUT_PER_MTOK",
+            "AI_PRICE_FAST_OUTPUT_PER_MTOK",
+          ),
+        ),
+        PROD_REF,
+      );
+      expect(named(findings, "AI prices")[0]).toMatchObject({ level: "warn" });
+      expect(levels(findings, "error").map((item) => [item.name, item.message])).toEqual([
+        ["AI cost alert", "set without the AI prices: it never sends"],
+      ]);
+    });
+
+    it("reads the drafts switch only when it is in clear, and warns when it is not true", () => {
+      const plain = (value: string) => ({ AI_DRAFTS_ENABLED: { type: "plain", value } });
+      for (const value of ["true", "1", " true "]) {
+        const findings = checkVercel("production", fullVercel("production", plain(value)), PROD_REF);
+        expect(levels(findings, "warn")).toEqual([]);
+      }
+      const off = checkVercel("production", fullVercel("production", plain("false")), PROD_REF);
+      expect(levels(off, "warn").map((item) => [item.name, item.message])).toEqual([
+        ["AI_DRAFTS_ENABLED", "is not true: AI drafts stay off"],
+      ]);
+      expect(JSON.stringify(off)).not.toContain("false");
+    });
+  });
+
   it("fails on FedaPay's mock URL on production, and on a Sensitive public variable", () => {
     const variables = [
       ...fullVercel("production", { NEXT_PUBLIC_APP_URL: { type: "sensitive" } }),
