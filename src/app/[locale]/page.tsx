@@ -15,11 +15,11 @@ import { prelaunchUntil } from "@/lib/launch";
 // prerendered at build time. Signed-in visitors are sent to the dashboard by
 // the proxy before they reach it.
 //
-// Before the launch, production shows a countdown in the hero (KRB-239). The
-// page is rendered again at most every 5 minutes, so the countdown leaves the
-// server HTML soon after the launch. In the browser it goes at the launch
-// second, whatever the cache holds.
-export const revalidate = 300;
+// A production build from before the launch shows a countdown in the hero
+// (KRB-239). The hero switches to its buttons by itself at the launch. No
+// revalidate: with it, `next start` answers with stale-while-revalidate, and
+// the browser's background check of the page never lets the network go idle
+// in the e2e and smoke tests.
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: "fr" }> }): Promise<Metadata> {
   const { locale } = await params;

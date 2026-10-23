@@ -145,6 +145,12 @@ const config: Config = {
     plugin(({ addVariant }) => {
       addVariant("sidebar-collapsed", ':root[data-sidebar="collapsed"] &');
     }),
+    // launched:* and prelaunch:* follow <html data-launched>, set by the
+    // hero's inline script once the launch has passed (KRB-239).
+    plugin(({ addVariant }) => {
+      addVariant("launched", ":root[data-launched] &");
+      addVariant("prelaunch", ":root:not([data-launched]) &");
+    }),
   ],
 };
 

@@ -7,6 +7,8 @@ import { requestLaunchReminder } from "@/lib/launch-actions";
 import messages from "../../../messages/fr.json";
 import { timeLeft } from "./countdown";
 import { LaunchPanel } from "./launch-panel";
+import { launchInitScript } from "./launch-script";
+import { LaunchWatch } from "./launch-watch";
 import { UntilLaunch } from "./until-launch";
 
 vi.mock("@/lib/launch-actions", () => ({ requestLaunchReminder: vi.fn() }));
@@ -33,6 +35,7 @@ function withIntl(node: React.ReactNode) {
 
 afterEach(() => {
   vi.useRealTimers();
+  delete document.documentElement.dataset.launched;
 });
 
 describe("timeLeft", () => {
@@ -81,6 +84,31 @@ describe("UntilLaunch", () => {
     act(() => vi.advanceTimersByTime(2000));
     expect(screen.getByText("Ouvert")).toBeInTheDocument();
     expect(screen.queryByText("Bientôt")).not.toBeInTheDocument();
+  });
+});
+
+describe("hero switch", () => {
+  const runScript = () => new Function(launchInitScript(LAUNCH))();
+
+  it("marks the page as launched before first paint, only once the launch has passed", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-27T07:59:59.000Z"));
+    runScript();
+    expect(document.documentElement.dataset.launched).toBeUndefined();
+
+    vi.setSystemTime(new Date(LAUNCH));
+    runScript();
+    expect(document.documentElement.dataset.launched).toBe("");
+  });
+
+  it("marks an open page at the launch second", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(new Date("2026-10-27T07:59:58.000Z"));
+    render(<LaunchWatch until={LAUNCH} />);
+    expect(document.documentElement.dataset.launched).toBeUndefined();
+
+    act(() => vi.advanceTimersByTime(2000));
+    expect(document.documentElement.dataset.launched).toBe("");
   });
 });
 

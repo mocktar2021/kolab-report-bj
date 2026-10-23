@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { LaunchPanel } from "@/components/launch/launch-panel";
-import { UntilLaunch } from "@/components/launch/until-launch";
+import { launchInitScript } from "@/components/launch/launch-script";
+import { LaunchWatch } from "@/components/launch/launch-watch";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -19,11 +20,12 @@ const enter =
 export function Hero({ launchAt }: { launchAt?: string }) {
   const t = useTranslations("Landing.hero");
 
-  const actions = (
+  const actions = (className?: string) => (
     <div
       className={cn(
         enter,
         "mx-auto mt-9 flex max-w-xs flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center motion-safe:delay-200",
+        className,
       )}
     >
       <Button asChild size="lg" shape="pill" className="h-12 px-7">
@@ -55,14 +57,22 @@ export function Hero({ launchAt }: { launchAt?: string }) {
           {t("subtitle")}
         </p>
         {launchAt ? (
-          <UntilLaunch
-            until={launchAt}
-            before={<LaunchPanel until={launchAt} className={cn(enter, "mt-9 motion-safe:delay-200")} />}
-          >
-            {actions}
-          </UntilLaunch>
+          <>
+            {/*
+              The page is static, so a build from before the launch holds both.
+              The script picks one before first paint, LaunchWatch at the launch
+              second, and the next build after the launch has no countdown.
+            */}
+            <script dangerouslySetInnerHTML={{ __html: launchInitScript(launchAt) }} />
+            <LaunchWatch until={launchAt} />
+            <LaunchPanel
+              until={launchAt}
+              className={cn(enter, "mt-9 motion-safe:delay-200 launched:hidden")}
+            />
+            {actions("prelaunch:hidden")}
+          </>
         ) : (
-          actions
+          actions()
         )}
       </div>
 
