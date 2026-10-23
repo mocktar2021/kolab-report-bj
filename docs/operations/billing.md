@@ -93,7 +93,7 @@ Mocktar Technologies issues its normalized invoices (factures normalisées) on S
 
 After each live payment, the same day:
 
-1. On SFE en ligne, create a "Facture de vente": the buyer's name and IFU from the receipt, one line per receipt line with its price (T.T.C.) and quantity, the tax group the accountant gives (ADR 001, A1), and the payment type, mobile money or card, as the FedaPay transaction shows.
+1. On SFE en ligne, create a "Facture de vente": the buyer's name and IFU from the receipt, one line per receipt line with its price (T.T.C., the same as the receipt since no VAT is charged) and quantity, the tax group of the TPS regime (ADR 001, A1), and the payment type, mobile money or card, as the FedaPay transaction shows.
 2. Finalize it. The block "Éléments de sécurité de la facture normalisée" then shows the invoice's codes and QR code instead of "La facture n'est pas traitée !".
 3. Copy the invoice's reference from that block (the code MECeF/DGI) to the receipt, on production:
 

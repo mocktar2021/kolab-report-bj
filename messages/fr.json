@@ -1766,7 +1766,7 @@
     "page": {
       "metaTitle": "Abonnement",
       "title": "Abonnement de {organization}",
-      "subtitle": "L'offre couvre l'organisation (cabinet) et tous ses espaces de travail, sauf ceux couverts par un Pass Mission. Prix hors taxes, en FCFA.",
+      "subtitle": "L'offre couvre l'organisation (cabinet) et tous ses espaces de travail, sauf ceux couverts par un Pass Mission. Prix nets en FCFA, sans TVA.",
       "current": "Offre en cours : {plan}, jusqu'au {date}.",
       "currentTrial": "Essai gratuit jusqu'au {date}.",
       "next": "Une période déjà payée suit, jusqu'au {date}.",
@@ -1877,7 +1877,7 @@
       "independant": "3 membres, 3 rapports actifs et 60 brouillons IA par mois.",
       "cabinet": "10 membres, rapports illimités, 250 brouillons IA par mois et modèles de prompt personnalisés.",
       "duration": "{months, plural, =1 {1 mois} =12 {12 mois, dont 2 offerts} other {# mois}}",
-      "price": "{price} FCFA HT",
+      "price": "{price} FCFA",
       "pay": "Payer",
       "payLabel": "Payer {offer}, {price} FCFA",
       "missionTitle": "Pass Mission",
@@ -1959,18 +1959,18 @@
         "label": "Désignation",
         "period": "Période",
         "quantity": "Qté",
-        "unitPrice": "Prix unitaire HT",
-        "amount": "Montant HT",
+        "unitPrice": "Prix unitaire",
+        "amount": "Montant",
         "tax": "Taxe"
       },
       "periodRange": "du {start} au {end}",
       "periodFrom": "à partir du {start}",
       "taxRate": "{rate} % : {amount}",
       "amount": "{amount} FCFA",
-      "totalHt": "Total HT",
+      "totalHt": "Sous-total",
       "totalTax": "Taxes",
       "total": "Total payé",
-      "noTax": "Aucune taxe n'est facturée sur ce reçu.",
+      "noTax": "TVA non applicable : le vendeur relève du régime de la taxe professionnelle synthétique (TPS).",
       "payment": "Paiement",
       "paymentMethod": "Moyen de paiement : {method}",
       "paymentDate": "Payé le {date}",
@@ -2048,7 +2048,7 @@
     "subtitle": "Essayez KolabReport {days} jours sans carte bancaire. Payez ensuite au mois, au trimestre ou à l'année, par Mobile Money ou carte bancaire.",
     "startTrial": "Commencer l'essai gratuit",
     "notes": {
-      "tax": "Prix hors taxes",
+      "tax": "Prix nets, sans TVA",
       "readers": "Lecteurs gratuits sur toutes les offres",
       "year": "L'année au prix de {paidMonths} mois"
     },
@@ -2068,17 +2068,17 @@
       "institution": {
         "description": "Pour les institutions et les grandes équipes, avec un contrat sur mesure.",
         "price": "Sur devis",
-        "period": "à partir de {price} FCFA HT par mois",
+        "period": "à partir de {price} FCFA par mois",
         "terms": "Engagement de {months} mois, paiement par virement bancaire.",
         "contractDrafts": "Quota IA ajusté au contrat",
         "onboarding": "Mise en route accompagnée de {hours} heures"
       }
     },
-    "perMonth": "FCFA HT par mois",
+    "perMonth": "FCFA par mois",
     "lengths": {
       "label": "Autres durées",
-      "quarter": "3 mois : {price} FCFA HT",
-      "year": "12 mois : {price} FCFA HT",
+      "quarter": "3 mois : {price} FCFA",
+      "year": "12 mois : {price} FCFA",
       "yearSaving": "{freeMonths} mois offerts"
     },
     "features": {
@@ -2101,12 +2101,12 @@
     "extrasSubtitle": "Sans abonnement pour une mission ponctuelle, ou en plus de votre offre quand le quota IA ne suffit pas.",
     "mission": {
       "description": "Un espace de travail et un rapport pendant {days} jours, sans abonnement.",
-      "unit": "FCFA HT par rapport"
+      "unit": "FCFA par rapport"
     },
     "pack": {
       "title": "Pack IA",
       "description": "{drafts} brouillons IA de plus, valables {months} mois, utilisés quand le quota de votre offre est épuisé.",
-      "unit": "FCFA HT le pack",
+      "unit": "FCFA le pack",
       "max": "Jusqu'à {max} packs en même temps",
       "paidOnly": "Avec une offre payante ou un Pass Mission, pas pendant l'essai"
     },
@@ -2126,7 +2126,7 @@
       },
       "receipt": {
         "title": "Un reçu pour chaque paiement",
-        "text": "Les prix sont hors taxes. Chaque paiement donne un reçu, à télécharger en PDF depuis la page Abonnement de votre organisation."
+        "text": "Les prix sont nets, sans TVA : Mocktar Technologies relève du régime de la TPS. Chaque paiement donne un reçu, à télécharger en PDF depuis la page Abonnement de votre organisation. Le reçu indique le numéro de la facture normalisée (e-MECeF)."
       }
     },
     "faqTitle": "Questions sur les tarifs",

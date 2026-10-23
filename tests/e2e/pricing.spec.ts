@@ -21,7 +21,7 @@ test("/fr/tarifs opens signed out with the offers and prices of the catalogue", 
   await expect(page).toHaveTitle("Tarifs · KolabReport");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /lecteurs sont gratuits/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Des offres claires, en FCFA");
-  await expect(page.getByText("Prix hors taxes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Prix nets, sans TVA", { exact: true })).toBeVisible();
   await expect(page.getByText("L'année au prix de 10 mois", { exact: true })).toBeVisible();
 
   const trial = offer(page, "Essai gratuit");
@@ -29,24 +29,24 @@ test("/fr/tarifs opens signed out with the offers and prices of the catalogue", 
   await expect(trial).toContainText("20 brouillons IA");
 
   const independant = offer(page, "Indépendant");
-  await expect(independant).toContainText(`${fcfa(OFFERS.independant_1m.priceHtXof)} FCFA HT par mois`);
-  await expect(independant).toContainText(`3 mois : ${fcfa(OFFERS.independant_3m.priceHtXof)} FCFA HT`);
+  await expect(independant).toContainText(`${fcfa(OFFERS.independant_1m.priceHtXof)} FCFA par mois`);
+  await expect(independant).toContainText(`3 mois : ${fcfa(OFFERS.independant_3m.priceHtXof)} FCFA`);
   await expect(independant).toContainText(
-    `12 mois : ${fcfa(OFFERS.independant_12m.priceHtXof)} FCFA HT, 2 mois offerts`,
+    `12 mois : ${fcfa(OFFERS.independant_12m.priceHtXof)} FCFA, 2 mois offerts`,
   );
   await expect(independant).toContainText("3 rapports actifs");
   await expect(independant).not.toContainText("Modèles de prompt personnalisés");
 
   const cabinet = offer(page, "Cabinet");
-  await expect(cabinet).toContainText(`${fcfa(OFFERS.cabinet_1m.priceHtXof)} FCFA HT par mois`);
+  await expect(cabinet).toContainText(`${fcfa(OFFERS.cabinet_1m.priceHtXof)} FCFA par mois`);
   await expect(cabinet).toContainText(
-    `12 mois : ${fcfa(OFFERS.cabinet_12m.priceHtXof)} FCFA HT, 2 mois offerts`,
+    `12 mois : ${fcfa(OFFERS.cabinet_12m.priceHtXof)} FCFA, 2 mois offerts`,
   );
   await expect(cabinet).toContainText("250 brouillons IA par mois");
 
   const institution = offer(page, "Institution");
   await expect(institution).toContainText(
-    `à partir de ${fcfa(INSTITUTION.fromMonthlyPriceHtXof)} FCFA HT par mois`,
+    `à partir de ${fcfa(INSTITUTION.fromMonthlyPriceHtXof)} FCFA par mois`,
   );
   await expect(institution.getByRole("link", { name: /Demander un devis Institution/ })).toHaveAttribute(
     "href",
@@ -59,11 +59,9 @@ test("/fr/tarifs opens signed out with the offers and prices of the catalogue", 
   }
 
   await expect(offer(page, "Pass Mission")).toContainText(
-    `${fcfa(OFFERS.mission_pass.priceHtXof)} FCFA HT par rapport`,
+    `${fcfa(OFFERS.mission_pass.priceHtXof)} FCFA par rapport`,
   );
-  await expect(offer(page, "Pack IA")).toContainText(
-    `${fcfa(OFFERS.ai_pack_100.priceHtXof)} FCFA HT le pack`,
-  );
+  await expect(offer(page, "Pack IA")).toContainText(`${fcfa(OFFERS.ai_pack_100.priceHtXof)} FCFA le pack`);
 });
 
 test("the trial button leads to sign-up and the refund answer to the terms of sale", async ({ page }) => {

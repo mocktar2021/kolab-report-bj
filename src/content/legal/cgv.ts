@@ -1,8 +1,9 @@
 import { GROUP_COMPANY, PUBLISHER, SUPPORT_EMAIL } from "./publisher";
 import type { LegalDocument } from "./types";
 
-// Offers of the business model (Jira epic KRB-173). Prices are in FCFA,
-// before tax. When billing ships, its plans must match these numbers.
+// Offers of the business model (Jira epic KRB-173). Prices are in FCFA and
+// net: the seller is on the TPS regime and charges no VAT (KRB-237). When
+// billing ships, its plans must match these numbers.
 export const OFFERS = {
   trial: { days: 14, members: 5, reports: 1, aiDrafts: 20 },
   independant: { monthly: 15_000, members: 3, activeReports: 3, aiDraftsPerMonth: 60 },
@@ -15,15 +16,15 @@ export const OFFERS = {
 
 const amount = new Intl.NumberFormat("fr-FR");
 
-/** "15 000 FCFA HT", with spaces that never break the amount over two lines. */
-export function fcfaHt(value: number) {
-  return `${amount.format(value)}\u00a0FCFA\u00a0HT`;
+/** "15 000 FCFA", with a space that never breaks the amount over two lines. */
+export function fcfa(value: number) {
+  return `${amount.format(value)}\u00a0FCFA`;
 }
 
 const { trial, independant, cabinet, institution, passMission, packIa, graceDays } = OFFERS;
 
 export const cgv: LegalDocument = {
-  updatedAt: "2026-10-14",
+  updatedAt: "2026-10-23",
   intro: [
     "Les présentes conditions générales de vente (CGV) s'appliquent à toute commande d'une offre KolabReport par une organisation cliente. Elles complètent les [conditions générales d'utilisation](/cgu).",
   ],
@@ -89,7 +90,7 @@ export const cgv: LegalDocument = {
               ],
               [
                 "Indépendant",
-                `${fcfaHt(independant.monthly)} par mois`,
+                `${fcfa(independant.monthly)} par mois`,
                 `${independant.members}`,
                 `${independant.activeReports} rapports actifs`,
                 `${independant.aiDraftsPerMonth} par mois`,
@@ -97,7 +98,7 @@ export const cgv: LegalDocument = {
               ],
               [
                 "Cabinet",
-                `${fcfaHt(cabinet.monthly)} par mois`,
+                `${fcfa(cabinet.monthly)} par mois`,
                 `${cabinet.members}`,
                 "Illimités",
                 `${cabinet.aiDraftsPerMonth} par mois`,
@@ -105,7 +106,7 @@ export const cgv: LegalDocument = {
               ],
               [
                 "Institution",
-                `Sur devis, à partir de ${fcfaHt(institution.fromMonthly)} par mois`,
+                `Sur devis, à partir de ${fcfa(institution.fromMonthly)} par mois`,
                 "Selon le devis",
                 "Selon le devis",
                 "Selon le devis",
@@ -113,7 +114,7 @@ export const cgv: LegalDocument = {
               ],
               [
                 "Pass Mission",
-                `${fcfaHt(passMission.price)} par rapport`,
+                `${fcfa(passMission.price)} par rapport`,
                 `${passMission.members}`,
                 "1",
                 `${passMission.aiDrafts} pour ce rapport`,
@@ -121,7 +122,7 @@ export const cgv: LegalDocument = {
               ],
               [
                 "Pack IA",
-                `${fcfaHt(packIa.price)} les ${packIa.aiDrafts} brouillons`,
+                `${fcfa(packIa.price)} les ${packIa.aiDrafts} brouillons`,
                 "Sans objet",
                 "Sans objet",
                 `${packIa.aiDrafts} de plus`,
@@ -131,7 +132,7 @@ export const cgv: LegalDocument = {
           },
         },
         "Les lecteurs sont gratuits et en nombre illimité dans toutes les offres.",
-        "Les prix sont indiqués en francs CFA (FCFA), hors taxes (HT). Les taxes applicables selon la réglementation en vigueur s'ajoutent au prix HT et figurent sur la facture.",
+        "Les prix sont indiqués en francs CFA (FCFA). Ce sont des prix nets : le vendeur relève du régime de la taxe professionnelle synthétique (TPS) et ne facture pas de TVA. Chaque paiement donne lieu à une facture normalisée, émise sur la plateforme e-MECeF de la Direction générale des impôts, dont le numéro figure sur le reçu.",
         "Les offres Indépendant et Cabinet se paient par mois, par trimestre ou par an. Le trimestre coûte trois mois. L'année coûte dix mois : deux mois sont offerts.",
         "Le quota mensuel de brouillons IA repart à zéro chaque mois de la période. Les brouillons non utilisés ne sont pas reportés sur le mois suivant.",
         "Le prix applicable est celui affiché au moment de la commande.",
@@ -197,7 +198,7 @@ export const cgv: LegalDocument = {
       id: "pack-ia",
       title: "Pack IA",
       body: [
-        `Le Pack IA ajoute ${packIa.aiDrafts} brouillons IA pour ${fcfaHt(packIa.price)}. Il s'achète en plus d'une offre payante en cours : Indépendant, Cabinet, Institution ou Pass Mission.`,
+        `Le Pack IA ajoute ${packIa.aiDrafts} brouillons IA pour ${fcfa(packIa.price)}. Il s'achète en plus d'une offre payante en cours : Indépendant, Cabinet, Institution ou Pass Mission.`,
         "Les brouillons du pack servent une fois le quota de l'offre épuisé. Ils restent valables 12 mois après l'achat, tant que le client a une offre payante en cours.",
         "Le Pack IA ne s'achète pas pendant l'essai gratuit. Dix packs au plus peuvent être en cours en même temps.",
       ],
@@ -240,7 +241,7 @@ export const cgv: LegalDocument = {
       id: "institution",
       title: "Offre Institution et devis",
       body: [
-        `L'offre Institution s'adresse aux organisations qui ont besoin de plus de membres, de plus de brouillons IA ou de conditions particulières. Son prix commence à ${fcfaHt(institution.fromMonthly)} par mois. Elle se souscrit pour un an, sur devis.`,
+        `L'offre Institution s'adresse aux organisations qui ont besoin de plus de membres, de plus de brouillons IA ou de conditions particulières. Son prix commence à ${fcfa(institution.fromMonthly)} par mois. Elle se souscrit pour un an, sur devis.`,
         "Le devis précise les limites, le prix, sa propre durée de validité et, le cas échéant, un niveau de service. Il est payé par virement bancaire dans le délai qu'il indique.",
         "Le devis signé et les présentes CGV forment le contrat. En cas de contradiction, le devis prime.",
       ],
@@ -267,7 +268,7 @@ export const cgv: LegalDocument = {
       body: [
         `${PUBLISHER.name} fournit le service dans le cadre d'une obligation de moyens.`,
         `${PUBLISHER.name} n'est pas responsable des dommages indirects, comme une perte de chiffre d'affaires, de bénéfice, de clientèle ou d'image, ni des conséquences d'un rapport ou d'un brouillon IA que le client a validé.`,
-        `Toutes causes confondues, la responsabilité de ${PUBLISHER.name} envers le client est limitée au montant hors taxes payé par le client pour KolabReport pendant les 12 mois qui précèdent le fait à l'origine du dommage.`,
+        `Toutes causes confondues, la responsabilité de ${PUBLISHER.name} envers le client est limitée au montant payé par le client pour KolabReport pendant les 12 mois qui précèdent le fait à l'origine du dommage.`,
         `Ces limites ne s'appliquent pas en cas de faute lourde ou intentionnelle de ${PUBLISHER.name}, ni lorsque la loi les interdit.`,
       ],
     },
