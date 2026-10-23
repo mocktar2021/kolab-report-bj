@@ -209,7 +209,7 @@ Pick:
    Condition: below `1`, so it fires only when every probe failed its last run. Two locations failing together is the confirmation, so set the pending period to 0. Evaluate every minute. The worst case is then about 2 minutes from the start of the outage. Check the labels in **Explore** first: Synthetic Monitoring names the series after the check's job name. Label `severity=critical`.
 4. Send it to the contact point below. Then point the check at a wrong path for a few minutes to see the alert arrive, and set it back.
 
-What is set up (2026-10-23, stack `shorttoucan1211`, EU): the check above from Frankfurt and Paris, **disabled** until the launch; the rule "KolabReport production down" in folder `KolabReport`, group `kolabreport-uptime`, **paused**, sending straight to `kolabreport-ops`; the default notification policy on `kolabreport-ops`. Launch day turns both on ([launch](launch.md#launch-day)). Two probes every minute make 89,280 runs a month, under the free 100,000: a third probe or a second check at 1 minute goes over.
+What is set up (2026-10-23, stack `shorttoucan1211`, EU): the check above from Frankfurt and Paris, **disabled** until the launch; the rule "KolabReport production down" in folder `KolabReport`, group `kolabreport-uptime`, **paused**, sending straight to `kolabreport-ops`; the default notification policy on `kolabreport-ops`. The release tag turns both on, before the launch ([launch](launch.md#the-tag-and-the-countdown)). Two probes every minute make 89,280 runs a month, under the free 100,000: a third probe or a second check at 1 minute goes over.
 
 ### Alert routing
 

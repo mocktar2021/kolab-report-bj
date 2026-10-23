@@ -217,6 +217,26 @@
       "rights": "© {year} KolabReport"
     }
   },
+  "Launch": {
+    "badge": "Ouverture le mardi 27 octobre à 9 h, heure de Cotonou (8 h UTC)",
+    "countdownLabel": "Temps restant avant l'ouverture",
+    "units": {
+      "days": "jours",
+      "hours": "heures",
+      "minutes": "minutes",
+      "seconds": "secondes"
+    },
+    "emailLabel": "Recevez un e-mail à l'ouverture",
+    "submit": "Me prévenir",
+    "honeypot": "Laissez ce champ vide",
+    "done": "C'est noté. Nous vous écrivons le 27 octobre, dès l'ouverture.",
+    "errors": {
+      "emailInvalid": "Saisissez une adresse e-mail valide.",
+      "unavailable": "Votre adresse n'a pas pu être enregistrée. Réessayez plus tard ou écrivez-nous à {email}."
+    },
+    "privacy": "Un seul e-mail, à l'ouverture. Votre adresse est ensuite effacée sous 30 jours. Détails dans la <link>politique de confidentialité</link>.",
+    "signUpClosed": "Les inscriptions ne sont pas encore ouvertes. Laissez votre adresse et nous vous écrirons à l'ouverture."
+  },
   "Auth": {
     "signInTitle": "Connexion",
     "signInSubtitle": "Accédez à vos espaces de travail et rapports.",
@@ -269,7 +289,8 @@
       "passwordTooLong": "Le mot de passe doit faire 72 caractères au plus.",
       "emailNotConfirmed": "Confirmez d'abord votre adresse e-mail avec le lien reçu.",
       "captchaRequired": "Confirmez que vous n'êtes pas un robot.",
-      "captchaUnavailable": "La vérification anti-robot n'a pas abouti. Vérifiez votre connexion ou rechargez la page."
+      "captchaUnavailable": "La vérification anti-robot n'a pas abouti. Vérifiez votre connexion ou rechargez la page.",
+      "signUpClosed": "Les inscriptions ouvrent le mardi 27 octobre à 9 h, heure de Cotonou."
     }
   },
   "AppShell": {

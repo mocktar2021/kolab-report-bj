@@ -29,6 +29,23 @@ afterEach(() => {
 });
 
 describe("signUp", () => {
+  it("refuses before the launch in production, without calling Supabase", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-27T07:59:59.000Z"));
+    vi.stubEnv("APP_ENV", "production");
+    try {
+      const state = await signUp({ status: "idle" }, form(valid));
+      expect(state).toEqual({
+        status: "error",
+        formError: "signUpClosed",
+        values: { fullName: valid.fullName, email: valid.email },
+      });
+      expect(authSignUp).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("applies the password policy before calling Supabase", async () => {
     const state = await signUp({ status: "idle" }, form({ ...valid, password: "chaufferie" }));
     expect(state).toMatchObject({

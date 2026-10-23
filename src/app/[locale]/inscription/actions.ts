@@ -7,6 +7,7 @@ import { publicEnv } from "@/lib/env";
 import { readCaptchaToken } from "@/lib/auth/captcha";
 import { authErrorKey, type AuthErrorKey } from "@/lib/auth/errors";
 import { emailSchema, fieldErrors, newPasswordSchema, type FieldErrorKey } from "@/lib/auth/schemas";
+import { isPrelaunch } from "@/lib/launch";
 import { createClient } from "@/lib/supabase/server";
 
 const signUpSchema = z.object({
@@ -34,6 +35,10 @@ export async function signUp(_prev: SignUpState, formData: FormData): Promise<Si
     password: String(formData.get("password") ?? ""),
   };
   const values = { fullName: raw.fullName, email: raw.email };
+
+  // Sign-up opens at the launch (KRB-239). The page hides the form until then;
+  // this covers a form left open or a direct post.
+  if (isPrelaunch()) return { status: "error", formError: "signUpClosed", values };
 
   // Field errors and a missing captcha come back together, so one more try is enough.
   const parsed = signUpSchema.safeParse(raw);
