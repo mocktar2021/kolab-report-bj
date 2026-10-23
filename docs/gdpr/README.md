@@ -10,6 +10,7 @@ This is not legal advice. A lawyer should review these documents before launch.
 | [`processors.md`](processors.md) | Subprocessors, what each one receives, region and DPA status |
 | [`retention.md`](retention.md) | How long each kind of data is kept, today and as targeted |
 | [`data-subject-requests.md`](data-subject-requests.md) | What the account page does for access, export, rectification and erasure, and the operator runbook for the rest |
+| [`breach.md`](breach.md) | What to do when personal data leaks or is lost: who decides, the first hour, who to tell and when, the incident log |
 
 ## Owner and review
 
@@ -63,14 +64,14 @@ People and pages:
 - [x] Name a contact for data requests (an e-mail address that someone reads) and add it to the table above.
 - [x] Publish a privacy policy page in French (politique de confidentialité) under `/fr`, with the mentions légales and CGU (KRB-6.6.3). Done in KRB-159: `/fr/confidentialite`, `/fr/mentions-legales`, `/fr/cgu`, `/fr/cgv` and `/fr/accord-traitement-donnees`. The page must follow this folder: see [`docs/legal.md`](../legal.md) for how to update it and the points a lawyer still has to review.
 - [ ] Decide what the customer terms say about sensitive data in deliverables. The masking before AI calls covers e-mails, phone numbers, IBANs, French social security numbers and card numbers, not names, postal addresses or health details (see `record-of-processing.md`).
-- [ ] Write a short breach procedure: who decides, how firms are told without undue delay (as processor), and how the supervisory authority is told within 72 hours when KolabReport is the controller.
+- [x] Write a short breach procedure: who decides, how firms are told without undue delay (as processor), and how the supervisory authority is told within 72 hours when KolabReport is the controller. Done in KRB-236: [`breach.md`](breach.md). The authority and its delay under Benin law are still to confirm with the lawyer.
 
 Configuration and engineering:
 
 - [ ] Check production settings: `AI_REDACT_PII=true` (the default), `AI_TRACE_CONTENT=false` unless a DPA with the tracing vendor is signed, e-mail confirmation on in Supabase Auth.
 - [x] Merge KRB-166 (daily storage cleanup and 90-day retention of exports) and describe the job in `retention.md`.
-- [ ] Set `CRON_SECRET` on the Vercel production environment, so the daily storage cleanup runs there.
+- [x] Set `CRON_SECRET` on the Vercel production environment, so the daily storage cleanup runs there. Check settings shows it set (2026-10-23).
 - [ ] Decide the retention rules still open in `retention.md`: AI generation content after its section is deleted, notifications, invitations, status history, accounts never confirmed or inactive, and the Supabase Auth audit log.
-- [ ] Set up the nightly backups of production (database dump and Storage copy, `docs/operations/backups.md`). Supabase stays on the Free plan for the launch (decided on 2026-10-20, `docs/operations/launch.md`), so they are the only backups: no daily backups and no point-in-time recovery. Their retention is in `retention.md`.
+- [x] Set up the nightly backups of production (database dump and Storage copy, `docs/operations/backups.md`). Supabase stays on the Free plan for the launch (decided on 2026-10-20, `docs/operations/launch.md`), so they are the only backups: no daily backups and no point-in-time recovery. Their retention is in `retention.md`.
 - [x] Build self-service data export and account deletion. Done in KRB-186: `/fr/compte`. An operator still answers what the app can't do, with the runbook in `data-subject-requests.md`.
 - [ ] Keep a log of answered requests (date, type, user id, what was done), so erasures can be applied again after a backup restore.
