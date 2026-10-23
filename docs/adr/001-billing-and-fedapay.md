@@ -864,7 +864,7 @@ The product owner asked to go with the recommendations. Answered by the tech lea
 
 ### For the accountant
 
-- **A1. Tax regime** of Mocktar Technologies (TPS or real regime) and whether VAT (18% in Benin) applies to this SaaS, for customers in Benin and in other UEMOA countries.
+- **A1. Tax regime** of Mocktar Technologies (TPS or real regime) and whether VAT (18% in Benin) applies to this SaaS, for customers in Benin and in other UEMOA countries. *2026-10-23: TPS, confirmed by the product owner. No VAT is charged: prices are net, the receipts say "TVA non applicable" and `taxLines` keeps returning nothing (KRB-237). The exact wording of that mention stays for A4.*
 - **A2. Normalized invoices.** Does each sale need a facture normalisée through e-MECeF? Can it be issued after payment through the DGI API, and does our "reçu de paiement" need to be called "facture"? *2026-10-23: Mocktar Technologies is registered on SFE en ligne and issues the facture normalisée there after each payment. The receipt keeps its name and carries the invoice's number (`docs/operations/billing.md`, Normalized invoice). The DGI API can replace the manual step later.*
 - **A3. Numbering.** Is `KR-<year>-<6 digits>`, restarting every year, acceptable? Do credit notes need their own sequence?
 - **A4. Mandatory mentions** on the document (IFU, RCCM, address, wording when no VAT is charged, payment terms).

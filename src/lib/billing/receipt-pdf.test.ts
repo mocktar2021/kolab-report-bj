@@ -108,15 +108,15 @@ describe("buildReceiptPdf", () => {
       text,
       "Désignation",
       "Période",
-      "Prix unitaire HT",
-      "Montant HT",
+      "Prix unitaire",
+      "Montant",
       "Taxe",
       "Indépendant, 3 mois",
       "du 15 octobre 2026 au 15 janvier 2027",
-      "Total HT45 000 FCFA",
+      "Sous-total45 000 FCFA",
       "Taxes0 FCFA",
       "Total payé45 000 FCFA",
-      "Aucune taxe n'est facturée sur ce reçu.",
+      "TVA non applicable : le vendeur relève du régime de la taxe professionnelle synthétique (TPS).",
     );
   });
 
