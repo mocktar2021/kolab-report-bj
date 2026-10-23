@@ -104,7 +104,6 @@ export function partialDraftMarkdown(
     case "section_draft": {
       const summary = text(value.summary);
       parts.push(summary ? `**Résumé.** ${summary}` : null);
-      parts.push(listSection("Points clés", value.key_findings));
       parts.push(text(value.body_markdown) || null);
       parts.push(listSection("Recommandations", value.recommendations));
       break;

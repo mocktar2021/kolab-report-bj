@@ -195,7 +195,11 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
   );
   if (deliverables.length === 0) return refuse(422, "noDeliverables");
 
-  const maxTokens = template.max_output_tokens ?? settings.defaultMaxOutputTokens;
+  // The template's cap is room for the answer. The model thinks first, and
+  // its thinking counts inside the cap of the call (KRB-224).
+  const answerTokens = template.max_output_tokens ?? settings.defaultMaxOutputTokens;
+  const thinking = settings.draftThinking;
+  const maxTokens = answerTokens + thinking.tokens;
   const temperature = template.temperature ?? settings.defaultTemperature;
   const budget = contextBudget({
     contextWindowTokens: settings.contextWindowTokens,
@@ -235,7 +239,10 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     model: mock ? "mock" : settings.models[tier],
     params: {
       temperature,
-      maxOutputTokens: maxTokens,
+      // The template's cap, as before thinking; the call's cap adds thinkingTokens.
+      maxOutputTokens: answerTokens,
+      effort: thinking.effort,
+      thinkingTokens: thinking.tokens,
       modelTier: tier,
       ...(settings.fallback ? { fallbackModel: settings.fallback.model } : {}),
     },
@@ -412,6 +419,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
           prompt,
           temperature,
           maxTokens,
+          effort: thinking.effort,
           userSignal: userAbort.signal,
           deadline,
           onPartial: (partial) => {

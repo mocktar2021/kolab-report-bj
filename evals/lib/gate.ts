@@ -35,6 +35,7 @@ const regressionSchema = z
         lengthOkRate: rate,
         keyPointCoverage: rate,
         forbiddenAbsentRate: rate,
+        plainStyleRate: rate,
         frenchRate: rate,
         judge: perCriterion(z.number().min(0).max(4)),
       })
@@ -58,6 +59,7 @@ export const thresholdsSchema = z
     lengthOkRate: rate,
     keyPointCoverage: rate,
     forbiddenAbsentRate: rate,
+    plainStyleRate: rate,
     frenchRate: rate,
     judge: perCriterion(score),
     regression: regressionSchema,
@@ -84,6 +86,7 @@ export type GateInput = {
   lengthOkRate: number | null;
   keyPointCoverage: number | null;
   forbiddenAbsentRate: number | null;
+  plainStyleRate: number | null;
   frenchRate: number | null;
   judge: Record<Criterion, number | null> | null;
 };
@@ -104,6 +107,7 @@ export const QUALITY: readonly RateMetric[] = [
   "lengthOkRate",
   "keyPointCoverage",
   "forbiddenAbsentRate",
+  "plainStyleRate",
   "frenchRate",
 ];
 

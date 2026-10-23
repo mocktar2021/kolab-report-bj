@@ -66,7 +66,6 @@ describe("global templates", () => {
     const [structured, ...others] = migration("20261022220000_synthese_section_structure.sql");
     if (!seeded || !structured) throw new Error("missing synthese-section");
     expect(others).toEqual([]);
-    expect(templates.get("synthese-section")).toEqual(structured);
     expect(structured.version).not.toBe(seeded.version);
     expect(structured.text).toContain("Dis chaque constat une seule fois");
     expect(structured.text).toContain("Vise 200 à 500 mots");
@@ -92,6 +91,20 @@ describe("global templates", () => {
     expect({ ...structured, text: seeded.text, version: seeded.version, source: seeded.source }).toEqual(
       seeded,
     );
+  });
+
+  it("picks up the section template without key points (KRB-224): new text, same settings", () => {
+    const [before] = migration("20261022220000_synthese_section_structure.sql");
+    const [latest, ...others] = migration("20261023130000_synthese_section_without_key_points.sql");
+    if (!before || !latest) throw new Error("missing synthese-section");
+    expect(others).toEqual([]);
+    expect(templates.get("synthese-section")).toEqual(latest);
+    expect(latest.version).not.toBe(before.version);
+    expect(latest.text).not.toContain("points clés");
+    expect(latest.text).toContain("Le résumé dit l'essentiel en deux ou trois phrases");
+    expect(latest.text).toContain("Vise 200 à 500 mots");
+    // Title, schema, tier, temperature and output cap are those of version 2.
+    expect({ ...latest, text: before.text, version: before.version, source: before.source }).toEqual(before);
   });
 
   it("gives each text a stable 8-character version", () => {

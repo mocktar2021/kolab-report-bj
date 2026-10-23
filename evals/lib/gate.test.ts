@@ -17,6 +17,7 @@ function passing(): GateInput {
     lengthOkRate: 0.9,
     keyPointCoverage: 0.8,
     forbiddenAbsentRate: 1,
+    plainStyleRate: 1,
     frenchRate: 1,
     judge: { fidelite: 4.2, couverture: 3.8, structure: 4, langue: 4.5, actionnable: 3.6, citations: 4 },
   };

@@ -8,7 +8,7 @@ import {
 } from "ai";
 import type { OutputSchema } from "@/lib/prompts/catalog";
 import { CHARS_PER_TOKEN, estimateTokens } from "./context/tokens";
-import { noThinking } from "./models";
+import { draftThinking, type DraftEffort } from "./models";
 import { outputSchemaFor, parseDraftOutput, type DraftOutput, type SourceRefs } from "./schemas";
 
 // One draft: the model streams an object for the template's schema. When
@@ -49,7 +49,10 @@ export type DraftCall = {
   system: string;
   prompt: string;
   temperature: number;
+  /** Output cap of each call, thinking included. */
   maxTokens: number;
+  /** How hard the model thinks before it answers. */
+  effort: DraftEffort;
   /** Aborted when the person stops the draft or leaves. */
   userSignal: AbortSignal;
   /** Aborted when the server's time budget runs out. */
@@ -170,7 +173,7 @@ async function attempt(
       prompt,
       temperature: call.temperature,
       maxOutputTokens: call.maxTokens,
-      providerOptions: noThinking(),
+      providerOptions: draftThinking(call.effort),
       maxRetries: 1,
       abortSignal: signal,
       // Errors arrive in the stream below; this keeps them out of the logs twice.

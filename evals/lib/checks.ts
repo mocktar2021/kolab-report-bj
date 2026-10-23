@@ -23,6 +23,8 @@ export type DeterministicChecks = {
   unsafe: string[];
   language: LanguageScore;
   french: boolean;
+  /** Marks of machine-written French found in the text: long or spaced dashes, STOCK_PHRASES. */
+  styleTells: string[];
 };
 
 export type CheckInput = {
@@ -38,6 +40,44 @@ export type CheckInput = {
   sourceText: string;
   reference: GoldenCase["reference"];
 };
+
+// check-prose: off (the list below quotes the patterns it looks for)
+/**
+ * What makes a French report read as written by a machine (KRB-224): a long
+ * dash, or a spaced middle dash, where French puts a comma, a colon or
+ * brackets, and set phrases that say nothing. A term ending in "*" matches
+ * its forms ("crucia*": crucial, cruciale, cruciaux).
+ */
+const STYLE_DASHES: readonly { label: string; pattern: RegExp }[] = [
+  { label: "tiret long (\u2014)", pattern: /\u2014/ },
+  { label: "tiret moyen entre deux espaces (\u2013)", pattern: /\s\u2013\s/ },
+];
+
+export const STOCK_PHRASES: readonly string[] = [
+  "il est important de noter",
+  "il est important de souligner",
+  "il est essentiel de",
+  "il convient de noter",
+  "il convient de souligner",
+  "force est de constater",
+  "en somme,",
+  "en définitive,",
+  "crucia*",
+  "incontournable*",
+  "de manière optimale",
+  "n'hésitez pas",
+  "plongeons",
+];
+// check-prose: on
+
+/** The long or spaced dashes and the STOCK_PHRASES found in a text. */
+export function styleTells(markdown: string): string[] {
+  const text = normalize(markdown);
+  return [
+    ...STYLE_DASHES.filter(({ pattern }) => pattern.test(markdown)).map(({ label }) => label),
+    ...STOCK_PHRASES.filter((phrase) => containsTerm(text, phrase)),
+  ];
+}
 
 const HTML_TAG = /<\/?[a-z][\w:-]*(?:\s[^<>]*)?\/?>/gi;
 const IMAGE = /!\[[^\]]*\]\([^)]*\)/g;
@@ -120,6 +160,7 @@ export function runChecks(input: CheckInput): DeterministicChecks {
     unsafe,
     language,
     french: looksFrench(language),
+    styleTells: styleTells(input.markdown),
   };
 }
 

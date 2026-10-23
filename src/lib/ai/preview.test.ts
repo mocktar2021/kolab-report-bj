@@ -26,7 +26,6 @@ describe("partialDraftMarkdown", () => {
     const value = {
       title: " Titre ",
       summary: "  Résumé avec espaces.  ",
-      key_findings: ["Constat\nsur deux lignes", " Autre constat "],
       body_markdown: "\n### Contexte\n\nTexte.\n",
       recommendations: [],
       sources: [{ deliverable: "L2", detail: " Tableau des consommations. " }],
@@ -69,10 +68,10 @@ describe("partialDraftMarkdown", () => {
   it("skips missing fields and keeps the order of the final text", () => {
     const markdown = partialDraftMarkdown(
       "section_draft",
-      { key_findings: ["Premier constat"], body_markdown: "### Contexte\n\nDébut du" },
+      { body_markdown: "### Contexte\n\nDébut du", recommendations: ["Vérifier les relevés"] },
       names,
     );
-    expect(markdown).toBe("### Points clés\n\n- Premier constat\n\n### Contexte\n\nDébut du");
+    expect(markdown).toBe("### Contexte\n\nDébut du\n\n### Recommandations\n\n- Vérifier les relevés");
   });
 
   it("ignores fields of the wrong type", () => {
@@ -80,7 +79,6 @@ describe("partialDraftMarkdown", () => {
       "section_draft",
       {
         summary: 12,
-        key_findings: "pas une liste",
         body_markdown: { text: "objet" },
         recommendations: [null, 3, "Vérifier les relevés", { text: "objet" }, ""],
         sources: "L1",

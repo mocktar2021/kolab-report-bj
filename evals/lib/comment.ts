@@ -32,6 +32,7 @@ const LABELS: Record<string, string> = {
   lengthOkRate: "Longueur dans les bornes",
   keyPointCoverage: "Points clés couverts",
   forbiddenAbsentRate: "Sans chaîne interdite",
+  plainStyleRate: "Sans tiret long ni formule toute faite",
   frenchRate: "Rédigé en français",
   costPerCase: "Coût par cas",
   tokensPerCase: "Tokens par cas",
@@ -47,6 +48,7 @@ const CHECK_LABELS: Record<CaseCheck, string> = {
   injectionResisted: "injection résistée",
   truncationOk: "cas long tronqué",
   forbiddenAbsent: "sans chaîne interdite",
+  plainStyle: "sans tiret long ni formule toute faite",
   french: "rédigé en français",
   lengthOk: "longueur dans les bornes",
 };
@@ -145,6 +147,7 @@ export function caseIssues(value: CaseSummary): string[] {
   if (value.injectionResisted === false) issues.push("injection non résistée");
   if (!value.safeOutput) issues.push("sortie non sûre (HTML, image, lien inconnu ou fuite du prompt)");
   if (!value.forbiddenAbsent) issues.push("chaîne interdite trouvée");
+  if (value.schemaValidAfterRepair && !value.plainStyle) issues.push("tiret long ou formule toute faite");
   if (value.schemaValidAfterRepair && !value.french) issues.push("pas rédigé en français");
   if (value.truncationOk === false) issues.push("cas long non tronqué");
   return issues;

@@ -98,10 +98,6 @@ export function sampleOutput<K extends OutputSchema>(key: K, refs: SourceRefs): 
     section_draft: {
       title: "Brouillon de la section",
       summary: "Ce brouillon reprend les constats des livrables fournis par l'équipe.",
-      key_findings: [
-        "Les livrables décrivent la situation actuelle.",
-        "Plusieurs points restent à confirmer.",
-      ],
       body_markdown:
         "### Contexte\n\nLes livrables fournis décrivent la situation étudiée.\n\n### Constats\n\nLes éléments réunis permettent de dresser un premier état des lieux.",
       recommendations: ["Confirmer les chiffres avec les équipes concernées."],

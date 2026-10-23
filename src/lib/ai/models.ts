@@ -15,6 +15,11 @@ export type AiProvider = (typeof AI_PROVIDERS)[number];
 
 export type ModelPrice = { inputPerMTok: number; outputPerMTok: number };
 
+/** How hard the model thinks before a draft. "xhigh" and "max" cost more than a draft needs. */
+export const DRAFT_EFFORTS = ["low", "medium", "high"] as const;
+
+export type DraftEffort = (typeof DRAFT_EFFORTS)[number];
+
 export type AiSettings = {
   provider: AiProvider;
   models: Record<ModelTier, string>;
@@ -24,6 +29,12 @@ export type AiSettings = {
   configured: boolean;
   defaultMaxOutputTokens: number;
   defaultTemperature: number;
+  /**
+   * Thinking before a draft and its repair (KRB-224): the effort, and the
+   * tokens it may use on top of the template's output cap, since thinking
+   * counts inside the cap.
+   */
+  draftThinking: { effort: DraftEffort; tokens: number };
   contextWindowTokens: number;
   /** Ceiling for one prompt, whatever the model accepts, to keep the cost of a draft in check. */
   maxInputTokens: number;
@@ -118,6 +129,10 @@ export function readAiSettings(env: Env): AiSettings {
     configured,
     defaultMaxOutputTokens: setting(positiveInt.max(8192), env.AI_MAX_OUTPUT_TOKENS, 4096),
     defaultTemperature: setting(z.coerce.number().min(0).max(1), env.AI_TEMPERATURE, 0.3),
+    draftThinking: {
+      effort: setting(z.enum(DRAFT_EFFORTS), env.AI_DRAFT_EFFORT, "high"),
+      tokens: setting(positiveInt.min(1024).max(32_000), env.AI_DRAFT_THINKING_TOKENS, 12_000),
+    },
     contextWindowTokens: setting(positiveInt, env.AI_CONTEXT_WINDOW_TOKENS, 200_000),
     maxInputTokens: setting(positiveInt.min(4000), env.AI_MAX_INPUT_TOKENS, 60_000),
     rateLimitPerHour: setting(positiveInt, env.AI_RATE_LIMIT_PER_HOUR, 30),
@@ -167,12 +182,13 @@ export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): 
 }
 
 /**
- * Provider options for drafts and summaries: no thinking before the answer.
- * Claude Sonnet 5 and later think by default, and thinking counts inside
- * `maxOutputTokens`, so a long context left too little room for the JSON.
- * The Anthropic provider sends `between_tools` to Sonnet 5.5, `disabled` to
- * models that accept it, and drops it for models that always think. Other
- * providers ignore it. A new object each time, since callers may mutate it.
+ * Provider options for summaries, the template writer and plan reading: no
+ * thinking before the answer. Claude Sonnet 5 and later think by default, and
+ * thinking counts inside `maxOutputTokens`, so a long context left too little
+ * room for the JSON. The Anthropic provider sends `between_tools` to Sonnet
+ * 5.5, `disabled` to models that accept it, and drops it for models that
+ * always think. Other providers ignore it. A new object each time, since
+ * callers may mutate it.
  */
 export function noThinking(): { anthropic: { thinking: { type: "disabled" } } } {
   return { anthropic: { thinking: { type: "disabled" } } };
@@ -210,4 +226,16 @@ export function estimateCost(settings: AiSettings, tier: ModelTier, usage: Usage
 /** Cost in USD of a call answered by the fallback model, or null without its price. */
 export function estimateFallbackCost(settings: AiSettings, usage: Usage): number | null {
   return costAt(settings.fallback?.price ?? null, usage);
+}
+
+/**
+ * Provider options for a draft and its repair: the model thinks before it
+ * answers. Writing the whole draft in one pass, it kept some rules and broke
+ * others: length, repeats, calculations shown (KRB-224). Callers add
+ * `draftThinking.tokens` to the output cap. Other providers ignore it.
+ */
+export function draftThinking(effort: DraftEffort): {
+  anthropic: { thinking: { type: "adaptive" }; effort: DraftEffort };
+} {
+  return { anthropic: { thinking: { type: "adaptive" }, effort } };
 }

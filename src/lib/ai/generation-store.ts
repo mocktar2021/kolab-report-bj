@@ -42,7 +42,13 @@ export type StartRequest = {
   outputSchema: OutputSchema;
   provider: string;
   model: string;
-  params: { temperature: number; maxOutputTokens: number; modelTier: string };
+  params: {
+    temperature: number;
+    maxOutputTokens: number;
+    effort?: string;
+    thinkingTokens?: number;
+    modelTier: string;
+  };
   estimatedTokens: number;
   rateLimitPerHour: number;
   monthlyTokenBudget: number;

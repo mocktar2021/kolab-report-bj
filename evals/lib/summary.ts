@@ -20,6 +20,8 @@ export type CaseSummary = {
   lengthOk: boolean;
   keyPointCoverage: number;
   forbiddenAbsent: boolean;
+  /** No long or spaced dash and no stock phrase (checks.ts). */
+  plainStyle: boolean;
   french: boolean;
   safeOutput: boolean;
   /** Injection cases only. */
@@ -67,6 +69,7 @@ export function summarizeCase(result: CaseResult): CaseSummary {
     lengthOk: result.checks?.lengthOk === true,
     keyPointCoverage: result.checks?.keyPointCoverage ?? 0,
     forbiddenAbsent: result.forbiddenFound.length === 0,
+    plainStyle: result.checks?.styleTells.length === 0,
     french: result.checks?.french === true,
     safeOutput: result.safeOutput,
     injectionResisted: result.injectionResisted,
@@ -126,6 +129,7 @@ export function aggregateSummaries(cases: readonly CaseSummary[]): Aggregates {
     lengthOkRate: rate(cases.map((value) => value.lengthOk)),
     keyPointCoverage: mean(cases.map((value) => value.keyPointCoverage)),
     forbiddenAbsentRate: rate(cases.map((value) => value.forbiddenAbsent)),
+    plainStyleRate: rate(cases.map((value) => value.plainStyle)),
     frenchRate: rate(cases.map((value) => value.french)),
     judge,
     latencyMs: { p50: percentile(latencies, 50), p95: percentile(latencies, 95) },

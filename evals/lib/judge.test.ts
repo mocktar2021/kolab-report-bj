@@ -10,15 +10,12 @@ describe("draftLengths", () => {
       value: {
         title: "Un titre qui ne compte pas",
         summary: "Deux mots.",
-        key_findings: ["Un constat.", "Un autre constat clair."],
         body_markdown: "### Détail\n\n| Site | Fuites |\n| --- | --- |\n| Titirou | 12 |",
         recommendations: [],
         sources: [{ deliverable: "L1", detail: "Le rapport d'audit, qui ne compte pas." }],
       },
     };
-    expect(draftLengths(output)).toBe(
-      "résumé 2 mots, points clés 6 mots, corps 5 mots, recommandations 0 mot ; 13 mots en tout",
-    );
+    expect(draftLengths(output)).toBe("résumé 2 mots, corps 5 mots, recommandations 0 mot ; 7 mots en tout");
   });
 
   it("keeps the summary of an executive summary apart from its key points", () => {

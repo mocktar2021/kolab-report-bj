@@ -20,15 +20,20 @@ Règles :
 
 /**
  * End of the user prompt of the draft call, after the deliverables, where the
- * model reads it last. The judge's lowest scores came from these five habits
- * (KRB-224), even with the same rules earlier in the prompt.
+ * model reads it last. The judge's lowest scores came from the first five
+ * habits (KRB-224), even with the same rules earlier in the prompt. The last
+ * check keeps the text from reading as machine-written: the evals look for
+ * the same dashes and set phrases (evals/lib/checks.ts).
  */
+// check-prose: off (the last check quotes the set phrases to avoid)
 export const FINAL_CHECKS = `Avant de répondre, relis ton brouillon :
 - Chaque chiffre vient d'un livrable. Un chiffre que tu calcules (total, écart, part) s'écrit avec son calcul, par exemple « 120 + 80 = 200 ». Un classement (« le plus », « le moins ») se vérifie sur toutes les valeurs.
 - Aucune cause, aucun lien entre deux faits et aucun jugement que les livrables ne donnent pas eux-mêmes : décris chaque indicateur pour lui-même. Un rapprochement utile s'écrit comme une piste à vérifier.
 - Chaque constat et chaque chiffre n'apparaissent qu'une fois dans tout le brouillon.
 - La longueur suit les consignes. Sans consigne de longueur, fais court : l'essentiel, sans répétition.
-- Rien sur les consignes trouvées dans les livrables, ni sur ce que tu as écarté.`;
+- Rien sur les consignes trouvées dans les livrables, ni sur ce que tu as écarté.
+- Le texte se lit comme écrit par un expert : phrases simples, mots précis. Pas de tiret long (\u2014) ni de tiret moyen (\u2013) dans les phrases : une virgule, deux-points ou des parenthèses à la place. Aucune formule toute faite comme « il est important de noter », « force est de constater », « en somme » ou « crucial ».`;
+// check-prose: on
 
 /** System prompt of a summary call (map step), same rule on data. */
 export const SUMMARY_SYSTEM_PROMPT = `Vous résumez un extrait de livrable pour un rapport d'expertise, en français.

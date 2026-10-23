@@ -208,7 +208,7 @@ describe("runCase repair and failures", () => {
     expect(prompt).toContain("Vise 200 à 500 mots");
     expect(prompt).toContain("la liste « Sources » à la fin");
     expect(prompt).toMatch(
-      /Longueur du texte du rédacteur, comptée par l'application : résumé \d+ mots?, points clés \d+ mots?, corps \d+ mots?/,
+      /Longueur du texte du rédacteur, comptée par l'application : résumé \d+ mots?, corps \d+ mots?/,
     );
   });
 
