@@ -218,7 +218,6 @@ describe("output caps", () => {
       section_draft: () => ({
         title: take(8),
         summary: take(60),
-        key_findings: Array.from({ length: 6 }, () => take(20)),
         body_markdown: Array.from({ length: 4 }, () => `### ${take(5)}\n\n${take(body / 4)}`).join("\n\n"),
         recommendations: Array.from({ length: 4 }, () => take(25)),
         sources,

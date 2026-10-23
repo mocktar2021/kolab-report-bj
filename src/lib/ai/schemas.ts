@@ -70,16 +70,10 @@ function itemRefs(refs: SourceRefs) {
 export function sectionDraftSchema(refs: SourceRefs) {
   return z.object({
     title: text(OUTPUT_LIMITS.title, "Titre proposé pour la section."),
-    summary: text(OUTPUT_LIMITS.summary, "L'essentiel de la section en deux à quatre phrases."),
-    key_findings: z
-      .array(text(OUTPUT_LIMITS.item, "Un constat principal, en une phrase, appuyé sur les livrables."))
-      .max(OUTPUT_LIMITS.findings)
-      .describe(
-        "Les constats principaux de la section, trois à cinq. Le corps les explique sans les recopier.",
-      ),
+    summary: text(OUTPUT_LIMITS.summary, "L'essentiel de la section en deux ou trois phrases."),
     body_markdown: text(
       OUTPUT_LIMITS.body,
-      "Corps de la section en Markdown : ce qui explique et chiffre les constats, sans recopier le résumé ni les points clés. Sous un intertitre, entre dans le détail sans redire le point clé. Pas de partie Sources ni Recommandations, qui ont leur propre champ. Intertitres de niveau 3 (###) au plus, listes et tableaux permis. Ni HTML ni images.",
+      "Corps de la section en Markdown : les constats, avec leurs chiffres et ce qui les explique, sous des intertitres quand le contenu le demande. Ne redis pas le résumé. Pas de partie Sources ni Recommandations, qui ont leur propre champ. Intertitres de niveau 3 (###) au plus, listes et tableaux permis. Ni HTML ni images.",
     ),
     recommendations: z
       .array(text(OUTPUT_LIMITS.item, "Une recommandation concrète, en une ou deux phrases."))
@@ -233,7 +227,6 @@ export function draftToMarkdown(output: DraftOutput, names: ReadonlyMap<string, 
     case "section_draft": {
       const value = output.value;
       parts.push(`**Résumé.** ${value.summary}`);
-      if (value.key_findings.length > 0) parts.push(`### Points clés\n\n${bullets(value.key_findings)}`);
       parts.push(value.body_markdown);
       if (value.recommendations.length > 0)
         parts.push(`### Recommandations\n\n${bullets(value.recommendations)}`);

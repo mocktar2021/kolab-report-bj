@@ -86,7 +86,6 @@ const FORMAT_PARTS: Record<OutputSchema, string> = {
 
 const FIELD_LABELS: Record<string, string> = {
   summary: "résumé",
-  key_findings: "points clés",
   key_points: "points clés",
   body_markdown: "corps",
   introduction: "introduction",

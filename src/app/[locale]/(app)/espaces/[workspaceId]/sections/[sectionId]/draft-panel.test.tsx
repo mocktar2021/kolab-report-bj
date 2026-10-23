@@ -424,7 +424,7 @@ describe("DraftPanel proposal", () => {
     expect(screen.getByText(/Les livrables dépassaient la place disponible/)).toBeVisible();
     const sources = screen.getByRole("list", { name: "Livrables utilisés" });
     expect(sources).toHaveTextContent("Consommations.xlsx (480 lignes de tableau coupées)");
-    expect(screen.getByRole("tabpanel", { name: "Aperçu" })).toHaveTextContent("Points clés");
+    expect(screen.getByRole("tabpanel", { name: "Aperçu" })).toHaveTextContent("Contexte");
     expect(
       screen.getByText("Un brouillon attend déjà votre décision. Le nouveau le remplacera."),
     ).toBeVisible();

@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(54);
+select plan(56);
 
 -- Seeded global templates (migration 20261013210100) ---------------------------
 select is(
@@ -21,8 +21,8 @@ select results_eq(
       and template_key in ('synthese-section', 'resume-executif', 'recommandations', 'analyse-donnees')
     order by template_key$$,
   $$values ('analyse-donnees', 2, 4096), ('recommandations', 2, 4096), ('resume-executif', 2, 2048),
-    ('synthese-section', 2, 4096)$$,
-  'recommandations and resume-executif publish a version 2 with a higher output cap, synthese-section and analyse-donnees one with new text');
+    ('synthese-section', 3, 4096)$$,
+  'recommandations and resume-executif publish a version 2 with a higher output cap, analyse-donnees one with new text, synthese-section a version 3 with new text');
 select results_eq(
   $$select template_key, status::text, max_output_tokens from public.prompt_library
     where workspace_id is null and version = 1 and template_key in ('resume-executif', 'recommandations')
@@ -79,6 +79,26 @@ select is(
      and v2.created_by is null
      and v2.changelog is not null),
   1, 'version 2 of analyse-donnees changes the text only and was published after version 1');
+
+-- Section template without key points (migration 20261023130000, KRB-224) ------
+select is(
+  (select status::text from public.prompt_library
+   where workspace_id is null and template_key = 'synthese-section' and version = 2),
+  'archived', 'version 2 of synthese-section is archived');
+select is(
+  (select count(*)::int from public.prompt_library v2
+   join public.prompt_library v3 on v3.workspace_id is null and v3.template_key = v2.template_key and v3.version = 3
+   where v2.workspace_id is null and v2.version = 2 and v2.template_key = 'synthese-section'
+     and (v3.title, v3.description, v3.variables, v3.output_schema, v3.model_tier, v3.temperature,
+          v3.max_output_tokens)
+         = (v2.title, v2.description, v2.variables, v2.output_schema, v2.model_tier, v2.temperature,
+            v2.max_output_tokens)
+     and v3.template not like '%points clés%'
+     and v3.template like '%Vise 200 à 500 mots%'
+     and v3.published_at > v2.published_at
+     and v3.created_by is null
+     and v3.changelog is not null),
+  1, 'version 3 of synthese-section drops the key points, keeps the settings and was published after version 2');
 
 -- Reading ---------------------------------------------------------------------
 select pg_temp.act_as('expert');

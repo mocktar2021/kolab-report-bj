@@ -12,7 +12,7 @@ import {
   type TruncationDecision,
 } from "@/lib/ai/context";
 import { describeValidationError, repairPrompt } from "@/lib/ai/generate";
-import { estimateCost, noThinking, type AiSettings } from "@/lib/ai/models";
+import { draftThinking, estimateCost, noThinking, type AiSettings, type DraftEffort } from "@/lib/ai/models";
 import {
   citedRefs,
   draftToMarkdown,
@@ -147,7 +147,7 @@ async function attempt(
   model: LanguageModelV4,
   schema: OutputSchema,
   refs: SourceRefs,
-  call: { system: string; prompt: string; temperature: number; maxTokens: number },
+  call: { system: string; prompt: string; temperature: number; maxTokens: number; effort: DraftEffort },
 ): Promise<Attempt> {
   try {
     const result = await generateText({
@@ -161,7 +161,7 @@ async function attempt(
       prompt: call.prompt,
       temperature: call.temperature,
       maxOutputTokens: call.maxTokens,
-      providerOptions: noThinking(),
+      providerOptions: draftThinking(call.effort),
       maxRetries: 2,
     });
     return {
@@ -228,9 +228,13 @@ function sourceText(value: LoadedCase): string {
 /** Runs one case end to end. Throws only on a bug; model failures are recorded in the result. */
 export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseResult> {
   const { settings, template } = deps;
+  // As in the route: the template's cap is room for the answer, and the
+  // thinking before it counts inside the cap of the call (KRB-224).
+  const maxTokens =
+    (template.maxOutputTokens || settings.defaultMaxOutputTokens) + settings.draftThinking.tokens;
   const budget = contextBudget({
     contextWindowTokens: settings.contextWindowTokens,
-    maxOutputTokens: template.maxOutputTokens || settings.defaultMaxOutputTokens,
+    maxOutputTokens: maxTokens,
     maxInputTokens: settings.maxInputTokens,
   });
   const plan = planContext(value.input, budget, { redactPii: settings.redactPii, template: template.text });
@@ -243,7 +247,8 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
     system,
     prompt,
     temperature: template.temperature,
-    maxTokens: template.maxOutputTokens || settings.defaultMaxOutputTokens,
+    maxTokens,
+    effort: settings.draftThinking.effort,
   };
   const started = performance.now();
   let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };

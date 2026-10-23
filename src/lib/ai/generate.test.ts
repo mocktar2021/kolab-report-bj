@@ -34,6 +34,7 @@ function draftCall(model: LanguageModelV4, overrides: Partial<DraftCall> = {}): 
     prompt: "Rédige la section.",
     temperature: 0.3,
     maxTokens: 1000,
+    effort: "high",
     userSignal: new AbortController().signal,
     deadline: new AbortController().signal,
     onPartial: () => undefined,
@@ -190,8 +191,9 @@ describe("provider fallback", () => {
 
 describe("the request a Claude 5.5 model receives", () => {
   // The real Anthropic provider, with a fetch that keeps the body and refuses
-  // the call. These models answer 400 to forced tool use, to a temperature
-  // and to `thinking: disabled`, and thinking would eat the output budget.
+  // the call. These models answer 400 to forced tool use and to a
+  // temperature. A draft thinks before it answers (KRB-224), at the effort of
+  // the call, inside max_tokens.
   async function requestBody(modelId: string): Promise<Record<string, unknown>> {
     const bodies: string[] = [];
     const fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
@@ -211,18 +213,21 @@ describe("the request a Claude 5.5 model receives", () => {
     return JSON.parse(bodies[0] ?? "{}") as Record<string, unknown>;
   }
 
-  it("sends Sonnet 5.5 no thinking upfront, no temperature, a JSON schema and no forced tool", async () => {
+  it("sends Sonnet 5.5 adaptive thinking at the call's effort, no temperature, a JSON schema and no forced tool", async () => {
     const body = await requestBody("claude-sonnet-5-5");
-    expect(body.thinking).toEqual({ type: "between_tools" });
+    expect(body.thinking).toEqual({ type: "adaptive" });
     expect(body).not.toHaveProperty("temperature");
     expect(body).not.toHaveProperty("tool_choice");
     expect(body.max_tokens).toBe(1000);
-    expect((body.output_config as { format?: { type?: string } }).format?.type).toBe("json_schema");
+    const config = body.output_config as { effort?: string; format?: { type?: string } };
+    expect(config.effort).toBe("high");
+    expect(config.format?.type).toBe("json_schema");
   });
 
-  it("turns thinking off for Haiku 5.5, the fast tier", async () => {
+  it("lets Haiku 5.5 think the same way when a template runs on the fast tier", async () => {
     const body = await requestBody("claude-haiku-5-5");
-    expect(body.thinking).toEqual({ type: "disabled" });
+    expect(body.thinking).toEqual({ type: "adaptive" });
+    expect((body.output_config as { effort?: string }).effort).toBe("high");
     expect(body).not.toHaveProperty("temperature");
   });
 });
