@@ -195,10 +195,11 @@ Pick:
 
 1. Grafana Cloud stack in an EU region (the same one as for the metrics).
 2. In Grafana Cloud, open Synthetic Monitoring and add an **HTTP** check:
-   - Job name `kolabreport-production-health`, target `https://kolabreport.com/api/health`.
+   - Job name `kolabreport-production-health`, target `https://kolabreport.com/api/health`, **Follow redirects** off.
    - Probe locations: two in Europe.
    - Frequency: 1 minute. Timeout: 10 seconds.
-   - Validation: status code `200`, and the body must match the regular expression `"status":"ok"`.
+   - Validation: status code `200`, and a regexp validation on **Body** with `"status":"ok"` and **Invert** ticked. In this form a rule fails the check when the body matches, so Invert is what turns it into "the body must contain".
+   - Leave the per-check alerting empty: the rule below covers it.
 3. **Alerting > Alert rules > New alert rule**, on the Prometheus data source of the stack:
 
    ```promql
@@ -207,6 +208,8 @@ Pick:
 
    Condition: below `1`, so it fires only when every probe failed its last run. Two locations failing together is the confirmation, so set the pending period to 0. Evaluate every minute. The worst case is then about 2 minutes from the start of the outage. Check the labels in **Explore** first: Synthetic Monitoring names the series after the check's job name. Label `severity=critical`.
 4. Send it to the contact point below. Then point the check at a wrong path for a few minutes to see the alert arrive, and set it back.
+
+What is set up (2026-10-23, stack `shorttoucan1211`, EU): the check above from Frankfurt and Paris, **disabled** until the launch; the rule "KolabReport production down" in folder `KolabReport`, group `kolabreport-uptime`, **paused**, sending straight to `kolabreport-ops`; the default notification policy on `kolabreport-ops`. Launch day turns both on ([launch](launch.md#launch-day)). Two probes every minute make 89,280 runs a month, under the free 100,000: a third probe or a second check at 1 minute goes over.
 
 ### Alert routing
 

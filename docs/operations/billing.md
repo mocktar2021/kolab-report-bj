@@ -45,7 +45,7 @@ select count(*) from private.billing_events where kind = 'launch_period';
 Before the release tag, for production:
 
 - FedaPay live account verified, every box of **Préférences > Frais** unticked (next section), live keys and webhook secret on Vercel Production only, live webhook created with auto-disable unticked ([`docs/deployment.md`](../deployment.md#4-fedapay-krb-176)).
-- Vercel Pro and Supabase Pro (ADR 001, Q16), terms of sale online at `/fr/cgv`.
+- Vercel Pro, the day before the tag ([launch](launch.md#vercel-plan)). Supabase stays on Free for now, against ADR 001, Q16 (decided 2026-10-20). Terms of sale online at `/fr/cgv`.
 - The sandbox checklist of ADR 001, section 13, passed on staging.
 - The launch e-mail to existing owners, written by the product owner, when production has any.
 
