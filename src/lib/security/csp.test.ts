@@ -29,7 +29,10 @@ describe("contentSecurityPolicy", () => {
   it("allows the Turnstile script, its iframe and the service worker's fetch of the script", () => {
     // KRB-242: the service worker's fetch() follows connect-src. Without
     // Cloudflare there, the widget failed on every visit after the first one.
-    const policy = directives({ NEXT_PUBLIC_SUPABASE_URL: SUPABASE, NEXT_PUBLIC_TURNSTILE_SITE_KEY: SITE_KEY });
+    const policy = directives({
+      NEXT_PUBLIC_SUPABASE_URL: SUPABASE,
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: SITE_KEY,
+    });
     expect(policy.get("script-src")).toContain(TURNSTILE_ORIGIN);
     expect(policy.get("frame-src")).toEqual([TURNSTILE_ORIGIN]);
     expect(policy.get("connect-src")).toContain(TURNSTILE_ORIGIN);
