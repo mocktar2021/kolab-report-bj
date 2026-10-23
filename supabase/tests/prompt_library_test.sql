@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(52);
+select plan(54);
 
 -- Seeded global templates (migration 20261013210100) ---------------------------
 select is(
@@ -20,9 +20,9 @@ select results_eq(
     where workspace_id is null and status = 'published'
       and template_key in ('synthese-section', 'resume-executif', 'recommandations', 'analyse-donnees')
     order by template_key$$,
-  $$values ('analyse-donnees', 1, 4096), ('recommandations', 2, 4096), ('resume-executif', 2, 2048),
+  $$values ('analyse-donnees', 2, 4096), ('recommandations', 2, 4096), ('resume-executif', 2, 2048),
     ('synthese-section', 2, 4096)$$,
-  'recommandations and resume-executif publish a version 2 with a higher output cap, synthese-section one with new text');
+  'recommandations and resume-executif publish a version 2 with a higher output cap, synthese-section and analyse-donnees one with new text');
 select results_eq(
   $$select template_key, status::text, max_output_tokens from public.prompt_library
     where workspace_id is null and version = 1 and template_key in ('resume-executif', 'recommandations')
@@ -59,6 +59,26 @@ select is(
      and v2.created_by is null
      and v2.changelog is not null),
   1, 'version 2 of synthese-section changes the text only and was published after version 1');
+
+-- Data analysis template, structure and length (migration 20261023100000, KRB-224)
+select is(
+  (select status::text from public.prompt_library
+   where workspace_id is null and template_key = 'analyse-donnees' and version = 1),
+  'archived', 'version 1 of analyse-donnees is archived');
+select is(
+  (select count(*)::int from public.prompt_library v1
+   join public.prompt_library v2 on v2.workspace_id is null and v2.template_key = v1.template_key and v2.version = 2
+   where v1.workspace_id is null and v1.version = 1 and v1.template_key = 'analyse-donnees'
+     and (v2.title, v2.description, v2.variables, v2.output_schema, v2.model_tier, v2.temperature,
+          v2.max_output_tokens)
+         = (v1.title, v1.description, v1.variables, v1.output_schema, v1.model_tier, v1.temperature,
+            v1.max_output_tokens)
+     and v2.template <> v1.template
+     and v2.template like '%Vise 250 à 400 mots%'
+     and v2.published_at > v1.published_at
+     and v2.created_by is null
+     and v2.changelog is not null),
+  1, 'version 2 of analyse-donnees changes the text only and was published after version 1');
 
 -- Reading ---------------------------------------------------------------------
 select pg_temp.act_as('expert');

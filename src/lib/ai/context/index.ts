@@ -16,6 +16,7 @@ export {
   type TruncationDecision,
 } from "./build";
 export {
+  FINAL_CHECKS,
   SUMMARY_SYSTEM_PROMPT,
   SYSTEM_PROMPT,
   deliverableBlock,

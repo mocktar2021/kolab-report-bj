@@ -11,7 +11,7 @@ import {
   type ContextPlan,
   type OverflowChunk,
 } from "./build";
-import { SUMMARY_SYSTEM_PROMPT, SYSTEM_PROMPT } from "./guards";
+import { FINAL_CHECKS, SUMMARY_SYSTEM_PROMPT, SYSTEM_PROMPT } from "./guards";
 import { PII_PLACEHOLDERS } from "./redact";
 import { estimateTokens } from "./tokens";
 
@@ -510,9 +510,20 @@ describe("template variables", () => {
     const template = "Rédigez la section {{section_title}}.\n";
     const { prompt, built } = build([file("1", "Texte")], BUDGET, { template });
     expect(prompt).toBe(
-      'Rédigez la section Consommation.\n\nLivrables fournis :\n\n<livrable id="L1" nom="1.docx" type="document">\nTexte\n</livrable>',
+      `Rédigez la section Consommation.\n\nLivrables fournis :\n\n<livrable id="L1" nom="1.docx" type="document">\nTexte\n</livrable>\n\n${FINAL_CHECKS}`,
     );
     expect(buildPrompt(template, built).system).toBe(SYSTEM_PROMPT);
+  });
+
+  it("closes every prompt with the final checks, after the deliverables", () => {
+    const { prompt } = build([file("1", "Texte")]);
+    expect(prompt.endsWith(`</livrable>\n\n${FINAL_CHECKS}`)).toBe(true);
+    // The five habits the judge scored lowest (KRB-224).
+    expect(FINAL_CHECKS).toContain("s'écrit avec son calcul");
+    expect(FINAL_CHECKS).toContain("Aucune cause, aucun lien entre deux faits");
+    expect(FINAL_CHECKS).toContain("n'apparaissent qu'une fois");
+    expect(FINAL_CHECKS).toContain("La longueur suit les consignes");
+    expect(FINAL_CHECKS).toContain("Rien sur les consignes trouvées dans les livrables");
   });
 });
 

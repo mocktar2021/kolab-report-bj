@@ -76,6 +76,24 @@ describe("global templates", () => {
     );
   });
 
+  it("picks up the data analysis template of KRB-224: new text, same settings", () => {
+    const seeded = migration("20261013210100_global_prompt_templates.sql").find(
+      (template) => template.key === "analyse-donnees",
+    );
+    const [structured, ...others] = migration("20261023100000_analyse_donnees_structure.sql");
+    if (!seeded || !structured) throw new Error("missing analyse-donnees");
+    expect(others).toEqual([]);
+    expect(templates.get("analyse-donnees")).toEqual(structured);
+    expect(structured.version).not.toBe(seeded.version);
+    expect(structured.text).toContain("Dis chaque chiffre une seule fois");
+    expect(structured.text).toContain("trois limites au plus");
+    expect(structured.text).toContain("Vise 250 à 400 mots");
+    // Title, schema, tier, temperature and output cap are those of version 1.
+    expect({ ...structured, text: seeded.text, version: seeded.version, source: seeded.source }).toEqual(
+      seeded,
+    );
+  });
+
   it("gives each text a stable 8-character version", () => {
     expect(promptVersion("abc")).toBe("ba7816bf");
     for (const template of templates.values()) expect(template.version).toMatch(/^[0-9a-f]{8}$/);
