@@ -11,39 +11,43 @@ The product owner took every proposal on 2026-10-17. Change a line here when a d
 | Support channel | `support@mocktar.com`, the address the legal pages and the error messages already give. A WhatsApp Business number as a second channel, if customers ask for one | 2026-10-17 |
 | Support hours during hypercare | Monday to Saturday, 08:00 to 20:00 in Cotonou (07:00 to 19:00 UTC) | 2026-10-17 |
 | Who is on call | The product owner, with Olakounle Akinotcho as backup. She has Vercel access for a rollback. Sentry's free plan has one user, the product owner, who forwards her what she needs (2026-10-20) | 2026-10-17 |
-| Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done | 2026-10-17 |
+| Launch day | A Tuesday or Wednesday morning in Cotonou. Never a Friday or the day before a holiday. The date is set once the "Before the tag" lines are done. Candidates: Tuesday 27 or Wednesday 28 October 2026 | 2026-10-17 |
 | Who tags the release | The product owner | 2026-10-17 |
 | Auth e-mails per hour | `email_sent` in `supabase/config.toml` goes from 30 to 100 for the launch (next section) | 2026-10-17 |
-| Plans for the launch | Free plans, with no budget for paid ones now. Supabase Free: no daily backups, so the nightly dump and the Storage copy are the only ones, and the leaked password check stays off. Sentry Developer: one user, the product owner. GitHub Actions within the free minutes (KRB-220). Runs of the eval suite cost money: the nightly run only runs after an AI change (KRB-223), and the baseline run waits (KRB-160). Vercel is open, see [Vercel plan](#vercel-plan). To revisit with the first payments: ADR 001, Q16 planned Supabase and Vercel Pro before the first paid customer | 2026-10-20 |
+| Plans for the launch | Free plans, with no budget for paid ones now. Supabase Free: no daily backups, so the nightly dump and the Storage copy are the only ones, and the leaked password check stays off. Sentry Developer: one user, the product owner. GitHub Actions within the free minutes (KRB-220). Runs of the eval suite cost money: the nightly run only runs after an AI change (KRB-223), and the baseline run waits (KRB-160). Vercel is the exception, see the next lines. To revisit with the first payments: ADR 001, Q16 planned Supabase and Vercel Pro before the first paid customer | 2026-10-20 |
+| Hosting | Vercel Pro, 20 USD a month, upgraded the day before the tag: production takes payments, which the free Hobby plan does not allow ([Vercel plan](#vercel-plan)) | 2026-10-22 |
+| AI drafts at launch | Off. `AI_DRAFTS_ENABLED` and the AI keys stay unset on Production until the eval baseline passes (KRB-160, KRB-224). The nightly **Evals** workflow stays disabled while the AI work is paused, and is turned back on when it resumes | 2026-10-22 |
+| E-mails | Resend Free: 100 e-mails a day and 3,000 a month, auth e-mails and app e-mails together. On the daily check of hypercare | 2026-10-22 |
 
 ## Before the tag
 
-Every line is checked the day before, and again on the morning of the launch for the ones that can change.
+Every line is checked the day before, and again on the morning of the launch for the ones that can change. The last column is where each line stood after the settings session of 2026-10-23.
 
-| Check | Where | Jira |
-| --- | --- | --- |
-| Supabase stays on Free (decided 2026-10-20). Free pauses a project after 7 days without activity: use production during the week before the tag, and restore it from the dashboard if it paused | Supabase, project `krsccuejegzqianrzstc` | KRB-130 |
-| GitHub integration of the production project with **Deploy to production** and **Automatic branching** off (Deploy to production checked off on 2026-10-17) | Supabase, project `krsccuejegzqianrzstc`, **Project Settings > Integrations** | KRB-130 |
-| GitHub environment `production`: Supabase ref and password, `AUTH_SITE_URL`, smoke test settings | GitHub, **Settings > Environments** | KRB-132 |
-| Vercel Production variables, `NEXT_PUBLIC_APP_URL` as a plain variable. The plan is open: see [Vercel plan](#vercel-plan) | Vercel, **Settings > Environment Variables** | KRB-131 |
-| Check settings on `production` with no ✗ | **Actions > Check settings**, [steps below](#production-settings-step-by-step) | KRB-157 |
-| Auth settings applied to production: site URL, redirect URLs, SMTP, French templates, rate limits, captcha | **Actions > Supabase Auth settings**, first with `--dry-run` | KRB-158 |
-| SMTP sender on `kolabreport.com` with SPF, DKIM and DMARC passing | The e-mail provider's domain page | KRB-158 |
-| FedaPay live: fees unticked, live webhook, live keys on Production only | [`deployment.md`](../deployment.md#4-fedapay-krb-176) | KRB-157 |
-| The accountant's answers on VAT, e-MECeF and the receipt mentions | ADR 001, A1 to A6 | KRB-26 |
-| `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` and the `AI_PRICE_*` variables on Production | [AI evaluation](../ai-evaluation.md#cost-alert-and-fallback-model) | KRB-160 |
-| Eval baseline on the production model passed, then `AI_DRAFTS_ENABLED=true`. A run costs money (the PR subset of 6 cases cost 0.45 USD): it waits on the product owner's go, and AI drafts stay off until then | [AI evaluation](../ai-evaluation.md) | KRB-160 |
-| Sentry alert rules for `production`: new issue, regression, spike, sent to the product owner, the only member on the free plan | [Monitoring](monitoring.md#alert-rules) | KRB-23 |
-| Uptime check on `https://kolabreport.com/api/health` with the `kolabreport-ops` contact point | [Monitoring](monitoring.md#uptime) | KRB-23 |
-| Nightly dump and Storage copy set up for production | [Backups](backups.md#setup) | KRB-23 |
-| Smoke account and workspace created on production | [Smoke tests](smoke-tests.md#setup-once-per-environment) | KRB-161 |
-| `master` green, staging deployed from it, smoke tests green on staging, no open P1 | GitHub Actions | |
+| Check | Where | Jira | On 2026-10-23 |
+| --- | --- | --- | --- |
+| Supabase stays on Free (decided 2026-10-20). Free pauses a project after 7 days without activity: use production during the week before the tag, and restore it from the dashboard if it paused | Supabase, project `krsccuejegzqianrzstc` | KRB-130 | Up: the nightly dump reached it |
+| GitHub integration of the production project with **Deploy to production** and **Automatic branching** off | Supabase, project `krsccuejegzqianrzstc`, **Project Settings > Integrations** | KRB-130 | Both off. Automatic branching needs Pro |
+| GitHub environment `production`: Supabase ref and password, `AUTH_SITE_URL`, smoke test settings | GitHub, **Settings > Environments** | KRB-132 | Set, except the smoke settings: launch day |
+| Vercel Production variables, `NEXT_PUBLIC_APP_URL` as a plain variable. The plan goes to Pro the day before the tag ([Vercel plan](#vercel-plan)) | Vercel, **Settings > Environment Variables** | KRB-131 | Set. Plan: the day before |
+| Check settings on `production` with no ✗ | **Actions > Check settings**, [steps below](#production-settings-step-by-step) | KRB-157 | "Ready to deploy, 2 to look at": smoke tests and AI, both expected |
+| Auth settings applied to production: site URL, redirect URLs, SMTP, French templates, rate limits | **Actions > Supabase Auth settings**, first with `--dry-run` | KRB-158 | Applied on 2026-10-21. The captcha goes on after the deploy (launch day) |
+| Turnstile: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` on Vercel Production, not Sensitive, and `TURNSTILE_SECRET_KEY` on the GitHub `production` environment. `AUTH_CAPTCHA_ENABLED` stays unset until launch day | Cloudflare **Turnstile**, widget `KolabReport`; [deployment](../deployment.md#turnstile-captcha) | KRB-157 | Done |
+| SMTP sender on `kolabreport.com` with SPF, DKIM and DMARC passing | The e-mail provider's domain page | KRB-158 | `email.kolabreport.com` verified on Resend on 2026-10-21 |
+| FedaPay live: fees unticked, live webhook, live keys on Production only | [`deployment.md`](../deployment.md#4-fedapay-krb-176) | KRB-157 | Done |
+| The accountant's answers on VAT, e-MECeF and the receipt mentions | ADR 001, A1 to A6 | KRB-26 | Open |
+| `AI_DAILY_COST_ALERT_USD`, `AI_ALERT_EMAIL` and the `AI_PRICE_*` variables on Production | [AI evaluation](../ai-evaluation.md#cost-alert-and-fallback-model) | KRB-160 | Not for this launch: AI drafts are off |
+| Eval baseline on the production model passed, then `AI_DRAFTS_ENABLED=true`. A run costs money (the PR subset of 6 cases cost 0.45 USD): it waits on the product owner's go, and AI drafts stay off until then | [AI evaluation](../ai-evaluation.md) | KRB-160 | Not for this launch |
+| Sentry alert rules for `production`: new issue, regression, spike, sent to the product owner, the only member on the free plan | [Monitoring](monitoring.md#alert-rules) | KRB-23 | Done |
+| Uptime check on `https://kolabreport.com/api/health` with the `kolabreport-ops` contact point | [Monitoring](monitoring.md#uptime) | KRB-139 | Set up, check disabled and rule paused until launch day |
+| Nightly dump and Storage copy set up for production | [Backups](backups.md#setup) | KRB-23 | Done. Both skip cleanly until the first deploy |
+| Smoke account and workspace created on production | [Smoke tests](smoke-tests.md#setup-once-per-environment) | KRB-161 | Launch day: it needs the deployed site |
+| `master` green, staging deployed from it, smoke tests green on staging, no open P1 | GitHub Actions | | The day before |
 
 **Auth e-mails.** With a custom SMTP sender, Supabase sends at most `email_sent` auth e-mails per hour for the whole project. Sign-up confirmations and password resets share it. At 30, an announcement could bring more sign-ups in an hour than that, and the next ones would get no confirmation e-mail. It is 100 since KRB-162: the merge to `master` pushed it to staging, and the Auth settings workflow for production applies it there.
 
 ### Vercel plan
 
-Open (2026-10-20). Vercel's fair use guidelines keep the free Hobby plan to non-commercial personal use, and count "any method of requesting or processing payment from visitors of the site" and "advertising the sale of a product or service" as commercial use. KolabReport sells plans and takes FedaPay payments, so production on Hobby goes against Vercel's terms, and Vercel can stop the project. The ways out: Vercel Pro, 20 USD a month on 2026-10-20, or another host whose free plan allows commercial use, which means moving the deploy (`deploy.yml`, `vercel.json`, the cron jobs). To decide before payments go live.
+Decided on 2026-10-22: Vercel Pro, 20 USD a month, upgraded the day before the tag. Vercel's fair use guidelines keep the free Hobby plan to non-commercial personal use, and count "any method of requesting or processing payment from visitors of the site" and "advertising the sale of a product or service" as commercial use. KolabReport sells plans and takes FedaPay payments, so production on Hobby goes against Vercel's terms, and Vercel can stop the project. The other way out, a host whose free plan allows commercial use, means moving the deploy (`deploy.yml`, `vercel.json`, the cron jobs).
 
 ## Production settings, step by step
 
@@ -62,15 +66,23 @@ For the setup session before the tag (KRB-157, KRB-158). Each step names what to
 
 ## Launch day
 
+In this order. Each step needs the one before it.
+
 | When | Step | Who |
 | --- | --- | --- |
-| T minus 30 min | Run the "Before the tag" lines that can change: CI on `master`, staging smoke tests, Vercel and Supabase status pages | On call |
+| The day before | Upgrade Vercel to Pro. Then run the "Before the tag" lines again and **Actions > Check settings** on `production`: no ✗ | Product owner, then on call |
+| T minus 30 min | Run the "Before the tag" lines that can change: CI on `master`, staging smoke tests, Vercel and Supabase status pages, Supabase production not paused | On call |
 | T | Tag the release: `git tag v1.0.0 <sha> && git push origin v1.0.0` | Product owner |
-| T to T plus 15 min | Watch the **Deploy** run: release check, production migrations (the billing launch migration among them), build, deploy, smoke tests | On call |
-| T plus 15 min | Check by hand on `https://kolabreport.com`, in a private window: sign up with a new address and get the e-mail, sign in, create a workspace, upload a file, ask for an AI draft, export to .docx, change a section in a second browser and see the dashboard refresh | On call |
-| T plus 30 min | Billing after the release: Institution for our own organizations, one real payment of the smallest offer, receipt, refund ([billing](billing.md#the-launch)) | Product owner |
-| T plus 1 h | Announce: the launch e-mail and messages to the first customers | Product owner |
-| T plus 4 h, then evening | Short check: Sentry, uptime, sign-ups, AI cost (the daily check below) | On call |
+| T to T plus 15 min | Watch the **Deploy** run: release check, production migrations (the billing launch migration among them), build, deploy. The smoke tests are skipped with a warning: `SMOKE_BASE_URL` comes with the smoke account, below | On call |
+| T plus 15 min | **Uptime on.** Grafana: enable the check `kolabreport-production-health`, then resume the rule "KolabReport production down". In **Explore**, `probe_success{job="kolabreport-production-health"}` shows one series per probe at 1 ([monitoring](monitoring.md#uptime)) | On call |
+| T plus 20 min | **Captcha on.** In a private window, open `https://kolabreport.com/fr/inscription`: the "Vérification anti-robot" box shows and passes. Only then set the variable `AUTH_CAPTCHA_ENABLED` to `true` on the GitHub `production` environment, and run **Actions > Supabase Auth settings** for `production`: its log lists `security_captcha_enabled`. If the box does not show, leave the variable unset and open a P2: sign-up works without the captcha | On call |
+| T plus 25 min | Check by hand on `https://kolabreport.com`, in a private window: sign up with a new address and get the e-mail, sign in, request a reset link and get it, create a workspace, upload a file, export to .docx, change a section in a second browser and see the dashboard refresh. AI drafts are off for this launch: no AI draft to ask for | On call |
+| T plus 35 min | **Smoke account.** Create it and its workspace on the site ([smoke tests](smoke-tests.md#setup-once-per-environment)). Its trial allows one report and the tests add a second one, so put its organization on Institution with `grant.mjs`, reason "usage interne" ([billing](billing.md#a-period-without-a-payment)). Then set `SMOKE_BASE_URL`, `SMOKE_EMAIL` and `SMOKE_PASSWORD` on the GitHub `production` environment. Run **Smoke tests** for `production`, then **Check settings**: only the AI line is left. If the signed-in checks fail at sign-in on the captcha, keep the captcha on and follow KRB-234 | On call |
+| T plus 45 min | Billing after the release: Institution for our own organizations, one real payment of the smallest offer, receipt, refund ([billing](billing.md#the-launch)) | Product owner |
+| T plus 1 h | **Uptime alert test.** Point the check at `https://kolabreport.com/api/health-test` for 3 to 5 minutes: the "KolabReport production down" e-mail arrives. Set the target back, and the resolved e-mail follows | On call |
+| T plus 1 h 15 | Announce: the launch e-mail and messages to the first customers | Product owner |
+| T plus 4 h, then evening | Short check: Sentry, uptime, sign-ups, e-mails sent on Resend (the daily check below) | On call |
+| The next morning | First nightly backups with data: **Backup database** uploads an encrypted dump, and **Backup storage** copies `deliverables` and `exports` to R2. It is the first run that writes to R2, so it also tests the R2 key: a red run is a P2 the same day ([backups](backups.md)) | On call |
 
 **Roll back the app** (Vercel **Instant Rollback**, [Rollback](../deployment.md#rollback)) when any of these happens after the deploy:
 
@@ -113,6 +125,7 @@ Every day at 09:00 in Cotonou, about 15 minutes. Write the result as one comment
 | AI cost and latency | The daily cost alert e-mail, and the query below in the SQL editor of production | Cost per day against the alert amount, p95 cost per draft over 0.10 USD, failure rate over 5%, p95 latency going up |
 | Database | Supabase, **Reports** and the advisors e-mail | CPU, connections, new advisor findings |
 | Auth e-mails | Supabase, **Logs > Auth** | Rate limit errors on sign-up or recovery |
+| E-mails sent | Resend, **Metrics** of the KolabReport account | The day's count against the free plan's 100 a day and 3,000 a month. Past 70 in a day, tell the product owner |
 | Usage | The query below | Sign-ups and new workspaces per day |
 
 Read-only queries for the SQL editor of production:
