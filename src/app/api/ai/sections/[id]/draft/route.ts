@@ -239,8 +239,10 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     model: mock ? "mock" : settings.models[tier],
     params: {
       temperature,
-      maxOutputTokens: maxTokens,
+      // The template's cap, as before thinking; the call's cap adds thinkingTokens.
+      maxOutputTokens: answerTokens,
       effort: thinking.effort,
+      thinkingTokens: thinking.tokens,
       modelTier: tier,
       ...(settings.fallback ? { fallbackModel: settings.fallback.model } : {}),
     },

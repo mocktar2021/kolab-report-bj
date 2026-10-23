@@ -156,7 +156,14 @@ test("the assigned expert gets a streamed draft, recorded as a proposal", async 
     accepted: null,
     prompt_version_id: setup.templateId,
     model: "mock",
-    params: { temperature: 0.3, maxOutputTokens: 4096, modelTier: "standard" },
+    // The template's cap, and the thinking on top of it (KRB-224, defaults).
+    params: {
+      temperature: 0.3,
+      maxOutputTokens: 4096,
+      effort: "high",
+      thinkingTokens: 12000,
+      modelTier: "standard",
+    },
   });
   expect(generation?.input_hash).toMatch(/^[0-9a-f]{64}$/);
   expect(generation?.output_tokens).toBeGreaterThan(0);
