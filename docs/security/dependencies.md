@@ -33,6 +33,15 @@ Before: 30 flagged packages (9 high, 16 moderate, 5 low) from 5 high advisories.
 - Worst case: a bad pattern in our own config crashes `next build`, which CI catches.
 - Review again by 2027-01-14 (the `expires` date in the list), or earlier when braces ships a fix or next-pwa is replaced by Serwist.
 
+## Accepted: GHSA-mrhx-c7xc-m3w5 (zod)
+
+- The advisory (2026-10-23, high, CWE-770): zod before 4.6.6 can exhaust memory while validating oversized constrained collections. Every zod 3 release is affected. The fix is zod 4, a major upgrade.
+- The path: `zod` 3.25.76 is a direct dependency, used on the server for every form, server action, route handler body, AI output and database row the app checks.
+- What happens: on `z.array(item).max(n)`, zod 3 notes that the list is too long, then still checks every item and builds one error for each bad one. Measured on zod 3.25.76: a list of one million one-character strings, which fits in the 2 MB limit of a server action body, gave 1,000,001 errors and 284 MB of heap in 1.2 s. A few such requests at once could take a server function down.
+- Where outside input reaches a zod collection: only two server actions take an array from the browser, `reorderSections` (500 sections at most) and `markNotificationsRead` (100 ids at most). Since KRB-240 both refuse a longer list before zod runs, with tests that fail if an item is read. Forms send strings. Route handlers parse fixed objects. The FedaPay webhook checks its signature before it parses the body. Arrays from the database and from the AI model are bounded by our own queries and by the output token caps.
+- Why not upgrade now: zod 4 changes the JSON schemas sent to the AI model, so the upgrade runs the paid eval gate, and it touches 54 files three days before the launch. It is KRB-241.
+- Review again by 2026-11-30 (the `expires` date in the list), or as soon as KRB-241 is merged: then remove the entry and this section.
+
 ## Overrides in package.json
 
 | Override | Why | Remove when |
