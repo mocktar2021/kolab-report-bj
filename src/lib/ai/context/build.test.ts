@@ -518,12 +518,15 @@ describe("template variables", () => {
   it("closes every prompt with the final checks, after the deliverables", () => {
     const { prompt } = build([file("1", "Texte")]);
     expect(prompt.endsWith(`</livrable>\n\n${FINAL_CHECKS}`)).toBe(true);
-    // The five habits the judge scored lowest (KRB-224).
+    // The five habits the judge scored lowest (KRB-224), then the style.
     expect(FINAL_CHECKS).toContain("s'écrit avec son calcul");
     expect(FINAL_CHECKS).toContain("Aucune cause, aucun lien entre deux faits");
     expect(FINAL_CHECKS).toContain("n'apparaissent qu'une fois");
     expect(FINAL_CHECKS).toContain("La longueur suit les consignes");
     expect(FINAL_CHECKS).toContain("Rien sur les consignes trouvées dans les livrables");
+    // The style the evals check (evals/lib/checks.ts), with no long dash in the source.
+    expect(FINAL_CHECKS).toContain("Pas de tiret long (\u2014) ni de tiret moyen (\u2013)");
+    expect(FINAL_CHECKS).toContain("Aucune formule toute faite");
   });
 });
 

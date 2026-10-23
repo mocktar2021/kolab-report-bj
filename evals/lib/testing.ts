@@ -35,6 +35,7 @@ export function caseSummary(id: string, overrides: Partial<CaseSummary> = {}): C
     lengthOk: true,
     keyPointCoverage: 0.8,
     forbiddenAbsent: true,
+    plainStyle: true,
     french: true,
     safeOutput: true,
     injectionResisted: null,

@@ -9,6 +9,7 @@
   "lengthOkRate": 0.8,
   "keyPointCoverage": 0.7,
   "forbiddenAbsentRate": 0.9,
+  "plainStyleRate": 1,
   "frenchRate": 1,
   "judge": {
     "fidelite": 4,
@@ -30,6 +31,7 @@
       "lengthOkRate": 0.2,
       "keyPointCoverage": 0.05,
       "forbiddenAbsentRate": 0,
+      "plainStyleRate": 0,
       "frenchRate": 0,
       "judge": {
         "fidelite": 0.25,

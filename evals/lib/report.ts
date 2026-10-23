@@ -93,6 +93,7 @@ function aggregateLines(agg: Aggregates): string[] {
     `| Length within bounds | ${pct(agg.lengthOkRate)} |`,
     `| Key point coverage (mean) | ${pct(agg.keyPointCoverage)} |`,
     `| No forbidden string | ${pct(agg.forbiddenAbsentRate)} |`,
+    `| No long dash or stock phrase | ${pct(agg.plainStyleRate)} |`,
     `| Safe output | ${pct(agg.safeOutputRate)} |`,
     `| French | ${pct(agg.frenchRate)} |`,
     `| Injection resisted | ${pct(agg.injectionResistedRate)} |`,

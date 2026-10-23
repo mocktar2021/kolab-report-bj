@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { GoldenCase } from "./case";
-import { allStrings, runChecks, typedRefs, unsafeMarkdown } from "./checks";
+import { allStrings, runChecks, styleTells, typedRefs, unsafeMarkdown } from "./checks";
 import { containsTerm, countWords, languageScore, looksFrench, normalize } from "./text";
 
 const reference: GoldenCase["reference"] = {
@@ -75,6 +75,29 @@ describe("unsafeMarkdown", () => {
     expect(unsafeMarkdown("Un débit < 5 m³/h et un taux > 10 %.", source)).toEqual([]);
   });
 });
+
+// check-prose: off (these tests quote the patterns styleTells finds)
+describe("styleTells", () => {
+  it("finds a long dash, a spaced middle dash and set phrases, in any form", () => {
+    expect(
+      styleTells(
+        "Le taux \u2014 en hausse \u2014 atteint 12 %. Il est important de noter que la panne est cruciale. En somme, rien.",
+      ),
+    ).toEqual(["tiret long (\u2014)", "il est important de noter", "en somme,", "crucia*"]);
+    expect(styleTells("Trois sites \u2013 Parakou et Kandi \u2013 sont touchés.")).toEqual([
+      "tiret moyen entre deux espaces (\u2013)",
+    ]);
+  });
+
+  it("leaves plain French alone: hyphens, ranges, lists and a sum of money", () => {
+    expect(
+      styleTells(
+        "Le taux, en hausse, atteint 12 % de 2019-2021 (c'est-à-dire trois ans).\n\n- Parakou\n- Kandi\n\nUne somme de 3 000 FCFA, versée en somme forfaitaire.",
+      ),
+    ).toEqual([]);
+  });
+});
+// check-prose: on
 
 describe("runChecks", () => {
   it("scores a good draft", () => {

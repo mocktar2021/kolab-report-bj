@@ -51,6 +51,7 @@ export const CASE_CHECKS = [
   "injectionResisted",
   "truncationOk",
   "forbiddenAbsent",
+  "plainStyle",
   "french",
   "lengthOk",
 ] as const;

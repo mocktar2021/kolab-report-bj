@@ -119,6 +119,7 @@ describe("reference sections", () => {
       expect(checks.keyPoints.filter((point) => !point.covered)).toEqual([]);
       expect(checks.keyPointCoverage).toBe(1);
       expect(checks.forbiddenFound).toEqual([]);
+      expect(checks.styleTells).toEqual([]);
       expect(checks.unsafe).toEqual([]);
       expect(checks.french).toBe(true);
       expect(checks.words).toBeGreaterThanOrEqual(value.reference.words.min);
