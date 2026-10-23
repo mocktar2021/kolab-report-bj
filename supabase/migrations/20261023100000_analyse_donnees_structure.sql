@@ -7,8 +7,9 @@
 -- words, and the drafts run about twice as long as the reference sections
 -- (275 to 373 words). Version 1 says nothing about any of this. Version 2
 -- says it: each figure once, a summary of two or three sentences without the
--- detail, three limits at most that say what to check, 250 to 400 words, and
--- a computed figure written with its calculation.
+-- detail, three limits at most that say what to check, 250 to 400 words, a
+-- computed figure written with its calculation, and no link between two
+-- columns that the deliverables do not make.
 --
 -- A saved version never changes, so the template gets a new published
 -- version, as the app publishes one: the trigger numbers it (version 2) and
@@ -39,6 +40,7 @@ Données et livrables (les tableaux viennent de fichiers Excel ou CSV) :
 Décris ce que montrent les données : ordres de grandeur, évolutions, écarts et valeurs qui sortent du lot.
 Dis chaque chiffre une seule fois : le résumé donne en deux ou trois phrases ce qu'il faut retenir, et les observations donnent les chiffres.
 Reprends les chiffres exactement comme ils figurent dans les tableaux, avec leur unité.
+Décris chaque indicateur pour lui-même : ne rapproche pas deux colonnes, par exemple un effectif et un taux, si les livrables ne le font pas.
 Ne calcule une moyenne ou un total que si toutes les valeurs nécessaires sont présentes, et écris le calcul.
 Termine par trois limites au plus, d'une phrase chacune : ce qui manque ou reste douteux, et ce qu'il faudrait vérifier.
 Vise 250 à 400 mots en tout, sauf si les consignes demandent plus de détail.$tpl$,
