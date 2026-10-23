@@ -109,10 +109,10 @@ run("ffmpeg", "-y", "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-
     "-ac", "2", "vo.wav")
 os.remove("vo_raw.f32")
 
-# Music ducks about 9 dB under the voice; SFX stay as they are.
+# The voice sits about 9 dB over the music, which ducks under it; SFX stay as they are.
 run("ffmpeg", "-y", "-v", "error", "-i", "video_raw.mp4", "-i", "music.wav", "-i", "sfx.wav", "-i", "vo.wav",
     "-filter_complex",
-    "[3]asplit=2[v][key];"
+    "[3]asplit=2[v0][key];[v0]volume=1.8[v];"
     "[1]volume=0.8[m];"
     "[m][key]sidechaincompress=threshold=0.02:ratio=6:attack=15:release=350:makeup=1[md];"
     "[2]volume=0.8[s];"

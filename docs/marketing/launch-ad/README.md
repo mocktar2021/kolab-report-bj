@@ -41,7 +41,7 @@ ffmpeg -i video_raw.mp4 -i music.wav -i sfx.wav \
 
 ## Add the voice
 
-There are two ways to get the 12 lines.
+There are three ways to get the 12 lines: ElevenLabs (see below), Kokoro, or a person reading the script.
 
 With Kokoro, free and Apache 2.0. The files come from Hugging Face, so the environment must allow `huggingface.co`.
 
@@ -61,13 +61,13 @@ Then mix:
 python3 mix_vo.py kolabreport_lancement_27oct.mp4
 ```
 
-Each line starts at its time in `vo_lines.json`. A line too long for its scene is sped up by 18% at most. The music drops by about 9 dB while the voice speaks, and the whole mix is set to -14 LUFS, the level social apps expect.
+Each line starts at its time in `vo_lines.json`. A line too long for its scene is sped up by 18% at most. The music drops by about 13 dB while the voice speaks, so the voice sits about 9 dB above it, and the whole mix is set to -14 LUFS, the level social apps expect.
 
 ## Change the ad
 
 - Scene text is in `ad.html`, in French.
 - To make a scene longer or shorter, change `timings.json`, then move the `at` times in `vo_lines.json` to match. The music follows the new timings.
-- An ElevenLabs flow holds the same script with the Amadou voice, for when the account has credits.
+- The current voice comes from ElevenLabs (voice "Paul K, French Ad & Trailer", model eleven_v4), one node per line in the flow "KolabReport lancement voix off". Audio made on a free ElevenLabs plan is not licensed for commercial use: make it again during a paid month before the ad runs.
 
 ## Licences
 
