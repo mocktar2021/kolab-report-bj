@@ -7,6 +7,7 @@ export type AuthErrorKey =
   | "sessionExpired"
   | "emailNotConfirmed"
   | "captchaRequired"
+  | "signUpClosed"
   | "unknown";
 
 /** Maps a Supabase Auth error to a key under Auth.errors in messages/fr.json. */

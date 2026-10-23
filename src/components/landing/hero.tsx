@@ -1,4 +1,7 @@
 import { useTranslations } from "next-intl";
+import { LaunchPanel } from "@/components/launch/launch-panel";
+import { launchInitScript } from "@/components/launch/launch-script";
+import { LaunchWatch } from "@/components/launch/launch-watch";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -13,8 +16,26 @@ import { HeroCards } from "./hero-cards";
 const enter =
   "motion-safe:animate-in motion-safe:fade-in-50 motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:duration-1000 motion-safe:ease-out-expo";
 
-export function Hero() {
+/** `launchAt` is set while production waits for the launch: a countdown takes the place of the buttons (KRB-239). */
+export function Hero({ launchAt }: { launchAt?: string }) {
   const t = useTranslations("Landing.hero");
+
+  const actions = (className?: string) => (
+    <div
+      className={cn(
+        enter,
+        "mx-auto mt-9 flex max-w-xs flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center motion-safe:delay-200",
+        className,
+      )}
+    >
+      <Button asChild size="lg" shape="pill" className="h-12 px-7">
+        <Link href="/connexion">{t("primaryCta")}</Link>
+      </Button>
+      <Button asChild variant="soft" size="lg" shape="pill" className="h-12 px-7">
+        <a href="#fonctionnalites">{t("secondaryCta")}</a>
+      </Button>
+    </div>
+  );
 
   return (
     <section aria-labelledby="hero-title" className="relative pt-14 sm:pt-20 lg:pt-24">
@@ -35,19 +56,24 @@ export function Hero() {
         >
           {t("subtitle")}
         </p>
-        <div
-          className={cn(
-            enter,
-            "mx-auto mt-9 flex max-w-xs flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center motion-safe:delay-200",
-          )}
-        >
-          <Button asChild size="lg" shape="pill" className="h-12 px-7">
-            <Link href="/connexion">{t("primaryCta")}</Link>
-          </Button>
-          <Button asChild variant="soft" size="lg" shape="pill" className="h-12 px-7">
-            <a href="#fonctionnalites">{t("secondaryCta")}</a>
-          </Button>
-        </div>
+        {launchAt ? (
+          <>
+            {/*
+              The page is static, so a build from before the launch holds both.
+              The script picks one before first paint, LaunchWatch at the launch
+              second, and the next build after the launch has no countdown.
+            */}
+            <script dangerouslySetInnerHTML={{ __html: launchInitScript(launchAt) }} />
+            <LaunchWatch until={launchAt} />
+            <LaunchPanel
+              until={launchAt}
+              className={cn(enter, "mt-9 motion-safe:delay-200 launched:hidden")}
+            />
+            {actions("prelaunch:hidden")}
+          </>
+        ) : (
+          actions()
+        )}
       </div>
 
       <HeroCards />

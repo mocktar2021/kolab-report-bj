@@ -4,7 +4,7 @@ Runbooks for running KolabReport in production: what watches it, what backs it u
 
 | File | What it holds |
 | --- | --- |
-| [`launch.md`](launch.md) | The first production release: checks before the tag, launch day, severity levels, support, and the daily checks of the first week (KRB-162) |
+| [`launch.md`](launch.md) | The first production release: checks before the tag, the countdown page that goes up with it, launch day, severity levels, support, and the daily checks of the first week (KRB-162) |
 | [`billing.md`](billing.md) | How access follows the plan, moving dates on staging, a reminder not sent, a workspace stuck in read-only, a manual grant, stuck purchases, purchases in review and refunds |
 | [`backups.md`](backups.md) | What Supabase backs up per plan, our RPO and RTO, the nightly database dump and Storage copy, the restore drill and its log |
 | [`monitoring.md`](monitoring.md) | Logs, Sentry, the uptime check on `/api/health` and its alert routing, the Supabase advisors, the database metrics and the billing job |

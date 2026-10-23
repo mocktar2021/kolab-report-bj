@@ -9,10 +9,18 @@ import { ProgressShowcase } from "@/components/landing/progress-showcase";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { WorkspaceBento } from "@/components/landing/workspace-bento";
+import { prelaunchUntil } from "@/lib/launch";
 
 // Public landing page. It reads no cookies or search params, so it is
 // prerendered at build time. Signed-in visitors are sent to the dashboard by
 // the proxy before they reach it.
+//
+// A production build from before the launch shows a countdown in the hero
+// (KRB-239). The hero switches to its buttons by itself at the launch. No
+// revalidate: with it, `next start` answers with stale-while-revalidate, and
+// the browser's background check of the page never lets the network go idle
+// in the e2e and smoke tests.
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: "fr" }> }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Landing" });
@@ -49,7 +57,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
       </a>
       <SiteHeader />
       <main id="contenu" className="overflow-x-clip">
-        <Hero />
+        <Hero launchAt={prelaunchUntil()} />
         <FormatStrip />
         <FeatureCards />
         <ProgressShowcase />

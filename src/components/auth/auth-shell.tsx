@@ -13,7 +13,7 @@ export async function AuthShell({
   footer,
 }: {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {

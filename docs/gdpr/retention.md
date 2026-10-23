@@ -121,6 +121,12 @@ What that means for a deletion:
 | `localStorage` (sidebar state, theme) | Until the person clears it. No personal data. |
 | Pages kept by the service worker for offline reading | Removed at sign-out. The app shell and static files stay. |
 
+## Launch reminder
+
+| Data | Where | Today | Target |
+| --- | --- | --- | --- |
+| E-mail addresses left before the launch (KRB-239) | Resend contacts, segment "KolabReport lancement". Nothing in the app's database. | Until the launch e-mail goes out on 27 October 2026, then the operator deletes the segment's contacts in Resend within 30 days ([`docs/operations/launch.md`](../operations/launch.md)). A contact who unsubscribes earlier stays marked as unsubscribed until then. | Same |
+
 ## Out of scope
 
 CI keeps test reports for 7 days and eval reports for 90 days on GitHub. They hold only the local seed accounts and the synthetic eval cases.

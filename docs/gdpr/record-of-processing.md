@@ -7,7 +7,7 @@ This is the Article 30 record for KolabReport. It lists each processing activity
 | Organization keeping the record | Mocktar Technologies, établissement, C 1357 Houeyiho, 07BP91 Cotonou, République du Bénin. RCCM COTONOU N° RB/COT/26 A 119654, IFU 1200900488800. Same details as `src/content/legal/publisher.ts`. |
 | Contact for data protection | support@mocktar.com |
 | EU representative, DPO | **To confirm** whether either is needed |
-| Last updated | 2026-10-15 |
+| Last updated | 2026-10-23 |
 | Database, Auth and Storage | Supabase, region EU West Paris (`eu-west-3`), per `docs/deployment.md` |
 | App server | Vercel, functions in `cdg1` (Paris), per `vercel.json` |
 
@@ -153,6 +153,20 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 | Transfers outside the EU | See FedaPay and the other processors in [`processors.md`](processors.md) |
 | Retention | Purchases, receipts and payment events: 10 years, **to confirm** (A5). They stay when the organization is deleted, with the link set to null. Billing details: until the organization is deleted. See [`retention.md`](retention.md#billing-records). |
 | Security measures | RLS on every billing table: billing readers read, nobody signed in writes except the four buyer columns of `organization_billing` for owners (column grant and policy). Amounts come from the catalogue on the server, never from the browser. Nothing is granted from a webhook body: the server reads the transaction back from FedaPay. A receipt can't be changed or deleted once issued (trigger). The receipt PDF is drawn on demand by `GET /api/billing/receipts/[id]` with the user's own client, so RLS decides who downloads it, and it is never cached. |
+
+## 10. Launch reminder
+
+| Field | Entry |
+| --- | --- |
+| Role | Controller (assumption to confirm) |
+| Purpose | Before the launch on 27 October 2026 at 09:00 in Cotonou, a visitor leaves an e-mail address on the landing page or the closed sign-up page and gets one e-mail when sign-up opens (KRB-239) |
+| Legal basis (proposed) | Consent, Article 6(1)(a). The visitor types the address and presses "Me prévenir". The e-mail carries an unsubscribe link, and a request to support works too. |
+| Data subjects | Visitors who leave an address. They may have no account. |
+| Data categories | The e-mail address only, trimmed and in lower case. The app stores nothing: `src/lib/launch-reminder.ts` creates a Resend contact and adds it to the segment "KolabReport lancement". Log lines carry the HTTP status, never the address. |
+| Recipients | Resend, which keeps the contact list and sends the launch e-mail as a broadcast. Vercel, which runs the form's server action. |
+| Transfers outside the EU | Resend is a US company. See [`processors.md`](processors.md#resend). |
+| Retention | Until the launch e-mail goes out, then 30 days at most: the operator deletes the contacts of the segment in Resend ([`docs/operations/launch.md`](../operations/launch.md)). See [`retention.md`](retention.md#launch-reminder). |
+| Security measures | The form only works in production before the launch (`isPrelaunch` in `src/lib/launch.ts`). A hidden field catches bots that fill every field, and the address is checked before it is sent. No e-mail goes out when someone signs up to the list, so the form can't be used to send mail to a stranger. |
 
 ## Measures that apply to every activity
 

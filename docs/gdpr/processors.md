@@ -35,6 +35,7 @@ These are the services that receive personal data from KolabReport. For report c
 The code supports both (`src/lib/email/send.ts`), and `docs/deployment.md` names both for the Supabase Auth SMTP sender. Production should use one. Remove the other from this page once chosen.
 
 - **Receives**: the recipient's e-mail, the subject and the body. Bodies hold names (inviter, person who changed a report's status), workspace and organization names, report titles, and links, including invitation links with their token and Auth links for confirmation and password reset (activity 5 in [`record-of-processing.md`](record-of-processing.md)).
+- **Launch reminder** (KRB-239, Resend only): Resend also keeps the list of addresses left on the site before the launch, as contacts in the segment "KolabReport lancement", and sends them the launch e-mail as a broadcast. Activity 10 in [`record-of-processing.md`](record-of-processing.md).
 - **Tracking**: check whether open and click tracking is on for transactional e-mails in the provider's settings, and turn it off unless it is needed.
 
 ### Resend

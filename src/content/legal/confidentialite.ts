@@ -8,7 +8,7 @@ const CONTROLLER = "Responsable de traitement";
 const PROCESSOR = "Sous-traitant de l'organisation cliente";
 
 export const confidentialite: LegalDocument = {
-  updatedAt: "2026-10-18",
+  updatedAt: "2026-10-23",
   intro: [
     "Cette politique explique quelles données personnelles KolabReport traite, pourquoi, avec qui elles sont partagées, combien de temps elles sont gardées et comment exercer vos droits. Elle s'applique au site, à l'application KolabReport et aux e-mails qu'ils envoient.",
   ],
@@ -49,6 +49,7 @@ export const confidentialite: LegalDocument = {
                 "L'organisation cliente, par exemple le cabinet",
               ],
               ["Membres des espaces, rôles et invitations", PROCESSOR, "L'organisation cliente"],
+              ["Rappel de lancement : l'adresse e-mail laissée sur le site", CONTROLLER, PUBLISHER.name],
             ],
           },
         },
@@ -69,6 +70,7 @@ export const confidentialite: LegalDocument = {
             "**Utilisation de l'IA** : auteur de la demande, modèle utilisé, nombre de jetons, coût estimé, durée, brouillon accepté ou non, note et commentaire laissés sur le brouillon.",
             "**Facturation** : organisation cliente, offre choisie, périodes payées, montants, factures et reçus, et le résultat de chaque paiement transmis par FedaPay (référence, montant, date, statut, moyen de paiement).",
             "**Échanges avec le support** : les messages que vous nous envoyez et nos réponses.",
+            "**Rappel de lancement** : l'adresse e-mail que vous laissez sur le site avant l'ouverture des inscriptions, pour recevoir un e-mail à l'ouverture.",
             "**Journaux techniques** : requêtes reçues par les serveurs et erreurs de l'application.",
           ],
         },
@@ -114,6 +116,10 @@ export const confidentialite: LegalDocument = {
                 "Intérêt légitime",
               ],
               ["Répondre à vos demandes au support", "Exécution du contrat ou intérêt légitime"],
+              [
+                "Vous écrire à l'ouverture des inscriptions, si vous avez laissé votre adresse sur le site avant le lancement",
+                `Consentement. Vous le retirez à tout moment avec le lien de désinscription de l'e-mail ou en écrivant à ${SUPPORT_EMAIL}.`,
+              ],
               [
                 "Respecter nos obligations légales et défendre nos droits",
                 "Obligation légale ou intérêt légitime",
@@ -173,8 +179,8 @@ export const confidentialite: LegalDocument = {
               ],
               [
                 "[Resend](https://resend.com) ou [Brevo](https://www.brevo.com)",
-                "Envoi des e-mails du service",
-                "Adresse du destinataire, objet et contenu de l'e-mail : noms, noms d'espace et de rapport, liens",
+                "Envoi des e-mails du service. Resend garde aussi la liste du rappel de lancement.",
+                "Adresse du destinataire, objet et contenu de l'e-mail : noms, noms d'espace et de rapport, liens. Pour le rappel de lancement : l'adresse laissée sur le site.",
                 "Resend : société établie aux États-Unis. Brevo : France et Belgique.",
               ],
               [
@@ -273,6 +279,10 @@ export const confidentialite: LegalDocument = {
               [
                 "Échanges avec le support",
                 "Le temps de traiter la demande, puis le temps utile en cas de contestation.",
+              ],
+              [
+                "Rappel de lancement",
+                "Jusqu'à l'e-mail d'ouverture, puis 30 jours au plus. Vous pouvez demander l'effacement avant.",
               ],
               [
                 "Journaux techniques et erreurs",

@@ -21,7 +21,7 @@ In read-only, the database refuses every insert and update made in a user's name
 
 ## The launch
 
-The migration `20261016100000_billing_launch.sql` (KRB-179) turns billing on. It runs on staging when its PR merges, through the deploy's `supabase db push`, and on production with the release tag, which is the launch moment. In one transaction it:
+The migration `20261016100000_billing_launch.sql` (KRB-179) turns billing on. It runs on staging when its PR merges, through the deploy's `supabase db push`, and on production with the release tag, which goes out a few days before sign-up opens on 27 October ([launch](launch.md#the-tag-and-the-countdown)). In one transaction it:
 
 1. Sets `enforced = true` and `launched_at` in `private.billing_settings`.
 2. Gives every organization with no paid or manual period running a 30-day launch period with the Cabinet limits (`source = 'launch'`, worth 0 FCFA, note "Période de lancement"). A running trial ends where it starts. When a period is planned later, the launch period stops where that one starts.
@@ -45,7 +45,7 @@ select count(*) from private.billing_events where kind = 'launch_period';
 Before the release tag, for production:
 
 - FedaPay live account verified, every box of **Préférences > Frais** unticked (next section), live keys and webhook secret on Vercel Production only, live webhook created with auto-disable unticked ([`docs/deployment.md`](../deployment.md#4-fedapay-krb-176)).
-- Vercel Pro, the day before the tag ([launch](launch.md#vercel-plan)). Supabase stays on Free for now, against ADR 001, Q16 (decided 2026-10-20). Terms of sale online at `/fr/cgv`.
+- Vercel Pro, before the tag ([launch](launch.md#vercel-plan)). Supabase stays on Free for now, against ADR 001, Q16 (decided 2026-10-20). Terms of sale online at `/fr/cgv`.
 - The sandbox checklist of ADR 001, section 13, passed on staging.
 - An account on SFE en ligne to issue the normalized invoices (done on 2026-10-23, [Normalized invoice](#normalized-invoice-e-mecef)).
 - The launch e-mail to existing owners, written by the product owner, when production has any.
