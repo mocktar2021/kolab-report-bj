@@ -122,9 +122,11 @@ export type ReorderResult =
   | { ok: true }
   | { ok: false; error: "forbidden" | "stale" | "reportFinal" | "readOnly" | "invalidInput" | "generic" };
 
+const MAX_REORDER_SECTIONS = 500;
+
 const reorderSchema = z.object({
   reportId: uuidSchema,
-  sectionIds: z.array(uuidSchema).max(500),
+  sectionIds: z.array(uuidSchema).max(MAX_REORDER_SECTIONS),
 });
 
 /**
@@ -134,6 +136,12 @@ const reorderSchema = z.object({
  * sections at the same time: the last save wins, and live refresh shows it.
  */
 export async function reorderSections(reportId: string, sectionIds: string[]): Promise<ReorderResult> {
+  // Before zod: zod 3 still checks every item of a list over its max, with
+  // one error each. A 2 MB request of a million items took 284 MB
+  // (GHSA-mrhx-c7xc-m3w5, KRB-240).
+  if (!Array.isArray(sectionIds) || sectionIds.length > MAX_REORDER_SECTIONS) {
+    return { ok: false, error: "invalidInput" };
+  }
   const parsed = reorderSchema.safeParse({ reportId, sectionIds });
   if (!parsed.success) return { ok: false, error: "invalidInput" };
   const supabase = await createClient();

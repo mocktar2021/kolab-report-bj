@@ -5,7 +5,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/lib/workspaces/schemas";
 
-const idsSchema = z.array(uuidSchema).max(100);
+const MAX_IDS = 100;
+const idsSchema = z.array(uuidSchema).max(MAX_IDS);
 
 /**
  * Marks notifications as read: the ones given, or all of them. RLS limits
@@ -13,6 +14,9 @@ const idsSchema = z.array(uuidSchema).max(100);
  * column users can change.
  */
 export async function markNotificationsRead(ids?: string[]): Promise<{ ok: boolean }> {
+  // Before zod: zod 3 still checks every item of a list over its max, with
+  // one error each (GHSA-mrhx-c7xc-m3w5, KRB-240).
+  if (ids !== undefined && (!Array.isArray(ids) || ids.length > MAX_IDS)) return { ok: false };
   const parsed = ids === undefined ? null : idsSchema.safeParse(ids);
   if (parsed && !parsed.success) return { ok: false };
 
