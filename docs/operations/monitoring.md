@@ -102,7 +102,7 @@ The SDK collects as little as it can (`dataCollection` in `src/lib/monitoring/op
 | `src/lib/supabase/user.ts`, `src/components/monitoring/monitoring-user.tsx` | Set the user id on the server (`getCurrentUser`) and in the browser (signed-in layout) |
 | `next.config.mjs` | `withSentryConfig`: tunnel, source map upload, release |
 
-- **Tunnel**: the browser posts events to `/monitoring` on our own origin and Next.js passes them on to Sentry's EU ingest host. The CSP keeps `connect-src` to `'self'` and Supabase, and ad blockers don't drop the events. `src/proxy.ts` skips `/monitoring`. The server sends its events to Sentry directly.
+- **Tunnel**: the browser posts events to `/monitoring` on our own origin and Next.js passes them on to Sentry's EU ingest host. The CSP keeps `connect-src` to `'self'`, Supabase and Turnstile, and ad blockers don't drop the events. `src/proxy.ts` skips `/monitoring`. The server sends its events to Sentry directly.
 - **OpenTelemetry**: Sentry runs with `enableOpenTelemetrySetup: false` and no server tracing, so it registers no tracer provider. The AI tracing (`AI_TRACING=true`, `docs/ai-evaluation.md`) keeps its own and still exports its spans.
 - **Source maps**: the build uploads them only when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are all set, then deletes the browser ones so they never ship. A failed upload prints a warning and the build goes on. CI and local builds have none of the three and skip the upload without a word.
 - **Release**: the commit SHA from `SENTRY_RELEASE`, `VERCEL_GIT_COMMIT_SHA` or `GITHUB_SHA`, the first one set. `deploy.yml` sets `SENTRY_RELEASE` on staging, where `GITHUB_SHA` is the tip of `master` rather than the commit it deploys.
