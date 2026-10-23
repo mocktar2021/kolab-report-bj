@@ -1,6 +1,6 @@
 begin;
 \ir fixtures.psql
-select plan(54);
+select plan(57);
 
 -- Seeded global templates (migration 20261013210100) ---------------------------
 select is(
@@ -20,9 +20,9 @@ select results_eq(
     where workspace_id is null and status = 'published'
       and template_key in ('synthese-section', 'resume-executif', 'recommandations', 'analyse-donnees')
     order by template_key$$,
-  $$values ('analyse-donnees', 2, 4096), ('recommandations', 2, 4096), ('resume-executif', 2, 2048),
-    ('synthese-section', 2, 4096)$$,
-  'recommandations and resume-executif publish a version 2 with a higher output cap, synthese-section and analyse-donnees one with new text');
+  $$values ('analyse-donnees', 3, 4096), ('recommandations', 2, 4096), ('resume-executif', 3, 2048),
+    ('synthese-section', 3, 4096)$$,
+  'recommandations is at version 2 (higher output cap), the three others at version 3 (one place per figure)');
 select results_eq(
   $$select template_key, status::text, max_output_tokens from public.prompt_library
     where workspace_id is null and version = 1 and template_key in ('resume-executif', 'recommandations')
@@ -79,6 +79,36 @@ select is(
      and v2.created_by is null
      and v2.changelog is not null),
   1, 'version 2 of analyse-donnees changes the text only and was published after version 1');
+
+-- One place per figure (migration 20261023120000, KRB-224) ---------------------
+select results_eq(
+  $$select template_key, status::text from public.prompt_library
+    where workspace_id is null and version = 2
+      and template_key in ('synthese-section', 'resume-executif', 'analyse-donnees')
+    order by template_key$$,
+  $$values ('analyse-donnees', 'archived'), ('resume-executif', 'archived'), ('synthese-section', 'archived')$$,
+  'version 2 of synthese-section, resume-executif and analyse-donnees is archived');
+select is(
+  (select count(*)::int from public.prompt_library v2
+   join public.prompt_library v3 on v3.workspace_id is null and v3.template_key = v2.template_key and v3.version = 3
+   where v2.workspace_id is null and v2.version = 2
+     and v2.template_key in ('synthese-section', 'resume-executif', 'analyse-donnees')
+     and (v3.title, v3.description, v3.variables, v3.output_schema, v3.model_tier, v3.temperature,
+          v3.max_output_tokens)
+         = (v2.title, v2.description, v2.variables, v2.output_schema, v2.model_tier, v2.temperature,
+            v2.max_output_tokens)
+     and v3.template <> v2.template
+     and v3.published_at > v2.published_at
+     and v3.created_by is null
+     and v3.changelog is not null),
+  3, 'version 3 of the three templates changes the text only and was published after version 2');
+select is(
+  (select count(*)::int from public.prompt_library
+   where workspace_id is null and version = 3 and status = 'published'
+     and ((template_key = 'synthese-section' and template like '%Il ne redonne aucun chiffre des points clés%')
+       or (template_key = 'resume-executif' and template like '%ni les chiffres du résumé%')
+       or (template_key = 'analyse-donnees' and template like '%une à trois limites, pas plus%'))),
+  3, 'version 3 says where the figures go in each template');
 
 -- Reading ---------------------------------------------------------------------
 select pg_temp.act_as('expert');

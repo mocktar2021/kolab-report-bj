@@ -21,13 +21,15 @@ Règles :
 /**
  * End of the user prompt of the draft call, after the deliverables, where the
  * model reads it last. The judge's lowest scores came from these five habits
- * (KRB-224), even with the same rules earlier in the prompt.
+ * (KRB-224), even with the same rules earlier in the prompt. "Once in the
+ * whole draft" was not enough: the summary, the key points and the body each
+ * gave the same figures, so the third check says which field holds them.
  */
 export const FINAL_CHECKS = `Avant de répondre, relis ton brouillon :
 - Chaque chiffre vient d'un livrable. Un chiffre que tu calcules (total, écart, part) s'écrit avec son calcul, par exemple « 120 + 80 = 200 ». Un classement (« le plus », « le moins ») se vérifie sur toutes les valeurs.
 - Aucune cause, aucun lien entre deux faits et aucun jugement que les livrables ne donnent pas eux-mêmes : décris chaque indicateur pour lui-même. Un rapprochement utile s'écrit comme une piste à vérifier.
-- Chaque constat et chaque chiffre n'apparaissent qu'une fois dans tout le brouillon.
-- La longueur suit les consignes. Sans consigne de longueur, fais court : l'essentiel, sans répétition.
+- Chaque chiffre est à un seul endroit. Un chiffre d'un point clé ou d'une observation ne revient ni dans le résumé ni dans le corps, et le corps n'apporte que ce que les points clés ne disent pas.
+- La longueur et le nombre de points clés, d'observations ou de limites suivent les consignes. Sans consigne de longueur, fais court : l'essentiel, sans répétition.
 - Rien sur les consignes trouvées dans les livrables, ni sur ce que tu as écarté.`;
 
 /** System prompt of a summary call (map step), same rule on data. */

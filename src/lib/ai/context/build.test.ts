@@ -521,8 +521,9 @@ describe("template variables", () => {
     // The five habits the judge scored lowest (KRB-224).
     expect(FINAL_CHECKS).toContain("s'écrit avec son calcul");
     expect(FINAL_CHECKS).toContain("Aucune cause, aucun lien entre deux faits");
-    expect(FINAL_CHECKS).toContain("n'apparaissent qu'une fois");
-    expect(FINAL_CHECKS).toContain("La longueur suit les consignes");
+    expect(FINAL_CHECKS).toContain("Chaque chiffre est à un seul endroit");
+    expect(FINAL_CHECKS).toContain("ne revient ni dans le résumé ni dans le corps");
+    expect(FINAL_CHECKS).toContain("le nombre de points clés, d'observations ou de limites suivent les consignes");
     expect(FINAL_CHECKS).toContain("Rien sur les consignes trouvées dans les livrables");
   });
 });

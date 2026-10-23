@@ -55,8 +55,9 @@ describe("global templates", () => {
       expect(template.maxOutputTokens).toBeGreaterThan(before.maxOutputTokens);
       // Same text (so the same prompt version), title, schema, tier and temperature.
       expect({ ...template, maxOutputTokens: before.maxOutputTokens, source: before.source }).toEqual(before);
-      expect(templates.get(template.key)).toEqual(template);
     }
+    // resume-executif has a later version (KRB-224), recommandations doesn't.
+    expect(templates.get("recommandations")).toEqual(raised[1]);
   });
 
   it("picks up the section template of KRB-224: new text, same settings", () => {
@@ -66,7 +67,6 @@ describe("global templates", () => {
     const [structured, ...others] = migration("20261022220000_synthese_section_structure.sql");
     if (!seeded || !structured) throw new Error("missing synthese-section");
     expect(others).toEqual([]);
-    expect(templates.get("synthese-section")).toEqual(structured);
     expect(structured.version).not.toBe(seeded.version);
     expect(structured.text).toContain("Dis chaque constat une seule fois");
     expect(structured.text).toContain("Vise 200 à 500 mots");
@@ -83,7 +83,6 @@ describe("global templates", () => {
     const [structured, ...others] = migration("20261023100000_analyse_donnees_structure.sql");
     if (!seeded || !structured) throw new Error("missing analyse-donnees");
     expect(others).toEqual([]);
-    expect(templates.get("analyse-donnees")).toEqual(structured);
     expect(structured.version).not.toBe(seeded.version);
     expect(structured.text).toContain("Dis chaque chiffre une seule fois");
     expect(structured.text).toContain("trois limites au plus");
@@ -92,6 +91,41 @@ describe("global templates", () => {
     expect({ ...structured, text: seeded.text, version: seeded.version, source: seeded.source }).toEqual(
       seeded,
     );
+  });
+
+  it("picks up the one-place-per-figure versions of KRB-224: new text, same settings", () => {
+    const previous = new Map(
+      [
+        ...migration("20261022220000_synthese_section_structure.sql"),
+        ...migration("20261015120000_prompt_output_caps.sql"),
+        ...migration("20261023100000_analyse_donnees_structure.sql"),
+      ].map((template) => [template.key, template]),
+    );
+    const latest = migration("20261023120000_one_place_per_figure.sql");
+    expect(latest.map((template) => template.key)).toEqual([
+      "synthese-section",
+      "resume-executif",
+      "analyse-donnees",
+    ]);
+    for (const template of latest) {
+      const before = previous.get(template.key);
+      if (!before) throw new Error(`no earlier version of ${template.key}`);
+      expect(templates.get(template.key)).toEqual(template);
+      expect(template.version).not.toBe(before.version);
+      // Title, schema, tier, temperature and output cap are those of the version before.
+      expect({ ...template, text: before.text, version: before.version, source: before.source }).toEqual(
+        before,
+      );
+    }
+    const [synthese, resume, analyse] = latest;
+    expect(synthese?.text).toContain("le résumé dit l'essentiel en deux ou trois phrases, sans chiffre");
+    expect(synthese?.text).toContain("Il ne redonne aucun chiffre des points clés");
+    expect(synthese?.text).toContain("Vise 200 à 500 mots");
+    expect(resume?.text).toContain("Écris un résumé de 150 à 250 mots, autour de 200");
+    expect(resume?.text).toContain("Ils ne reprennent ni les phrases ni les chiffres du résumé");
+    expect(analyse?.text).toContain("sans aucun chiffre");
+    expect(analyse?.text).toContain("une à trois limites, pas plus");
+    expect(analyse?.text).toContain("Vise 250 à 400 mots");
   });
 
   it("gives each text a stable 8-character version", () => {
