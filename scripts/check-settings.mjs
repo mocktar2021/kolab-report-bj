@@ -61,6 +61,14 @@ export const GITHUB = {
   ],
 };
 
+const AI_KEYS = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"];
+const AI_PRICES = [
+  "AI_PRICE_INPUT_PER_MTOK",
+  "AI_PRICE_OUTPUT_PER_MTOK",
+  "AI_PRICE_FAST_INPUT_PER_MTOK",
+  "AI_PRICE_FAST_OUTPUT_PER_MTOK",
+];
+
 /** Vercel variables of the environment's target, from docs/deployment.md. */
 export const VERCEL = {
   // The app does not start, or its sign-in or scheduled jobs fail, without them.
@@ -92,7 +100,30 @@ export const VERCEL = {
       name: "AI",
       why: "AI drafts and the template helper stay off",
       all: [],
-      oneOf: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
+      oneOf: AI_KEYS,
+    },
+    // The next three are checked only with an AI key (KRB-235): without one,
+    // the AI line above already says AI is off.
+    {
+      name: "AI drafts",
+      why: "AI drafts, the template helper and the PDF plan import stay off",
+      all: ["AI_DRAFTS_ENABLED"],
+      oneOf: [],
+      onlyWith: AI_KEYS,
+    },
+    {
+      name: "AI prices",
+      why: "generations get no cost, so the AI dashboard shows tokens only and the cost alert never sends",
+      all: AI_PRICES,
+      oneOf: [],
+      onlyWith: AI_KEYS,
+    },
+    {
+      name: "AI cost alert",
+      why: "no e-mail when a day of AI generations costs more than planned",
+      all: ["AI_DAILY_COST_ALERT_USD", "AI_ALERT_EMAIL"],
+      oneOf: [],
+      onlyWith: AI_KEYS,
     },
   ],
   recommended: ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", "ACCOUNT_DELETION_LOG_EMAIL", "BILLING_ALERT_EMAIL"],
@@ -226,6 +257,7 @@ export function checkVercel(environment, variables, projectRef) {
       );
   }
   for (const group of VERCEL.groups) {
+    if (group.onlyWith && !group.onlyWith.some((key) => byKey.has(key))) continue;
     const missing = group.all.filter((key) => !byKey.has(key));
     const keyFound = group.oneOf.length === 0 || group.oneOf.some((key) => byKey.has(key));
     if (!keyFound) missing.push(group.oneOf.join(" or "));
@@ -237,6 +269,16 @@ export function checkVercel(environment, variables, projectRef) {
       findings.push(
         finding("error", "Vercel", group.name, `partly set on ${target}, missing ${missing.join(", ")}`),
       );
+  }
+  if (AI_KEYS.some((key) => byKey.has(key))) {
+    // Only true or 1 turns drafts on. The value is read only when Vercel returns it in clear.
+    const drafts = readable("AI_DRAFTS_ENABLED");
+    if (drafts !== null && !["true", "1"].includes(drafts.trim()))
+      findings.push(finding("warn", "Vercel", "AI_DRAFTS_ENABLED", "is not true: AI drafts stay off"));
+    // The alert adds up the cost of each generation, which needs the prices.
+    const alertSet = ["AI_DAILY_COST_ALERT_USD", "AI_ALERT_EMAIL"].every((key) => byKey.has(key));
+    if (alertSet && !AI_PRICES.some((key) => byKey.has(key)))
+      findings.push(finding("error", "Vercel", "AI cost alert", "set without the AI prices: it never sends"));
   }
   for (const key of VERCEL.recommended) {
     if (!byKey.has(key)) findings.push(finding("warn", "Vercel", key, `not set on ${target}`));
