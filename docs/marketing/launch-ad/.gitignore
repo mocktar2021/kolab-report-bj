@@ -1,0 +1,10 @@
+# Rendered output and voice files: rebuilt from the source, kept out of git.
+*.mp4
+*.wav
+*.f32
+*.npz
+*.log
+segs.txt
+stills/
+vo/
+models/

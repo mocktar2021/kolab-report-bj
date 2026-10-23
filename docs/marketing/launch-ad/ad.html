@@ -1,0 +1,1690 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>KolabReport, pub de lancement</title>
+    <link rel="stylesheet" href="fonts/local.css" />
+    <style>
+      :root {
+        --ink: #0b0b0e;
+        --ink2: #18141a;
+        --paper: #fafaf8;
+        --white: #ffffff;
+        --accent: #b93a26;
+        --coral: #ff8975;
+        --muted: #71717a;
+        --line: #e4e4e7;
+        --body: #3f3f46;
+        --green: #16a34a;
+        --orange: #e07b0b;
+        --gray: #a1a1aa;
+        --bar1: #b93a26;
+        --bar2: #ff8975;
+        --bar3: #fafaf8;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+      body {
+        font-family: "Inter Tight", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        overflow: hidden;
+      }
+      .dark {
+        color: var(--paper);
+        background: var(--ink);
+      }
+      .light {
+        color: var(--ink);
+        background: var(--paper);
+      }
+      .bg {
+        position: absolute;
+        inset: -200px;
+        pointer-events: none;
+      }
+      .glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+      }
+      .h {
+        font-family: "Instrument Sans", Arial, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.04;
+      }
+      .acc {
+        color: var(--accent);
+      }
+      .dark .acc {
+        color: var(--coral);
+      }
+      .mask {
+        display: block;
+        overflow: hidden;
+        padding-bottom: 0.08em;
+      }
+      .mask > span {
+        display: inline-block;
+        will-change: transform;
+      }
+      .center {
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+      }
+      .kicker {
+        display: inline-block;
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        padding: 12px 22px;
+        border-radius: 999px;
+      }
+      .light .kicker {
+        background: #f6e1dc;
+        color: var(--accent);
+      }
+      .dark .kicker {
+        background: rgba(255, 137, 117, 0.16);
+        color: var(--coral);
+      }
+      .phone {
+        position: absolute;
+        left: 50%;
+        width: 640px;
+        height: 1180px;
+        margin-left: -320px;
+        border-radius: 84px;
+        background: var(--ink);
+        padding: 18px;
+        box-shadow:
+          0 60px 120px rgba(11, 11, 14, 0.28),
+          0 20px 40px rgba(11, 11, 14, 0.18);
+      }
+      .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 68px;
+        background: #fff;
+        overflow: hidden;
+      }
+      .notch {
+        position: absolute;
+        top: 22px;
+        left: 50%;
+        width: 170px;
+        height: 44px;
+        margin-left: -85px;
+        border-radius: 30px;
+        background: var(--ink);
+        z-index: 5;
+      }
+      .appbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 150px;
+        padding: 86px 40px 0;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .appbar .logo {
+        width: 44px;
+        height: 44px;
+      }
+      .appbar b {
+        font-family: "Instrument Sans";
+        font-size: 30px;
+      }
+      .sc {
+        position: absolute;
+        top: 150px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 34px 36px;
+      }
+      .sc h4 {
+        font-family: "Instrument Sans";
+        font-size: 40px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .sc .sub {
+        font-size: 24px;
+        color: var(--muted);
+        margin-bottom: 26px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 20px 22px;
+        margin-bottom: 16px;
+        background: #fff;
+        font-size: 27px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .row .n {
+        color: var(--muted);
+        font-weight: 600;
+        min-width: 44px;
+      }
+      .row.ind {
+        margin-left: 44px;
+      }
+      .av {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        flex: none;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 20px;
+        font-weight: 700;
+        padding: 7px 14px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .pill i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 26px;
+        border-radius: 18px;
+        padding: 18px 26px;
+      }
+      .btn.dark {
+        background: var(--ink);
+        color: #fff;
+      }
+      .btn.ghost {
+        background: #fff;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+      .float {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 26px;
+        padding: 22px 28px;
+        font-weight: 700;
+        font-size: 30px;
+        box-shadow: 0 24px 60px rgba(11, 11, 14, 0.18);
+        white-space: nowrap;
+      }
+      .float.green {
+        background: var(--green);
+        color: #fff;
+      }
+      .float.inkf {
+        background: var(--ink);
+        color: #fff;
+      }
+      .chk {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+      }
+      .float.green .chk {
+        background: #fff;
+      }
+      .ripple {
+        position: absolute;
+        border-radius: 50%;
+        border: 4px solid var(--accent);
+        pointer-events: none;
+      }
+      .tile {
+        position: absolute;
+        border-radius: 36px;
+        padding: 40px;
+      }
+      .grain {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.07;
+        mix-blend-mode: overlay;
+        z-index: 50;
+      }
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 49;
+        background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.28) 100%);
+      }
+      .flash {
+        position: absolute;
+        inset: 0;
+        background: #fff;
+        opacity: 0;
+        z-index: 60;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <!-- S1: le problème -->
+      <section class="scene dark" id="s1">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s1g1"
+            style="width: 900px; height: 900px; background: rgba(185, 58, 38, 0.55)"
+          ></div>
+          <div
+            class="glow"
+            id="s1g2"
+            style="width: 700px; height: 700px; background: rgba(255, 137, 117, 0.18)"
+          ></div>
+        </div>
+        <div id="s1docs"></div>
+        <div class="center h" style="top: 640px; font-size: 120px">
+          <span class="mask"><span id="s1a">10 experts.</span></span>
+          <span class="mask"><span id="s1b">10 fichiers Word.</span></span>
+          <span class="mask"
+            ><span id="s1c"><span class="acc">1</span> rapport à rendre.</span></span
+          >
+        </div>
+      </section>
+
+      <!-- S2: ensemble -->
+      <section class="scene dark" id="s2">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s2g1"
+            style="width: 1000px; height: 1000px; background: rgba(185, 58, 38, 0.5)"
+          ></div>
+          <div
+            class="glow"
+            id="s2g2"
+            style="width: 600px; height: 600px; background: rgba(255, 137, 117, 0.18)"
+          ></div>
+        </div>
+        <div
+          class="center h"
+          style="top: 600px; font-size: 78px; font-weight: 600; line-height: 1.15; color: #e7e3e1"
+        >
+          <span class="mask"><span id="s2b">Vos rapports d'expertise</span></span>
+          <span class="mask"><span id="s2c">s'écrivent enfin</span></span>
+        </div>
+        <div class="center h" style="top: 820px; font-size: 170px">
+          <span class="mask"><span id="s2d" class="acc">ensemble.</span></span>
+        </div>
+        <div
+          id="s2flag"
+          style="
+            position: absolute;
+            top: 1060px;
+            left: 50%;
+            width: 420px;
+            margin-left: -210px;
+            height: 14px;
+            display: flex;
+            gap: 10px;
+          "
+        >
+          <div
+            style="flex: 1; border-radius: 7px; background: var(--bar1); transform-origin: left"
+            id="s2f1"
+          ></div>
+          <div
+            style="flex: 1; border-radius: 7px; background: var(--bar2); transform-origin: left"
+            id="s2f2"
+          ></div>
+          <div
+            style="flex: 1; border-radius: 7px; background: var(--bar3); transform-origin: left"
+            id="s2f3"
+          ></div>
+        </div>
+      </section>
+
+      <!-- S3: logo -->
+      <section class="scene dark" id="s3">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s3g1"
+            style="width: 1100px; height: 1100px; background: rgba(185, 58, 38, 0.6)"
+          ></div>
+          <div
+            class="glow"
+            id="s3g2"
+            style="width: 700px; height: 700px; background: rgba(255, 137, 117, 0.22)"
+          ></div>
+        </div>
+        <div id="s3rings"></div>
+        <svg
+          id="s3logo"
+          viewBox="0 0 32 32"
+          style="position: absolute; left: 50%; top: 620px; width: 260px; height: 260px; margin-left: -130px"
+        >
+          <rect width="32" height="32" rx="9" fill="#FAFAF8" />
+          <path
+            id="s3l1"
+            d="M10 10.5h12"
+            fill="none"
+            stroke="#0B0B0E"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <path
+            id="s3l2"
+            d="M10 16h6.5"
+            fill="none"
+            stroke="#0B0B0E"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <path
+            id="s3l3"
+            d="M10 21.5h12"
+            fill="none"
+            stroke="#0B0B0E"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle id="s3dot" cx="21" cy="16" r="1.6" fill="#B93A26" />
+        </svg>
+        <div class="center h" id="s3word" style="top: 930px; font-size: 132px; letter-spacing: -0.03em"></div>
+        <div class="center" style="top: 1120px">
+          <span
+            id="s3pill"
+            style="
+              display: inline-block;
+              font-size: 34px;
+              font-weight: 700;
+              padding: 16px 34px;
+              border-radius: 999px;
+              background: rgba(255, 137, 117, 0.16);
+              color: var(--coral);
+            "
+            >Lancement le 27 octobre</span
+          >
+        </div>
+        <div
+          id="s3shine"
+          style="
+            position: absolute;
+            top: 880px;
+            left: -400px;
+            width: 260px;
+            height: 300px;
+            background: linear-gradient(
+              100deg,
+              rgba(255, 255, 255, 0),
+              rgba(255, 255, 255, 0.35),
+              rgba(255, 255, 255, 0)
+            );
+            transform: skewX(-18deg);
+          "
+        ></div>
+      </section>
+
+      <!-- S4: le plan -->
+      <section class="scene light" id="s4">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s4g1"
+            style="width: 900px; height: 900px; background: rgba(255, 137, 117, 0.22)"
+          ></div>
+        </div>
+        <div style="position: absolute; top: 150px; left: 80px; right: 80px">
+          <span class="kicker" id="s4k">1 · Le plan</span>
+          <div class="h" style="font-size: 96px; margin-top: 30px">
+            <span class="mask"><span id="s4a">Importez le plan.</span></span>
+            <span class="mask"><span id="s4b" class="acc">Les sections se créent.</span></span>
+          </div>
+        </div>
+        <div class="phone" id="s4phone" style="top: 640px">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="appbar">
+              <svg class="logo" viewBox="0 0 32 32">
+                <rect width="32" height="32" rx="9" fill="#0B0B0E" />
+                <path
+                  d="M10 10.5h12M10 16h6.5M10 21.5h12"
+                  stroke="#fff"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                />
+                <circle cx="21" cy="16" r="1.6" fill="#FF8975" /></svg
+              ><b>KolabReport</b>
+            </div>
+            <div class="sc">
+              <h4>Vérifiez le plan</h4>
+              <div class="sub">10 éléments : 6 sections, 4 sous-sections</div>
+              <div id="s4rows"></div>
+              <div
+                class="btn dark"
+                id="s4btn"
+                style="position: absolute; left: 36px; right: 36px; bottom: 40px"
+              >
+                Créer les sections
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="float" id="s4file" style="top: 700px; left: 40px">
+          <svg width="44" height="52" viewBox="0 0 44 52">
+            <rect width="44" height="52" rx="8" fill="#2B579A" />
+            <text
+              x="22"
+              y="35"
+              text-anchor="middle"
+              font-family="Arial"
+              font-weight="700"
+              font-size="24"
+              fill="#fff"
+            >
+              W
+            </text></svg
+          >Termes de référence.docx
+        </div>
+        <div class="float green" id="s4ok" style="top: 1560px; left: 50%">
+          <div class="chk">
+            <svg width="22" height="22" viewBox="0 0 24 24">
+              <path
+                d="M5 12.5l4.5 4.5L19 7.5"
+                fill="none"
+                stroke="#16A34A"
+                stroke-width="3.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          10 sections créées
+        </div>
+        <div class="ripple" id="s4rip"></div>
+      </section>
+
+      <!-- S5: une section par expert -->
+      <section class="scene light" id="s5">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s5g1"
+            style="width: 900px; height: 900px; background: rgba(255, 137, 117, 0.2)"
+          ></div>
+        </div>
+        <div style="position: absolute; top: 150px; left: 80px; right: 80px">
+          <span class="kicker" id="s5k">2 · L'équipe</span>
+          <div class="h" style="font-size: 96px; margin-top: 30px">
+            <span class="mask"><span id="s5a">Une section</span></span>
+            <span class="mask"><span id="s5b" class="acc">par expert.</span></span>
+          </div>
+        </div>
+        <div class="phone" id="s5phone" style="top: 640px">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="appbar">
+              <svg class="logo" viewBox="0 0 32 32">
+                <rect width="32" height="32" rx="9" fill="#0B0B0E" />
+                <path
+                  d="M10 10.5h12M10 16h6.5M10 21.5h12"
+                  stroke="#fff"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                />
+                <circle cx="21" cy="16" r="1.6" fill="#FF8975" /></svg
+              ><b>KolabReport</b>
+            </div>
+            <div class="sc">
+              <h4>Sommaire</h4>
+              <div class="sub">Étude d'impact, assainissement</div>
+              <div id="s5rows"></div>
+            </div>
+          </div>
+        </div>
+        <div class="float inkf" id="s5team" style="top: 1700px; left: 50%">
+          <div id="s5avs" style="display: flex"></div>
+          4 experts, 1 rapport
+        </div>
+      </section>
+
+      <!-- S6: l'IA -->
+      <section class="scene light" id="s6">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s6g1"
+            style="width: 1000px; height: 1000px; background: rgba(255, 137, 117, 0.24)"
+          ></div>
+        </div>
+        <div style="position: absolute; top: 150px; left: 80px; right: 80px">
+          <span class="kicker" id="s6k">3 · L'IA</span>
+          <div class="h" style="font-size: 76px; margin-top: 30px">
+            <span class="mask"><span id="s6a">L'IA écrit le premier jet.</span></span>
+            <span class="mask"><span id="s6b" class="acc">L'expert décide.</span></span>
+          </div>
+        </div>
+        <div class="phone" id="s6phone" style="top: 660px">
+          <div class="screen">
+            <div class="notch"></div>
+            <div class="appbar">
+              <svg class="logo" viewBox="0 0 32 32">
+                <rect width="32" height="32" rx="9" fill="#0B0B0E" />
+                <path
+                  d="M10 10.5h12M10 16h6.5M10 21.5h12"
+                  stroke="#fff"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                />
+                <circle cx="21" cy="16" r="1.6" fill="#FF8975" /></svg
+              ><b>KolabReport</b>
+            </div>
+            <div class="sc">
+              <div id="s6card" style="border: 2px solid var(--line); border-radius: 28px; padding: 28px">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    font-family: &quot;Instrument Sans&quot;;
+                    font-size: 32px;
+                    font-weight: 700;
+                  "
+                >
+                  <svg width="34" height="34" viewBox="0 0 24 24">
+                    <path
+                      d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z"
+                      fill="#B93A26"
+                    /></svg
+                  >Brouillon proposé
+                </div>
+                <div style="font-size: 22px; color: var(--muted); margin: 6px 0 20px">
+                  À partir de 2 livrables de la section
+                </div>
+                <div style="font-size: 24px; font-weight: 700; margin-bottom: 8px">Résumé</div>
+                <div
+                  id="s6text"
+                  style="font-size: 24px; line-height: 1.5; color: var(--body); height: 220px"
+                ></div>
+                <div style="font-size: 24px; font-weight: 700; margin: 18px 0 10px">Sources</div>
+                <div id="s6src" style="display: flex; flex-direction: column; gap: 10px"></div>
+              </div>
+              <div style="display: flex; gap: 12px; margin-top: 22px" id="s6btns">
+                <div class="btn dark" id="s6acc" style="flex: 1.1">✓ Accepter</div>
+                <div class="btn ghost" style="flex: 1">Modifier</div>
+                <div class="btn ghost" style="flex: 0.9">Rejeter</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="float" id="s6f1" style="top: 880px; left: 30px; font-size: 26px">📎 Sources citées</div>
+        <div class="float green" id="s6ok" style="top: 1620px; left: 50%">
+          <div class="chk">
+            <svg width="22" height="22" viewBox="0 0 24 24">
+              <path
+                d="M5 12.5l4.5 4.5L19 7.5"
+                fill="none"
+                stroke="#16A34A"
+                stroke-width="3.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          Ajouté à la section
+        </div>
+        <div class="ripple" id="s6rip"></div>
+      </section>
+
+      <!-- S7: tableau de bord -->
+      <section class="scene dark" id="s7">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s7g1"
+            style="width: 1000px; height: 1000px; background: rgba(185, 58, 38, 0.5)"
+          ></div>
+          <div
+            class="glow"
+            id="s7g2"
+            style="width: 700px; height: 700px; background: rgba(255, 137, 117, 0.16)"
+          ></div>
+        </div>
+        <div style="position: absolute; top: 200px; left: 80px; right: 80px">
+          <span class="kicker" id="s7k"
+            ><span
+              id="s7live"
+              style="
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: var(--coral);
+                margin-right: 12px;
+                vertical-align: 1px;
+              "
+            ></span
+            >En direct</span
+          >
+          <div class="h" style="font-size: 100px; margin-top: 30px">
+            <span class="mask"><span id="s7a">Suivez tout,</span></span>
+            <span class="mask"><span id="s7b" class="acc">en temps réel.</span></span>
+          </div>
+        </div>
+        <div id="s7tiles"></div>
+        <div
+          class="tile"
+          id="s7big"
+          style="
+            left: 80px;
+            right: 80px;
+            top: 1340px;
+            height: 330px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+          "
+        >
+          <div style="font-size: 30px; color: #c8c8ce; font-weight: 600">Avancement global</div>
+          <div class="h" id="s7pct" style="font-size: 130px; margin-top: 6px">36 %</div>
+          <div
+            style="
+              position: absolute;
+              left: 40px;
+              right: 40px;
+              bottom: 46px;
+              height: 22px;
+              border-radius: 11px;
+              background: rgba(255, 255, 255, 0.12);
+              overflow: hidden;
+            "
+          >
+            <div
+              id="s7bar"
+              style="
+                height: 100%;
+                width: 36%;
+                border-radius: 11px;
+                background: linear-gradient(90deg, #b93a26, #ff8975);
+              "
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- S8: données -->
+      <section class="scene" id="s8" style="background: var(--accent); color: #fff">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s8g1"
+            style="width: 1000px; height: 1000px; background: rgba(255, 137, 117, 0.45)"
+          ></div>
+          <div
+            class="glow"
+            id="s8g2"
+            style="width: 800px; height: 800px; background: rgba(11, 11, 14, 0.35)"
+          ></div>
+        </div>
+        <div style="position: absolute; top: 260px; left: 80px; right: 80px">
+          <div class="h" style="font-size: 112px">
+            <span class="mask"><span id="s8a">Vos données</span></span>
+            <span class="mask"><span id="s8b" style="color: #ffe3dc">restent les vôtres.</span></span>
+          </div>
+        </div>
+        <div id="s8tiles"></div>
+      </section>
+
+      <!-- S9: export -->
+      <section class="scene light" id="s9">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s9g1"
+            style="width: 900px; height: 900px; background: rgba(255, 137, 117, 0.22)"
+          ></div>
+        </div>
+        <div style="position: absolute; top: 180px; left: 80px; right: 80px">
+          <span class="kicker" id="s9k">4 · Le rapport</span>
+          <div class="h" style="font-size: 100px; margin-top: 30px">
+            <span class="mask"><span id="s9a">Un seul rapport,</span></span>
+            <span class="mask"><span id="s9b" class="acc">en Word ou en PDF.</span></span>
+          </div>
+        </div>
+        <div id="s9pages"></div>
+        <div
+          id="s9doc"
+          style="
+            position: absolute;
+            left: 50%;
+            top: 820px;
+            width: 520px;
+            height: 700px;
+            margin-left: -260px;
+            background: #fff;
+            border-radius: 28px;
+            box-shadow: 0 40px 90px rgba(11, 11, 14, 0.18);
+            padding: 56px 50px;
+          "
+        >
+          <div class="h" style="font-size: 42px; margin-bottom: 10px">Étude d'impact</div>
+          <div style="font-size: 24px; color: var(--muted); margin-bottom: 34px">
+            Rapport final · 9 sections
+          </div>
+          <div id="s9lines"></div>
+        </div>
+        <div class="float" id="s9docx" style="top: 1430px; left: 110px">
+          <svg width="44" height="52" viewBox="0 0 44 52">
+            <rect width="44" height="52" rx="8" fill="#2B579A" />
+            <text
+              x="22"
+              y="35"
+              text-anchor="middle"
+              font-family="Arial"
+              font-weight="700"
+              font-size="24"
+              fill="#fff"
+            >
+              W
+            </text></svg
+          >.docx
+        </div>
+        <div class="float" id="s9pdf" style="top: 1430px; right: 110px">
+          <svg width="44" height="52" viewBox="0 0 44 52">
+            <rect width="44" height="52" rx="8" fill="#D93025" />
+            <text
+              x="22"
+              y="33"
+              text-anchor="middle"
+              font-family="Arial"
+              font-weight="700"
+              font-size="16"
+              fill="#fff"
+            >
+              PDF
+            </text></svg
+          >.pdf
+        </div>
+      </section>
+
+      <!-- S10: plateformes -->
+      <section class="scene dark" id="s10">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s10g1"
+            style="width: 1000px; height: 1000px; background: rgba(185, 58, 38, 0.5)"
+          ></div>
+        </div>
+        <div class="center h" style="top: 300px; font-size: 92px">
+          <span class="mask"><span id="s10a">Web · Android · iPhone</span></span>
+        </div>
+        <div class="center" style="top: 440px; font-size: 40px; color: #c8c8ce; font-weight: 500">
+          <span class="mask"><span id="s10b">Comme une application. Sans passer par un store.</span></span>
+        </div>
+        <div
+          id="s10laptop"
+          style="
+            position: absolute;
+            left: 110px;
+            top: 760px;
+            width: 700px;
+            height: 470px;
+            border-radius: 30px;
+            border: 16px solid #26222a;
+            background: #fafaf8;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              height: 64px;
+              border-bottom: 1px solid var(--line);
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 0 24px;
+            "
+          >
+            <svg width="34" height="34" viewBox="0 0 32 32">
+              <rect width="32" height="32" rx="9" fill="#0B0B0E" />
+              <path
+                d="M10 10.5h12M10 16h6.5M10 21.5h12"
+                stroke="#fff"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
+              <circle cx="21" cy="16" r="1.6" fill="#FF8975" /></svg
+            ><b style="font-family: &quot;Instrument Sans&quot;; color: var(--ink); font-size: 24px"
+              >KolabReport</b
+            >
+          </div>
+          <div
+            style="padding: 28px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px"
+            id="s10cards"
+          ></div>
+        </div>
+        <div
+          id="s10base"
+          style="
+            position: absolute;
+            left: 60px;
+            top: 1230px;
+            width: 800px;
+            height: 26px;
+            border-radius: 0 0 26px 26px;
+            background: #26222a;
+          "
+        ></div>
+        <div
+          id="s10phone"
+          style="
+            position: absolute;
+            left: 700px;
+            top: 880px;
+            width: 280px;
+            height: 540px;
+            border-radius: 44px;
+            border: 12px solid #26222a;
+            background: #0b0b0e;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+          "
+        >
+          <svg width="120" height="120" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="9" fill="#FAFAF8" />
+            <path
+              d="M10 10.5h12M10 16h6.5M10 21.5h12"
+              stroke="#0B0B0E"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+            <circle cx="21" cy="16" r="1.6" fill="#B93A26" />
+          </svg>
+          <div
+            style="font-family: &quot;Instrument Sans&quot;; font-size: 28px; font-weight: 700; color: #fff"
+          >
+            KolabReport
+          </div>
+        </div>
+        <div class="float" id="s10inst" style="top: 1500px; left: 50%; font-size: 30px">
+          ⬇ Installer l'application
+        </div>
+      </section>
+
+      <!-- S11: essai -->
+      <section class="scene light" id="s11">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s11g1"
+            style="width: 1000px; height: 1000px; background: rgba(255, 137, 117, 0.26)"
+          ></div>
+        </div>
+        <div class="center h" style="top: 330px; font-size: 380px; letter-spacing: -0.05em" id="s11num">
+          14
+        </div>
+        <div class="center h" style="top: 760px; font-size: 96px">
+          <span class="mask"><span id="s11a">jours d'essai</span></span
+          ><span class="mask"><span id="s11b" class="acc">gratuit.</span></span>
+        </div>
+        <div
+          id="s11chips"
+          style="
+            position: absolute;
+            top: 1150px;
+            left: 0;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+          "
+        ></div>
+      </section>
+
+      <!-- S12: fin -->
+      <section class="scene dark" id="s12">
+        <div class="bg">
+          <div
+            class="glow"
+            id="s12g1"
+            style="width: 1200px; height: 1200px; background: rgba(185, 58, 38, 0.6)"
+          ></div>
+          <div
+            class="glow"
+            id="s12g2"
+            style="width: 800px; height: 800px; background: rgba(255, 137, 117, 0.2)"
+          ></div>
+        </div>
+        <div id="s12conf"></div>
+        <svg
+          id="s12logo"
+          viewBox="0 0 32 32"
+          style="position: absolute; left: 50%; top: 330px; width: 200px; height: 200px; margin-left: -100px"
+        >
+          <rect width="32" height="32" rx="9" fill="#FAFAF8" />
+          <path
+            d="M10 10.5h12M10 16h6.5M10 21.5h12"
+            fill="none"
+            stroke="#0B0B0E"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle cx="21" cy="16" r="1.6" fill="#B93A26" />
+        </svg>
+        <div class="center h" style="top: 570px; font-size: 116px; letter-spacing: -0.03em">
+          <span class="mask"><span id="s12a">KolabReport</span></span>
+        </div>
+        <div class="center h" style="top: 740px; font-size: 72px; font-weight: 600">
+          <span class="mask"><span id="s12b">Lancement</span></span
+          ><span class="mask"><span id="s12c" class="acc">le 27 octobre</span></span>
+        </div>
+        <div
+          id="s12flag"
+          style="
+            position: absolute;
+            top: 1000px;
+            left: 50%;
+            width: 300px;
+            margin-left: -150px;
+            height: 10px;
+            display: flex;
+            gap: 8px;
+          "
+        >
+          <div style="flex: 1; border-radius: 5px; background: var(--bar1)"></div>
+          <div style="flex: 1; border-radius: 5px; background: var(--bar2)"></div>
+          <div style="flex: 1; border-radius: 5px; background: var(--bar3)"></div>
+        </div>
+        <div
+          id="s12card"
+          style="
+            position: absolute;
+            left: 110px;
+            right: 110px;
+            top: 1110px;
+            background: #fff;
+            color: var(--ink);
+            border-radius: 36px;
+            padding: 46px 40px;
+            text-align: center;
+            box-shadow: 0 40px 90px rgba(0, 0, 0, 0.35);
+          "
+        >
+          <div style="font-size: 30px; color: var(--muted); font-weight: 600">
+            Essai gratuit de 14 jours sur
+          </div>
+          <div class="h" style="font-size: 84px; margin: 10px 0 14px; color: var(--ink)">kolabreport.com</div>
+          <div style="font-size: 30px; color: var(--body); font-weight: 600">support@mocktar.com</div>
+        </div>
+        <div class="center" style="top: 1560px">
+          <span
+            id="s12pill"
+            style="
+              display: inline-block;
+              font-size: 30px;
+              font-weight: 700;
+              padding: 14px 30px;
+              border-radius: 999px;
+              background: rgba(255, 255, 255, 0.1);
+              color: #e7e3e1;
+            "
+            >Web · Android · iOS</span
+          >
+        </div>
+      </section>
+
+      <canvas class="grain" id="grain" width="540" height="960"></canvas>
+      <div class="vignette"></div>
+      <div class="flash" id="flash"></div>
+    </div>
+
+    <script>
+      // Scene timings in seconds. Replaced by timings.json when the voiceover is aligned.
+      window.TIMES = window.TIMES || {
+        s1: [0, 3.6],
+        s2: [3.6, 7.0],
+        s3: [7.0, 9.6],
+        s4: [9.6, 15.2],
+        s5: [15.2, 19.6],
+        s6: [19.6, 26.4],
+        s7: [26.4, 30.2],
+        s8: [30.2, 33.4],
+        s9: [33.4, 36.8],
+        s10: [36.8, 39.8],
+        s11: [39.8, 43.6],
+        s12: [43.6, 52.0],
+      };
+      const $ = (id) => document.getElementById(id);
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const E = {
+        out: (t) => 1 - Math.pow(1 - t, 3),
+        out5: (t) => 1 - Math.pow(1 - t, 5),
+        inOut: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+        back: (t) => {
+          const c1 = 1.9,
+            c3 = c1 + 1;
+          return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        },
+        lin: (t) => t,
+      };
+      const P = (u, s, d, e = E.out) => e(clamp((u - s) / d));
+      function tf(el, { x = 0, y = 0, s = 1, r = 0, o = 1, blur = 0, sx, sy } = {}) {
+        if (!el) return;
+        const scale = sx !== undefined || sy !== undefined ? `scale(${sx ?? 1},${sy ?? 1})` : `scale(${s})`;
+        el.style.transform = `translate(${x}px,${y}px) ${scale} rotate(${r}deg)`;
+        el.style.opacity = o;
+        el.style.filter = blur ? `blur(${blur}px)` : "none";
+      }
+      // Masked line reveal: the line slides up from under its mask.
+      function line(el, u, s, d = 0.55) {
+        const p = P(u, s, d, E.out5);
+        tf(el, { y: (1 - p) * 140, o: p > 0 ? 1 : 0 });
+      }
+      function rise(el, u, s, d = 0.5, dist = 70) {
+        const p = P(u, s, d);
+        tf(el, { y: (1 - p) * dist, o: p });
+      }
+      function pop(el, u, s, d = 0.45, extra = {}) {
+        const p = P(u, s, d, E.back);
+        const o = P(u, s, 0.15, E.lin);
+        tf(el, { s: 0.55 + 0.45 * p, o, ...extra });
+      }
+      function glows(id, t, a, b) {
+        const g1 = $(id + "g1"),
+          g2 = $(id + "g2");
+        if (g1) {
+          g1.style.left = a[0] + Math.sin(t * 0.6) * 60 + "px";
+          g1.style.top = a[1] + Math.cos(t * 0.5) * 50 + "px";
+        }
+        if (g2) {
+          g2.style.left = b[0] + Math.cos(t * 0.7) * 70 + "px";
+          g2.style.top = b[1] + Math.sin(t * 0.4) * 60 + "px";
+        }
+      }
+
+      // ---------- build dynamic content ----------
+      const docs = [];
+      (function () {
+        const box = $("s1docs");
+        const seeds = [
+          [140, 330, -14],
+          [820, 260, 12],
+          [90, 1280, 9],
+          [860, 1300, -10],
+          [480, 170, 4],
+          [250, 1560, -6],
+          [700, 1620, 14],
+          [320, 420, -18],
+          [640, 400, 16],
+          [520, 1420, -3],
+        ];
+        seeds.forEach(([x, y, r], i) => {
+          const d = document.createElement("div");
+          d.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:120px;height:150px;border-radius:16px;background:#fff;box-shadow:0 20px 40px rgba(0,0,0,.35);padding:18px 16px`;
+          d.innerHTML = `<div style="width:40px;height:46px;border-radius:8px;background:#2B579A;color:#fff;font:700 24px Arial;display:flex;align-items:center;justify-content:center">W</div><div style="height:8px;border-radius:4px;background:#E4E4E7;margin-top:16px"></div><div style="height:8px;width:70%;border-radius:4px;background:#E4E4E7;margin-top:8px"></div><div style="height:8px;width:85%;border-radius:4px;background:#E4E4E7;margin-top:8px"></div>`;
+          box.appendChild(d);
+          docs.push({ el: d, x, y, r, i });
+        });
+        // wordmark letters
+        const w = $("s3word");
+        "KolabReport".split("").forEach((ch) => {
+          const s = document.createElement("span");
+          s.textContent = ch;
+          s.style.display = "inline-block";
+          w.appendChild(s);
+        });
+        // rings
+        const rings = $("s3rings");
+        for (let i = 0; i < 3; i++) {
+          const r = document.createElement("div");
+          r.style.cssText =
+            "position:absolute;left:50%;top:750px;width:300px;height:300px;margin:-150px 0 0 -150px;border-radius:50%;border:3px solid rgba(255,137,117,.6)";
+          rings.appendChild(r);
+        }
+        // plan rows
+        const plan = [
+          ["1.", "Résumé", 0],
+          ["2.", "Contexte de la mission", 0],
+          ["2.1", "Présentation du programme", 1],
+          ["2.2", "Zone d'étude", 1],
+          ["3.", "Méthodologie", 0],
+          ["4.", "Diagnostic des ouvrages", 0],
+          ["5.", "Recommandations", 0],
+        ];
+        plan.forEach(([n, t, ind]) => {
+          const r = document.createElement("div");
+          r.className = "row" + (ind ? " ind" : "");
+          r.innerHTML = `<span class="n">${n}</span><span>${t}</span>`;
+          $("s4rows").appendChild(r);
+        });
+        // section rows
+        const secs = [
+          ["1.", "Contexte et objectifs", "NH", "#B93A26"],
+          ["2.", "Méthodologie", "FK", "#2563EB"],
+          ["3.", "Diagnostic des ouvrages", "CA", "#7C3AED"],
+          ["4.", "Résultats de l'enquête", "AD", "#0F766E"],
+          ["5.", "Recommandations", "NH", "#B93A26"],
+        ];
+        secs.forEach(([n, t, ini, col], i) => {
+          const r = document.createElement("div");
+          r.className = "row";
+          r.style.flexWrap = "wrap";
+          r.innerHTML = `<span class="n">${n}</span><span style="flex:1;min-width:0">${t}</span><div class="av" style="background:${col}">${ini}</div><div style="width:100%;padding-left:60px;margin-top:2px"><span class="pill" id="s5p${i}"><i></i><b></b></span></div>`;
+          $("s5rows").appendChild(r);
+        });
+        [
+          ["NH", "#B93A26"],
+          ["FK", "#2563EB"],
+          ["CA", "#7C3AED"],
+          ["AD", "#0F766E"],
+        ].forEach(([ini, col], i) => {
+          const a = document.createElement("div");
+          a.className = "av";
+          a.style.cssText = `background:${col};width:48px;height:48px;font-size:18px;border:3px solid #0B0B0E;margin-left:${i ? -14 : 0}px`;
+          a.textContent = ini;
+          $("s5avs").appendChild(a);
+        });
+        // AI sources
+        ["releves-terrain.docx", "inventaire-ouvrages.xlsx"].forEach((f) => {
+          const c = document.createElement("div");
+          c.className = "pill";
+          c.style.cssText = "background:#F4F4F5;color:#3F3F46;font-size:21px;align-self:flex-start";
+          c.textContent = f;
+          $("s6src").appendChild(c);
+        });
+        // dashboard tiles
+        [
+          ["Non commencées", "#A1A1AA", 4, 1],
+          ["En cours", "#F59E0B", 3, 3],
+          ["Terminées", "#22C55E", 2, 5],
+        ].forEach(([lbl, col, a, b], i) => {
+          const t = document.createElement("div");
+          t.className = "tile";
+          t.id = "s7t" + i;
+          t.style.cssText = `left:${80 + i * 315}px;top:820px;width:290px;height:440px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)`;
+          t.innerHTML = `<div style="display:flex;align-items:center;gap:10px;font-size:24px;color:#C8C8CE;font-weight:600"><i style="width:14px;height:14px;border-radius:50%;background:${col};display:inline-block"></i>${lbl}</div><div class="h" id="s7n${i}" style="font-size:150px;margin-top:40px">${a}</div>`;
+          t.dataset.a = a;
+          t.dataset.b = b;
+          $("s7tiles").appendChild(t);
+        });
+        // data tiles
+        const ic = {
+          lock: '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+          globe:
+            '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>',
+          shield:
+            '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5" stroke-linecap="round"/></svg>',
+        };
+        [
+          ["lock", "Chaque espace isolé", "Seuls ses membres le voient"],
+          ["globe", "Hébergées dans l'UE", "Base et fichiers à Paris"],
+          ["shield", "Masquées avant l'IA", "E-mails, téléphones, IBAN"],
+        ].forEach(([k, a, b], i) => {
+          const t = document.createElement("div");
+          t.className = "tile";
+          t.id = "s8t" + i;
+          t.style.cssText = `left:80px;right:80px;top:${760 + i * 300}px;height:260px;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);display:flex;align-items:center;gap:34px`;
+          t.innerHTML = `<div style="width:120px;height:120px;border-radius:30px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;flex:none">${ic[k]}</div><div><div class="h" style="font-size:52px">${a}</div><div style="font-size:30px;margin-top:8px;color:#FFE3DC">${b}</div></div>`;
+          $("s8tiles").appendChild(t);
+        });
+        // export pages
+        for (let i = 0; i < 4; i++) {
+          const p = document.createElement("div");
+          p.id = "s9p" + i;
+          p.style.cssText =
+            "position:absolute;width:300px;height:400px;background:#fff;border-radius:22px;box-shadow:0 24px 50px rgba(11,11,14,.16);padding:30px";
+          p.innerHTML =
+            `<div style="height:16px;width:60%;border-radius:8px;background:#0B0B0E;margin-bottom:22px"></div>` +
+            Array.from(
+              { length: 7 },
+              (_, j) =>
+                `<div style="height:10px;width:${70 + ((j * 13) % 30)}%;border-radius:5px;background:#E4E4E7;margin-bottom:14px"></div>`,
+            ).join("");
+          $("s9pages").appendChild(p);
+        }
+        const ln = $("s9lines");
+        [
+          "1. Contexte et objectifs",
+          "2. Méthodologie",
+          "3. Diagnostic des ouvrages",
+          "4. Résultats de l'enquête",
+          "5. Recommandations",
+        ].forEach((t) => {
+          const d = document.createElement("div");
+          d.style.cssText = "margin-bottom:26px";
+          d.innerHTML = `<div style="font-size:26px;font-weight:700;color:#0B0B0E;margin-bottom:10px">${t}</div><div style="height:10px;border-radius:5px;background:#E4E4E7;margin-bottom:8px"></div><div style="height:10px;width:75%;border-radius:5px;background:#E4E4E7"></div>`;
+          ln.appendChild(d);
+        });
+        // laptop cards
+        [
+          ["Non commencées", "4"],
+          ["En cours", "3"],
+          ["Terminées", "2"],
+        ].forEach(([a, b]) => {
+          const c = document.createElement("div");
+          c.style.cssText = "border:1px solid #E4E4E7;border-radius:16px;padding:16px;color:#0B0B0E";
+          c.innerHTML = `<div style="font-size:16px;color:#71717A">${a}</div><div style="font-family:Instrument Sans;font-weight:700;font-size:48px">${b}</div>`;
+          $("s10cards").appendChild(c);
+        });
+        const bar = document.createElement("div");
+        bar.style.cssText =
+          "grid-column:1/4;height:16px;border-radius:8px;background:#F4F4F5;overflow:hidden";
+        bar.innerHTML =
+          '<div id="s10bar" style="height:100%;width:0;background:linear-gradient(90deg,#B93A26,#FF8975)"></div>';
+        $("s10cards").appendChild(bar);
+        const rowsl = document.createElement("div");
+        rowsl.style.cssText = "grid-column:1/4";
+        rowsl.innerHTML = Array.from(
+          { length: 4 },
+          () =>
+            '<div style="height:34px;border:1px solid #E4E4E7;border-radius:10px;margin-bottom:10px"></div>',
+        ).join("");
+        $("s10cards").appendChild(rowsl);
+        // trial chips
+        [
+          ["✓", "Sans carte bancaire"],
+          ["📱", "Mobile Money, carte ou virement"],
+          ["FCFA", "Dès 15 000 FCFA par mois ensuite"],
+        ].forEach(([a, b], i) => {
+          const c = document.createElement("div");
+          c.className = "float";
+          c.id = "s11c" + i;
+          c.style.position = "relative";
+          c.innerHTML = `<span style="display:inline-flex;min-width:56px;height:56px;padding:0 10px;border-radius:16px;background:#F6E1DC;color:#B93A26;align-items:center;justify-content:center;font-size:${a.length > 2 ? 20 : 28}px">${a}</span>${b}`;
+          $("s11chips").appendChild(c);
+        });
+        // confetti in brand colours
+        const conf = $("s12conf");
+        const cols = ["#B93A26", "#FF8975", "#FAFAF8", "#FFC2B6", "#E7E3E1"];
+        for (let i = 0; i < 46; i++) {
+          const c = document.createElement("div");
+          const w = 10 + ((i * 7) % 12);
+          c.style.cssText = `position:absolute;width:${w}px;height:${w * 1.8}px;border-radius:3px;background:${cols[i % 5]}`;
+          c.dataset.i = i;
+          conf.appendChild(c);
+        }
+      })();
+
+      // grain texture, redrawn per frame from a seed so the render is deterministic
+      const gctx = $("grain").getContext("2d");
+      const gimg = gctx.createImageData(540, 960);
+      function grain(frame) {
+        let s = (frame * 9301 + 49297) % 233280;
+        const d = gimg.data;
+        for (let i = 0; i < d.length; i += 4) {
+          s = (s * 9301 + 49297) % 233280;
+          const v = (s / 233280) * 255;
+          d[i] = d[i + 1] = d[i + 2] = v;
+          d[i + 3] = 255;
+        }
+        gctx.putImageData(gimg, 0, 0);
+      }
+
+      const AI_TEXT =
+        "Sur les 48 ouvrages visités, 30 fonctionnent. Les pannes viennent surtout du réseau d'évacuation, que les ménages ne savent pas à qui signaler.";
+      const STATUS = {
+        nc: ["Non commencée", "#F4F4F5", "#71717A", "#A1A1AA"],
+        ec: ["En cours", "#FEF3C7", "#B45309", "#F59E0B"],
+        tm: ["Terminée", "#DCFCE7", "#15803D", "#22C55E"],
+      };
+      function setPill(el, st, popP = 1) {
+        const [txt, bg, fg, dot] = STATUS[st];
+        el.style.background = bg;
+        el.style.color = fg;
+        el.querySelector("i").style.background = dot;
+        el.querySelector("b").textContent = txt;
+        el.style.transform = `scale(${0.8 + 0.2 * popP})`;
+      }
+
+      // ---------- scene renderers (u = seconds since scene start, d = scene length) ----------
+      const R = {
+        s1(u, d, t) {
+          glows("s1", t, [-300, 1100], [700, -200]);
+          line($("s1a"), u, 0.05);
+          line($("s1b"), u, 0.75);
+          line($("s1c"), u, 1.5);
+          docs.forEach(({ el, x, y, r, i }) => {
+            const p = P(u, 0.7 + i * 0.07, 0.5, E.back);
+            const drift = Math.sin(t * 1.3 + i) * 10;
+            // on exit the files fly outward, away from the text
+            const out = P(u, d - 0.5, 0.5, E.inOut);
+            const dx = x + 60 - 540,
+              dy = y + 75 - 900;
+            tf(el, {
+              x: dx * 1.2 * out,
+              y: dy * 1.2 * out + drift,
+              r: r + Math.sin(t + i) * 4 + out * 40,
+              s: (0.3 + 0.7 * p) * (1 + 0.4 * out),
+              o: clamp(p * 1.4) * (1 - out),
+              blur: out * 8,
+            });
+          });
+        },
+        s2(u, d, t) {
+          glows("s2", t, [-250, 1000], [600, 100]);
+          line($("s2b"), u, 0.1);
+          line($("s2c"), u, 0.35);
+          const p = P(u, 0.8, 0.6, E.back);
+          tf($("s2d"), { y: (1 - clamp(p)) * 160, s: 0.9 + 0.1 * p, o: P(u, 0.8, 0.1, E.lin) });
+          ["s2f1", "s2f2", "s2f3"].forEach((id, i) =>
+            tf($(id), { sx: P(u, 1.3 + i * 0.12, 0.4, E.out5), sy: 1 }),
+          );
+        },
+        s3(u, d, t) {
+          glows("s3", t, [-50, 300], [500, 900]);
+          const lp = P(u, 0, 0.5, E.back);
+          tf($("s3logo"), { s: 0.3 + 0.7 * lp, r: (1 - P(u, 0, 0.6)) * -25, o: P(u, 0, 0.12, E.lin) });
+          ["s3l1", "s3l2", "s3l3"].forEach((id, i) => {
+            const el = $(id);
+            const len = i === 1 ? 6.5 : 12;
+            el.style.strokeDasharray = len;
+            el.style.strokeDashoffset = len * (1 - P(u, 0.25 + i * 0.1, 0.35));
+          });
+          const dp = P(u, 0.6, 0.35, E.back);
+          $("s3dot").setAttribute("r", 1.6 * dp);
+          [...$("s3rings").children].forEach((r, i) => {
+            const p = P(u, 0.05 + i * 0.18, 1.4, E.out);
+            tf(r, { s: 0.4 + p * 4.2, o: (1 - p) * 0.9 * (p > 0) });
+          });
+          [...$("s3word").children].forEach((s, i) => {
+            const p = P(u, 0.45 + i * 0.035, 0.45, E.out5);
+            tf(s, { y: (1 - p) * 90, o: p });
+          });
+          pop($("s3pill"), u, 1.1);
+          const sh = P(u, 1.0, 0.8, E.inOut);
+          tf($("s3shine"), { x: sh * 1800, o: sh > 0 && sh < 1 ? 1 : 0 });
+          $("flash").style.opacity = 0.55 * (1 - P(u, 0, 0.25, E.lin)) * (u < 0.25);
+        },
+        s4(u, d, t) {
+          glows("s4", t, [400, -300], [0, 0]);
+          pop($("s4k"), u, 0.05, 0.4);
+          line($("s4a"), u, 0.1);
+          line($("s4b"), u, 0.35);
+          const ph = P(u, 0.2, 0.7, E.out5);
+          tf($("s4phone"), { y: (1 - ph) * 700, r: (1 - ph) * 6 });
+          // the file flies into the phone
+          const fp = P(u, 0.5, 0.45, E.back),
+            fin = P(u, 1.25, 0.45, E.inOut);
+          tf($("s4file"), {
+            x: fin * 240,
+            y: fin * 120,
+            s: (0.6 + 0.4 * fp) * (1 - 0.6 * fin),
+            o: clamp(fp * 2) * (1 - fin),
+          });
+          [...$("s4rows").children].forEach((r, i) => {
+            const p = P(u, 1.5 + i * 0.18, 0.4, E.back);
+            tf(r, { x: (1 - clamp(p)) * 120, o: P(u, 1.5 + i * 0.18, 0.15, E.lin) });
+          });
+          const tap = 3.2;
+          const bp = u > tap && u < tap + 0.25 ? 0.94 : 1;
+          tf($("s4btn"), { s: bp, o: P(u, 1.2, 0.3, E.lin) });
+          const rp = P(u, tap, 0.7, E.out);
+          const rip = $("s4rip");
+          rip.style.left = "540px";
+          rip.style.top = "1745px";
+          rip.style.width = rip.style.height = "120px";
+          rip.style.marginLeft = rip.style.marginTop = "-60px";
+          tf(rip, { s: 0.3 + rp * 2.5, o: (1 - rp) * (u > tap) });
+          const ok = $("s4ok");
+          ok.style.marginLeft = "-" + ok.offsetWidth / 2 + "px";
+          pop(ok, u, tap + 0.3, 0.5);
+        },
+        s5(u, d, t) {
+          glows("s5", t, [400, -300], [0, 0]);
+          pop($("s5k"), u, 0.05, 0.4);
+          line($("s5a"), u, 0.1);
+          line($("s5b"), u, 0.35);
+          const ph = P(u, 0.15, 0.7, E.out5);
+          tf($("s5phone"), { y: (1 - ph) * 700 });
+          [...$("s5rows").children].forEach((r, i) => {
+            const p = P(u, 0.7 + i * 0.15, 0.4, E.back);
+            tf(r, { y: (1 - clamp(p)) * 60, o: P(u, 0.7 + i * 0.15, 0.15, E.lin) });
+          });
+          const plan = [
+            ["tm", null, 0],
+            ["ec", "tm", 2.0],
+            ["ec", null, 0],
+            ["nc", "ec", 2.6],
+            ["nc", null, 0],
+          ];
+          plan.forEach(([a, b, at], i) => {
+            const el = $("s5p" + i);
+            if (b && u >= at) setPill(el, b, P(u, at, 0.35, E.back));
+            else setPill(el, a, 1);
+          });
+          const tm = $("s5team");
+          tm.style.marginLeft = "-" + tm.offsetWidth / 2 + "px";
+          pop(tm, u, 1.6, 0.5);
+        },
+        s6(u, d, t) {
+          glows("s6", t, [400, -300], [0, 0]);
+          pop($("s6k"), u, 0.05, 0.4);
+          line($("s6a"), u, 0.1);
+          line($("s6b"), u, 0.45);
+          const ph = P(u, 0.15, 0.7, E.out5);
+          tf($("s6phone"), { y: (1 - ph) * 700 });
+          const tp = clamp((u - 1.1) / 2.4);
+          const n = Math.floor(AI_TEXT.length * tp);
+          $("s6text").innerHTML =
+            AI_TEXT.slice(0, n) +
+            (tp < 1 && u > 1.1
+              ? '<span style="display:inline-block;width:3px;height:26px;background:#B93A26;vertical-align:-4px;margin-left:2px"></span>'
+              : "");
+          [...$("s6src").children].forEach((c, i) => pop(c, u, 3.3 + i * 0.2, 0.4));
+          pop($("s6f1"), u, 3.5, 0.5);
+          tf($("s6btns"), { o: P(u, 2.0, 0.3, E.lin) });
+          const tap = 4.6;
+          const accp = u > tap && u < tap + 0.22 ? 0.93 : 1;
+          tf($("s6acc"), { s: accp });
+          $("s6card").style.borderColor = u > tap + 0.1 ? "#22C55E" : "#E4E4E7";
+          $("s6card").style.background = u > tap + 0.1 ? "#F0FDF4" : "#fff";
+          const rp = P(u, tap, 0.7);
+          const rip = $("s6rip");
+          rip.style.left = "320px";
+          rip.style.top = "1650px";
+          rip.style.width = rip.style.height = "120px";
+          rip.style.marginLeft = rip.style.marginTop = "-60px";
+          tf(rip, { s: 0.3 + rp * 2.5, o: (1 - rp) * (u > tap) });
+          const ok = $("s6ok");
+          ok.style.marginLeft = "-" + ok.offsetWidth / 2 + "px";
+          pop(ok, u, tap + 0.3, 0.5);
+        },
+        s7(u, d, t) {
+          glows("s7", t, [-300, 1100], [700, -100]);
+          pop($("s7k"), u, 0.05, 0.4);
+          line($("s7a"), u, 0.1);
+          line($("s7b"), u, 0.35);
+          $("s7live").style.opacity = 0.4 + 0.6 * Math.abs(Math.sin(t * 4));
+          [...$("s7tiles").children].forEach((tl, i) => {
+            rise(tl, u, 0.5 + i * 0.12, 0.5, 120);
+            const a = +tl.dataset.a,
+              b = +tl.dataset.b;
+            const p = P(u, 1.4, 1.6, E.inOut);
+            $("s7n" + i).textContent = Math.round(a + (b - a) * p);
+          });
+          rise($("s7big"), u, 0.8, 0.5, 120);
+          const pp = P(u, 1.4, 1.8, E.inOut);
+          const pct = Math.round(36 + (78 - 36) * pp);
+          $("s7pct").textContent = pct + " %";
+          $("s7bar").style.width = pct + "%";
+        },
+        s8(u, d, t) {
+          glows("s8", t, [-200, 900], [600, -200]);
+          line($("s8a"), u, 0.05);
+          line($("s8b"), u, 0.3);
+          [...$("s8tiles").children].forEach((tl, i) => {
+            const p = P(u, 0.7 + i * 0.22, 0.5, E.back);
+            tf(tl, {
+              x: (1 - clamp(p)) * -200,
+              s: 0.9 + 0.1 * clamp(p),
+              o: P(u, 0.7 + i * 0.22, 0.15, E.lin),
+            });
+          });
+        },
+        s9(u, d, t) {
+          glows("s9", t, [400, -300], [0, 0]);
+          pop($("s9k"), u, 0.05, 0.4);
+          line($("s9a"), u, 0.1);
+          line($("s9b"), u, 0.35);
+          const starts = [
+            [60, 820, -12],
+            [720, 800, 10],
+            [40, 1250, 8],
+            [740, 1260, -9],
+          ];
+          [...$("s9pages").children].forEach((pg, i) => {
+            const [x, y, r] = starts[i];
+            const inP = P(u, 0.3 + i * 0.1, 0.45, E.back);
+            const merge = P(u, 1.3 + i * 0.08, 0.5, E.inOut);
+            pg.style.left = x + "px";
+            pg.style.top = y + "px";
+            tf(pg, {
+              x: (390 - x) * merge,
+              y: (980 - y) * merge,
+              r: r * (1 - merge),
+              s: (0.6 + 0.4 * clamp(inP)) * (1 - 0.3 * merge),
+              o: P(u, 0.3 + i * 0.1, 0.15, E.lin) * (1 - merge),
+            });
+          });
+          pop($("s9doc"), u, 1.75, 0.55);
+          [...$("s9lines").children].forEach((l, i) => rise(l, u, 2.0 + i * 0.1, 0.35, 30));
+          pop($("s9docx"), u, 2.4, 0.45);
+          pop($("s9pdf"), u, 2.55, 0.45);
+        },
+        s10(u, d, t) {
+          glows("s10", t, [-100, 900], [0, 0]);
+          line($("s10a"), u, 0.05);
+          line($("s10b"), u, 0.3);
+          rise($("s10laptop"), u, 0.35, 0.6, 160);
+          rise($("s10base"), u, 0.35, 0.6, 160);
+          $("s10bar").style.width = 60 * P(u, 0.9, 1.4, E.inOut) + "%";
+          const pp = P(u, 0.7, 0.6, E.back);
+          tf($("s10phone"), { y: (1 - clamp(pp)) * 400, r: (1 - clamp(pp)) * 12, o: P(u, 0.7, 0.15, E.lin) });
+          const ins = $("s10inst");
+          ins.style.marginLeft = "-" + ins.offsetWidth / 2 + "px";
+          pop(ins, u, 1.4, 0.5);
+        },
+        s11(u, d, t) {
+          glows("s11", t, [100, 200], [0, 0]);
+          const np = P(u, 0, 0.9, E.out5);
+          $("s11num").textContent = Math.round(14 * np);
+          tf($("s11num"), { s: 0.7 + 0.3 * P(u, 0, 0.6, E.back), o: P(u, 0, 0.15, E.lin) });
+          line($("s11a"), u, 0.4);
+          line($("s11b"), u, 0.6);
+          [...$("s11chips").children].forEach((c, i) => pop(c, u, 1.1 + i * 0.22, 0.45));
+        },
+        s12(u, d, t) {
+          glows("s12", t, [-100, 600], [500, 1200]);
+          const lp = P(u, 0, 0.55, E.back);
+          tf($("s12logo"), { s: 0.4 + 0.6 * lp, r: (1 - P(u, 0, 0.6)) * 20, o: P(u, 0, 0.12, E.lin) });
+          line($("s12a"), u, 0.3);
+          line($("s12b"), u, 0.6);
+          line($("s12c"), u, 0.8);
+          tf($("s12flag"), { sx: P(u, 1.0, 0.5, E.out5), sy: 1 });
+          const cp = P(u, 1.3, 0.7, E.out5);
+          tf($("s12card"), { y: (1 - cp) * 300, s: 0.92 + 0.08 * cp, o: P(u, 1.3, 0.2, E.lin) });
+          pop($("s12pill"), u, 1.9, 0.45);
+          [...$("s12conf").children].forEach((c) => {
+            const i = +c.dataset.i;
+            const st = 0.9 + (i % 9) * 0.05;
+            const p = clamp((u - st) / 3.2);
+            const ang = (((i * 137.5) % 360) * Math.PI) / 180;
+            const sp = 380 + ((i * 53) % 420);
+            const x = 540 + Math.cos(ang) * sp * E.out(p);
+            const y = 500 + Math.sin(ang) * sp * E.out(p) * 0.8 + 900 * p * p;
+            c.style.left = x + "px";
+            c.style.top = y + "px";
+            c.style.transform = `rotate(${i * 40 + p * 720}deg)`;
+            c.style.opacity = p > 0 ? 1 - p : 0;
+          });
+          // gentle breathing at the end
+          const br = 1 + Math.sin(t * 2) * 0.006;
+          $("s12card").style.transform += ` scale(${br})`;
+        },
+      };
+
+      window.renderAt = function (t, frame) {
+        const order = Object.keys(window.TIMES);
+        for (const id of order) {
+          const [a, b] = window.TIMES[id];
+          const sc = $(id);
+          if (t >= a && t < b) {
+            const u = t - a,
+              d = b - a;
+            sc.style.opacity = 1;
+            // camera drift: a slow push-in over the scene, and a short settle at the start
+            const settle = 1 - P(u, 0, 0.35, E.out5);
+            sc.style.transform = `scale(${1 + 0.03 * (u / d) + 0.04 * settle})`;
+            R[id](u, d, t);
+          } else {
+            sc.style.opacity = 0;
+          }
+        }
+        grain(frame);
+      };
+      window.renderAt(0, 0);
+    </script>
+  </body>
+</html>
