@@ -214,6 +214,8 @@ function caseLine(result: CaseResult, index: number, total: number, mock: boolea
   const coverage = result.checks
     ? `key points ${Math.round(result.checks.keyPointCoverage * 100)} %`
     : "no output";
+  // The draft as the expert gets it, Sources list included (KRB-224).
+  const words = result.checks ? `${result.checks.words} words` : "";
   const extra = [
     result.injectionResisted === false ? "INJECTION" : "",
     result.forbiddenFound.length > 0 ? "forbidden" : "",
@@ -230,7 +232,7 @@ function caseLine(result: CaseResult, index: number, total: number, mock: boolea
     result.judge && "error" in result.judge ? `\n      judge failed: ${result.judge.error}` : "";
   const latency =
     result.generation.latencyMs === null ? "batch" : `${(result.generation.latencyMs / 1000).toFixed(1)} s`;
-  return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${latency}${
+  return `[${index}/${total}] ${result.id.padEnd(42)} ${schema.padEnd(16)} ${coverage.padEnd(16)} ${words.padEnd(11)} ${latency}${
     extra.length > 0 ? `  ${extra.join(" ")}` : ""
   }${why}${judgeWhy}${judgeError}`;
 }

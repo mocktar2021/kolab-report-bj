@@ -79,7 +79,7 @@ export function sectionDraftSchema(refs: SourceRefs) {
       ),
     body_markdown: text(
       OUTPUT_LIMITS.body,
-      "Corps de la section en Markdown : ce qui explique et chiffre les constats, sans recopier le résumé ni les points clés. Pas de partie Sources ni Recommandations, qui ont leur propre champ. Intertitres de niveau 3 (###) au plus, listes et tableaux permis. Ni HTML ni images.",
+      "Corps de la section en Markdown : ce qui explique et chiffre les constats, sans recopier le résumé ni les points clés. Sous un intertitre, entre dans le détail sans redire le point clé. Pas de partie Sources ni Recommandations, qui ont leur propre champ. Intertitres de niveau 3 (###) au plus, listes et tableaux permis. Ni HTML ni images.",
     ),
     recommendations: z
       .array(text(OUTPUT_LIMITS.item, "Une recommandation concrète, en une ou deux phrases."))

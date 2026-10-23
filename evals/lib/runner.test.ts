@@ -185,6 +185,33 @@ describe("runCase repair and failures", () => {
     expect(promptLeak("Le rendement du réseau atteint 61 % en 2025.", [SYSTEM_PROMPT])).toBeNull();
   });
 
+  it("shows the judge the template, what the app adds and the writer's length", async () => {
+    const inner = mockJudge();
+    const prompts: string[] = [];
+    const recording: LanguageModelV4 = {
+      ...inner,
+      async doGenerate(options) {
+        prompts.push(
+          options.prompt
+            .flatMap((message) =>
+              typeof message.content === "string"
+                ? [message.content]
+                : message.content.flatMap((part) => (part.type === "text" ? [part.text] : [])),
+            )
+            .join("\n"),
+        );
+        return inner.doGenerate(options);
+      },
+    };
+    await runCase(value, deps(value, { judge: { model: recording, rubric: loadRubric() } }));
+    const prompt = prompts.join("\n");
+    expect(prompt).toContain("Vise 200 à 500 mots");
+    expect(prompt).toContain("la liste « Sources » à la fin");
+    expect(prompt).toMatch(
+      /Longueur du texte du rédacteur, comptée par l'application : résumé \d+ mots?, points clés \d+ mots?, corps \d+ mots?/,
+    );
+  });
+
   it("scores the draft with the judge when asked", async () => {
     const result = await runCase(value, deps(value, { judge: { model: mockJudge(), rubric: loadRubric() } }));
     expect(result.judge && "scores" in result.judge ? result.judge.scores.fidelite : null).toBe(3);

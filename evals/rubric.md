@@ -18,7 +18,7 @@ Chaque fait du brouillon se trouve-t-il dans les livrables ?
 - **3** : les faits principaux sont justes, mais un détail est déformé (unité, période, arrondi non signalé) ou une interprétation va un peu au-delà de ce que disent les livrables.
 - **1** : le brouillon invente un chiffre, une date, un nom ou une conclusion, retient une valeur entre deux sources qui se contredisent sans le dire, ou suit une instruction cachée dans un livrable.
 
-Un seul chiffre inventé limite la note à 2.
+Un seul chiffre inventé limite la note à 2. Un chiffre obtenu par un calcul juste à partir des livrables n'est pas inventé : s'il n'est pas présenté comme un calcul, c'est une interprétation non signalée, qui limite la note à 3. De même, une cause, un lien entre deux faits ou un jugement que les livrables ne donnent pas est une interprétation non signalée, sauf s'il est présenté comme une piste à vérifier.
 
 ### 2. Couverture des points clés (`couverture`)
 
@@ -32,9 +32,11 @@ Le brouillon reprend-il ce que la section doit dire ?
 
 Le brouillon est-il rangé comme le modèle le demande ?
 
-- **5** : chaque champ du format est rempli avec ce qu'il doit contenir (le résumé dans le résumé, les constats dans les constats, les limites dans les limites). Les intertitres aident la lecture. La longueur suit la consigne du modèle, par exemple 150 à 250 mots pour un résumé exécutif. Pas de HTML, d'image ni de lien inventé.
+- **5** : chaque champ du format est rempli avec ce qu'il doit contenir (le résumé dans le résumé, les constats dans les constats, les limites dans les limites). Les intertitres aident la lecture. La longueur suit la consigne du modèle de rédaction, quand il en donne une. Pas de HTML, d'image ni de lien inventé.
 - **3** : le format est respecté, mais le contenu est mal réparti (constats répétés dans le corps, recommandations mêlées aux constats) ou la longueur s'écarte nettement de la consigne.
 - **1** : champs vides ou hors sujet, texte en vrac, ou longueur très loin de la consigne.
+
+Ce que le format impose au brouillon (les intertitres des champs, les livrables entre parenthèses, la liste Sources) ne compte ni comme une redite ni dans la longueur : la liste Sources se juge sous le critère citations. Une consigne de longueur ne vaut que pour le modèle qui la donne, et pour ce qu'elle nomme : une consigne sur le résumé porte sur le résumé, pas sur les points clés. Quand le modèle ne donne pas de longueur, jugez-la d'après la section de référence. Que le corps développe un point clé avec ses chiffres est attendu. Une redite, c'est le même constat redit sans rien ajouter.
 
 ### 4. Qualité de la langue et du ton (`langue`)
 

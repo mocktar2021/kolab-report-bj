@@ -5,6 +5,7 @@ import { checkTemplate, renderTemplate } from "@/lib/prompts/template";
 import type { SourceRefs } from "../schemas";
 import type { ContextDeliverable, ContextInput, DeliverableUse, TemplateVariables } from "../types";
 import {
+  FINAL_CHECKS,
   SUMMARY_SYSTEM_PROMPT,
   SYSTEM_PROMPT,
   deliverableBlock,
@@ -505,12 +506,17 @@ function sha256(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-/** The user prompt. A template without {{deliverables}} still gets them, at the end. */
+/**
+ * The user prompt. A template without {{deliverables}} still gets them, at the
+ * end. FINAL_CHECKS closes every prompt, whatever the template.
+ */
 function promptFor(template: string, variables: TemplateVariables): string {
   const rendered = renderTemplate(template, variables);
-  if (checkTemplate(template).variables.includes("deliverables")) return rendered;
+  // No trim here: planContext reads how many times the deliverables appear
+  // from the length difference of two renderings.
+  if (checkTemplate(template).variables.includes("deliverables")) return `${rendered}\n\n${FINAL_CHECKS}`;
   const head = rendered.trimEnd();
-  return `${head ? `${head}\n\n` : ""}${DELIVERABLES_HEADING}\n\n${variables.deliverables}`;
+  return `${head ? `${head}\n\n` : ""}${DELIVERABLES_HEADING}\n\n${variables.deliverables}\n\n${FINAL_CHECKS}`;
 }
 
 /**
