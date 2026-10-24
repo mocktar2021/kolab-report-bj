@@ -2,12 +2,14 @@
   {
     "scene": "s1",
     "at": 0.15,
-    "text": "Dix experts. Dix fichiers Word. Un seul rapport à rendre."
+    "text": "Dix experts. Dix fichiers Word. Un seul rapport à rendre.",
+    "say": "Dix experts. Dix fichiers Houorde. Un seul rapport à rendre."
   },
   {
     "scene": "s2",
     "at": 4.3,
-    "text": "Vos rapports d'expertise s'écrivent enfin ensemble."
+    "text": "Vos rapports d'expertise s'écrivent enfin ensemble.",
+    "say": "Vos rapports d'expertise s'écrive enfin ensemble."
   },
   {
     "scene": "s3",
@@ -17,7 +19,8 @@
   {
     "scene": "s4",
     "at": 10.8,
-    "text": "Importez le plan des termes de référence. Toutes les sections se créent en un clic."
+    "text": "Importez le plan des termes de référence. Toutes les sections se créent en un clic.",
+    "say": "Importez le plan des termes de référence. Toutes les sections se crée en un clic."
   },
   {
     "scene": "s5",
@@ -27,7 +30,8 @@
   {
     "scene": "s6",
     "at": 20.8,
-    "text": "L'I.A. lit les livrables et propose un premier jet. L'expert l'accepte, le modifie ou le rejette."
+    "text": "L'I.A. lit les livrables et propose un premier jet. L'expert l'accepte, le modifie ou le rejette.",
+    "say": "Lie a lit les livrable et propose un premier jet. L'expert l'accepte, le modifie ou le rejette."
   },
   {
     "scene": "s7",
@@ -42,12 +46,14 @@
   {
     "scene": "s9",
     "at": 34.6,
-    "text": "À la fin, un seul rapport, en Word ou en PDF."
+    "text": "À la fin, un seul rapport, en Word ou en PDF.",
+    "say": "À la fin, un seul rapport, en Houorde ou en PDF."
   },
   {
     "scene": "s10",
     "at": 38.1,
-    "text": "Sur ordinateur, sur Android et sur iPhone."
+    "text": "Sur ordinateur, sur Android et sur iPhone.",
+    "say": "Sur ordinateur, sur Androïde et sur Aïe-fone."
   },
   {
     "scene": "s11",
