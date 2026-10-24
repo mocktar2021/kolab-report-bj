@@ -25,6 +25,10 @@ if (fs.existsSync(timesFile)) {
   const times = fs.readFileSync(timesFile, "utf8");
   await page.addInitScript(`window.TIMES = ${times};`);
 }
+// AD_ENDING=disponible renders the ending for once sign-up is open (KRB-244).
+if (process.env.AD_ENDING) {
+  await page.addInitScript(`window.AD_ENDING = ${JSON.stringify(process.env.AD_ENDING)};`);
+}
 await page.goto("file://" + path.join(dir, "ad.html"));
 await page.evaluate(() => document.fonts.ready);
 
