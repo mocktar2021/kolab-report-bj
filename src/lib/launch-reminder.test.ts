@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { log } from "@/lib/log";
-import { LAUNCH_SEGMENT_ID, saveLaunchReminder } from "./launch-reminder";
+import { saveLaunchReminder } from "./launch-reminder";
 
 vi.mock("@/lib/log", () => ({ log: { warn: vi.fn() } }));
 
 const fetchMock = vi.fn<typeof fetch>();
 const EMAIL = "aicha@kolab.test";
+const SEGMENT = "0b6e2f1c-5d4a-4c3b-9a8e-7f6d5c4b3a21";
 
 function reply(status: number) {
   return new Response(status < 300 ? "{}" : '{"message":"no"}', { status });
@@ -16,6 +17,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("EMAIL_PROVIDER", "resend");
   vi.stubEnv("RESEND_API_KEY", "re_test_key");
+  vi.stubEnv("RESEND_LAUNCH_SEGMENT_ID", SEGMENT);
 });
 
 afterEach(() => {
@@ -35,9 +37,7 @@ describe("saveLaunchReminder", () => {
     expect(created![1]).toMatchObject({ method: "POST" });
     expect(JSON.parse(String(created![1]!.body))).toEqual({ email: EMAIL, unsubscribed: false });
     expect(new Headers(created![1]!.headers).get("authorization")).toBe("Bearer re_test_key");
-    expect(added![0]).toBe(
-      `https://api.resend.com/contacts/aicha%40kolab.test/segments/${LAUNCH_SEGMENT_ID}`,
-    );
+    expect(added![0]).toBe(`https://api.resend.com/contacts/aicha%40kolab.test/segments/${SEGMENT}`);
   });
 
   it("accepts a contact that exists already", async () => {
@@ -78,5 +78,15 @@ describe("saveLaunchReminder", () => {
     await expect(saveLaunchReminder(EMAIL)).resolves.toBe(false);
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("calls nothing without the launch segment of this Resend account", async () => {
+    // KRB-243: the segment lives in the account of RESEND_API_KEY, so its id
+    // comes from the environment, not from the code.
+    vi.stubEnv("RESEND_LAUNCH_SEGMENT_ID", " ");
+    await expect(saveLaunchReminder(EMAIL)).resolves.toBe(false);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(log.warn).toHaveBeenCalledWith("launch reminder skipped: RESEND_LAUNCH_SEGMENT_ID is not set");
   });
 });
