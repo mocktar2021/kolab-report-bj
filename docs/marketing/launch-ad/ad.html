@@ -1117,6 +1117,13 @@
         s12: [43.6, 52.0],
       };
       const $ = (id) => document.getElementById(id);
+      // The ending for once sign-up is open (KRB-244). render.mjs sets
+      // window.AD_ENDING from the AD_ENDING environment variable.
+      if (window.AD_ENDING === "disponible") {
+        $("s3pill").textContent = "Disponible maintenant";
+        $("s12b").textContent = "Disponible";
+        $("s12c").textContent = "maintenant";
+      }
       const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
       const E = {
         out: (t) => 1 - Math.pow(1 - t, 3),

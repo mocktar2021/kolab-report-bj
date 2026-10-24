@@ -16,6 +16,7 @@ A 52 second vertical video (1080x1920, 30 fps) for Reels, TikTok, Shorts and Wha
 | `gen_vo.py` | Makes the 12 lines with the Kokoro voice model. |
 | `mix_vo.py` | Places the voice lines, lowers the music under them and writes the final MP4. |
 | `legende.txt` | French caption for the post. |
+| `legende-disponible.txt` | French caption for the posts once sign-up is open. |
 | `fonts/` | Instrument Sans and Inter Tight, so the render needs no network. |
 
 Videos and audio files stay out of git (see `.gitignore`). Rebuild them from the source.
@@ -53,6 +54,14 @@ curl -L -o models/ff_siwis.bin https://huggingface.co/onnx-community/Kokoro-82M-
 .venv/bin/python gen_vo.py models/model.onnx models/ff_siwis.bin
 ```
 
+If Hugging Face is blocked, the kokoro-onnx GitHub release has the same model: `kokoro-v1.0.onnx`, and `voices-v1.0.bin`, which holds every voice. Take the French one out of it:
+
+```sh
+curl -L -o models/model.onnx https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+curl -L -o models/voices.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+.venv/bin/python -c "import numpy as np; np.load('models/voices.bin')['ff_siwis'].tofile('models/ff_siwis.bin')"
+```
+
 With a person reading `voix-off.txt`: leave about one second of silence between lines and save the recording as `vo/full.m4a` (any format ffmpeg reads). `mix_vo.py` splits it on the pauses.
 
 Then mix:
@@ -63,11 +72,23 @@ python3 mix_vo.py kolabreport_lancement_27oct.mp4
 
 Each line starts at its time in `vo_lines.json`. A line too long for its scene is sped up by 18% at most. The music drops by about 13 dB while the voice speaks, so the voice sits about 9 dB above it, and the whole mix is set to -14 LUFS, the level social apps expect.
 
+## The ending once sign-up is open
+
+From 27 October, "Lancement le 27 octobre" is out of date. `AD_ENDING=disponible` swaps it for "Disponible maintenant", in scene 3 and in the last scene, and reads the last voice line from `text_disponible` in `vo_lines.json` (KRB-244):
+
+```sh
+AD_ENDING=disponible sh render-all.sh
+AD_ENDING=disponible .venv/bin/python gen_vo.py models/model.onnx models/ff_siwis.bin
+python3 mix_vo.py kolabreport_disponible.mp4
+```
+
+A person reading the script ends with this line instead: "Kolab Report. Disponible maintenant. Rendez-vous sur kolabreport point com." Post it with `legende-disponible.txt`.
+
 ## Change the ad
 
 - Scene text is in `ad.html`, in French.
 - To make a scene longer or shorter, change `timings.json`, then move the `at` times in `vo_lines.json` to match. The music follows the new timings.
-- The current voice comes from ElevenLabs (voice "Paul K, French Ad & Trailer", model eleven_v4), one node per line in the flow "KolabReport lancement voix off". Audio made on a free ElevenLabs plan is not licensed for commercial use: make it again during a paid month before the ad runs.
+- The first voiced version came from ElevenLabs (voice "Paul K, French Ad & Trailer", model eleven_v4), one node per line in the flow "KolabReport lancement voix off". Audio made on a free ElevenLabs plan is not licensed for commercial use, so that version must not run. Post the Kokoro version or one read by a person, or make the ElevenLabs one again during a paid month.
 
 ## Licences
 
