@@ -3,11 +3,9 @@ import { log } from "@/lib/log";
 
 // Launch reminders (KRB-239): a visitor leaves an e-mail before the launch and
 // gets one message when sign-up opens. The address becomes a Resend contact in
-// the segment below, which the launch e-mail goes to. Nothing is sent per
-// sign-up: the daily e-mail quota stays for sign-up and password e-mails.
-
-/** Resend segment "KolabReport lancement". Not a secret: it only names a list. */
-export const LAUNCH_SEGMENT_ID = "c0be8b98-a919-4c4d-941e-a9efbbe28f2b";
+// the segment RESEND_LAUNCH_SEGMENT_ID, which the launch e-mail goes to.
+// Nothing is sent per sign-up: the daily e-mail quota stays for sign-up and
+// password e-mails.
 
 const RESEND_API = "https://api.resend.com";
 
@@ -22,14 +20,21 @@ async function resend(path: string, apiKey: string, body?: unknown): Promise<Res
 
 /**
  * Adds the address to the launch segment. Returns false when Resend is not
- * the provider, refuses (a key limited to sending) or cannot be reached. The
- * log line gives the status, never the address.
+ * the provider, refuses (a key limited to sending, a segment of another Resend
+ * account) or cannot be reached. The log line gives the status, never the address.
  */
 export async function saveLaunchReminder(email: string): Promise<boolean> {
   const provider = process.env.EMAIL_PROVIDER?.trim().toLowerCase();
   const apiKey = process.env.RESEND_API_KEY;
   if (provider !== "resend" || !apiKey) {
     log.warn("launch reminder skipped: Resend is not the e-mail provider");
+    return false;
+  }
+  // The segment "KolabReport lancement", in the Resend account of RESEND_API_KEY
+  // (KRB-243). Not a secret: it only names a list.
+  const segmentId = process.env.RESEND_LAUNCH_SEGMENT_ID?.trim();
+  if (!segmentId) {
+    log.warn("launch reminder skipped: RESEND_LAUNCH_SEGMENT_ID is not set");
     return false;
   }
   try {
@@ -40,7 +45,7 @@ export async function saveLaunchReminder(email: string): Promise<boolean> {
       return false;
     }
     const added = await resend(
-      `/contacts/${encodeURIComponent(email)}/segments/${LAUNCH_SEGMENT_ID}`,
+      `/contacts/${encodeURIComponent(email)}/segments/${encodeURIComponent(segmentId)}`,
       apiKey,
     );
     if (!added.ok && added.status !== 409) {
