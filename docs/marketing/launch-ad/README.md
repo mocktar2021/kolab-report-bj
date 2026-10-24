@@ -2,6 +2,8 @@
 
 A 52 second vertical video (1080x1920, 30 fps) for Reels, TikTok, Shorts and WhatsApp status. Twelve animated scenes live in `ad.html`. The music and sound effects come from `music.py`, and a French voiceover goes on top. The ad names no country, because KolabReport sells wherever customers can pay with FedaPay or by bank transfer.
 
+A 28 s cut for TikTok and Reels ads, the still images for Facebook and the ad text are in `../social-posts` (KRB-246).
+
 ## Files
 
 | File | What it holds |

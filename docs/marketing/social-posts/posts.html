@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>KolabReport, images pour les réseaux</title>
+    <link rel="stylesheet" href="../launch-ad/fonts/local.css" />
+    <style>
+      :root {
+        --ink: #0b0b0e;
+        --paper: #fafaf8;
+        --accent: #b93a26;
+        --coral: #ff8975;
+        --muted: #71717a;
+        --line: #e4e4e7;
+        --body: #3f3f46;
+        --green: #16a34a;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--ink);
+        font-family: "Inter Tight", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* One canvas per format: fil 4:5 (Facebook feed), carre 1:1 (carousel), story 9:16. */
+      .post {
+        position: relative;
+        width: 1080px;
+        height: var(--h);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: var(--pt) var(--px) var(--pb);
+      }
+      .fil {
+        --h: 1350px;
+        --pt: 88px;
+        --px: 80px;
+        --pb: 64px;
+        --title: 86px;
+      }
+      .carre {
+        --h: 1080px;
+        --pt: 64px;
+        --px: 72px;
+        --pb: 52px;
+        --title: 70px;
+      }
+      /* TikTok and Stories cover the top and bottom of the screen with their own buttons. */
+      .story {
+        --h: 1920px;
+        --pt: 210px;
+        --px: 80px;
+        --pb: 360px;
+        --title: 86px;
+      }
+      .light {
+        color: var(--ink);
+        background:
+          radial-gradient(900px 700px at 50% 0%, rgba(255, 137, 117, 0.24), rgba(255, 137, 117, 0) 70%),
+          var(--paper);
+      }
+      .dark {
+        color: var(--paper);
+        background:
+          radial-gradient(900px 900px at 15% 85%, rgba(185, 58, 38, 0.55), rgba(185, 58, 38, 0) 70%),
+          radial-gradient(700px 700px at 90% 10%, rgba(255, 137, 117, 0.16), rgba(255, 137, 117, 0) 70%),
+          var(--ink);
+      }
+      .h {
+        font-family: "Instrument Sans", Arial, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.04;
+      }
+      .title {
+        font-size: var(--title);
+        margin-top: 26px;
+      }
+      .acc {
+        color: var(--accent);
+      }
+      .dark .acc {
+        color: var(--coral);
+      }
+      .kicker {
+        display: inline-block;
+        font-weight: 700;
+        font-size: 24px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        padding: 11px 20px;
+        border-radius: 999px;
+        background: #f6e1dc;
+        color: var(--accent);
+      }
+      .dark .kicker {
+        background: rgba(255, 137, 117, 0.16);
+        color: var(--coral);
+      }
+      .stage {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .visual {
+        position: relative;
+        flex: none;
+        transform-origin: center center;
+      }
+      .foot {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding-top: 28px;
+      }
+      .foot .logo {
+        width: 56px;
+        height: 56px;
+      }
+      .foot .name {
+        font-family: "Instrument Sans", Arial, sans-serif;
+        font-weight: 700;
+        font-size: 34px;
+        letter-spacing: -0.01em;
+      }
+      .foot .url {
+        margin-left: auto;
+        font-weight: 700;
+        font-size: 28px;
+        color: var(--muted);
+      }
+      .dark .foot .url {
+        color: rgba(250, 250, 248, 0.7);
+      }
+      .tag {
+        margin-left: auto;
+        font-weight: 700;
+        font-size: 26px;
+        padding: 12px 22px;
+        border-radius: 999px;
+        background: rgba(255, 137, 117, 0.18);
+        color: var(--coral);
+      }
+      /* App window used as the product mock-up. */
+      .win {
+        width: 800px;
+        background: #fff;
+        border-radius: 40px;
+        overflow: hidden;
+        box-shadow:
+          0 50px 100px rgba(11, 11, 14, 0.16),
+          0 16px 32px rgba(11, 11, 14, 0.1);
+      }
+      .appbar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 26px 36px;
+        border-bottom: 1px solid var(--line);
+      }
+      .appbar .logo {
+        width: 42px;
+        height: 42px;
+      }
+      .appbar b {
+        font-family: "Instrument Sans", Arial, sans-serif;
+        font-size: 29px;
+      }
+      .sc {
+        padding: 30px 36px 36px;
+      }
+      .sc h4 {
+        font-family: "Instrument Sans", Arial, sans-serif;
+        font-size: 38px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .sc .sub {
+        font-size: 23px;
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 19px 22px;
+        margin-bottom: 14px;
+        background: #fff;
+        font-size: 27px;
+        font-weight: 600;
+      }
+      .row:last-child {
+        margin-bottom: 0;
+      }
+      .row .n {
+        color: var(--muted);
+        min-width: 44px;
+      }
+      .row.ind {
+        margin-left: 44px;
+      }
+      .av {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        font-weight: 700;
+        color: #fff;
+        flex: none;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 20px;
+        font-weight: 700;
+        padding: 7px 14px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .pill i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 26px;
+        border-radius: 18px;
+        padding: 18px 20px;
+      }
+      .btn.dark {
+        background: var(--ink);
+        color: #fff;
+      }
+      .btn.ghost {
+        border: 1px solid var(--line);
+      }
+      .float {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 26px;
+        padding: 20px 28px;
+        font-weight: 700;
+        font-size: 30px;
+        box-shadow: 0 24px 60px rgba(11, 11, 14, 0.18);
+        white-space: nowrap;
+      }
+      .float.green {
+        background: var(--green);
+        color: #fff;
+      }
+      .float.ink {
+        background: var(--ink);
+        color: #fff;
+      }
+      .chk {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+      }
+      .doc {
+        position: absolute;
+        width: 120px;
+        height: 150px;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+        padding: 18px 16px;
+      }
+      .doc b {
+        display: flex;
+        width: 40px;
+        height: 46px;
+        border-radius: 8px;
+        background: #2b579a;
+        color: #fff;
+        font: 700 24px Arial;
+        align-items: center;
+        justify-content: center;
+      }
+      .doc i {
+        display: block;
+        height: 8px;
+        border-radius: 4px;
+        background: var(--line);
+        margin-top: 8px;
+      }
+      .chips {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 22px;
+        padding: 16px 26px 16px 16px;
+        font-weight: 700;
+        font-size: 30px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+      }
+      .chip span {
+        display: inline-flex;
+        min-width: 54px;
+        height: 54px;
+        padding: 0 10px;
+        border-radius: 16px;
+        background: #f6e1dc;
+        color: var(--accent);
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+      }
+      .card {
+        background: #fff;
+        color: var(--ink);
+        border-radius: 34px;
+        padding: 34px 60px;
+        text-align: center;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // posts.html?f=fil|carre|story&s=1..6&e=lancement|disponible (KRB-246)
+      const q = new URLSearchParams(location.search);
+      const F = q.get("f") || "fil";
+      const S = parseInt(q.get("s") || "1", 10);
+      const E = q.get("e") || "disponible";
+      const LIVE = E === "disponible";
+      const ENDING = LIVE ? "Disponible maintenant" : "Lancement le 27 octobre";
+      // How many mock rows each format has room for.
+      const ROOM = { fil: 1, carre: 0, story: 2 }[F];
+
+      const LOGO_DARK =
+        '<svg class="logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#0B0B0E"/><path d="M10 10.5h12M10 16h6.5M10 21.5h12" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><circle cx="21" cy="16" r="1.6" fill="#FF8975"/></svg>';
+      const LOGO_LIGHT =
+        '<svg class="logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#FAFAF8"/><path d="M10 10.5h12M10 16h6.5M10 21.5h12" stroke="#0B0B0E" stroke-width="2.5" stroke-linecap="round"/><circle cx="21" cy="16" r="1.6" fill="#B93A26"/></svg>';
+      const CHECK =
+        '<div class="chk"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#16A34A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+      const fileIcon = (color, label, size) =>
+        `<svg width="44" height="52" viewBox="0 0 44 52"><rect width="44" height="52" rx="8" fill="${color}"/><text x="22" y="${size > 20 ? 35 : 33}" text-anchor="middle" font-family="Arial" font-weight="700" font-size="${size}" fill="#fff">${label}</text></svg>`;
+      const WORD = fileIcon("#2B579A", "W", 24);
+      const PDF = fileIcon("#D93025", "PDF", 16);
+      const appbar = `<div class="appbar">${LOGO_DARK}<b>KolabReport</b></div>`;
+
+      const head = (kicker, a, b) =>
+        `<div><span class="kicker">${kicker}</span><div class="h title">${a}<br /><span class="acc">${b}</span></div></div>`;
+      const foot = (dark, right) =>
+        `<div class="foot">${dark ? LOGO_LIGHT : LOGO_DARK}<span class="name">KolabReport</span>${right}</div>`;
+      const url = '<span class="url">kolabreport.com</span>';
+
+      const STATUS = {
+        nc: ["Non commencée", "#F4F4F5", "#71717A", "#A1A1AA"],
+        ec: ["En cours", "#FEF3C7", "#B45309", "#F59E0B"],
+        tm: ["Terminée", "#DCFCE7", "#15803D", "#22C55E"],
+      };
+      const pill = (st) => {
+        const [txt, bg, fg, dot] = STATUS[st];
+        return `<span class="pill" style="background:${bg};color:${fg}"><i style="background:${dot}"></i>${txt}</span>`;
+      };
+
+      const slides = {
+        // 1. The problem, in the same words as the video's first scene.
+        1: () => {
+          const spots = {
+            fil: [
+              [70, 70, -14],
+              [880, 40, 12],
+              [470, 10, 4],
+              [40, 1010, 9],
+              [880, 990, -10],
+              [600, 1060, 14],
+            ],
+            carre: [
+              [60, 50, -14],
+              [890, 40, 12],
+              [60, 780, 9],
+              [890, 760, -10],
+            ],
+            story: [
+              [120, 250, -14],
+              [820, 200, 12],
+              [470, 130, 4],
+              [290, 400, -18],
+              [670, 380, 16],
+              [80, 1150, 9],
+              [860, 1170, -10],
+              [470, 1290, -6],
+            ],
+          }[F];
+          const docs = spots
+            .map(
+              ([x, y, r]) =>
+                `<div class="doc" style="left:${x}px;top:${y}px;transform:rotate(${r}deg)"><b>W</b><i style="margin-top:16px"></i><i style="width:70%"></i><i style="width:85%"></i></div>`,
+            )
+            .join("");
+          return {
+            dark: true,
+            html: `${docs}<div class="stage" style="flex-direction:column;text-align:center">
+                <div class="h" style="font-size:${F === "carre" ? 96 : 94}px">10 experts.<br />10 fichiers Word.<br /><span class="acc">1</span> rapport à rendre.</div>
+                <div style="font-size:${F === "carre" ? 36 : 40}px;font-weight:600;margin-top:40px;color:rgba(250,250,248,.85)">Écrivez-le à plusieurs, dans un seul document.</div>
+              </div>${foot(true, `<span class="tag">${ENDING}</span>`)}`,
+          };
+        },
+        // 2. Import the outline from the terms of reference.
+        2: () => {
+          const plan = [
+            ["1.", "Résumé", 0],
+            ["2.", "Contexte de la mission", 0],
+            ["2.1", "Présentation du programme", 1],
+            ["2.2", "Zone d'étude", 1],
+            ["3.", "Méthodologie", 0],
+            ["4.", "Diagnostic des ouvrages", 0],
+            ["5.", "Recommandations", 0],
+          ].slice(0, [4, 5, 7][ROOM]);
+          const rows = plan
+            .map(
+              ([n, t, ind]) =>
+                `<div class="row${ind ? " ind" : ""}"><span class="n">${n}</span><span>${t}</span></div>`,
+            )
+            .join("");
+          return {
+            html: `${head("1 · Le plan", "Importez le plan.", "Les sections se créent.")}
+              <div class="stage"><div class="visual" style="padding:40px 0 50px">
+                <div class="win">${appbar}<div class="sc"><h4>Vérifiez le plan</h4><div class="sub">10 éléments : 6 sections, 4 sous-sections</div>${rows}</div></div>
+                <div class="float" style="top:0;right:-40px">${WORD}Termes de référence.docx</div>
+                <div class="float green" style="bottom:0;left:50%;transform:translateX(-50%)">${CHECK}10 sections créées</div>
+              </div></div>${foot(false, url)}`,
+          };
+        },
+        // 3. One section per expert, with live progress.
+        3: () => {
+          const secs = [
+            ["1.", "Contexte et objectifs", "NH", "#B93A26", "tm"],
+            ["2.", "Méthodologie", "FK", "#2563EB", "tm"],
+            ["3.", "Diagnostic des ouvrages", "CA", "#7C3AED", "ec"],
+            ["4.", "Résultats de l'enquête", "AD", "#0F766E", "ec"],
+            ["5.", "Recommandations", "NH", "#B93A26", "nc"],
+          ].slice(0, [3, 4, 5][ROOM]);
+          const rows = secs
+            .map(
+              ([n, t, ini, col, st]) =>
+                `<div class="row" style="flex-wrap:wrap"><span class="n">${n}</span><span style="flex:1">${t}</span><div class="av" style="background:${col}">${ini}</div><div style="width:100%;padding-left:60px">${pill(st)}</div></div>`,
+            )
+            .join("");
+          const avs = [
+            ["NH", "#B93A26"],
+            ["FK", "#2563EB"],
+            ["CA", "#7C3AED"],
+            ["AD", "#0F766E"],
+          ]
+            .map(
+              ([ini, col], i) =>
+                `<div class="av" style="background:${col};width:48px;height:48px;font-size:18px;border:3px solid #0B0B0E;margin-left:${i ? -14 : 0}px">${ini}</div>`,
+            )
+            .join("");
+          return {
+            html: `${head("2 · L'équipe", "Une section par expert.", "Vous voyez qui avance.")}
+              <div class="stage"><div class="visual" style="padding-bottom:50px">
+                <div class="win">${appbar}<div class="sc"><h4>Sommaire</h4><div class="sub">Étude d'impact, assainissement</div>${rows}</div></div>
+                <div class="float ink" style="bottom:0;left:50%;transform:translateX(-50%)"><div style="display:flex">${avs}</div>4 experts, 1 rapport</div>
+              </div></div>${foot(false, url)}`,
+          };
+        },
+        // 4. The AI draft, which the expert accepts, edits or rejects.
+        4: () => {
+          const text =
+            "Sur les 48 ouvrages visités, 30 fonctionnent. Les pannes viennent surtout du réseau d'évacuation, que les ménages ne savent pas à qui signaler.";
+          const sources = ["releves-terrain.docx", "inventaire-ouvrages.xlsx"]
+            .map(
+              (f) => `<span class="pill" style="background:#F4F4F5;color:#3F3F46;font-size:21px">${f}</span>`,
+            )
+            .join("");
+          return {
+            html: `${head("3 · L'IA", "L'IA écrit le premier jet.", "L'expert décide.")}
+              <div class="stage"><div class="visual" style="padding-bottom:${ROOM ? 50 : 0}px">
+                <div class="win">${appbar}<div class="sc">
+                  <div style="border:2px solid #BBF7D0;background:#F0FDF4;border-radius:28px;padding:26px 28px">
+                    <div style="display:flex;align-items:center;gap:12px;font-family:'Instrument Sans';font-size:32px;font-weight:700">
+                      <svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z" fill="#B93A26"/></svg>Brouillon proposé</div>
+                    <div style="font-size:22px;color:var(--muted);margin:6px 0 18px">À partir de 2 livrables de la section</div>
+                    <div style="font-size:24px;font-weight:700;margin-bottom:8px">Résumé</div>
+                    <div style="font-size:25px;line-height:1.5;color:var(--body)">${text}</div>
+                    ${ROOM ? `<div style="font-size:24px;font-weight:700;margin:18px 0 10px">Sources</div><div style="display:flex;gap:10px;flex-wrap:wrap">${sources}</div>` : ""}
+                  </div>
+                  <div style="display:flex;gap:12px;margin-top:22px">
+                    <div class="btn dark" style="flex:1.1">✓ Accepter</div><div class="btn ghost" style="flex:1">Modifier</div><div class="btn ghost" style="flex:0.9">Rejeter</div>
+                  </div>
+                </div></div>
+                ${ROOM ? `<div class="float green" style="bottom:0;left:50%;transform:translateX(-50%)">${CHECK}Ajouté à la section</div>` : ""}
+              </div></div>${foot(false, url)}`,
+          };
+        },
+        // 5. One report at the end, as Word or PDF.
+        5: () => {
+          const heads = [
+            "1. Contexte et objectifs",
+            "2. Méthodologie",
+            "3. Diagnostic des ouvrages",
+            "4. Résultats de l'enquête",
+            "5. Recommandations",
+          ].slice(0, [3, 5, 5][ROOM]);
+          const lines = heads
+            .map(
+              (t) =>
+                `<div style="font-size:27px;font-weight:700;margin-top:26px">${t}</div><div style="height:10px;border-radius:5px;background:var(--line);margin-top:12px"></div><div style="height:10px;width:62%;border-radius:5px;background:var(--line);margin-top:8px"></div>`,
+            )
+            .join("");
+          return {
+            html: `${head("4 · Le rapport", "Un seul rapport,", "en Word ou en PDF.")}
+              <div class="stage"><div class="visual" style="padding:0 70px 60px">
+                <div style="width:560px;background:#fff;border-radius:28px;box-shadow:0 40px 90px rgba(11,11,14,.18);padding:52px 50px 56px">
+                  <div class="h" style="font-size:44px">Étude d'impact</div>
+                  <div style="font-size:24px;color:var(--muted);margin-top:8px">Rapport final · 9 sections</div>${lines}
+                </div>
+                <div class="float" style="bottom:0;left:0">${WORD}.docx</div>
+                <div class="float" style="bottom:0;right:0">${PDF}.pdf</div>
+              </div></div>${foot(false, url)}`,
+          };
+        },
+        // 6. The offer and where to go.
+        6: () => {
+          const chips = [
+            ["✓", "Sans carte bancaire"],
+            ["", "Mobile Money ou carte bancaire"],
+            ["FCFA", "Dès 15 000 FCFA par mois ensuite"],
+          ]
+            .map(
+              ([a, b]) =>
+                `<div class="chip"><span style="font-size:${a.length > 2 ? 18 : 28}px">${a || "<svg width='26' height='34' viewBox='0 0 26 34'><rect x='2' y='2' width='22' height='30' rx='5' fill='none' stroke='#B93A26' stroke-width='3'/><circle cx='13' cy='27' r='2' fill='#B93A26'/></svg>"}</span>${b}</div>`,
+            )
+            .join("");
+          const big = { fil: 300, carre: 210, story: 380 }[F];
+          const label = LIVE ? "Essai gratuit de 14 jours sur" : "Recevez un rappel le 27 octobre sur";
+          return {
+            dark: true,
+            html: `<div class="stage" style="flex-direction:column;text-align:center">
+                <div class="h" style="font-size:${big}px;letter-spacing:-0.05em;line-height:0.9">14</div>
+                <div class="h" style="font-size:${F === "carre" ? 70 : 88}px;margin-top:${F === "carre" ? 6 : 14}px">jours d'essai <span class="acc">gratuit.</span></div>
+                <div class="chips" style="margin-top:${F === "carre" ? 30 : 48}px">${chips}</div>
+                <div class="card" style="margin-top:${F === "carre" ? 34 : 56}px">
+                  <div style="font-size:26px;color:var(--muted);font-weight:600">${label}</div>
+                  <div class="h" style="font-size:64px;margin-top:4px">kolabreport.com</div>
+                </div>
+              </div>${foot(true, `<span class="tag">${ENDING}</span>`)}`,
+          };
+        },
+      };
+
+      const slide = slides[S]();
+      const root = document.getElementById("root");
+      root.innerHTML = `<div class="post ${F} ${slide.dark ? "dark" : "light"}" id="post">${slide.html}</div>`;
+
+      // Scale each mock-up down until it fits its stage, and report anything that still spills over.
+      window.FIT = document.fonts.ready.then(() => {
+        const problems = [];
+        for (const v of document.querySelectorAll(".visual")) {
+          const st = v.parentElement;
+          const k = Math.min(1, st.clientWidth / v.offsetWidth, st.clientHeight / v.offsetHeight);
+          v.style.transform = `scale(${k})`;
+          if (k < 0.72) problems.push(`mock-up scaled to ${k.toFixed(2)}`);
+        }
+        for (const st of document.querySelectorAll(".stage")) {
+          if (st.scrollHeight > st.clientHeight + 1)
+            problems.push(`stage overflows by ${st.scrollHeight - st.clientHeight}px`);
+        }
+        return problems;
+      });
+    </script>
+  </body>
+</html>
