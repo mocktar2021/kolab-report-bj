@@ -44,7 +44,7 @@ ffmpeg -i video_raw.mp4 -i music.wav -i sfx.wav \
 
 There are three ways to get the 12 lines: ElevenLabs (see below), Kokoro, or a person reading the script.
 
-With Kokoro, free and Apache 2.0. The files come from Hugging Face, so the environment must allow `huggingface.co`.
+With Kokoro, free and Apache 2.0. Kokoro reads some words wrong ("L'I.A." with a stop in the middle, "Word" with an English accent, "s'écrivent enfin" with a t), so a line in `vo_lines.json` can carry a `say` field: the same line spelled the way Kokoro says it right. `voix-off.txt` and the scenes keep the real spelling. The files come from Hugging Face, so the environment must allow `huggingface.co`.
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install kokoro-onnx soundfile
