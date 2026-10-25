@@ -244,7 +244,7 @@ describe("DraftPanel generation", () => {
     stub.stream.send({ type: "partial", object: { title: "Brouillon", summary: "Le siège consom" } });
     expect(await screen.findByText("Le siège consom", { exact: false })).toBeVisible();
     expect(status()).toHaveTextContent("Rédaction du brouillon…");
-    expect(screen.getByText(/Les livrables dépassaient la place disponible/)).toBeVisible();
+    expect(screen.getByText(/Un livrable contient un tableau trop long/)).toBeVisible();
     expect(screen.getByText("(480 lignes de tableau coupées)", { exact: false })).toBeVisible();
 
     stub.stream.send({ type: "done", generationId: GENERATION_ID, output: OUTPUT, markdown: MARKDOWN });
@@ -421,7 +421,9 @@ describe("DraftPanel proposal", () => {
   it("shows the proposal with its template, date and sources", () => {
     renderPanel(panelData({ proposal: proposal({ truncated: true }) }));
     expect(screen.getByText("Modèle « Synthèse de section », généré le", { exact: false })).toBeVisible();
-    expect(screen.getByText(/Les livrables dépassaient la place disponible/)).toBeVisible();
+    expect(screen.getByText(/Un livrable contient un tableau trop long/)).toHaveTextContent(
+      "Le détail par livrable est sous « Livrables utilisés ».",
+    );
     const sources = screen.getByRole("list", { name: "Livrables utilisés" });
     expect(sources).toHaveTextContent("Consommations.xlsx (480 lignes de tableau coupées)");
     expect(screen.getByRole("tabpanel", { name: "Aperçu" })).toHaveTextContent("Contexte");
