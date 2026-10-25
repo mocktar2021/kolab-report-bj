@@ -356,7 +356,8 @@
     <script>
       // posts.html?f=fil|carre|story&s=1..6&e=lancement|disponible (KRB-246)
       const q = new URLSearchParams(location.search);
-      const F = q.get("f") || "fil";
+      // Only a known format: F ends up in the page markup.
+      const F = ["fil", "carre", "story"].find((f) => f === q.get("f")) ?? "fil";
       const S = parseInt(q.get("s") || "1", 10);
       const E = q.get("e") || "disponible";
       const LIVE = E === "disponible";
