@@ -7,9 +7,13 @@ on:
     paths:
       - "src/**"
       - "tests/**"
-      - "*.ts"
-      - "*.mts"
-      - "*.mjs"
+      # Any script CodeQL reads, docs and scripts included.
+      - "**/*.ts"
+      - "**/*.mts"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.html"
       - "package-lock.json"
       - ".github/workflows/codeql.yml"
   schedule:
