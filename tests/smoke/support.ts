@@ -1,7 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { CAPTCHA_FIELD } from "../../src/lib/auth/captcha";
 
 // Settings of a smoke run, read from the environment. The suite only uses
 // what a real user has: the site's URL, an account and its password. It never
@@ -49,6 +50,27 @@ export const FILE_PREFIX = "smoke-";
 
 /** Prefix of the report each run creates and deletes. The cleanup deletes reports with this prefix only. */
 export const REPORT_PREFIX = "smoke-rapport-";
+
+/**
+ * True when the page's form has the Turnstile captcha, as on production
+ * (KRB-58). A headless browser may never get a token, and the action then
+ * answers "Confirmez que vous n'êtes pas un robot." without calling Supabase.
+ */
+export async function captchaOn(page: Page): Promise<boolean> {
+  return (await page.locator(`input[name="${CAPTCHA_FIELD}"]`).count()) > 0;
+}
+
+/**
+ * True on /fr/inscription before the launch: production shows the countdown
+ * and the reminder form in place of the sign-up form (KRB-239).
+ */
+export async function signUpClosed(page: Page): Promise<boolean> {
+  return (await page.getByText("Les inscriptions ne sont pas encore ouvertes.").count()) > 0;
+}
+
+/** Why the sign-up checks are skipped while signUpClosed() is true. */
+export const SIGN_UP_CLOSED_REASON =
+  "Sign-up opens at the launch (src/lib/launch.ts). Until then the page shows the reminder form (KRB-239)";
 
 /** Short tag that makes a run's names unique, for example 20261014-210133-k3f9. */
 export function runTag(): string {

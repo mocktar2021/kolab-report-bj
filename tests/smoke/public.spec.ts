@@ -1,11 +1,21 @@
 import { expect, test } from "@playwright/test";
-import { runTag, smoke } from "./support";
+import { captchaOn, runTag, signUpClosed, smoke } from "./support";
 
 // Always on, no account needed, nothing written: public pages, the health
 // endpoint, PWA files and headers. The one sign-in attempt uses an address
 // that has no account.
 
 const PUBLIC_PAGES = ["/fr", "/fr/connexion", "/fr/inscription", "/fr/mot-de-passe-oublie"];
+
+const WRONG_CREDENTIALS = "Adresse e-mail ou mot de passe incorrect.";
+const CAPTCHA_REQUIRED = "Confirmez que vous n'êtes pas un robot.";
+
+/**
+ * Console messages from these origins are not the app's: the Vercel toolbar on
+ * preview deployments, and the Turnstile widget, which logs its own errors when
+ * it sends a headless browser a challenge. CSP violations are always kept.
+ */
+const OTHER_ORIGINS = ["https://vercel.live/", "https://challenges.cloudflare.com/"];
 
 test.describe("public pages", { tag: "@public" }, () => {
   test("GET /api/health answers 200 with the database check", async ({ request }) => {
@@ -56,8 +66,13 @@ test.describe("public pages", { tag: "@public" }, () => {
 
     await page.goto("/fr/inscription");
     await expect(page.getByRole("heading", { name: "Créer un compte" })).toBeVisible();
-    await expect(page.getByLabel("Nom complet")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Créer mon compte" })).toBeVisible();
+    if (await signUpClosed(page)) {
+      await expect(page.getByLabel("Recevez un e-mail à l'ouverture")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Me prévenir" })).toBeVisible();
+    } else {
+      await expect(page.getByLabel("Nom complet")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Créer mon compte" })).toBeVisible();
+    }
 
     await page.goto("/fr/mot-de-passe-oublie");
     await expect(page.getByRole("heading", { name: "Mot de passe oublié" })).toBeVisible();
@@ -71,12 +86,25 @@ test.describe("public pages", { tag: "@public" }, () => {
   test("wrong credentials get the generic French error", async ({ page }) => {
     // Goes through the server action to Supabase Auth, so Auth is reachable.
     await page.goto("/fr/connexion");
+    const captcha = await captchaOn(page);
     await page.getByLabel("Adresse e-mail").fill(`personne-${runTag()}@example.com`);
     await page.getByLabel("Mot de passe", { exact: true }).fill("pas-le-bon-mot-de-passe");
     await page.getByRole("button", { name: "Se connecter" }).click();
-    await expect(page.getByRole("main").getByRole("alert")).toHaveText(
-      "Adresse e-mail ou mot de passe incorrect.",
-    );
+    const generic = page.getByRole("main").getByRole("alert").filter({ hasText: WRONG_CREDENTIALS });
+    if (!captcha) {
+      await expect(page.getByRole("main").getByRole("alert")).toHaveText(WRONG_CREDENTIALS);
+      return;
+    }
+    // Without a token, the action answers before Supabase: the server action
+    // still ran, and the captcha is on as it should be.
+    const refused = page.getByText(CAPTCHA_REQUIRED);
+    await expect(generic.or(refused)).toBeVisible();
+    test.info().annotations.push({
+      type: "note",
+      description: (await refused.isVisible())
+        ? "Captcha on: no Turnstile token in the headless browser, so Supabase Auth was not called (KRB-234)."
+        : "Captcha on: Turnstile gave a token and Supabase Auth answered.",
+    });
   });
 
   test("the PWA manifest, service worker and icons are served", async ({ request }) => {
@@ -126,10 +154,10 @@ test.describe("public pages", { tag: "@public" }, () => {
     const errors: string[] = [];
     const failed: string[] = [];
     page.on("console", (message) => {
-      // The Vercel toolbar on preview deployments is not part of the app.
-      if (message.type() === "error" && !message.location().url.startsWith("https://vercel.live/")) {
-        errors.push(message.text());
-      }
+      if (message.type() !== "error") return;
+      const text = message.text();
+      const elsewhere = OTHER_ORIGINS.some((prefix) => message.location().url.startsWith(prefix));
+      if (!elsewhere || text.includes("Content Security Policy")) errors.push(text);
     });
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("response", (response) => {
@@ -140,8 +168,10 @@ test.describe("public pages", { tag: "@public" }, () => {
 
     for (const path of PUBLIC_PAGES) {
       await page.goto(path);
-      // Lets lazy chunks, the service worker and prefetches load.
-      await page.waitForLoadState("networkidle");
+      // Lets lazy chunks, the service worker and prefetches load. The
+      // Turnstile widget on production can keep talking to Cloudflare, so a
+      // page that never goes quiet moves on after 10 s instead of failing.
+      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
     }
 
     const csp = errors.filter((text) => text.includes("Content Security Policy"));
