@@ -13,7 +13,7 @@ const CAPTCHA_REQUIRED = "Confirmez que vous n'êtes pas un robot.";
 /**
  * Console messages from these origins are not the app's: the Vercel toolbar on
  * preview deployments, and the Turnstile widget, which logs its own errors when
- * it sends a headless browser a challenge. CSP violations are always kept.
+ * it sends a headless browser a challenge.
  */
 const OTHER_ORIGINS = ["https://vercel.live/", "https://challenges.cloudflare.com/"];
 
@@ -156,8 +156,19 @@ test.describe("public pages", { tag: "@public" }, () => {
     page.on("console", (message) => {
       if (message.type() !== "error") return;
       const text = message.text();
-      const elsewhere = OTHER_ORIGINS.some((prefix) => message.location().url.startsWith(prefix));
-      if (!elsewhere || text.includes("Content Security Policy")) errors.push(text);
+      // CSP violations are read from the page itself, below.
+      if (text.includes("Content Security Policy")) return;
+      if (!OTHER_ORIGINS.some((prefix) => message.location().url.startsWith(prefix))) errors.push(text);
+    });
+    // Only our own document's policy counts. The Turnstile iframe has its own
+    // CSP, and the violations it logs inside that frame are Cloudflare's.
+    await page.addInitScript(() => {
+      if (window.top !== window) return;
+      const seen: string[] = [];
+      Object.assign(window, { __cspViolations: seen });
+      document.addEventListener("securitypolicyviolation", (event) => {
+        seen.push(`${event.effectiveDirective} blocked ${event.blockedURI || "inline"}`);
+      });
     });
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("response", (response) => {
@@ -166,15 +177,19 @@ test.describe("public pages", { tag: "@public" }, () => {
       }
     });
 
+    const csp: string[] = [];
     for (const path of PUBLIC_PAGES) {
       await page.goto(path);
       // Lets lazy chunks, the service worker and prefetches load. The
       // Turnstile widget on production can keep talking to Cloudflare, so a
       // page that never goes quiet moves on after 10 s instead of failing.
       await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
+      const seen = await page.evaluate(
+        () => (window as unknown as { __cspViolations?: string[] }).__cspViolations ?? [],
+      );
+      csp.push(...seen.map((line) => `${path}: ${line}`));
     }
 
-    const csp = errors.filter((text) => text.includes("Content Security Policy"));
     expect(csp, "CSP violations").toEqual([]);
     expect(errors, "console errors").toEqual([]);
     expect(failed, "requests to the site that failed").toEqual([]);
