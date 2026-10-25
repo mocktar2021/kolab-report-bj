@@ -1002,7 +1002,14 @@
     "liveTitle": "Aperçu en direct",
     "liveWaiting": "Le texte apparaît ici au fil de la rédaction.",
     "previewError": "Cet aperçu n'a pas pu être affiché.",
-    "truncated": "Les livrables dépassaient la place disponible pour l'IA. Certains ont été raccourcis : le brouillon peut manquer des éléments.",
+    "truncation": {
+      "rows": "{count, plural, one {Un livrable contient un tableau trop long : l'IA n'en a reçu que les premières lignes.} other {# livrables contiennent des tableaux trop longs : l'IA n'en a reçu que les premières lignes.}}",
+      "long": "{count, plural, one {Un livrable trop long a été raccourci ou résumé en partie pour l'IA.} other {# livrables trop longs ont été raccourcis ou résumés en partie pour l'IA.}}",
+      "dropped": "{count, plural, one {Faute de place, un livrable n'a été transmis à l'IA que par son nom.} other {Faute de place, # livrables n'ont été transmis à l'IA que par leur nom.}}",
+      "other": "Certains livrables n'ont pas été transmis en entier à l'IA.",
+      "missing": "Le brouillon peut manquer des éléments.",
+      "details": "Le brouillon peut manquer des éléments. Le détail par livrable est sous « Livrables utilisés »."
+    },
     "usage": {
       "dropped": "laissé de côté, seul son nom a été transmis",
       "summarized": "résumé en partie",

@@ -29,24 +29,48 @@ function UsageItem({ use, note }: { use: DeliverableUse; note: string | null }) 
 }
 
 /**
- * Says that the deliverables didn't all fit in the context. With `list`, it
- * also names the ones that were cut and how.
+ * One sentence per reason the deliverables didn't all go in whole (KRB-250):
+ * a table over the row cap is not a lack of room, so it gets its own words.
+ * A file can count for rows and for length when both happened to it.
+ */
+function useReasons() {
+  const t = useTranslations("AiDraft.truncation");
+  return (deliverables: DeliverableUse[]): string[] => {
+    const dropped = deliverables.filter((use) => use.dropped).length;
+    const kept = deliverables.filter((use) => !use.dropped);
+    const rows = kept.filter((use) => use.rowsCut > 0).length;
+    const long = kept.filter((use) => use.summarized || (use.truncated && use.rowsCut === 0)).length;
+    const reasons = [
+      rows > 0 ? t("rows", { count: rows }) : null,
+      long > 0 ? t("long", { count: long }) : null,
+      dropped > 0 ? t("dropped", { count: dropped }) : null,
+    ].filter((reason): reason is string => reason !== null);
+    return reasons.length > 0 ? reasons : [t("other")];
+  };
+}
+
+/**
+ * Says why the deliverables didn't all go in whole. With `list`, it also
+ * names the ones that were cut and how; without, it points to the sources
+ * list under the draft, which has the same notes.
  */
 export function TruncationNotice({ deliverables, list }: { deliverables: DeliverableUse[]; list: boolean }) {
-  const t = useTranslations("AiDraft");
+  const t = useTranslations("AiDraft.truncation");
   const notesOf = useNotes();
+  const reasonsOf = useReasons();
   const affected = list
     ? deliverables.flatMap((use) => {
         const note = notesOf(use);
         return note ? [{ use, note }] : [];
       })
     : [];
+  const text = [...reasonsOf(deliverables), list ? t("missing") : t("details")].join(" ");
 
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
       <p className="flex items-start gap-2">
         <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <span>{t("truncated")}</span>
+        <span>{text}</span>
       </p>
       {affected.length > 0 ? (
         <ul className="mt-2 space-y-1 pl-6 text-xs">
