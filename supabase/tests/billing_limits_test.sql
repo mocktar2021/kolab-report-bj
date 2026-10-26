@@ -360,7 +360,7 @@ select is(
      'private.assert_workspace_writable(uuid)', 'private.billing_first_report(uuid)',
      'private.billing_check_line_seat(uuid, uuid, text, boolean)', 'private.billing_check_seat(uuid, text, boolean)',
      'private.billing_check_report_slot(uuid, uuid)', 'private.billing_check_templates(uuid)',
-     'private.billing_reserve_draft(uuid, uuid, uuid)', 'private.join_from_invitation(uuid, uuid)']) f
+     'private.billing_reserve_draft(uuid, uuid, uuid, bigint)', 'private.join_from_invitation(uuid, uuid)']) f
    where has_function_privilege('authenticated', f, 'execute') or has_function_privilege('anon', f, 'execute')),
   '{}'::text[], 'nobody signed in calls the billing checks');
 

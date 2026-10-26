@@ -8,12 +8,20 @@ import type { TokenUsage } from "@/lib/ai/generate";
 // report, the hourly limit and the AI drafts of the plan again, and reserves
 // one draft, before any model call. Every query names the workspace.
 
-export type PlanCallRefusal = "forbidden" | "reportFinal" | "rateLimited" | "readOnly" | "quotaExceeded";
+export type PlanCallRefusal =
+  "forbidden" | "reportFinal" | "rateLimited" | "readOnly" | "quotaExceeded" | "tokenQuotaExceeded";
 
 export type PlanCallStart =
   { ok: true; id: string } | { ok: false; refusal: PlanCallRefusal | "generic"; retryAfter: number | null };
 
-const REFUSALS = new Set<string>(["forbidden", "reportFinal", "rateLimited", "readOnly", "quotaExceeded"]);
+const REFUSALS = new Set<string>([
+  "forbidden",
+  "reportFinal",
+  "rateLimited",
+  "readOnly",
+  "quotaExceeded",
+  "tokenQuotaExceeded",
+]);
 
 export async function startPlanImportCall(request: {
   workspaceId: string;

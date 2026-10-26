@@ -2,6 +2,11 @@ begin;
 \ir fixtures.psql
 select plan(51);
 
+-- The workspace's monthly budget applies while billing is not enforced. With
+-- billing, the organization's token volume takes over (KRB-252,
+-- billing_tokens_test.sql).
+update private.billing_settings set enforced = false;
+
 -- Starts a generation as the app does (service role).
 create or replace function pg_temp.start(
   section text, requester text, prompt uuid,

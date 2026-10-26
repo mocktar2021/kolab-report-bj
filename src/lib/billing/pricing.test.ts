@@ -21,6 +21,7 @@ describe("planFeatures", () => {
       { key: "members", count: 10 },
       { key: "reportsUnlimited" },
       { key: "draftsPerMonth", count: 250 },
+      { key: "aiVolumeMonth", volume: "12,5\u00a0millions de jetons" },
       { key: "customTemplates" },
       { key: "readersFree" },
     ]);
@@ -34,6 +35,7 @@ describe("planFeatures", () => {
       { key: "members", count: 5 },
       { key: "reports", count: 1 },
       { key: "draftsTotal", count: 20 },
+      { key: "aiVolumeTotal", volume: "1\u00a0million de jetons" },
       { key: "customTemplates" },
       { key: "readersFree" },
     ]);
@@ -43,7 +45,7 @@ describe("planFeatures", () => {
     const keys = planFeatures(PLANS.independant.limits, { activeReports: true }).map(
       (feature) => feature.key,
     );
-    expect(keys).toEqual(["members", "activeReports", "draftsPerMonth", "readersFree"]);
+    expect(keys).toEqual(["members", "activeReports", "draftsPerMonth", "aiVolumeMonth", "readersFree"]);
   });
 });
 

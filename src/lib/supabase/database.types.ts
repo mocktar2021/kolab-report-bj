@@ -245,6 +245,7 @@ export type Database = {
           pool: string;
           settled_at: string | null;
           status: string;
+          tokens: number;
           usage_month: string;
           workspace_id: string | null;
         };
@@ -258,6 +259,7 @@ export type Database = {
           pool: string;
           settled_at?: string | null;
           status?: string;
+          tokens?: number;
           usage_month: string;
           workspace_id?: string | null;
         };
@@ -270,6 +272,7 @@ export type Database = {
           pool?: string;
           settled_at?: string | null;
           status?: string;
+          tokens?: number;
           usage_month?: string;
           workspace_id?: string | null;
         };
