@@ -3,6 +3,7 @@ import { z } from "zod";
 import { OUTPUT_SCHEMAS, type OutputSchema } from "@/lib/prompts/catalog";
 import { createClient } from "@/lib/supabase/server";
 import { draftAvailability, type DraftAvailability } from "./config";
+import { nameInlineRefs } from "./refs";
 import { draftToMarkdown, parseDraftOutput, type DraftOutput } from "./schemas";
 import type { DeliverableUse } from "./types";
 
@@ -77,7 +78,7 @@ export function storedProposal(
   const parsed = parseDraftOutput(schema.data, refs as [string, ...string[]], output);
   if (!parsed) return null;
   const names = new Map(deliverables.map((use) => [use.ref, use.fileName]));
-  return { output: parsed, markdown: draftToMarkdown(parsed, names) };
+  return { output: parsed, markdown: nameInlineRefs(draftToMarkdown(parsed, names), names) };
 }
 
 export async function getDraftPanel(

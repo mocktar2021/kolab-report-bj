@@ -7,6 +7,7 @@ import { checkDailyCost, finishGeneration, startGeneration } from "@/lib/ai/gene
 import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
 import { estimateCost, estimateFallbackCost, fallbackModel } from "@/lib/ai/models";
+import { nameInlineRefs } from "@/lib/ai/refs";
 import { draftToMarkdown } from "@/lib/ai/schemas";
 import { aiTelemetry } from "@/lib/ai/telemetry";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
@@ -404,7 +405,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
       return close();
     }
 
-    const markdown = draftToMarkdown(result.output, built.names);
+    const markdown = nameInlineRefs(draftToMarkdown(result.output, built.names), built.names);
     const outcome = {
       usage,
       costEstimate,
