@@ -1037,6 +1037,10 @@
       "quotaExceededTrial": "Les {max} brouillons IA de l'essai sont utilisés. Choisissez une offre pour continuer.",
       "quotaExceededMission": "Les {max} brouillons IA de ce Pass Mission sont utilisés. Ajoutez un Pack IA pour continuer.",
       "quotaUsed": "Les brouillons IA inclus dans l'offre sont utilisés. Ajoutez un Pack IA pour continuer.",
+      "tokensExceeded": "Le volume d'IA du mois ({volume}) ne suffit plus pour ce brouillon. Ajoutez un Pack IA ou attendez le {date}. Vous pouvez aussi rédiger la section sans IA.",
+      "tokensExceededTrial": "Le volume d'IA de l'essai ({volume}) ne suffit plus pour ce brouillon. Choisissez une offre pour continuer avec l'IA, ou rédigez la section sans IA.",
+      "tokensExceededMission": "Le volume d'IA de ce Pass Mission ({volume}) ne suffit plus pour ce brouillon. Ajoutez un Pack IA, ou rédigez la section sans IA.",
+      "tokensUsed": "Le volume d'IA inclus dans l'offre ne suffit plus pour ce brouillon. Ajoutez un Pack IA, ou rédigez la section sans IA.",
       "readOnly": "Cet espace de travail est en lecture seule : aucun brouillon ne peut être généré.",
       "templateNotIncluded": "Ce modèle est un modèle personnalisé, inclus dans les offres Cabinet et Institution. Choisissez un modèle standard."
     },
@@ -1959,6 +1963,10 @@
       "draftsUnlimited": "{count, plural, =0 {Aucun brouillon IA} one {# brouillon IA} other {# brouillons IA}}, sans limite",
       "draftsHelpMonth": "Comptés quand ils aboutissent, pour toute l'organisation. Le compteur repart à zéro le 1er de chaque mois.",
       "draftsHelpTotal": "Comptés quand ils aboutissent, pour toute la durée de l'essai.",
+      "tokensMonth": "Volume d'IA ce mois-ci",
+      "tokensTotal": "Volume d'IA de l'essai",
+      "tokensUsage": "{used} sur {max}",
+      "tokensHelp": "Les jetons que l'IA lit et rédige, selon la taille des livrables. L'offre en donne {perDraft} par brouillon IA inclus.",
       "packs": "Packs IA",
       "packsLeft": "{count, plural, =0 {Aucun brouillon IA restant} one {# brouillon IA restant} other {# brouillons IA restants}}",
       "packsHelp": "Utilisés quand l'offre n'a plus de brouillons. Le prochain pack expire le {date}.",
@@ -2118,6 +2126,8 @@
       "reportsUnlimited": "Rapports illimités",
       "draftsPerMonth": "{count, plural, =1 {1 brouillon IA par mois} other {# brouillons IA par mois}}",
       "draftsTotal": "{count, plural, =1 {1 brouillon IA} other {# brouillons IA}}",
+      "aiVolumeMonth": "{volume} d'IA par mois",
+      "aiVolumeTotal": "{volume} d'IA au total",
       "customTemplates": "Modèles de prompt personnalisés",
       "readersFree": "Lecteurs gratuits et illimités"
     },
@@ -2133,7 +2143,7 @@
     },
     "pack": {
       "title": "Pack IA",
-      "description": "{drafts} brouillons IA de plus, valables {months} mois, utilisés quand le quota de votre offre est épuisé.",
+      "description": "{drafts} brouillons IA et {volume} de plus, valables {months} mois, utilisés quand le quota de votre offre est épuisé.",
       "unit": "FCFA le pack",
       "max": "Jusqu'à {max} packs en même temps",
       "paidOnly": "Avec une offre payante ou un Pass Mission, pas pendant l'essai"
@@ -2415,6 +2425,7 @@
       "quotaExceededTrial": "Les {max} brouillons IA de l'essai sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte.",
       "quotaExceededMission": "Les {max} brouillons IA de ce Pass Mission sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte.",
       "quotaUsed": "Les brouillons IA inclus dans l'offre sont utilisés, et la lecture d'un PDF en compte un. Importez un fichier Word ou texte.",
+      "tokensUsed": "Le volume d'IA inclus dans l'offre est épuisé, et la lecture d'un PDF en utilise. Importez un fichier Word ou texte.",
       "aiFailed": "L'IA n'a pas pu lire le plan de ce PDF. Réessayez, ou collez son texte.",
       "aiTimeout": "L'IA a mis trop de temps à lire ce PDF. Réessayez, ou collez son texte.",
       "generic": "Une erreur est survenue. Réessayez.",

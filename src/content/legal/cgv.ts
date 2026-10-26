@@ -1,3 +1,4 @@
+import { AI_TOKENS_PER_DRAFT, tokenVolumeLabel } from "@/lib/billing/catalog";
 import { GROUP_COMPANY, PUBLISHER, SUPPORT_EMAIL } from "./publisher";
 import type { LegalDocument } from "./types";
 
@@ -23,8 +24,15 @@ export function fcfa(value: number) {
 
 const { trial, independant, cabinet, institution, passMission, packIa, graceDays } = OFFERS;
 
+/** The token volume that goes with a number of AI drafts (KRB-252). */
+function volume(drafts: number) {
+  return tokenVolumeLabel(drafts * AI_TOKENS_PER_DRAFT);
+}
+
+const perDraft = amount.format(AI_TOKENS_PER_DRAFT);
+
 export const cgv: LegalDocument = {
-  updatedAt: "2026-10-23",
+  updatedAt: "2026-10-26",
   intro: [
     "Les présentes conditions générales de vente (CGV) s'appliquent à toute commande d'une offre KolabReport par une organisation cliente. Elles complètent les [conditions générales d'utilisation](/cgu).",
   ],
@@ -66,6 +74,10 @@ export const cgv: LegalDocument = {
               "Brouillon IA",
               "Une demande de brouillon de section traitée par l'IA. Chaque brouillon produit compte pour un, qu'il soit accepté ou non.",
             ],
+            [
+              "Volume d'IA",
+              `Le nombre de jetons que l'IA peut lire et rédiger pour l'organisation : ${perDraft} jetons par brouillon IA inclus dans l'offre ou dans un Pack IA. Un jeton correspond à trois ou quatre caractères de texte environ.`,
+            ],
             ["Période", "La durée payée d'avance : un mois, un trimestre ou un an."],
           ],
         },
@@ -85,7 +97,7 @@ export const cgv: LegalDocument = {
                 `Gratuit pendant ${trial.days} jours, sans carte bancaire`,
                 `${trial.members}`,
                 `${trial.reports}`,
-                `${trial.aiDrafts} au total`,
+                `${trial.aiDrafts} au total (${volume(trial.aiDrafts)})`,
                 "Une seule fois par organisation",
               ],
               [
@@ -93,7 +105,7 @@ export const cgv: LegalDocument = {
                 `${fcfa(independant.monthly)} par mois`,
                 `${independant.members}`,
                 `${independant.activeReports} rapports actifs`,
-                `${independant.aiDraftsPerMonth} par mois`,
+                `${independant.aiDraftsPerMonth} par mois (${volume(independant.aiDraftsPerMonth)})`,
                 "Paiement au mois, au trimestre ou à l'année",
               ],
               [
@@ -101,7 +113,7 @@ export const cgv: LegalDocument = {
                 `${fcfa(cabinet.monthly)} par mois`,
                 `${cabinet.members}`,
                 "Illimités",
-                `${cabinet.aiDraftsPerMonth} par mois`,
+                `${cabinet.aiDraftsPerMonth} par mois (${volume(cabinet.aiDraftsPerMonth)})`,
                 "Modèles de prompts personnalisés. Paiement au mois, au trimestre ou à l'année.",
               ],
               [
@@ -117,7 +129,7 @@ export const cgv: LegalDocument = {
                 `${fcfa(passMission.price)} par rapport`,
                 `${passMission.members}`,
                 "1",
-                `${passMission.aiDrafts} pour ce rapport`,
+                `${passMission.aiDrafts} pour ce rapport (${volume(passMission.aiDrafts)})`,
                 `Valable ${passMission.days} jours`,
               ],
               [
@@ -125,7 +137,7 @@ export const cgv: LegalDocument = {
                 `${fcfa(packIa.price)} les ${packIa.aiDrafts} brouillons`,
                 "Sans objet",
                 "Sans objet",
-                `${packIa.aiDrafts} de plus`,
+                `${packIa.aiDrafts} de plus (${volume(packIa.aiDrafts)})`,
                 "S'ajoute à une offre payante en cours",
               ],
             ],
@@ -135,6 +147,7 @@ export const cgv: LegalDocument = {
         "Les prix sont indiqués en francs CFA (FCFA). Ce sont des prix nets : le vendeur relève du régime de la taxe professionnelle synthétique (TPS) et ne facture pas de TVA. Chaque paiement donne lieu à une facture normalisée, émise sur la plateforme e-MECeF de la Direction générale des impôts, dont le numéro figure sur le reçu.",
         "Les offres Indépendant et Cabinet se paient par mois, par trimestre ou par an. Le trimestre coûte trois mois. L'année coûte dix mois : deux mois sont offerts.",
         "Le quota mensuel de brouillons IA repart à zéro chaque mois de la période. Les brouillons non utilisés ne sont pas reportés sur le mois suivant.",
+        "Chaque brouillon IA consomme des jetons, selon la taille des livrables que l'IA lit et du texte qu'elle rédige. Le volume d'IA suit le quota de brouillons : il repart à zéro chaque mois pour une offre au mois, et vaut pour toute la durée de l'essai, du Pass Mission ou du Pack IA. Quand il reste des brouillons mais plus assez de jetons pour une demande, la demande est refusée et rien n'est compté. Le reste du service reste disponible : la section peut être rédigée sans IA, ou un Pack IA ajouté.",
         "Le prix applicable est celui affiché au moment de la commande.",
       ],
     },
@@ -190,7 +203,7 @@ export const cgv: LegalDocument = {
       id: "pass-mission",
       title: "Pass Mission",
       body: [
-        `Le Pass Mission couvre un seul rapport pendant ${passMission.days} jours à partir de la confirmation du paiement, avec ${passMission.members} membres et ${passMission.aiDrafts} brouillons IA pour ce rapport. Il convient à une mission ponctuelle, sans abonnement.`,
+        `Le Pass Mission couvre un seul rapport pendant ${passMission.days} jours à partir de la confirmation du paiement, avec ${passMission.members} membres et ${passMission.aiDrafts} brouillons IA (${volume(passMission.aiDrafts)}) pour ce rapport. Il convient à une mission ponctuelle, sans abonnement.`,
         `À la fin des ${passMission.days} jours, les règles de [fin de période](#fin-de-periode) s'appliquent au rapport : délai de grâce de ${graceDays} jours, puis lecture seule.`,
       ],
     },
@@ -198,8 +211,8 @@ export const cgv: LegalDocument = {
       id: "pack-ia",
       title: "Pack IA",
       body: [
-        `Le Pack IA ajoute ${packIa.aiDrafts} brouillons IA pour ${fcfa(packIa.price)}. Il s'achète en plus d'une offre payante en cours : Indépendant, Cabinet, Institution ou Pass Mission.`,
-        "Les brouillons du pack servent une fois le quota de l'offre épuisé. Ils restent valables 12 mois après l'achat, tant que le client a une offre payante en cours.",
+        `Le Pack IA ajoute ${packIa.aiDrafts} brouillons IA et ${volume(packIa.aiDrafts)} pour ${fcfa(packIa.price)}. Il s'achète en plus d'une offre payante en cours : Indépendant, Cabinet, Institution ou Pass Mission.`,
+        "Les brouillons et les jetons du pack servent une fois le quota de l'offre épuisé. Ils restent valables 12 mois après l'achat, tant que le client a une offre payante en cours.",
         "Le Pack IA ne s'achète pas pendant l'essai gratuit. Dix packs au plus peuvent être en cours en même temps.",
       ],
     },

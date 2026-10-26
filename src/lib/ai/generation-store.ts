@@ -24,6 +24,8 @@ export type StartRefusal =
   // From the organization's plan (ADR 001): no draft left, a read-only
   // workspace, or a custom template on a plan without them.
   | "quotaExceeded"
+  // Drafts left, but not the tokens for this one (KRB-252).
+  | "tokenQuotaExceeded"
   | "readOnly"
   | "templateNotIncluded";
 
@@ -60,14 +62,16 @@ const REFUSALS = new Set<string>([
   "busy",
   "templateUnavailable",
   "quotaExceeded",
+  "tokenQuotaExceeded",
   "readOnly",
   "templateNotIncluded",
 ]);
 
 /**
- * Counts the request against the user's hourly limit, the workspace's
- * monthly budget and the AI drafts of the organization's plan, and records
- * it as running, in one locked step.
+ * Counts the request against the user's hourly limit, the AI drafts and
+ * token volume of the organization's plan (or the workspace's monthly budget
+ * while billing is not enforced), and records it as running, in one locked
+ * step.
  */
 export async function startGeneration(request: StartRequest): Promise<StartResult> {
   const { data, error } = await createAdminClient()

@@ -214,6 +214,10 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
         const key = quota.error as PlanImportErrorKey;
         return refuse(402, key, started.retryAfter, quota.values);
       }
+      // The reading reserves no tokens, so this only comes when the volume
+      // is already past its end (KRB-252).
+      case "tokenQuotaExceeded":
+        return refuse(402, "tokensUsed", started.retryAfter);
       default:
         return refuse(500, "generic");
     }

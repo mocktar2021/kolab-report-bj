@@ -286,7 +286,10 @@ test("past the hourly limit the route answers 429 without calling the model", as
   expect(await generationCount(setup.expert.id)).toBe(before);
 });
 
-test("past the workspace's monthly budget the route answers 429", async ({ page }) => {
+// With billing enforced, as here, the cap is the organization's AI volume
+// (KRB-252): its trial includes 1,000,000 tokens. The workspace's monthly
+// budget only applies without billing (ai_generations_test.sql).
+test("past the organization's AI volume the route answers 402", async ({ page }) => {
   const owner = await createTestUser("Bruno Budget");
   const { api, workspace_id: workspaceId, report_id: reportId } = await createWorkspaceFor(owner, "Budget");
   const { data: section, error } = await api
@@ -296,17 +299,30 @@ test("past the workspace's monthly budget the route answers 429", async ({ page 
     .single();
   if (error || !section) throw error ?? new Error("Could not create the section");
   await addParsedDeliverable(workspaceId, section.id, owner.id, "notes.md");
-  const { error: usageError } = await adminClient().from("ai_generations").insert({
+  // One draft of the trial already used its whole volume.
+  const admin = adminClient();
+  const { data: ws } = await admin
+    .from("workspaces")
+    .select("organization_id")
+    .eq("id", workspaceId)
+    .single();
+  const { data: trial } = await admin
+    .from("billing_entitlements")
+    .select("id")
+    .eq("organization_id", ws?.organization_id ?? "")
+    .eq("plan", "trial")
+    .single();
+  if (!ws || !trial) throw new Error("No trial for the new organization");
+  const { error: usageError } = await admin.from("billing_draft_usage").insert({
+    generation_id: crypto.randomUUID(),
+    organization_id: ws.organization_id,
     workspace_id: workspaceId,
-    section_id: section.id,
-    requested_by: null,
-    output_schema: "section_draft",
-    schema_version: 1,
-    provider: "mock",
-    model: "mock",
-    status: "failed",
-    estimated_tokens: 0,
-    input_tokens: 2_000_000,
+    pool: "trial",
+    entitlement_id: trial.id,
+    usage_month: new Date().toISOString().slice(0, 8) + "01",
+    status: "counted",
+    settled_at: new Date().toISOString(),
+    tokens: 1_000_000,
   });
   if (usageError) throw usageError;
 
@@ -314,6 +330,9 @@ test("past the workspace's monthly budget the route answers 429", async ({ page 
   const response = await page.request.post(draftRoute(section.id), {
     data: { promptVersionId: setup.templateId },
   });
-  expect(response.status()).toBe(429);
-  expect(await response.json()).toMatchObject({ error: "budgetExceeded" });
+  expect(response.status()).toBe(402);
+  expect(await response.json()).toMatchObject({
+    error: "tokensExceededTrial",
+    values: { volume: "1\u00a0million de jetons" },
+  });
 });

@@ -59,6 +59,10 @@ export type DraftUsage = {
   /** Null when there is no limit. */
   allowance: number | null;
   period: "month" | "total";
+  /** Tokens of those drafts (KRB-252). Missing while the database is older than the app. */
+  tokensUsed?: number;
+  /** The token volume of the line, null when there is no limit. */
+  tokensAllowance?: number | null;
 };
 
 export const PURCHASE_STATUSES = ["pending", "paid", "expired", "refunded", "review"] as const;
@@ -227,6 +231,8 @@ const draftsSchema = z
     used: countSchema,
     allowance: limitSchema,
     period: z.enum(["month", "total"]),
+    tokensUsed: countSchema.optional(),
+    tokensAllowance: limitSchema.optional(),
   })
   .optional()
   .transform((drafts): DraftUsage | null => drafts ?? null);

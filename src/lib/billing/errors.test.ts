@@ -7,6 +7,7 @@ import {
   billingErrorMessage,
   describeWorkspaceError,
   draftQuotaMessage,
+  draftTokenMessage,
   formatBillingDate,
   type BillingLineFacts,
 } from "./errors";
@@ -157,6 +158,43 @@ describe("draftQuotaMessage", () => {
     expect(draftQuotaMessage(null, toNextMonth, now)).toEqual({ error: "quotaUsed" });
     expect(draftQuotaMessage(independant, null, now)).toEqual({ error: "quotaUsed" });
     expect(drafts("quotaUsed")).toContain("Pack IA");
+  });
+});
+
+describe("draftTokenMessage", () => {
+  const now = new Date("2026-10-15T12:00:00Z");
+  const toNextMonth = (Date.parse("2026-11-01T00:00:00Z") - now.getTime()) / 1000;
+  const line = {
+    billingMode: "subscription" as const,
+    plan: "independant" as const,
+    limits: PLANS.independant.limits,
+  };
+
+  it("names the month's volume and when it comes back", () => {
+    const described = draftTokenMessage(line, toNextMonth, now);
+    expect(described).toEqual({
+      error: "tokensExceeded",
+      values: { volume: "3\u00a0millions de jetons", date: "1 novembre 2026" },
+    });
+    expect(drafts(described.error, described.values)).toBe(
+      "Le volume d'IA du mois (3\u00a0millions de jetons) ne suffit plus pour ce brouillon. Ajoutez un Pack IA ou attendez le 1 novembre 2026. Vous pouvez aussi rédiger la section sans IA.",
+    );
+  });
+
+  it("names the volume of the trial and of a pass", () => {
+    expect(draftTokenMessage({ ...line, plan: "trial", limits: PLANS.trial.limits }, null, now)).toEqual({
+      error: "tokensExceededTrial",
+      values: { volume: "1\u00a0million de jetons" },
+    });
+    expect(
+      draftTokenMessage({ billingMode: "mission", plan: "mission", limits: PLANS.mission.limits }, null, now),
+    ).toEqual({ error: "tokensExceededMission", values: { volume: "4\u00a0millions de jetons" } });
+  });
+
+  it("falls back to the plain message", () => {
+    expect(draftTokenMessage(null, toNextMonth, now)).toEqual({ error: "tokensUsed" });
+    expect(draftTokenMessage(line, null, now)).toEqual({ error: "tokensUsed" });
+    expect(drafts("tokensUsed")).toContain("sans IA");
   });
 });
 

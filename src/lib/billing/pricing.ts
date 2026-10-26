@@ -1,4 +1,4 @@
-import { OFFERS, PLANS, YEAR_PAID_MONTHS, type PlanLimits } from "./catalog";
+import { aiTokensFor, OFFERS, PLANS, tokenVolumeLabel, YEAR_PAID_MONTHS, type PlanLimits } from "./catalog";
 
 // What the public pricing page shows, read from the catalogue (KRB-179). The
 // page never writes a price or a limit itself, so it changes with
@@ -33,9 +33,10 @@ export function planPrices(plan: PricedPlan): PlanPrices {
   };
 }
 
-/** One line of a plan card: a key of Pricing.features and its count, if any. */
+/** One line of a plan card: a key of Pricing.features and its count or token volume, if any. */
 export type PlanFeature =
   | { key: "members" | "reports" | "activeReports" | "draftsPerMonth" | "draftsTotal"; count: number }
+  | { key: "aiVolumeMonth" | "aiVolumeTotal"; volume: string }
   | { key: "membersUnlimited" | "reportsUnlimited" | "customTemplates" | "readersFree" };
 
 /**
@@ -53,8 +54,18 @@ export function planFeatures(
   );
   if (limits.maxReports === null) features.push({ key: "reportsUnlimited" });
   else features.push({ key: activeReports ? "activeReports" : "reports", count: limits.maxReports });
-  if (limits.draftsPerMonth !== null) features.push({ key: "draftsPerMonth", count: limits.draftsPerMonth });
-  if (limits.draftsTotal !== null) features.push({ key: "draftsTotal", count: limits.draftsTotal });
+  // Each draft brings its token volume (KRB-252).
+  if (limits.draftsPerMonth !== null) {
+    features.push({ key: "draftsPerMonth", count: limits.draftsPerMonth });
+    features.push({
+      key: "aiVolumeMonth",
+      volume: tokenVolumeLabel(aiTokensFor(limits.draftsPerMonth) ?? 0),
+    });
+  }
+  if (limits.draftsTotal !== null) {
+    features.push({ key: "draftsTotal", count: limits.draftsTotal });
+    features.push({ key: "aiVolumeTotal", volume: tokenVolumeLabel(aiTokensFor(limits.draftsTotal) ?? 0) });
+  }
   if (limits.customTemplates) features.push({ key: "customTemplates" });
   features.push({ key: "readersFree" });
   return features;

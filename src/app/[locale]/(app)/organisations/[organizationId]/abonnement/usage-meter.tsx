@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { AI_TOKENS_PER_DRAFT, formatMillions, tokenVolumeLabel } from "@/lib/billing/catalog";
 import { formatBillingDate } from "@/lib/billing/format";
 import type { BillingOverview } from "@/lib/billing/state";
 import { meterPercent } from "@/lib/billing/usage";
@@ -103,6 +104,21 @@ export async function UsageMeter({ overview }: { overview: BillingOverview }) {
             help={draftsPeriod === "month" ? t("meter.draftsHelpMonth") : t("meter.draftsHelpTotal")}
             used={drafts.used}
             max={drafts.allowance}
+          />
+        ) : null}
+        {drafts && drafts.tokensUsed !== undefined && drafts.tokensAllowance ? (
+          <MeterTile
+            id="meter-tokens"
+            label={draftsPeriod === "month" ? t("meter.tokensMonth") : t("meter.tokensTotal")}
+            value={t("meter.tokensUsage", {
+              used: formatMillions(drafts.tokensUsed),
+              max: tokenVolumeLabel(drafts.tokensAllowance),
+            })}
+            help={t("meter.tokensHelp", {
+              perDraft: new Intl.NumberFormat("fr-FR").format(AI_TOKENS_PER_DRAFT),
+            })}
+            used={drafts.tokensUsed}
+            max={drafts.tokensAllowance}
           />
         ) : null}
         <MeterTile
