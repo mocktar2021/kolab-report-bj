@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { LoaderCircle } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { readInPart } from "@/lib/deliverables/parse/types";
 import { loadPreview, type DeliverablePreview as Preview } from "./actions";
 
 /** What the app read from a file, or the image itself. */
@@ -82,7 +83,7 @@ export function DeliverablePreview({ id, name, isImage }: { id: string; name: st
           <Markdown fallback={<p className="text-destructive">{t("previewError")}</p>}>{markdown}</Markdown>
         )}
       </div>
-      {cappedSheets.length > 0 || meta?.truncated ? (
+      {readInPart(meta) ? (
         <ul className="space-y-0.5 border-t px-4 py-2.5 text-xs text-muted-foreground">
           {cappedSheets.map((sheet) => (
             <li key={sheet.name}>
@@ -105,6 +106,7 @@ export function DeliverablePreview({ id, name, isImage }: { id: string; name: st
           ) : meta?.truncated ? (
             <li>{t("previewTruncated")}</li>
           ) : null}
+          <li>{t("previewNoDraft")}</li>
         </ul>
       ) : null}
     </div>

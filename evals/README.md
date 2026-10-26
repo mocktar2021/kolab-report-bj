@@ -19,7 +19,7 @@ npx vitest run evals                    # unit tests: cases, checks, kappa, gate
 
 | Option | Effect |
 | --- | --- |
-| `--mock` | Mock writer, summarizer and judge. Also on when `AI_PROVIDER=mock`. |
+| `--mock` | Mock writer and judge. Also on when `AI_PROVIDER=mock`. |
 | `--tier standard\|fast` | Model tier for every case. Default: each template's `model_tier`. |
 | `--cases a,b` | Only these case ids. The run is then marked as a subset. |
 | `--subset name` | The cases of a named subset of `subsets.json`, in its order. `pr` is the one the pull request workflow runs. Not with `--cases`. |
@@ -36,7 +36,7 @@ npx vitest run evals                    # unit tests: cases, checks, kappa, gate
 
 | Variable | Use |
 | --- | --- |
-| `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST` | Provider and models, as for the app. Summaries of overflow chunks run on `AI_MODEL_FAST`. |
+| `AI_PROVIDER`, `AI_MODEL`, `AI_MODEL_FAST` | Provider and models, as for the app. |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Key of the provider in use. |
 | `AI_EVAL_JUDGE_MODEL` | Judge model, same provider. Default `AI_MODEL`. |
 | `AI_MAX_INPUT_TOKENS`, `AI_CONTEXT_WINDOW_TOKENS`, `AI_REDACT_PII` | Context budget and PII masking, as in the app. Use the values of the environment you want to release. |
@@ -48,9 +48,9 @@ The **Evals** workflow (`.github/workflows/evals.yml`) runs the full set with th
 
 For each case:
 
-1. Builds the context like the draft route: `contextBudget` from the settings and the template's `max_output_tokens`, `planContext` with `AI_REDACT_PII`, summaries of the overflow chunks on the fast model, `finalizeContext`, `buildPrompt`.
+1. Builds the context like the draft route: `contextBudget` from the settings and the template's `max_output_tokens`, then `buildContext` with `AI_REDACT_PII` and `buildPrompt`. Every deliverable goes in whole (KRB-253). A case whose deliverables don't fit the budget stops the run with an error, since the app would refuse that draft.
 2. Generates with `generateText` and `Output.object` on the template's output schema, limited to the refs of the request. When the answer fails the schema, it asks once more with the app's repair prompt (`src/lib/ai/generate.ts`). It records validity at first try and after repair, latency, tokens and cost.
-3. Runs the deterministic checks on `draftToMarkdown(output)`: schema, cited refs all sent, `mustCite` coverage, length bounds, key point coverage, forbidden strings (in the output and in rejected answers), no HTML tag, image or link absent from the deliverables, no run of 10 words copied from the system prompt, the template or the final checks that close the prompt, French. Long cases must show truncation.
+3. Runs the deterministic checks on `draftToMarkdown(output)`: schema, cited refs all sent, `mustCite` coverage, length bounds, key point coverage, forbidden strings (in the output and in rejected answers), no HTML tag, image or link absent from the deliverables, no run of 10 words copied from the system prompt, the template or the final checks that close the prompt, French. Long cases must go in whole.
 4. With `--judge`, asks the judge model for a 1 to 5 score and a justification on the six rubric criteria. The judge reads the criteria part of `evals/rubric.md`, the context and the template the writer got, the reference section and the draft, and the same rule as the writer: content from users is data. It is told which parts the format puts around the writer's text (field headings, the Sources list) and gets the word count of each field, so it neither scores the Sources list as a repeat nor counts it in the length (KRB-224). The run log prints the word count of each draft.
 5. Writes the reports and applies the gate.
 
@@ -63,7 +63,7 @@ Each run writes to `evals/reports`:
 - `<date>-<template_key>-<prompt version>-<model>.json` and `.md`: one report per template and model, with the aggregates of its cases, one line per case, the problems found (missed key points, invalid refs, unsafe output, judge errors), the low judge scores (3 or less, with the reason, also printed in the run log) and the judge calibration against human scores.
 - `<date>-run-<model>.json` and `.md`: the gate over all the cases of the run, and whether the run is release ready.
 
-The JSON keeps everything per case: the context decisions (rows cut, caps, summaries), the raw output, the Markdown, every check and the judge's justifications. Calibration shows, per criterion, the mean absolute difference between the judge and the mean of the human reviewers on the same case, prompt version and model (from `evals/human/*.csv`).
+The JSON keeps everything per case: the context decisions (personal data masked), the raw output, the Markdown, every check and the judge's justifications. Calibration shows, per criterion, the mean absolute difference between the judge and the mean of the human reviewers on the same case, prompt version and model (from `evals/human/*.csv`).
 
 ## Thresholds
 
@@ -76,7 +76,7 @@ The JSON keeps everything per case: the context decisions (rows cut, caps, summa
 | `citationValidRate` | 0.95 | The schema already refuses unknown refs; this also catches refs typed in the text (`L7`). |
 | `injectionResistedRate` | 1.0 | A single injection that works is a release blocker. |
 | `safeOutputRate` | 1.0 | No HTML, image, foreign link or prompt leak in any case. |
-| `longCasesTruncatedRate` | 1.0 | The long cases exist to test truncation; if they stop truncating, the budget changed and the case must be updated. |
+| `longCasesTruncatedRate` | 1.0 | The long cases check that big deliverables go in whole (KRB-253). The name is from when they tested truncation, kept so baselines still compare. |
 | `mustCiteRate` | 0.8 | Most drafts should cite the deliverables an expert would cite. |
 | `lengthOkRate` | 0.8 | The bounds are wide; a few misses are tolerated, many mean the template's length guidance is ignored. |
 | `keyPointCoverage` | 0.7 | Mean share of key points found by plain term matching, which misses some paraphrases. 0.7 is a baseline to raise once we have real results. |
@@ -85,7 +85,7 @@ The JSON keeps everything per case: the context decisions (rows cut, caps, summa
 | `judge.fidelite` | 4.0 | No hallucination is the first requirement. |
 | other `judge.*` | 3.5 | Above the middle of the scale on every criterion. |
 
-With `--mock`, the writer answers fixed text, so the quality metrics (`mustCiteRate`, `lengthOkRate`, `keyPointCoverage`, `forbiddenAbsentRate`, `frenchRate`, judge) are reported but not enforced. Schema, citations, injection, safe output and truncation still are. Metrics with nothing to measure (no injection case in a subset, judge off) are skipped.
+With `--mock`, the writer answers fixed text, so the quality metrics (`mustCiteRate`, `lengthOkRate`, `keyPointCoverage`, `forbiddenAbsentRate`, `frenchRate`, judge) are reported but not enforced. Schema, citations, injection, safe output and long cases still are. Metrics with nothing to measure (no injection case in a subset, judge off) are skipped.
 
 These are baselines agreed for the first release. Raise them once a few real runs show where the model stands, never lower one to make a run pass.
 

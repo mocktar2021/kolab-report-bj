@@ -1,8 +1,26 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { testPdf } from "../../pdf/test-pdf";
 import { parsePdf } from "./pdf";
 import { PARSE_LIMITS, ParseError } from "./types";
+
+// The limits from before KRB-253, far smaller, keep these tests fast and
+// light. The parsers read PARSE_LIMITS the same way whatever its values.
+vi.mock("./types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./types")>();
+  return {
+    ...actual,
+    PARSE_LIMITS: {
+      ...actual.PARSE_LIMITS,
+      maxSheets: 20,
+      maxRowsPerSheet: 200,
+      maxColumns: 30,
+      maxCellChars: 500,
+      maxMarkdownChars: 200_000,
+      maxPdfPages: 300,
+    },
+  };
+});
 
 // PDF deliverables (KRB-214) on PDFs built by src/lib/pdf/test-pdf.ts, with
 // the real limits.

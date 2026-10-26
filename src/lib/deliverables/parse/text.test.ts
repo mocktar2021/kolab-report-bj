@@ -1,8 +1,26 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { decodeText, parseCsv, parseCsvRows, parsePlainText } from "./text";
 import { PARSE_LIMITS, type ParseResult } from "./types";
+
+// The limits from before KRB-253, far smaller, keep these tests fast and
+// light. The parsers read PARSE_LIMITS the same way whatever its values.
+vi.mock("./types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./types")>();
+  return {
+    ...actual,
+    PARSE_LIMITS: {
+      ...actual.PARSE_LIMITS,
+      maxSheets: 20,
+      maxRowsPerSheet: 200,
+      maxColumns: 30,
+      maxCellChars: 500,
+      maxMarkdownChars: 200_000,
+      maxPdfPages: 300,
+    },
+  };
+});
 
 const fixture = (name: string) =>
   readFileSync(new URL(`../../../../tests/fixtures/deliverables/${name}`, import.meta.url));
@@ -81,6 +99,7 @@ describe("parseCsvRows", () => {
       ],
       totalRows: 2,
       totalColumns: 2,
+      cellsCut: false,
     });
   });
 
@@ -119,11 +138,12 @@ describe("parseCsvRows", () => {
       ],
       totalRows: 3,
       totalColumns: 3,
+      cellsCut: false,
     });
   });
 
   it("reads an empty text", () => {
-    expect(parseCsvRows("")).toEqual({ rows: [], totalRows: 0, totalColumns: 0 });
+    expect(parseCsvRows("")).toEqual({ rows: [], totalRows: 0, totalColumns: 0, cellsCut: false });
   });
 
   it("keeps 200 rows and 30 columns but counts them all", () => {
@@ -197,9 +217,17 @@ describe("parseCsv", () => {
     const text = Array.from({ length: 250 }, () => Array.from({ length: 40 }, () => "v").join(",")).join(
       "\n",
     );
-    expect(parsed(parseCsv(utf8(text))).meta.sheets).toEqual([
-      { name: "CSV", rows: 250, columns: 40, keptRows: 200, keptColumns: 30 },
-    ]);
+    const { meta } = parsed(parseCsv(utf8(text)));
+    expect(meta.sheets).toEqual([{ name: "CSV", rows: 250, columns: 40, keptRows: 200, keptColumns: 30 }]);
+    // Read in part: the AI won't draft from it (KRB-253).
+    expect(meta.truncated).toBe(true);
+  });
+
+  it("flags a value cut at maxCellChars", () => {
+    const long = "x".repeat(PARSE_LIMITS.maxCellChars + 1);
+    expect(parseCsvRows(`a;"${long}"\n`).cellsCut).toBe(true);
+    expect(parsed(parseCsv(utf8(`a;${long}\n`))).meta.truncated).toBe(true);
+    expect(parsed(parseCsv(utf8(`a;${"x".repeat(PARSE_LIMITS.maxCellChars)}\n`))).meta.truncated).toBe(false);
   });
 });
 

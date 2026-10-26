@@ -51,12 +51,9 @@ export function upfrontSpend(value: LoadedCase, deps: RunDeps): Spend {
   const source = estimateTokens(
     value.input.deliverables.map((deliverable) => deliverable.markdown).join("\n\n"),
   );
-  const kept = Math.min(source, settings.maxInputTokens);
-  const overflow = source - kept;
   const output = template.maxOutputTokens || settings.defaultMaxOutputTokens;
-  const draft: TokenUsage = { inputTokens: prompt + kept, outputTokens: output };
-  // Overflow chunks are read once by the fast model, which writes short summaries.
-  const summaries: TokenUsage = { inputTokens: overflow, outputTokens: Math.ceil(overflow / 10) };
+  // Every deliverable goes in whole (KRB-253).
+  const draft: TokenUsage = { inputTokens: prompt + source, outputTokens: output };
   const judge: TokenUsage = deps.judge
     ? {
         inputTokens:
@@ -68,21 +65,17 @@ export function upfrontSpend(value: LoadedCase, deps: RunDeps): Spend {
       }
     : ZERO;
   return {
-    usd:
-      cost(settings, deps.tier, draft) +
-      cost(settings, "fast", summaries) +
-      cost(settings, "standard", judge),
-    tokens: total(draft) + total(summaries) + total(judge),
+    usd: cost(settings, deps.tier, draft) + cost(settings, "standard", judge),
+    tokens: total(draft) + total(judge),
   };
 }
 
-/** What a finished case cost: draft, summaries and judge (priced as the standard tier). */
+/** What a finished case cost: draft and judge (priced as the standard tier). */
 export function caseSpend(result: CaseResult, settings: AiSettings): Spend {
   const judge = result.judge && "scores" in result.judge ? result.judge.usage : ZERO;
   return {
-    usd:
-      (result.generation.costUsd ?? 0) + (result.summaries.costUsd ?? 0) + cost(settings, "standard", judge),
-    tokens: total(result.generation.usage) + total(result.summaries.usage) + total(judge),
+    usd: (result.generation.costUsd ?? 0) + cost(settings, "standard", judge),
+    tokens: total(result.generation.usage) + total(judge),
   };
 }
 

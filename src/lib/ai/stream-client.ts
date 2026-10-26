@@ -9,6 +9,9 @@ const ERROR_KEYS = {
   notFound: true,
   invalidRequest: true,
   noDeliverables: true,
+  deliverableReadInPart: true,
+  deliverablesReadInPart: true,
+  contextTooLarge: true,
   templateUnavailable: true,
   aiUnavailable: true,
   rateLimited: true,
@@ -122,14 +125,19 @@ function errorValues(value: unknown): DraftErrorValues | undefined {
   const values: DraftErrorValues = {};
   if (typeof value.max === "number" && Number.isInteger(value.max) && value.max >= 0) values.max = value.max;
   if (typeof value.date === "string" && value.date.length <= 40) values.date = value.date;
+  if (typeof value.name === "string" && value.name.length > 0 && value.name.length <= 300)
+    values.name = value.name;
   return Object.keys(values).length > 0 ? values : undefined;
 }
 
-/** Quota messages need these values; without them the plain one is shown. */
-const NEEDED_VALUES: Partial<Record<DraftErrorKey, (keyof DraftErrorValues)[]>> = {
-  quotaExceeded: ["max", "date"],
-  quotaExceededTrial: ["max"],
-  quotaExceededMission: ["max"],
+/** Messages that need these values; without them the plain message is shown. */
+const NEEDED_VALUES: Partial<
+  Record<DraftErrorKey, { values: (keyof DraftErrorValues)[]; plain: DraftErrorKey }>
+> = {
+  quotaExceeded: { values: ["max", "date"], plain: "quotaUsed" },
+  quotaExceededTrial: { values: ["max"], plain: "quotaUsed" },
+  quotaExceededMission: { values: ["max"], plain: "quotaUsed" },
+  deliverableReadInPart: { values: ["name"], plain: "deliverablesReadInPart" },
 };
 
 /**
@@ -147,7 +155,9 @@ export async function draftRequestError(response: Response): Promise<DraftErrorB
   const record = isRecord(body) ? body : {};
   let error = isDraftErrorKey(record.error) ? record.error : "generic";
   const values = errorValues(record.values);
-  if (NEEDED_VALUES[error]?.some((name) => values?.[name] === undefined)) error = "quotaUsed";
+  const needed = NEEDED_VALUES[error];
+  const plain = needed?.values.some((name) => values?.[name] === undefined) ?? false;
+  if (needed && plain) error = needed.plain;
   const fromBody =
     typeof record.retryAfter === "number" && Number.isFinite(record.retryAfter) && record.retryAfter >= 0
       ? Math.ceil(record.retryAfter)
@@ -156,6 +166,6 @@ export async function draftRequestError(response: Response): Promise<DraftErrorB
   return {
     error,
     ...(retryAfter === undefined ? {} : { retryAfter }),
-    ...(values && error !== "quotaUsed" ? { values } : {}),
+    ...(values && !plain ? { values } : {}),
   };
 }

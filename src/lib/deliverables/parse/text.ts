@@ -42,8 +42,13 @@ function delimiterOf(text: string): string {
   return counts.reduce((best, current) => (current[1] > best[1] ? current : best))[0];
 }
 
-/** Rows of a CSV text, quotes handled, cut at the parse limits. */
-export function parseCsvRows(text: string): { rows: string[][]; totalRows: number; totalColumns: number } {
+/** Rows of a CSV text, quotes handled, cut at the parse limits. `cellsCut`: a value was longer than maxCellChars. */
+export function parseCsvRows(text: string): {
+  rows: string[][];
+  totalRows: number;
+  totalColumns: number;
+  cellsCut: boolean;
+} {
   const delimiter = delimiterOf(text);
   const rows: string[][] = [];
   // Values past the column limit are counted, not kept.
@@ -53,6 +58,7 @@ export function parseCsvRows(text: string): { rows: string[][]; totalRows: numbe
   let quoted = false;
   let totalRows = 0;
   let totalColumns = 0;
+  let cellsCut = false;
   const endValue = () => {
     if (columns < PARSE_LIMITS.maxColumns) row.push(value);
     columns++;
@@ -78,6 +84,8 @@ export function parseCsvRows(text: string): { rows: string[][]; totalRows: numbe
         quoted = false;
       } else if (value.length < PARSE_LIMITS.maxCellChars) {
         value += char;
+      } else {
+        cellsCut = true;
       }
     } else if (char === '"' && value === "") {
       quoted = true;
@@ -88,14 +96,16 @@ export function parseCsvRows(text: string): { rows: string[][]; totalRows: numbe
       endRow();
     } else if (value.length < PARSE_LIMITS.maxCellChars) {
       value += char;
+    } else {
+      cellsCut = true;
     }
   }
   if (value !== "" || columns > 0) endRow();
-  return { rows, totalRows, totalColumns };
+  return { rows, totalRows, totalColumns, cellsCut };
 }
 
 export function parseCsv(bytes: Uint8Array): ParseResult {
-  const { rows, totalRows, totalColumns } = parseCsvRows(decodeText(bytes));
+  const { rows, totalRows, totalColumns, cellsCut } = parseCsvRows(decodeText(bytes));
   const grid = rows.map((row) => row.map(escapeInline));
   const sheet = {
     name: "CSV",
@@ -104,10 +114,9 @@ export function parseCsv(bytes: Uint8Array): ParseResult {
     keptRows: rows.length,
     keptColumns: Math.min(totalColumns, PARSE_LIMITS.maxColumns),
   };
-  return {
-    status: "parsed",
-    ...finishMarkdown(tableToMarkdown(grid), { kind: "spreadsheet", sheets: [sheet] }),
-  };
+  const { markdown, meta } = finishMarkdown(tableToMarkdown(grid), { kind: "spreadsheet", sheets: [sheet] });
+  const partial = cellsCut || sheet.keptRows < sheet.rows || sheet.keptColumns < sheet.columns;
+  return { status: "parsed", markdown, meta: { ...meta, truncated: meta.truncated || partial } };
 }
 
 /** Bytes of a text file that hold at least maxMarkdownChars characters, whatever the encoding. */

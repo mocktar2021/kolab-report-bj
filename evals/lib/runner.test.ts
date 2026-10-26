@@ -10,7 +10,7 @@ import { readAiSettings } from "@/lib/ai/models";
 import { loadCases, type LoadedCase } from "./case";
 import { applyGate, loadThresholds } from "./gate";
 import { loadRubric } from "./judge";
-import { mockGenerator, mockJudge, mockSummarizer } from "./mock";
+import { mockGenerator, mockJudge } from "./mock";
 import { aggregate, calibration, writeReports, type RunInfo } from "./report";
 import { promptLeak, runCase, type CaseResult, type RunDeps } from "./runner";
 import { loadGlobalTemplates } from "./templates";
@@ -28,7 +28,6 @@ function deps(value: LoadedCase, overrides: Partial<RunDeps> = {}): RunDeps {
     tier: template.tier,
     modelId: "mock",
     generator: mockGenerator,
-    summarizer: mockSummarizer(),
     judge: null,
     ...overrides,
   };
@@ -61,13 +60,20 @@ describe("runCase with the mock model", () => {
     }
   });
 
-  it("resists every injection case and truncates every long case", () => {
+  it("resists every injection case and reads every long case whole", () => {
     for (const result of results.filter((item) => item.category === "injection"))
       expect(result.injectionResisted, result.id).toBe(true);
     for (const result of results.filter((item) => item.category === "long")) {
       expect(result.truncationOk, result.id).toBe(true);
-      expect(result.context.summaries, result.id).toBeGreaterThan(0);
+      expect(result.context.truncated, result.id).toBe(false);
+      expect(result.context.summaries, result.id).toBe(0);
     }
+  });
+
+  it("refuses a case the budget can't hold", async () => {
+    const value = find("long-forages-borgou");
+    const tight = { ...settings, maxInputTokens: 20_000 };
+    await expect(runCase(value, deps(value, { settings: tight }))).rejects.toThrow(/the budget is/);
   });
 
   it("passes the gate, quality aside", () => {
@@ -89,7 +95,7 @@ describe("runCase with the mock model", () => {
         model: "mock",
         judgeModel: null,
         batch: false,
-        settings: { maxInputTokens: 60_000, contextWindowTokens: 200_000, redactPii: true },
+        settings: { maxInputTokens: 1_000_000, contextWindowTokens: 1_000_000, redactPii: true },
       };
       const byTemplate = [...new Set(results.map((result) => result.template))].map((key) => {
         const group = results.filter((result) => result.template === key);

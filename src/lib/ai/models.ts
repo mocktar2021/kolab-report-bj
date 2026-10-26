@@ -35,8 +35,13 @@ export type AiSettings = {
    * counts inside the cap.
    */
   draftThinking: { effort: DraftEffort; tokens: number };
+  /** What the model reads at once. Deliverables that don't fit it give no draft (KRB-253). */
   contextWindowTokens: number;
-  /** Ceiling for one prompt, whatever the model accepts, to keep the cost of a draft in check. */
+  /**
+   * Optional ceiling for one prompt, below the window. The organization's AI
+   * volume keeps the cost in check (KRB-252), so by default the window is the
+   * limit.
+   */
   maxInputTokens: number;
   rateLimitPerHour: number;
   monthlyTokenBudget: number;
@@ -133,8 +138,9 @@ export function readAiSettings(env: Env): AiSettings {
       effort: setting(z.enum(DRAFT_EFFORTS), env.AI_DRAFT_EFFORT, "high"),
       tokens: setting(positiveInt.min(1024).max(32_000), env.AI_DRAFT_THINKING_TOKENS, 12_000),
     },
-    contextWindowTokens: setting(positiveInt, env.AI_CONTEXT_WINDOW_TOKENS, 200_000),
-    maxInputTokens: setting(positiveInt.min(4000), env.AI_MAX_INPUT_TOKENS, 60_000),
+    // Claude Sonnet 5.5 and Haiku 5.5 read 1M tokens.
+    contextWindowTokens: setting(positiveInt, env.AI_CONTEXT_WINDOW_TOKENS, 1_000_000),
+    maxInputTokens: setting(positiveInt.min(4000), env.AI_MAX_INPUT_TOKENS, 1_000_000),
     rateLimitPerHour: setting(positiveInt, env.AI_RATE_LIMIT_PER_HOUR, 30),
     monthlyTokenBudget: setting(positiveInt, env.AI_MONTHLY_TOKEN_BUDGET, 2_000_000),
     templateWriterPerDay: setting(positiveInt.max(1000), env.AI_TEMPLATE_WRITER_PER_DAY, 20),
@@ -182,7 +188,7 @@ export function providerModel(settings: AiSettings, tier: ModelTier, env: Env): 
 }
 
 /**
- * Provider options for summaries, the template writer and plan reading: no
+ * Provider options for the template writer and plan reading: no
  * thinking before the answer. Claude Sonnet 5 and later think by default, and
  * thinking counts inside `maxOutputTokens`, so a long context left too little
  * room for the JSON. The Anthropic provider sends `between_tools` to Sonnet

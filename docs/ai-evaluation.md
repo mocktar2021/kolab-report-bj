@@ -8,7 +8,7 @@ Each run drafts every golden case with the app's own pipeline (context builder, 
 
 | Layer | What it checks | Why |
 | --- | --- | --- |
-| Deterministic checks | Schema valid at first try and after repair, cited refs all sent with the request, `mustCite` coverage, length bounds, key point coverage, forbidden strings, no HTML, image or foreign link, no prompt leak, French, truncation of the long cases, injection resistance | Exact, free and the same on every run. They catch a broken prompt, schema or context change. |
+| Deterministic checks | Schema valid at first try and after repair, cited refs all sent with the request, `mustCite` coverage, length bounds, key point coverage, forbidden strings, no HTML, image or foreign link, no prompt leak, French, long cases read whole, injection resistance | Exact, free and the same on every run. They catch a broken prompt, schema or context change. |
 | LLM judge (`--judge`) | A score from 1 to 5, with a justification, on the six criteria of [`evals/rubric.md`](../evals/rubric.md): fidélité, couverture, structure, langue, actionnable, citations | Term matching misses paraphrases and can't tell a clear draft from a muddled one that names the right figures. The judge reads like a reviewer, with some noise. It sees the template the writer followed and the word count of each field, so it scores length against the template's own rule. |
 | Human rubric | Two reviewers score at least 8 cases of a run with the same rubric, in `evals/human/*.csv` | The judge is trusted only while it scores like people. `npm run eval:agreement` gives the quadratic weighted kappa per criterion (0.6 or more means the rubric is clear enough), and the run report shows how far the judge is from the human mean (0.75 point at most). |
 
@@ -95,7 +95,7 @@ Then:
 
 | Command | What it does |
 | --- | --- |
-| `npm run eval -- --mock` | Mock model: no key, no cost. Checks the pipeline: schema, citations, injections, truncation. Quality is reported, not enforced. |
+| `npm run eval -- --mock` | Mock model: no key, no cost. Checks the pipeline: schema, citations, injections, long cases. Quality is reported, not enforced. |
 | `npm run eval` | Real provider from `.env.local` or the environment, every case. |
 | `npm run eval -- --subset pr` | The cases of `pr` in `evals/subsets.json`, in that order. |
 | `npm run eval -- --cases a,b` | These case ids only. |
@@ -208,8 +208,8 @@ Nobody waits for the nightly run, so it sends its calls through the Anthropic Me
 
 How it works (`evals/lib/batch.ts`):
 
-- Every case runs at once. Each call (overflow summary, draft, repair, judge) waits in a queue, and after two quiet seconds the queue goes out as one batch, through the AI SDK provider's batch interface. The request is the one a direct call sends: same prompt, output schema, output cap and thinking setting. Each result goes back to its caller unchanged, so the schema check, the repair and the judge work as with the standard API.
-- A full run takes about three batches in a row: the summaries and the drafts of the short cases, then the drafts of the long cases and the first judges, then the last judges. A repair adds one.
+- Every case runs at once. Each call (draft, repair, judge) waits in a queue, and after two quiet seconds the queue goes out as one batch, through the AI SDK provider's batch interface. The request is the one a direct call sends: same prompt, output schema, output cap and thinking setting. Each result goes back to its caller unchanged, so the schema check, the repair and the judge work as with the standard API.
+- A full run takes about two batches in a row: the drafts, then the judges. A repair adds one.
 - The job checks each batch every 15 seconds. A batch usually ends within minutes, but Anthropic allows up to 24 hours, and the runner bills Actions minutes while it waits. So `EVAL_BATCH_WAIT_MINUTES` (20 by default) after the start, the run cancels the open batch and sends what it did not finish to the standard API at full price. The log says how many calls went that way.
 - A failed request comes back as the error a direct call would get, so the AI SDK retries what it would retry. A batch that can't start or fails sends its calls directly.
 - The latency is not measured: it would measure the queue. The reports and the comment say so, and the comparison skips the latency row when either run has none. The cost estimate and the budget use half the `AI_PRICE_*` prices; calls sent directly after the wait cap are counted at that price too.

@@ -34,9 +34,9 @@ export type CaseSummary = {
   error: string | null;
   /** Generation latency, repair included. Null when not measured (Batch API). */
   latencyMs: number | null;
-  /** Draft, summaries and judge. */
+  /** Draft and judge. */
   tokens: { input: number; output: number };
-  /** Draft and summaries, null when no price is set. The judge is left out, as in the reports. */
+  /** The draft, null when no price is set. The judge is left out, as in the reports. */
   costUsd: number | null;
 };
 
@@ -54,8 +54,8 @@ export function judged(result: CaseResult) {
 
 export function summarizeCase(result: CaseResult): CaseSummary {
   const judge = judged(result);
-  const usages = [result.generation.usage, result.summaries.usage, ...(judge ? [judge.usage] : [])];
-  const costs = [result.generation.costUsd, result.summaries.costUsd].filter((cost) => cost !== null);
+  const usages = [result.generation.usage, ...(judge ? [judge.usage] : [])];
+  const costs = [result.generation.costUsd].filter((cost) => cost !== null);
   return {
     id: result.id,
     category: result.category,

@@ -18,7 +18,7 @@ import { SetupError } from "./lib/errors";
 import { executeCases } from "./lib/execute";
 import { applyGate, loadThresholds, renderGate } from "./lib/gate";
 import { loadRubric } from "./lib/judge";
-import { mockGenerator, mockJudge, mockSummarizer } from "./lib/mock";
+import { mockGenerator, mockJudge } from "./lib/mock";
 import {
   aggregate,
   calibration,
@@ -219,7 +219,7 @@ function caseLine(result: CaseResult, index: number, total: number, mock: boolea
   const extra = [
     result.injectionResisted === false ? "INJECTION" : "",
     result.forbiddenFound.length > 0 ? "forbidden" : "",
-    result.truncationOk === false ? "NOT TRUNCATED" : "",
+    result.truncationOk === false ? "NOT WHOLE" : "",
   ].filter(Boolean);
   const why = result.generation.rejections.map((reason) => `\n      refused: ${reason}`).join("");
   // In the CI log, where the reports artifact can't be read (KRB-224). The
@@ -311,7 +311,6 @@ async function evaluate(options: Options, env: Env): Promise<number> {
       ? mockJudge()
       : live(realModel(settings, "standard", env, judgeModelId ?? undefined));
   const judge = judgeModel ? { model: judgeModel, rubric: loadRubric() } : null;
-  const summarizer = mock ? mockSummarizer() : live(realModel(settings, "fast", env));
 
   const depsFor = (value: LoadedCase): RunDeps => {
     const template = templates.get(value.template);
@@ -323,10 +322,7 @@ async function evaluate(options: Options, env: Env): Promise<number> {
       tier,
       modelId: mock ? "mock" : settings.models[tier],
       generator: mock ? mockGenerator : () => live(realModel(settings, tier, env)),
-      summarizer,
       judge,
-      // All the overflow chunks of a case in one batch, not three at a time.
-      summaryConcurrency: batching ? Number.MAX_SAFE_INTEGER : undefined,
       timed: !batching,
     };
   };
