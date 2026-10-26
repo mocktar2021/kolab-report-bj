@@ -1,4 +1,4 @@
-import { OFFERS, PLANS, TRIAL, type PlanLimits } from "@/lib/billing/catalog";
+import { aiTokensFor, OFFERS, PLANS, tokenVolumeLabel, TRIAL, type PlanLimits } from "@/lib/billing/catalog";
 import type { LegalBlock } from "@/content/legal/types";
 
 // The limits of each plan for the FAQ of the guide (KRB-199), read from the
@@ -32,11 +32,14 @@ export function reportsCell(limits: PlanLimits, { activeReports }: { activeRepor
     : count(limits.maxReports, "rapport", "rapports");
 }
 
-/** AI drafts by the month, or for the whole trial or pass. */
+/** AI drafts by the month, or for the whole trial or pass, with their token volume (KRB-252). */
 export function draftsCell(limits: PlanLimits): string {
   const parts: string[] = [];
-  if (limits.draftsPerMonth !== null) parts.push(`${NUMBER.format(limits.draftsPerMonth)} par mois`);
-  if (limits.draftsTotal !== null) parts.push(`${NUMBER.format(limits.draftsTotal)} au total`);
+  const volume = (drafts: number) => tokenVolumeLabel(aiTokensFor(drafts) ?? 0);
+  if (limits.draftsPerMonth !== null)
+    parts.push(`${NUMBER.format(limits.draftsPerMonth)} par mois (${volume(limits.draftsPerMonth)})`);
+  if (limits.draftsTotal !== null)
+    parts.push(`${NUMBER.format(limits.draftsTotal)} au total (${volume(limits.draftsTotal)})`);
   return parts.length > 0 ? parts.join(", ") : "Illimités";
 }
 

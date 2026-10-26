@@ -23,6 +23,35 @@ export const GRACE_DAYS = 7;
 /** A year of Indépendant or Cabinet costs this many months. */
 export const YEAR_PAID_MONTHS = 10;
 
+/**
+ * Tokens of AI volume for each draft a plan, pass or Pack IA includes
+ * (KRB-252). A draft reads whole deliverables, so its size varies a lot: the
+ * volume caps the AI bill of an organization. Also in
+ * private.billing_tokens_per_draft() in
+ * supabase/migrations/20261026170000_ai_token_volume.sql, checked by
+ * catalog.test.ts.
+ */
+export const AI_TOKENS_PER_DRAFT = 50_000;
+
+/** The token volume that goes with a number of drafts, null when there is no limit. */
+export function aiTokensFor(drafts: number | null): number | null {
+  return drafts === null ? null : drafts * AI_TOKENS_PER_DRAFT;
+}
+
+const MILLIONS = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+const USED_MILLIONS = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
+
+/** Tokens used, in millions: "0,31", "2,9". */
+export function formatMillions(tokens: number): string {
+  return USED_MILLIONS.format(tokens / 1_000_000);
+}
+
+/** "3 millions de jetons", "1 million de jetons", "12,5 millions de jetons". */
+export function tokenVolumeLabel(tokens: number): string {
+  const millions = tokens / 1_000_000;
+  return `${MILLIONS.format(millions)}\u00a0${millions < 2 ? "million" : "millions"} de jetons`;
+}
+
 /** Mirrors the plan column of public.billing_entitlements. */
 export const PLAN_CODES = ["trial", "independant", "cabinet", "institution", "mission"] as const;
 

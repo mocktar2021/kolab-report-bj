@@ -35,15 +35,22 @@ export type DraftErrorKey =
   | "quotaExceededTrial"
   | "quotaExceededMission"
   | "quotaUsed"
+  // The token volume that goes with those drafts (KRB-252): a draft left,
+  // but not the tokens for this one.
+  | "tokensExceeded"
+  | "tokensExceededTrial"
+  | "tokensExceededMission"
+  | "tokensUsed"
   | "readOnly"
   | "templateNotIncluded"
   | "generic";
 
 /**
- * What the messages show: {max} drafts and the {date} the month's allowance
- * comes back for the quota ones, the {name} of a deliverable read in part.
+ * What the messages show: {max} drafts, the token {volume} ("3 millions de
+ * jetons") and the {date} the month's allowance comes back for the quota
+ * ones, the {name} of a deliverable read in part.
  */
-export type DraftErrorValues = { max?: number; date?: string; name?: string };
+export type DraftErrorValues = { max?: number; volume?: string; date?: string; name?: string };
 
 /**
  * Body of a refused request (any status but 200). 429 answers also carry a

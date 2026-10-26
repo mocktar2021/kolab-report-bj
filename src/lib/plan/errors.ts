@@ -31,6 +31,8 @@ export type PlanImportErrorKey =
   | "quotaExceededTrial"
   | "quotaExceededMission"
   | "quotaUsed"
+  // The token volume of the plan is used up (KRB-252).
+  | "tokensUsed"
   | "aiFailed"
   | "aiTimeout"
   | "generic";

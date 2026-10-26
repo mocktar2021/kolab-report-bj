@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { OFFERS as CGV_OFFERS } from "@/content/legal/cgv";
 import { PUBLISHER } from "@/content/legal/publisher";
 import {
+  AI_TOKENS_PER_DRAFT,
+  aiTokensFor,
   GRACE_DAYS,
   INSTITUTION,
   isOfferCode,
@@ -14,6 +16,7 @@ import {
   PLAN_CODES,
   PLANS,
   taxLines,
+  tokenVolumeLabel,
   TRIAL,
   YEAR_PAID_MONTHS,
 } from "./catalog";
@@ -61,6 +64,35 @@ describe("private.billing_trial_terms()", () => {
     });
     // The trial has one allowance for its whole length, never a monthly one.
     expect(TRIAL.limits.draftsPerMonth).toBeNull();
+  });
+});
+
+describe("private.billing_tokens_per_draft()", () => {
+  it("matches the token volume of a draft in the catalogue", () => {
+    const migration = readFileSync(
+      new URL("../../../supabase/migrations/20261026170000_ai_token_volume.sql", import.meta.url),
+      "utf8",
+    );
+    expect(functionBody("private.billing_tokens_per_draft", migration).trim()).toBe(
+      `select ${AI_TOKENS_PER_DRAFT}::bigint;`,
+    );
+  });
+});
+
+describe("token volume", () => {
+  it("goes with the drafts of each pool", () => {
+    expect(aiTokensFor(TRIAL.limits.draftsTotal)).toBe(1_000_000);
+    expect(aiTokensFor(PLANS.independant.limits.draftsPerMonth)).toBe(3_000_000);
+    expect(aiTokensFor(PLANS.cabinet.limits.draftsPerMonth)).toBe(12_500_000);
+    expect(aiTokensFor(OFFERS.ai_pack_100.drafts)).toBe(5_000_000);
+    expect(aiTokensFor(null)).toBeNull();
+  });
+
+  it("reads in millions", () => {
+    expect(tokenVolumeLabel(1_000_000)).toBe("1\u00a0million de jetons");
+    expect(tokenVolumeLabel(3_000_000)).toBe("3\u00a0millions de jetons");
+    expect(tokenVolumeLabel(12_500_000)).toBe("12,5\u00a0millions de jetons");
+    expect(tokenVolumeLabel(1_500_000)).toBe("1,5\u00a0million de jetons");
   });
 });
 

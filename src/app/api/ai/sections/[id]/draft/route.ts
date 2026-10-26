@@ -17,7 +17,7 @@ import type {
   DraftErrorValues,
   DraftStreamEvent,
 } from "@/lib/ai/types";
-import { describeDraftQuota } from "@/lib/billing/errors";
+import { describeDraftQuota, describeDraftTokens } from "@/lib/billing/errors";
 import { readInPart, type ParseMeta } from "@/lib/deliverables/parse/types";
 import { log, withRequestId } from "@/lib/log";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier } from "@/lib/prompts/catalog";
@@ -252,6 +252,11 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
       case "quotaExceeded": {
         const quota = await describeDraftQuota(section.workspace_id, started.retryAfter);
         return refuse(402, quota.error, started.retryAfter, quota.values);
+      }
+      // Drafts left, but not the tokens this one needs (KRB-252).
+      case "tokenQuotaExceeded": {
+        const tokens = await describeDraftTokens(section.workspace_id, started.retryAfter);
+        return refuse(402, tokens.error, started.retryAfter, tokens.values);
       }
       case "readOnly":
       case "templateNotIncluded":

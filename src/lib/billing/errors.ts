@@ -6,7 +6,7 @@ import {
   type WorkspaceErrorKey,
   type WorkspaceErrorValues,
 } from "@/lib/workspaces/errors";
-import { PLANS, type PlanCode, type PlanLimits } from "./catalog";
+import { aiTokensFor, PLANS, tokenVolumeLabel, type PlanCode, type PlanLimits } from "./catalog";
 import { formatBillingDate } from "./format";
 import { getBillingOverview, getWorkspaceBillingState, type BillingMode } from "./state";
 
@@ -137,6 +137,45 @@ export function draftQuotaMessage(
     };
   }
   return { error: "quotaUsed" };
+}
+
+/**
+ * The message for a draft refused because the token volume of the plan does
+ * not cover it (tokenQuotaExceeded, KRB-252): drafts are left, the tokens
+ * for this one are not. Same cases as draftQuotaMessage, with the volume in
+ * millions of tokens. Pure.
+ */
+export function draftTokenMessage(
+  line: Pick<BillingLineFacts, "billingMode" | "plan" | "limits"> | null,
+  retryAfter: number | null,
+  now: Date = new Date(),
+): { error: DraftErrorKey; values?: DraftErrorValues } {
+  if (!line) return { error: "tokensUsed" };
+  const { draftsPerMonth, draftsTotal } = line.limits;
+  if (draftsTotal !== null) {
+    const volume = tokenVolumeLabel(aiTokensFor(draftsTotal) ?? 0);
+    if (line.billingMode === "mission") return { error: "tokensExceededMission", values: { volume } };
+    if (line.plan === "trial") return { error: "tokensExceededTrial", values: { volume } };
+    return { error: "tokensUsed" };
+  }
+  if (draftsPerMonth !== null && retryAfter !== null) {
+    return {
+      error: "tokensExceeded",
+      values: {
+        volume: tokenVolumeLabel(aiTokensFor(draftsPerMonth) ?? 0),
+        date: formatBillingDate(new Date(now.getTime() + retryAfter * 1000)),
+      },
+    };
+  }
+  return { error: "tokensUsed" };
+}
+
+/** draftTokenMessage for a workspace, read with the user's rights. */
+export async function describeDraftTokens(
+  workspaceId: string,
+  retryAfter: number | null,
+): Promise<{ error: DraftErrorKey; values?: DraftErrorValues }> {
+  return draftTokenMessage(await getWorkspaceBillingState(workspaceId), retryAfter);
 }
 
 /** draftQuotaMessage for a workspace, read with the user's rights. */

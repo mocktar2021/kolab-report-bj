@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { PUBLISHER } from "@/content/legal/publisher";
 import { Link } from "@/i18n/navigation";
-import { INSTITUTION, OFFERS, PLANS, TRIAL } from "@/lib/billing/catalog";
+import { aiTokensFor, INSTITUTION, OFFERS, PLANS, tokenVolumeLabel, TRIAL } from "@/lib/billing/catalog";
 import { formatXof } from "@/lib/billing/format";
 import { PRICING_PLANS, planFeatures, planPrices, type PlanFeature } from "@/lib/billing/pricing";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,11 @@ function FeatureList({ items }: { items: ReactNode[] }) {
 function useFeatureText() {
   const t = useTranslations("Pricing.features");
   return (feature: PlanFeature) =>
-    "count" in feature ? t(feature.key, { count: feature.count }) : t(feature.key);
+    "count" in feature
+      ? t(feature.key, { count: feature.count })
+      : "volume" in feature
+        ? t(feature.key, { volume: feature.volume })
+        : t(feature.key);
 }
 
 function Card({
@@ -175,7 +179,11 @@ export function Extras() {
       </Card>
       <Card id="offre-pack-ia" title={t("pack.title")}>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t("pack.description", { drafts: pack.drafts, months: pack.validMonths })}
+          {t("pack.description", {
+            drafts: pack.drafts,
+            volume: tokenVolumeLabel(aiTokensFor(pack.drafts) ?? 0),
+            months: pack.validMonths,
+          })}
         </p>
         <Price amount={formatXof(pack.priceHtXof)} unit={t("pack.unit")} />
         <FeatureList items={[t("pack.max", { max: pack.maxQuantity }), t("pack.paidOnly")]} />

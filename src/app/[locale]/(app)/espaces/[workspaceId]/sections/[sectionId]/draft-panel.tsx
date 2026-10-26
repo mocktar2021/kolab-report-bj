@@ -18,7 +18,7 @@ import { TruncationNotice } from "./draft-usage";
 
 /**
  * Why the last request gave no draft. "network": the request never reached
- * the server. `values` fill in the quota messages ({max}, {date}).
+ * the server. `values` fill in the quota messages ({max}, {volume}, {date}).
  */
 type Failure = { error: DraftErrorKey | "network"; retryAfter?: number; values?: DraftErrorValues };
 

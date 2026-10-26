@@ -46,6 +46,7 @@ Paid per firm, in FCFA (XOF), through FedaPay (mobile money and cards). Readers 
 - Periods are prepaid: a month, a quarter or a year. A year costs 10 months. There is no automatic debit: we send reminders 7 days before the end, 1 day before, and on the day it ends.
 - When a period ends: 7 days of grace, then read-only. Reading and exporting still work, writing does not.
 - Customers buy AI drafts (section drafts), not tokens. The monthly token budget per workspace (`AI_MONTHLY_TOKEN_BUDGET`, checked in `start_ai_generation`) stays as the cost cap.
+  - Update (KRB-252): drafts read whole deliverables since KRB-253, so their size varies too much for a draft count alone. Each pool of drafts now has a token volume of 50,000 tokens per draft it includes (trial, plan month, Pass Mission, Pack IA), checked in `billing_reserve_draft`. `AI_MONTHLY_TOKEN_BUDGET` only applies while billing is not enforced.
 - Seller: Mocktar Technologies (Benin). FedaPay sandbox on staging (kolabreport.mocktar.com), live account on production.
 - Tax: VAT and normalized invoices (e-MECeF) wait for the accountant. The design has to take tax lines and an external invoice number later without a rewrite.
 
@@ -834,6 +835,7 @@ Costs and risks:
 - **Q11. Quarter price.** 3 times the month with no discount, as written in the brief?
 - **Q12. Institution defaults.** Default AI drafts a month (1 000 proposed), onboarding content, minimum term.
 - **Q13. Token budget.** Raise `AI_MONTHLY_TOKEN_BUDGET` to cover Cabinet (measure p95 tokens per draft on staging first), or derive it from the plan? Check also the margin: a Pack IA draft sells at 120 FCFA HT (about 0.18 EUR at the fixed 655.957 FCFA per euro), before the FedaPay fee; the AI dashboard's measured cost per draft should stay well under that.
+  - Answered (KRB-252): derived from the plan, 50,000 tokens per draft included.
 - **Q14. A fourth reminder** when the workspace turns read-only?
 - **Q15. Who gets billing e-mails**: the organization owner only, or every workspace owner of the organization (proposed)?
 - **Q16. Vercel Pro** before the first paid customer?

@@ -36,9 +36,15 @@ describe("cells", () => {
   });
 
   it("writes AI drafts by the month or in all, grouped the French way", () => {
-    expect(draftsCell(limits({ draftsPerMonth: 1000 }))).toBe("1 000 par mois");
-    expect(draftsCell(limits({ draftsPerMonth: null, draftsTotal: 20 }))).toBe("20 au total");
-    expect(draftsCell(limits({ draftsPerMonth: 10, draftsTotal: 5 }))).toBe("10 par mois, 5 au total");
+    expect(draftsCell(limits({ draftsPerMonth: 1000 }))).toBe(
+      "1\u202f000 par mois (50\u00a0millions de jetons)",
+    );
+    expect(draftsCell(limits({ draftsPerMonth: null, draftsTotal: 20 }))).toBe(
+      "20 au total (1\u00a0million de jetons)",
+    );
+    expect(draftsCell(limits({ draftsPerMonth: 10, draftsTotal: 5 }))).toBe(
+      "10 par mois (0,5\u00a0million de jetons), 5 au total (0,3\u00a0million de jetons)",
+    );
     expect(draftsCell(limits({ draftsPerMonth: null, draftsTotal: null }))).toBe("Illimités");
   });
 });

@@ -1,5 +1,5 @@
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-policy";
-import { OFFERS } from "@/lib/billing/catalog";
+import { AI_TOKENS_PER_DRAFT, aiTokensFor, OFFERS, tokenVolumeLabel } from "@/lib/billing/catalog";
 import { planLimitsTable } from "./plan-limits";
 import type { GuidePart } from "./types";
 
@@ -158,7 +158,8 @@ export const faqPart: GuidePart = {
             "**Membres** : les propriétaires, administrateurs et experts, invitations en attente comprises. Une même personne compte une fois. Les lecteurs sont gratuits et illimités.",
             "**Rapports actifs** : les rapports en brouillon ou en revue. Un rapport final ne compte plus.",
             "**Brouillons IA** : comptés quand ils aboutissent, pour toute l'organisation. La lecture d'un plan en PDF en compte un. Le compteur du mois repart à zéro le 1er de chaque mois.",
-            `**Pack IA** : ${pack.drafts} brouillons IA de plus, valables ${pack.validMonths} mois, utilisés quand le quota de l'offre est épuisé. ${pack.maxQuantity} packs au plus en même temps, avec une offre payante ou un Pass Mission.`,
+            `**Volume d'IA** : ${new Intl.NumberFormat("fr-FR").format(AI_TOKENS_PER_DRAFT)} jetons par brouillon inclus. Un brouillon en consomme selon la taille des livrables lus et du texte rédigé. Quand il reste des brouillons mais plus assez de jetons, l'IA s'arrête jusqu'au mois suivant ou à l'ajout d'un Pack IA. La section peut toujours être rédigée sans IA.`,
+            `**Pack IA** : ${pack.drafts} brouillons IA et ${tokenVolumeLabel(aiTokensFor(pack.drafts) ?? 0)} de plus, valables ${pack.validMonths} mois, utilisés quand le quota de l'offre est épuisé. ${pack.maxQuantity} packs au plus en même temps, avec une offre payante ou un Pass Mission.`,
           ],
         },
         "Les prix et le détail des offres sont sur la page [Tarifs](/tarifs).",

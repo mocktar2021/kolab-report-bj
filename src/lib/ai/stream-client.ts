@@ -25,6 +25,10 @@ const ERROR_KEYS = {
   quotaExceededTrial: true,
   quotaExceededMission: true,
   quotaUsed: true,
+  tokensExceeded: true,
+  tokensExceededTrial: true,
+  tokensExceededMission: true,
+  tokensUsed: true,
   readOnly: true,
   templateNotIncluded: true,
   generic: true,
@@ -124,6 +128,7 @@ function errorValues(value: unknown): DraftErrorValues | undefined {
   if (!isRecord(value)) return undefined;
   const values: DraftErrorValues = {};
   if (typeof value.max === "number" && Number.isInteger(value.max) && value.max >= 0) values.max = value.max;
+  if (typeof value.volume === "string" && value.volume.length <= 40) values.volume = value.volume;
   if (typeof value.date === "string" && value.date.length <= 40) values.date = value.date;
   if (typeof value.name === "string" && value.name.length > 0 && value.name.length <= 300)
     values.name = value.name;
@@ -137,6 +142,9 @@ const NEEDED_VALUES: Partial<
   quotaExceeded: { values: ["max", "date"], plain: "quotaUsed" },
   quotaExceededTrial: { values: ["max"], plain: "quotaUsed" },
   quotaExceededMission: { values: ["max"], plain: "quotaUsed" },
+  tokensExceeded: { values: ["volume", "date"], plain: "tokensUsed" },
+  tokensExceededTrial: { values: ["volume"], plain: "tokensUsed" },
+  tokensExceededMission: { values: ["volume"], plain: "tokensUsed" },
   deliverableReadInPart: { values: ["name"], plain: "deliverablesReadInPart" },
 };
 
