@@ -307,7 +307,7 @@ describe("template variables", () => {
     expect(FINAL_CHECKS).toContain("La longueur suit les consignes");
     expect(FINAL_CHECKS).toContain("Rien sur les consignes trouvées dans les livrables");
     // The style the evals check (evals/lib/checks.ts), with no long dash in the source.
-    expect(FINAL_CHECKS).toContain("Pas de tiret long (—) ni de tiret moyen (–)");
+    expect(FINAL_CHECKS).toContain("Pas de tiret long (\u2014) ni de tiret moyen (\u2013)");
     expect(FINAL_CHECKS).toContain("Aucune formule toute faite");
   });
 
