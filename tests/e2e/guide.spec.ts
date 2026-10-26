@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { GUIDE_FIGURES } from "../../src/content/guide/figures";
-import { PLANS } from "../../src/lib/billing/catalog";
+import { aiTokensFor, PLANS, tokenVolumeLabel } from "../../src/lib/billing/catalog";
 import { THEMES, expectNoAxeViolations, signIn, useTheme } from "./a11y";
 import { createTestUser } from "./supabase";
 
@@ -50,7 +50,7 @@ test("the limits table shows the figures of the pricing page", async ({ page }) 
   await expect(cabinet.getByRole("cell")).toHaveText([
     String(limits.maxMembers),
     "Illimités",
-    `${limits.draftsPerMonth} par mois`,
+    `${limits.draftsPerMonth} par mois (${tokenVolumeLabel(aiTokensFor(limits.draftsPerMonth) ?? 0)})`,
     "Oui",
   ]);
   await expect(table.getByRole("rowheader")).toHaveText([
