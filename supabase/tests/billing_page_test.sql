@@ -193,8 +193,9 @@ where e.organization_id = pg_temp.id('org_b') and e.plan = 'independant' and e.r
 -- billing_overview: what billing readers see --------------------------------------
 select pg_temp.act_as('owner');
 insert into seen values ('owner', public.billing_overview(pg_temp.id('org_a')));
+-- With the token volume of the month (KRB-252): these rows hold no tokens.
 select is((select body -> 'subscription' -> 'drafts' from seen where who = 'owner'),
-  '{"used": 4, "allowance": 60, "period": "month"}'::jsonb,
+  '{"used": 4, "allowance": 60, "period": "month", "tokensUsed": 0, "tokensAllowance": 3000000}'::jsonb,
   'the overview counts the drafts of the month like the reservation does');
 select is(
   (select jsonb_build_object('drafts', p -> 'drafts', 'used', p -> 'used')
@@ -203,7 +204,7 @@ select is(
 select is(
   (select jsonb_build_object('name', p -> 'workspace_name', 'drafts', p -> 'drafts')
    from seen, jsonb_array_elements(body -> 'passes') p where who = 'owner'),
-  '{"name": "Mission A", "drafts": {"used": 0, "allowance": 80, "period": "total"}}'::jsonb,
+  '{"name": "Mission A", "drafts": {"used": 0, "allowance": 80, "period": "total", "tokensUsed": 0, "tokensAllowance": 4000000}}'::jsonb,
   'a pass names its workspace and has its own allowance');
 select is(
   (select array_agg(p ->> 'offer_label' || ' ' || (p ->> 'status') || ' ' || (p ->> 'amount_xof') order by p ->> 'offer_label')
