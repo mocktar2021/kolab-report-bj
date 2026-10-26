@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Link } from "@/i18n/navigation";
 import { partialDraftMarkdown } from "@/lib/ai/preview";
+import { nameInlineRefs } from "@/lib/ai/refs";
 import type { DraftPanelData, DraftProposal, DraftTemplateOption } from "@/lib/ai/server";
 import { draftRequestError, readDraftStream } from "@/lib/ai/stream-client";
 import type { DeliverableUse, DraftErrorKey, DraftErrorValues, DraftRequest } from "@/lib/ai/types";
@@ -97,9 +98,8 @@ export function DraftPanel({ workspaceId, sectionId, data, manager, usageHint = 
   });
 
   const running = run !== null;
-  const liveMarkdown = run
-    ? partialDraftMarkdown(run.schema, run.partial, run.started?.names ?? NO_NAMES)
-    : "";
+  const names = run?.started?.names ?? NO_NAMES;
+  const liveMarkdown = run ? nameInlineRefs(partialDraftMarkdown(run.schema, run.partial, names), names) : "";
   // Long drafts re-render often while they stream: React may skip a frame of the preview.
   const preview = useDeferredValue(liveMarkdown);
 
