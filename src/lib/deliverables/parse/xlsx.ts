@@ -38,30 +38,43 @@ export async function parseXlsx(bytes: Buffer): Promise<ParseResult> {
 
   const parts: string[] = [];
   const sheets: SheetMeta[] = [];
+  // Something past the limits was left out. Reading stops once the text
+  // passes maxMarkdownChars: finishMarkdown would cut it there anyway, and a
+  // shared string repeated in many cells can't fill the memory.
+  let partial = false;
+  let length = 0;
   for (const sheet of workbook.worksheets) {
     if (sheet.state !== "visible") continue;
-    if (sheets.length === PARSE_LIMITS.maxSheets) break;
+    if (sheets.length === PARSE_LIMITS.maxSheets || length > PARSE_LIMITS.maxMarkdownChars) {
+      partial = true;
+      break;
+    }
     const { top, left, bottom, right } = sheet.dimensions;
     const rows = sheet.actualRowCount === 0 ? 0 : bottom - top + 1;
     const columns = rows === 0 ? 0 : right - left + 1;
     const keptRows = Math.min(rows, PARSE_LIMITS.maxRowsPerSheet);
     const keptColumns = Math.min(columns, PARSE_LIMITS.maxColumns);
+    if (keptRows < rows || keptColumns < columns) partial = true;
     // The name goes into parse_meta, which Postgres stores as JSON.
     const name = storableText(sheet.name);
     sheets.push({ name, rows, columns, keptRows, keptColumns });
 
     const grid: string[][] = [];
-    for (let row = top; row < top + keptRows; row++) {
+    for (let row = top; row < top + keptRows && length <= PARSE_LIMITS.maxMarkdownChars; row++) {
       const cells: string[] = [];
       for (let column = left; column < left + keptColumns; column++) {
         const cell = sheet.getRow(row).getCell(column);
         // Merged cells show their value once, in the top left cell.
         const text = cell.isMerged && cell.master.address !== cell.address ? "" : cellText(cell.value);
-        cells.push(escapeInline(text.slice(0, PARSE_LIMITS.maxCellChars)));
+        if (text.length > PARSE_LIMITS.maxCellChars) partial = true;
+        const kept = escapeInline(text.slice(0, PARSE_LIMITS.maxCellChars));
+        length += kept.length + 3;
+        cells.push(kept);
       }
       grid.push(cells);
     }
     parts.push(heading(2, escapeInline(name)), grid.length > 0 ? tableToMarkdown(grid) : "");
   }
-  return { status: "parsed", ...finishMarkdown(parts.join("\n\n"), { kind: "spreadsheet", sheets }) };
+  const { markdown, meta } = finishMarkdown(parts.join("\n\n"), { kind: "spreadsheet", sheets });
+  return { status: "parsed", markdown, meta: { ...meta, truncated: meta.truncated || partial } };
 }

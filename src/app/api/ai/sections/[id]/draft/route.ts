@@ -1,23 +1,12 @@
-import { generateText } from "ai";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { aiSettings, draftAvailability, modelFor } from "@/lib/ai/config";
-import {
-  buildPrompt,
-  contextBudget,
-  estimateTokens,
-  finalizeContext,
-  planContext,
-  summaryPrompt,
-  type BuiltContext,
-  type ContextPlan,
-  type OverflowChunk,
-} from "@/lib/ai/context";
+import { buildContext, buildPrompt, contextBudget, type ContextResult } from "@/lib/ai/context";
 import { generateDraft, repairReserve, type TokenUsage } from "@/lib/ai/generate";
 import { checkDailyCost, finishGeneration, startGeneration } from "@/lib/ai/generation-store";
 import { wordCount } from "@/lib/ai/metrics";
 import { mockModel, sampleOutput } from "@/lib/ai/mock";
-import { estimateCost, estimateFallbackCost, fallbackModel, noThinking } from "@/lib/ai/models";
+import { estimateCost, estimateFallbackCost, fallbackModel } from "@/lib/ai/models";
 import { draftToMarkdown } from "@/lib/ai/schemas";
 import { aiTelemetry } from "@/lib/ai/telemetry";
 import { flushTraces, withDraftSpan, type DraftSpan } from "@/lib/ai/tracing";
@@ -29,7 +18,7 @@ import type {
   DraftStreamEvent,
 } from "@/lib/ai/types";
 import { describeDraftQuota, describeDraftTokens } from "@/lib/billing/errors";
-import type { ParseMeta } from "@/lib/deliverables/parse/types";
+import { readInPart, type ParseMeta } from "@/lib/deliverables/parse/types";
 import { log, withRequestId } from "@/lib/log";
 import { MODEL_TIERS, OUTPUT_SCHEMAS, type ModelTier } from "@/lib/prompts/catalog";
 import { versionForSection } from "@/lib/prompts/rollouts";
@@ -40,12 +29,13 @@ import { uuidSchema } from "@/lib/workspaces/schemas";
 import { requireWorkspaceRole } from "@/lib/workspaces/server";
 
 // POST /api/ai/sections/[id]/draft: a draft of the section from a published
-// template and the section's parsed deliverables. Checks run first and
-// answer with a JSON error; then the generation is recorded as running
+// template and the section's parsed deliverables, each one read whole
+// (KRB-253). Checks run first and answer with a JSON error, deliverables too
+// large for the model included. Then the generation is recorded as running
 // (hourly limit, monthly budget and the AI drafts of the organization's plan
 // included, so no model call happens past them) and the answer streams as
-// NDJSON events (src/lib/ai/types.ts). The
-// draft is only a proposal: the section changes when the expert accepts it.
+// NDJSON events (src/lib/ai/types.ts). The draft is only a proposal: the
+// section changes when the expert accepts it.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,9 +43,6 @@ export const maxDuration = 300;
 
 /** Stops the model calls in time to record the outcome before the function is cut. */
 const DEADLINE_MS = (maxDuration - 20) * 1000;
-
-/** Summaries of overflow run at most this many at a time. */
-const SUMMARY_CONCURRENCY = 3;
 
 /** At most one partial object every this many milliseconds: each one carries the whole object so far. */
 const PARTIAL_INTERVAL_MS = 150;
@@ -89,15 +76,6 @@ async function readRequest(request: Request) {
   } catch {
     return null;
   }
-}
-
-/** Runs `run` over `items`, `limit` at a time, keeping their order. */
-async function inBatches<T, R>(items: T[], limit: number, run: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = [];
-  for (let start = 0; start < items.length; start += limit) {
-    results.push(...(await Promise.all(items.slice(start, start + limit).map(run))));
-  }
-  return results;
 }
 
 export const POST = withRequestId(async (request: Request, { params }: { params: Params }) => {
@@ -180,20 +158,19 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     .eq("section_id", section.id)
     .eq("parse_status", "parsed")
     .not("uploaded_at", "is", null);
-  const deliverables: ContextDeliverable[] = (files ?? []).flatMap((file) =>
-    file.parsed_content?.trim() && file.uploaded_at
-      ? [
-          {
-            id: file.id,
-            fileName: file.file_name,
-            kind: (file.parse_meta as ParseMeta | null)?.kind ?? "document",
-            markdown: file.parsed_content,
-            uploadedAt: file.uploaded_at,
-          },
-        ]
-      : [],
-  );
+  const usable = (files ?? []).filter((file) => file.parsed_content?.trim() && file.uploaded_at);
+  const deliverables: ContextDeliverable[] = usable.map((file) => ({
+    id: file.id,
+    fileName: file.file_name,
+    kind: (file.parse_meta as ParseMeta | null)?.kind ?? "document",
+    markdown: file.parsed_content ?? "",
+    uploadedAt: file.uploaded_at ?? "",
+  }));
   if (deliverables.length === 0) return refuse(422, "noDeliverables");
+  // The AI reads every deliverable whole or not at all (KRB-253). A file the
+  // upload read only in part keeps the section from a draft until it goes.
+  const partial = usable.find((file) => readInPart(file.parse_meta as ParseMeta | null));
+  if (partial) return refuse(422, "deliverableReadInPart", null, { name: partial.file_name });
 
   // The template's cap is room for the answer. The model thinks first, and
   // its thinking counts inside the cap of the call (KRB-224).
@@ -206,9 +183,9 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     maxOutputTokens: maxTokens,
     maxInputTokens: settings.maxInputTokens,
   });
-  let plan: ContextPlan;
+  let context: ContextResult;
   try {
-    plan = planContext(
+    context = buildContext(
       {
         workspaceName: workspace?.name ?? "",
         report: { title: section.report.title, description: section.report.description },
@@ -226,6 +203,15 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     // Every deliverable was empty once cleaned.
     return refuse(422, "noDeliverables");
   }
+  if (!context.fits) {
+    log.info("ai drafts: deliverables too large for the model", {
+      sectionId: section.id,
+      estimatedInputTokens: context.estimatedInputTokens,
+      maxInputTokens: context.maxInputTokens,
+    });
+    return refuse(413, "contextTooLarge");
+  }
+  const built = context.context;
 
   const mock = settings.provider === "mock";
   const started = await startGeneration({
@@ -248,10 +234,7 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     },
     // Held against the budget while the draft runs, a repair call included.
     estimatedTokens:
-      plan.estimatedInputTokens +
-      maxTokens +
-      plan.estimatedSummaryTokens +
-      repairReserve(plan.estimatedInputTokens, maxTokens),
+      built.estimatedInputTokens + maxTokens + repairReserve(built.estimatedInputTokens, maxTokens),
     rateLimitPerHour: settings.rateLimitPerHour,
     monthlyTokenBudget: settings.monthlyTokenBudget,
   });
@@ -321,94 +304,23 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
     }
   }
 
-  async function summarize(
-    chunks: OverflowChunk[],
-  ): Promise<{ summaries: Map<string, string | null>; usage: TokenUsage; estimated: boolean }> {
-    const usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
-    let estimated = false;
-    const fast = mock ? mockModel(() => "Résumé simulé de la suite du livrable.") : modelFor("fast");
-    const signal = AbortSignal.any([userAbort.signal, deadline]);
-    const results = await inBatches(chunks, SUMMARY_CONCURRENCY, async (chunk) => {
-      if (!fast || signal.aborted) return [chunk.id, null] as const;
-      const { system, prompt, maxOutputTokens } = summaryPrompt(chunk);
-      try {
-        const result = await generateText({
-          model: fast,
-          instructions: system,
-          prompt,
-          maxOutputTokens,
-          temperature: 0,
-          providerOptions: noThinking(),
-          maxRetries: 1,
-          abortSignal: signal,
-          telemetry: telemetry("kolab.summary"),
-        });
-        usage.inputTokens += result.usage.inputTokens || 0;
-        usage.outputTokens += result.usage.outputTokens || 0;
-        return [chunk.id, result.text.trim() || null] as const;
-      } catch {
-        // A stopped call was billed for its prompt all the same.
-        if (signal.aborted) {
-          usage.inputTokens += estimateTokens(system + prompt);
-          estimated = true;
-        }
-        return [chunk.id, null] as const;
-      }
-    });
-    return { summaries: new Map(results), usage, estimated };
-  }
-
   async function runDraft(span: DraftSpan) {
-    let built: BuiltContext | null = null;
-    let summaryUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
-    let summaryEstimated = false;
-    try {
-      const summarized = await summarize(plan.overflow);
-      summaryUsage = summarized.usage;
-      summaryEstimated = summarized.estimated;
-      spent = summaryUsage;
-      built = finalizeContext(plan, summarized.summaries);
-    } catch (error) {
-      log.error("ai drafts: could not build the context", { generationId, error });
-    }
-
+    // Nothing is cut since KRB-253: the record says so for every new draft.
     const common = (usageEstimated: boolean) => ({
-      inputHash: built?.inputHash ?? null,
-      inputHashes: built?.deliverableHashes ?? {},
-      contextMeta: built
-        ? {
-            version: 1 as const,
-            deliverables: built.deliverables,
-            decisions: built.decisions,
-            estimatedInputTokens: built.estimatedInputTokens,
-            usageEstimated,
-          }
-        : null,
-      truncated: built?.truncated ?? false,
+      inputHash: built.inputHash,
+      inputHashes: built.deliverableHashes,
+      contextMeta: {
+        version: 1 as const,
+        deliverables: built.deliverables,
+        decisions: built.decisions,
+        estimatedInputTokens: built.estimatedInputTokens,
+        usageEstimated,
+      },
+      truncated: false,
       traceId: span.traceId,
     });
-    const summaryCost = estimateCost(settings, "fast", summaryUsage);
 
-    if (!built) {
-      await finishGeneration(generationId, workspaceId, {
-        status: "failed",
-        error: "contextFailed",
-        usage: summaryUsage,
-        costEstimate: summaryCost,
-        latencyMs: performance.now() - startedAt,
-        rawOutput: "",
-        repaired: false,
-        ...common(summaryEstimated),
-      });
-      span.fail("contextFailed");
-      send({ type: "error", error: "generic" });
-      return close();
-    }
-
-    if (built.truncated) {
-      log.info("ai drafts: context truncated", { generationId, decisions: built.decisions });
-    }
-    send({ type: "start", generationId, truncated: built.truncated, deliverables: built.deliverables });
+    send({ type: "start", generationId, truncated: false, deliverables: built.deliverables });
 
     const refs = built.refs;
     const model = mock ? mockModel(() => JSON.stringify(sampleOutput(schemaKey, refs))) : modelFor(tier);
@@ -453,25 +365,21 @@ export const POST = withRequestId(async (request: Request, { params }: { params:
         } as const);
     if (pending) send({ type: "partial", object: pending });
 
-    const usage = {
-      inputTokens: summaryUsage.inputTokens + result.usage.inputTokens,
-      outputTokens: summaryUsage.outputTokens + result.usage.outputTokens,
-    };
+    const usage = result.usage;
     spent = usage;
-    const usageEstimated = summaryEstimated || result.usageEstimated;
+    const usageEstimated = result.usageEstimated;
     // A draft written by the fallback model is priced with
     // AI_FALLBACK_PRICE_*, and has no cost estimate without them.
-    const draftCost = result.usedFallback
+    const costEstimate = result.usedFallback
       ? estimateFallbackCost(settings, result.usage)
       : estimateCost(settings, tier, result.usage);
-    const costEstimate = draftCost === null ? null : draftCost + (summaryCost ?? 0);
     const latencyMs = performance.now() - startedAt;
     const answeredBy = result.usedFallback && settings.fallback ? settings.fallback : null;
     span.set({
       "gen_ai.usage.input_tokens": usage.inputTokens,
       "gen_ai.usage.output_tokens": usage.outputTokens,
       "kolab.latency_ms": Math.round(latencyMs),
-      "kolab.truncated": built.truncated,
+      "kolab.truncated": false,
       "kolab.repaired": result.repaired,
       "kolab.usage_estimated": usageEstimated,
       "kolab.fallback_used": result.usedFallback,

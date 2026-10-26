@@ -97,7 +97,7 @@ function aggregateLines(agg: Aggregates): string[] {
     `| Safe output | ${pct(agg.safeOutputRate)} |`,
     `| French | ${pct(agg.frenchRate)} |`,
     `| Injection resisted | ${pct(agg.injectionResistedRate)} |`,
-    `| Long cases truncated | ${pct(agg.longCasesTruncatedRate)} |`,
+    `| Long cases read whole | ${pct(agg.longCasesTruncatedRate)} |`,
     `| Latency p50 / p95 | ${agg.latencyMs.p50 ?? "n/a"} ms / ${agg.latencyMs.p95 ?? "n/a"} ms |`,
     `| Tokens in / out | ${agg.tokens.input} / ${agg.tokens.output} |`,
     `| Cost | ${agg.costUsd === null ? "n/a (no price set)" : `$${agg.costUsd.toFixed(4)}`} |`,

@@ -209,6 +209,30 @@ describe("draftRequestError", () => {
     expect(await draftRequestError(malformed)).toEqual({ error: "quotaUsed" });
   });
 
+  it("names the deliverable read in part, or shows the plain message without its name", async () => {
+    const named = Response.json(
+      { error: "deliverableReadInPart", values: { name: "rapport-provisoire-v1.pdf" } },
+      { status: 422 },
+    );
+    expect(await draftRequestError(named)).toEqual({
+      error: "deliverableReadInPart",
+      values: { name: "rapport-provisoire-v1.pdf" },
+    });
+    const unnamed = Response.json({ error: "deliverableReadInPart" }, { status: 422 });
+    expect(await draftRequestError(unnamed)).toEqual({ error: "deliverablesReadInPart" });
+    const tooLong = Response.json(
+      { error: "deliverableReadInPart", values: { name: "x".repeat(301) } },
+      { status: 422 },
+    );
+    expect(await draftRequestError(tooLong)).toEqual({ error: "deliverablesReadInPart" });
+  });
+
+  it("knows the refusal of deliverables too large for the model", async () => {
+    expect(await draftRequestError(Response.json({ error: "contextTooLarge" }, { status: 413 }))).toEqual({
+      error: "contextTooLarge",
+    });
+  });
+
   it("knows the other refusals of the plan", async () => {
     for (const error of ["readOnly", "templateNotIncluded"]) {
       expect(await draftRequestError(Response.json({ error }, { status: 403 }))).toEqual({ error });

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { contextBudget, estimateTokens, planContext } from "@/lib/ai/context";
+import { buildContext, contextBudget, estimateTokens } from "@/lib/ai/context";
 import { readAiSettings } from "@/lib/ai/models";
 import { draftToMarkdown, parseDraftOutput, type DraftOutput, type SourceRefs } from "@/lib/ai/schemas";
 import { PARSE_LIMITS } from "@/lib/deliverables/parse/types";
@@ -147,48 +147,44 @@ describe("long cases", () => {
     }
   });
 
-  for (const value of long) {
-    it(`${value.id}: makes planContext truncate`, () => {
-      const template = templates.get(value.template);
-      if (!template) throw new Error(`no template ${value.template}`);
-      const budget = contextBudget({
-        contextWindowTokens: settings.contextWindowTokens,
-        maxOutputTokens: template.maxOutputTokens,
-        maxInputTokens: settings.maxInputTokens,
-      });
-      const plan = planContext(value.input, budget, {
-        redactPii: settings.redactPii,
-        template: template.text,
-      });
-      const original = plan.entries.reduce((sum, entry) => sum + entry.originalTokens, 0);
-      const actions = new Set(plan.decisions.map((decision) => decision.action));
-
-      expect(original).toBeGreaterThan(budget.maxInputTokens);
-      expect(plan.entries.some((entry) => entry.originalTokens > budget.perDeliverableTokens)).toBe(true);
-      expect(actions.has("capped")).toBe(true);
-      expect(actions.has("rowsCut")).toBe(true);
-      expect(plan.overflow.length).toBeGreaterThan(0);
-      expect(plan.estimatedInputTokens).toBeLessThanOrEqual(budget.maxInputTokens);
+  /** The default budget for a template: the window with room for the answer and the thinking. */
+  function budgetFor(value: LoadedCase, maxInputTokens = settings.maxInputTokens) {
+    const template = templates.get(value.template);
+    if (!template) throw new Error(`no template ${value.template}`);
+    const budget = contextBudget({
+      contextWindowTokens: settings.contextWindowTokens,
+      maxOutputTokens: template.maxOutputTokens + settings.draftThinking.tokens,
+      maxInputTokens,
     });
+    return { template, budget };
   }
 
-  it("include one case past the budget after the per-deliverable caps", () => {
-    const shared = long.some((value) => {
-      const template = templates.get(value.template);
-      if (!template) return false;
-      const budget = contextBudget({
-        contextWindowTokens: settings.contextWindowTokens,
-        maxOutputTokens: template.maxOutputTokens,
-        maxInputTokens: settings.maxInputTokens,
-      });
-      const plan = planContext(value.input, budget, {
+  for (const value of long) {
+    it(`${value.id}: goes in whole under the default budget`, () => {
+      const { template, budget } = budgetFor(value);
+      const source = value.input.deliverables.reduce(
+        (sum, deliverable) => sum + estimateTokens(deliverable.markdown),
+        0,
+      );
+      // Past the 60,000 tokens a draft used to be cut to (before KRB-253).
+      expect(source).toBeGreaterThan(60_000);
+      const context = buildContext(value.input, budget, {
         redactPii: settings.redactPii,
         template: template.text,
       });
-      return plan.decisions.some((decision) => decision.action === "cut" || decision.action === "dropped");
+      expect(context.fits).toBe(true);
     });
-    expect(shared).toBe(true);
-  });
+
+    it(`${value.id}: is refused whole, never cut, under a small budget`, () => {
+      const { template, budget } = budgetFor(value, 20_000);
+      const context = buildContext(value.input, budget, {
+        redactPii: settings.redactPii,
+        template: template.text,
+      });
+      expect(context).toMatchObject({ fits: false, maxInputTokens: 20_000 });
+      if (!context.fits) expect(context.estimatedInputTokens).toBeGreaterThan(20_000);
+    });
+  }
 });
 
 // The longest answer the golden cases of a template accept
@@ -280,17 +276,17 @@ describe("output caps", () => {
     });
   }
 
-  it("keeps the default input ceiling whatever the cap", () => {
+  it("leaves room in the window for the answer and the thinking", () => {
     for (const template of templates.values()) {
+      const output = template.maxOutputTokens + settings.draftThinking.tokens;
       const budget = contextBudget({
         contextWindowTokens: settings.contextWindowTokens,
-        maxOutputTokens: template.maxOutputTokens,
+        maxOutputTokens: output,
         maxInputTokens: settings.maxInputTokens,
       });
-      expect(budget.maxInputTokens, template.key).toBe(settings.maxInputTokens);
-      expect(budget.maxInputTokens + template.maxOutputTokens, template.key).toBeLessThan(
-        settings.contextWindowTokens,
-      );
+      // The whole window minus the answer: a section can hold some 800,000 tokens of deliverables.
+      expect(budget.maxInputTokens, template.key).toBeGreaterThan(800_000);
+      expect(budget.maxInputTokens + output, template.key).toBeLessThan(settings.contextWindowTokens);
     }
   });
 });

@@ -11,7 +11,7 @@ import { compareWithBaseline } from "./compare";
 import { SetupError } from "./errors";
 import { executeCases } from "./execute";
 import { loadThresholds } from "./gate";
-import { mockGenerator, mockSummarizer } from "./mock";
+import { mockGenerator } from "./mock";
 import { aggregate } from "./report";
 import { summarizeCase } from "./summary";
 import { loadGlobalTemplates } from "./templates";
@@ -49,7 +49,6 @@ describe("baseline files", () => {
             tier: template.tier,
             modelId: "claude-test",
             generator: mockGenerator,
-            summarizer: mockSummarizer(),
             judge: null,
           };
         },

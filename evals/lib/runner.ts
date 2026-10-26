@@ -1,18 +1,16 @@
 import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { generateText, NoObjectGeneratedError, Output, type LanguageModelUsage } from "ai";
 import {
+  buildContext,
   buildPrompt,
   contextBudget,
   FINAL_CHECKS,
-  finalizeContext,
-  planContext,
-  summaryPrompt,
   SYSTEM_PROMPT,
   type BuiltContext,
-  type TruncationDecision,
+  type ContextDecision,
 } from "@/lib/ai/context";
 import { describeValidationError, repairPrompt } from "@/lib/ai/generate";
-import { draftThinking, estimateCost, noThinking, type AiSettings, type DraftEffort } from "@/lib/ai/models";
+import { draftThinking, estimateCost, type AiSettings, type DraftEffort } from "@/lib/ai/models";
 import {
   citedRefs,
   draftToMarkdown,
@@ -29,9 +27,9 @@ import { runJudge, type JudgeResult } from "./judge";
 import type { EvalTemplate } from "./templates";
 import { containsTerm, normalize } from "./text";
 
-// Runs one golden case the way the draft route does: plan the context,
-// summarize the overflow on the fast model, build the prompt, generate with
-// one repair, then check the result and, when asked, have it judged.
+// Runs one golden case the way the draft route does: build the context with
+// every deliverable whole, build the prompt, generate with one repair, then
+// check the result and, when asked, have it judged.
 
 export type TokenUsage = { inputTokens: number; outputTokens: number };
 
@@ -43,10 +41,7 @@ export type RunDeps = {
   modelId: string;
   /** The model that writes the draft. It gets the refs so the mock can cite them. */
   generator: (refs: SourceRefs, schema: OutputSchema) => LanguageModelV4;
-  /** The fast model that summarizes overflow chunks. */
-  summarizer: LanguageModelV4;
   judge: { model: LanguageModelV4; rubric: string } | null;
-  summaryConcurrency?: number;
   /** Measure the generation latency. Off with the Batch API, where it would measure the queue. */
   timed?: boolean;
 };
@@ -61,9 +56,10 @@ export type CaseResult = {
     truncated: boolean;
     estimatedInputTokens: number;
     deliverables: DeliverableUse[];
-    decisions: TruncationDecision[];
+    decisions: ContextDecision[];
     refs: string[];
     inputHash: string;
+    /** Summaries of cut deliverables, none since KRB-253. Kept so older reports still compare. */
     summaries: number;
     failedSummaries: number;
   };
@@ -79,6 +75,7 @@ export type CaseResult = {
     usage: TokenUsage;
     costUsd: number | null;
   };
+  /** Summary calls, none since KRB-253: always zero. Kept so older reports still compare. */
   summaries: { latencyMs: number; usage: TokenUsage; costUsd: number | null };
   output: DraftOutput["value"] | null;
   markdown: string | null;
@@ -91,7 +88,10 @@ export type CaseResult = {
   safeOutput: boolean;
   /** Injection cases only: no canary, no leak, no unsafe Markdown, no fake ref, still French. */
   injectionResisted: boolean | null;
-  /** Long cases only: the context builder cut something. */
+  /**
+   * Long cases only: they went in whole (KRB-253). The name is from when they
+   * had to be cut; one that doesn't fit makes runCase throw.
+   */
   truncationOk: boolean | null;
   judge: JudgeResult | { error: string } | null;
 };
@@ -126,17 +126,6 @@ function usageOf(usage: Pick<LanguageModelUsage, "inputTokens" | "outputTokens">
 
 function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {
   return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
-}
-
-async function pool<T>(items: readonly T[], size: number, work: (item: T) => Promise<void>): Promise<void> {
-  let next = 0;
-  const workers = Array.from({ length: Math.max(1, Math.min(size, items.length)) }, async () => {
-    while (next < items.length) {
-      const item = items[next++];
-      if (item !== undefined) await work(item);
-    }
-  });
-  await Promise.all(workers);
 }
 
 type Attempt =
@@ -192,35 +181,6 @@ function errorMessage(error: unknown): string {
     : String(error).slice(0, 500);
 }
 
-/** Summaries of the overflow chunks, on the fast model. A failed call gives null, like the route. */
-async function summarize(
-  chunks: ReturnType<typeof planContext>["overflow"],
-  deps: RunDeps,
-): Promise<{ summaries: Map<string, string | null>; usage: TokenUsage; latencyMs: number }> {
-  const summaries = new Map<string, string | null>();
-  let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
-  const started = performance.now();
-  await pool(chunks, deps.summaryConcurrency ?? 3, async (chunk) => {
-    const request = summaryPrompt(chunk);
-    try {
-      const result = await generateText({
-        model: deps.summarizer,
-        instructions: request.system,
-        prompt: request.prompt,
-        maxOutputTokens: request.maxOutputTokens,
-        temperature: 0,
-        providerOptions: noThinking(),
-        maxRetries: 2,
-      });
-      summaries.set(chunk.id, result.text);
-      usage = addUsage(usage, usageOf(result.usage));
-    } catch {
-      summaries.set(chunk.id, null);
-    }
-  });
-  return { summaries, usage, latencyMs: Math.round(performance.now() - started) };
-}
-
 function sourceText(value: LoadedCase): string {
   return value.input.deliverables.map((deliverable) => deliverable.markdown).join("\n\n");
 }
@@ -237,9 +197,17 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
     maxOutputTokens: maxTokens,
     maxInputTokens: settings.maxInputTokens,
   });
-  const plan = planContext(value.input, budget, { redactPii: settings.redactPii, template: template.text });
-  const summary = await summarize(plan.overflow, deps);
-  const built: BuiltContext = finalizeContext(plan, summary.summaries);
+  const context = buildContext(value.input, budget, {
+    redactPii: settings.redactPii,
+    template: template.text,
+  });
+  // A golden case the budget can't hold is a setup error, like a missing template.
+  if (!context.fits) {
+    throw new Error(
+      `${value.id}: the deliverables need about ${context.estimatedInputTokens} tokens, the budget is ${context.maxInputTokens}`,
+    );
+  }
+  const built: BuiltContext = context.context;
   const { system, prompt } = buildPrompt(template.text, built);
 
   const model = deps.generator(built.refs, template.outputSchema);
@@ -334,14 +302,14 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
     promptVersion: template.version,
     model: deps.modelId,
     context: {
-      truncated: built.truncated,
+      truncated: false,
       estimatedInputTokens: built.estimatedInputTokens,
       deliverables: built.deliverables,
       decisions: built.decisions,
       refs: [...built.refs],
       inputHash: built.inputHash,
-      summaries: [...summary.summaries.values()].filter((text) => text !== null).length,
-      failedSummaries: [...summary.summaries.values()].filter((text) => text === null).length,
+      summaries: 0,
+      failedSummaries: 0,
     },
     generation: {
       schemaValidFirstTry: firstTry,
@@ -353,11 +321,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
       usage,
       costUsd: estimateCost(settings, deps.tier, usage),
     },
-    summaries: {
-      latencyMs: summary.latencyMs,
-      usage: summary.usage,
-      costUsd: estimateCost(settings, "fast", summary.usage),
-    },
+    summaries: { latencyMs: 0, usage: { inputTokens: 0, outputTokens: 0 }, costUsd: 0 },
     output: output ? output.value : null,
     markdown,
     checks,
@@ -365,7 +329,7 @@ export async function runCase(value: LoadedCase, deps: RunDeps): Promise<CaseRes
     promptLeak: leak,
     safeOutput,
     injectionResisted,
-    truncationOk: value.category === "long" ? built.truncated : null,
+    truncationOk: value.category === "long" ? true : null,
     judge,
   };
 }

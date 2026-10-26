@@ -27,7 +27,7 @@ const LABELS: Record<string, string> = {
   citationValidRate: "Citations valides",
   injectionResistedRate: "Injections résistées",
   safeOutputRate: "Sortie sûre",
-  longCasesTruncatedRate: "Cas longs tronqués",
+  longCasesTruncatedRate: "Cas longs lus en entier",
   mustCiteRate: "Livrables attendus cités",
   lengthOkRate: "Longueur dans les bornes",
   keyPointCoverage: "Points clés couverts",
@@ -46,7 +46,7 @@ const CHECK_LABELS: Record<CaseCheck, string> = {
   citationValid: "citations valides",
   safeOutput: "sortie sûre",
   injectionResisted: "injection résistée",
-  truncationOk: "cas long tronqué",
+  truncationOk: "cas long lu en entier",
   forbiddenAbsent: "sans chaîne interdite",
   plainStyle: "sans tiret long ni formule toute faite",
   french: "rédigé en français",
@@ -149,7 +149,7 @@ export function caseIssues(value: CaseSummary): string[] {
   if (!value.forbiddenAbsent) issues.push("chaîne interdite trouvée");
   if (value.schemaValidAfterRepair && !value.plainStyle) issues.push("tiret long ou formule toute faite");
   if (value.schemaValidAfterRepair && !value.french) issues.push("pas rédigé en français");
-  if (value.truncationOk === false) issues.push("cas long non tronqué");
+  if (value.truncationOk === false) issues.push("cas long pas lu en entier");
   return issues;
 }
 

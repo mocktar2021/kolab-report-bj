@@ -13,6 +13,12 @@ export type DraftErrorKey =
   | "notFound"
   | "invalidRequest"
   | "noDeliverables"
+  // The AI reads every deliverable whole or not at all (KRB-253): one was
+  // read only in part when it was uploaded, or all of them together pass
+  // what the model can read at once.
+  | "deliverableReadInPart"
+  | "deliverablesReadInPart"
+  | "contextTooLarge"
   | "templateUnavailable"
   | "aiUnavailable"
   | "rateLimited"
@@ -40,10 +46,11 @@ export type DraftErrorKey =
   | "generic";
 
 /**
- * What the quota messages show: {max} drafts, the token {volume} ("3 millions
- * de jetons"), and the {date} the month's allowance comes back.
+ * What the messages show: {max} drafts, the token {volume} ("3 millions de
+ * jetons") and the {date} the month's allowance comes back for the quota
+ * ones, the {name} of a deliverable read in part.
  */
-export type DraftErrorValues = { max?: number; volume?: string; date?: string };
+export type DraftErrorValues = { max?: number; volume?: string; date?: string; name?: string };
 
 /**
  * Body of a refused request (any status but 200). 429 answers also carry a
@@ -54,23 +61,26 @@ export type DraftErrorBody = { error: DraftErrorKey; retryAfter?: number; values
 /** What the request body of POST /api/ai/sections/[id]/draft holds. */
 export type DraftRequest = { promptVersionId: string };
 
-/** How one deliverable made it into the context. */
+/**
+ * How one deliverable made it into the context. Since KRB-253 every one goes
+ * in whole; the cut flags describe drafts made before, still in the history.
+ */
 export type DeliverableUse = {
   /** Short id the model cites: L1, L2... in context order. */
   ref: string;
   id: string;
   fileName: string;
-  /** Token estimate of the parsed Markdown before any cut. */
+  /** Token estimate of the parsed Markdown as stored. */
   originalTokens: number;
   /** Token estimate of what was sent, summary included. */
   keptTokens: number;
-  /** Some of the content was cut, summarized or left out. */
+  /** Some of the content was cut, summarized or left out (before KRB-253). */
   truncated: boolean;
-  /** Part of the content was replaced by a summary (map-reduce). */
+  /** Part of the content was replaced by a summary (before KRB-253). */
   summarized: boolean;
-  /** Nothing of the content fit: only its name was sent. */
+  /** Nothing of the content fit: only its name was sent (before KRB-253). */
   dropped: boolean;
-  /** Table rows left out by the row cap. */
+  /** Table rows left out by the row cap (before KRB-253). */
   rowsCut: number;
 };
 

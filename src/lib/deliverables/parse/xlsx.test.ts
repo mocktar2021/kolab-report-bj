@@ -1,9 +1,27 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PARSE_LIMITS, ParseError, type ParseResult } from "./types";
 import { cellText, parseXlsx } from "./xlsx";
+
+// The limits from before KRB-253, far smaller, keep these tests fast and
+// light. The parsers read PARSE_LIMITS the same way whatever its values.
+vi.mock("./types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./types")>();
+  return {
+    ...actual,
+    PARSE_LIMITS: {
+      ...actual.PARSE_LIMITS,
+      maxSheets: 20,
+      maxRowsPerSheet: 200,
+      maxColumns: 30,
+      maxCellChars: 500,
+      maxMarkdownChars: 200_000,
+      maxPdfPages: 300,
+    },
+  };
+});
 
 async function workbookBytes(build: (workbook: ExcelJS.Workbook) => void): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -128,7 +146,8 @@ describe("parseXlsx limits", () => {
       `| ${Array.from({ length: 30 }, (_, column) => `R200C${column + 1}`).join(" | ")} |`,
     );
     expect(markdown).not.toMatch(/R201C|C31\b/);
-    expect(meta.truncated).toBe(false);
+    // Read in part: the AI won't draft from it (KRB-253).
+    expect(meta.truncated).toBe(true);
   });
 
   it("cuts a long cell at 500 characters", async () => {
@@ -137,8 +156,9 @@ describe("parseXlsx limits", () => {
       sheet.getCell("A1").value = "Texte";
       sheet.getCell("A2").value = "é".repeat(PARSE_LIMITS.maxCellChars) + "FIN".repeat(40);
     });
-    const { markdown } = parsed(await parseXlsx(bytes));
+    const { markdown, meta } = parsed(await parseXlsx(bytes));
     expect(markdown).toBe(`## Long\n\n| Texte |\n| --- |\n| ${"é".repeat(PARSE_LIMITS.maxCellChars)} |`);
+    expect(meta.truncated).toBe(true);
   });
 
   it("keeps the first 20 visible sheets", async () => {
@@ -153,6 +173,21 @@ describe("parseXlsx limits", () => {
     expect(meta.sheets?.at(-1)?.name).toBe("Feuille 20");
     expect(markdown).toContain("## Feuille 20\n");
     expect(markdown).not.toContain("Feuille 21");
+    expect(meta.truncated).toBe(true);
+  });
+
+  it("stops reading once the text passes maxMarkdownChars", async () => {
+    const bytes = await workbookBytes((workbook) => {
+      for (let index = 1; index <= 3; index++) {
+        const sheet = workbook.addWorksheet(`Feuille ${index}`);
+        for (let row = 1; row <= 200; row++) sheet.addRow(Array.from({ length: 2 }, () => "x".repeat(400)));
+      }
+    });
+    const { markdown, meta } = parsed(await parseXlsx(bytes));
+    // 200 rows of 800 characters fill the 200,000 characters before the third sheet.
+    expect(meta.sheets?.map((sheet) => sheet.name)).toEqual(["Feuille 1", "Feuille 2"]);
+    expect(markdown.length).toBeLessThanOrEqual(PARSE_LIMITS.maxMarkdownChars);
+    expect(meta.truncated).toBe(true);
   });
 
   it("shows nothing for a date it cannot represent instead of failing", async () => {

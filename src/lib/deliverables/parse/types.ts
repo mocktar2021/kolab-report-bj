@@ -11,14 +11,17 @@ export const PARSE_LIMITS = {
   /** Of which the XML parts, which the parsers load into memory as text and trees. */
   maxXmlBytes: 20 * 1024 * 1024,
   maxZipEntries: 5000,
-  maxSheets: 20,
-  maxRowsPerSheet: 200,
-  maxColumns: 30,
-  maxCellChars: 500,
-  /** About 50,000 tokens, more than a section draft needs. */
-  maxMarkdownChars: 200_000,
+  // The AI reads a file whole or not at all (KRB-253), so these let real
+  // files through whole. A file past one of them is read in part, flagged,
+  // and kept out of AI drafts.
+  maxSheets: 50,
+  maxRowsPerSheet: 5_000,
+  maxColumns: 100,
+  maxCellChars: 5_000,
+  /** About 600 pages of text, some 500,000 tokens. */
+  maxMarkdownChars: 2_000_000,
   /** Pages of a PDF read. The text of most files reaches maxMarkdownChars well before. */
-  maxPdfPages: 300,
+  maxPdfPages: 2_000,
   /** Download and read together. */
   timeoutMs: 45_000,
   /** Heap of the process that reads a file. Past it the process ends and the file is too large. */
@@ -55,7 +58,11 @@ export type ParseMeta = {
   characters: number;
   /** Rough count for the AI draft: about four characters per token. */
   tokenEstimate: number;
-  /** The Markdown was cut at maxMarkdownChars. */
+  /**
+   * Something was left out: text past maxMarkdownChars, or a sheet, row,
+   * column or cell text past the spreadsheet limits. Files read before
+   * KRB-253 only set it for the text; readInPart covers their other cases.
+   */
   truncated: boolean;
   tables?: number;
   sheets?: SheetMeta[];
@@ -65,6 +72,19 @@ export type ParseMeta = {
   /** Why a PDF is kept without its text: it has none, as a scan, or a password locks it. */
   reason?: "noText" | "locked";
 };
+
+/**
+ * The file was read only in part: its text, pages, sheets, rows or columns
+ * went past the limits. The AI never drafts from such a file (KRB-253).
+ */
+export function readInPart(meta: ParseMeta | null | undefined): boolean {
+  if (!meta) return false;
+  if (meta.truncated) return true;
+  if (meta.pages !== undefined && meta.pagesRead !== undefined && meta.pagesRead < meta.pages) return true;
+  return (meta.sheets ?? []).some(
+    (sheet) => sheet.keptRows < sheet.rows || sheet.keptColumns < sheet.columns,
+  );
+}
 
 export type ParseResult =
   { status: "parsed"; markdown: string; meta: ParseMeta } | { status: "skipped"; meta: ParseMeta };

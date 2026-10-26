@@ -6,7 +6,7 @@ import { loadCases, type LoadedCase } from "./case";
 import { executeCases } from "./execute";
 import { applyGate, loadThresholds } from "./gate";
 import { loadRubric } from "./judge";
-import { mockGenerator, mockJudge, mockSummarizer } from "./mock";
+import { mockGenerator, mockJudge } from "./mock";
 import { aggregate } from "./report";
 import type { RunDeps } from "./runner";
 import { loadGlobalTemplates } from "./templates";
@@ -37,7 +37,6 @@ function deps(value: LoadedCase, options: { judge?: boolean; settings?: typeof m
     tier: template.tier,
     modelId: "mock",
     generator: mockGenerator,
-    summarizer: mockSummarizer(),
     judge: options.judge ? { model: mockJudge(), rubric: loadRubric() } : null,
   };
 }
@@ -103,7 +102,7 @@ describe("upfrontSpend and caseSpend", () => {
     expect(upfrontSpend(short, deps(short, { settings: pricedSettings })).usd).toBeGreaterThan(0);
   });
 
-  it("adds draft, summaries and judge for a finished case", async () => {
+  it("adds draft and judge for a finished case", async () => {
     const value = find("long-mutuelle-zou");
     const { results } = await executeCases([value], {
       concurrency: 1,
@@ -113,17 +112,14 @@ describe("upfrontSpend and caseSpend", () => {
     const result = results[0];
     if (!result || !result.judge || !("scores" in result.judge)) throw new Error("no judged result");
     const actual = caseSpend(result, pricedSettings);
-    const { generation, summaries, judge } = { ...result, judge: result.judge };
+    const { generation, judge } = { ...result, judge: result.judge };
     expect(actual.tokens).toBe(
       generation.usage.inputTokens +
         generation.usage.outputTokens +
-        summaries.usage.inputTokens +
-        summaries.usage.outputTokens +
         judge.usage.inputTokens +
         judge.usage.outputTokens,
     );
-    expect(summaries.usage.inputTokens).toBeGreaterThan(0);
-    expect(actual.usd).toBeGreaterThan((generation.costUsd ?? 0) + (summaries.costUsd ?? 0));
+    expect(actual.usd).toBeGreaterThan(generation.costUsd ?? 0);
   });
 });
 
