@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { WEB_ANALYTICS_ORIGINS, expect, test } from "./fixtures";
 import { captchaOn, runTag, signUpClosed, smoke } from "./support";
 
 // Always on, no account needed, nothing written: public pages, the health
@@ -12,10 +12,15 @@ const CAPTCHA_REQUIRED = "Confirmez que vous n'êtes pas un robot.";
 
 /**
  * Console messages from these origins are not the app's: the Vercel toolbar on
- * preview deployments, and the Turnstile widget, which logs its own errors when
- * it sends a headless browser a challenge.
+ * preview deployments, the Turnstile widget, which logs its own errors when
+ * it sends a headless browser a challenge, and the analytics beacon that
+ * fixtures.ts blocks.
  */
-const OTHER_ORIGINS = ["https://vercel.live/", "https://challenges.cloudflare.com/"];
+const OTHER_ORIGINS = [
+  "https://vercel.live/",
+  "https://challenges.cloudflare.com/",
+  ...WEB_ANALYTICS_ORIGINS,
+];
 
 test.describe("public pages", { tag: "@public" }, () => {
   test("GET /api/health answers 200 with the database check", async ({ request }) => {

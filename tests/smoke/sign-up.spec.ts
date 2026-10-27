@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { PASSWORD_MIN_LENGTH } from "../../src/lib/auth/password-policy";
 import { SIGN_UP_CLOSED_REASON, fillSecret, runTag, signUpClosed, signupAddress, smoke } from "./support";
 
