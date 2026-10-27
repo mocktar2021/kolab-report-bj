@@ -8,14 +8,14 @@ describe("WebAnalytics", () => {
   });
 
   it("renders nothing without a token", () => {
-    vi.stubEnv("NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN", "");
+    vi.stubEnv("NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG", "");
     expect(renderToStaticMarkup(<WebAnalytics />)).toBe("");
-    vi.stubEnv("NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN", "  ");
+    vi.stubEnv("NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG", "  ");
     expect(renderToStaticMarkup(<WebAnalytics />)).toBe("");
   });
 
   it("loads the beacon with the token and counts full page loads only", () => {
-    vi.stubEnv("NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN", "abc123");
+    vi.stubEnv("NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG", "abc123");
     const html = renderToStaticMarkup(<WebAnalytics />);
     expect(html).toContain('src="https://static.cloudflareinsights.com/beacon.min.js"');
     expect(html).toContain("defer");

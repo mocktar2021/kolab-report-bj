@@ -180,7 +180,7 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 | Recipients | Cloudflare Web Analytics. See [`processors.md`](processors.md#cloudflare-web-analytics). |
 | Transfers outside the EU | Cloudflare is a US company and processes the beacon at the nearest data center |
 | Retention | Cloudflare keeps the visits unsampled 7 days, then a sample of about 10% (https://developers.cloudflare.com/web-analytics/faq/). See [`retention.md`](retention.md#logs). |
-| Security measures | Loaded only with `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN`, only on the public pages, never on the app pages that show report content. The CSP allows Cloudflare's two origins only in that build (`src/lib/security/csp.mjs`). |
+| Security measures | Loaded only with `NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG`, only on the public pages, never on the app pages that show report content. The CSP allows Cloudflare's two origins only in that build (`src/lib/security/csp.mjs`). |
 
 ## Measures that apply to every activity
 

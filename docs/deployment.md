@@ -37,7 +37,7 @@ Create two projects, `kolabreport-staging` and `kolabreport-production`, in the 
 | `NEXT_PUBLIC_SUPABASE_URL` | no | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | no | Anon (publishable) key |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | no | Cloudflare Turnstile site key. Without it the forms show no captcha. Set it before turning the captcha on in Supabase, see [Turnstile captcha](#turnstile-captcha) |
-| `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` | no | Production only. Cloudflare Web Analytics site token: page views of the public pages. Leave it empty for Preview so staging isn't counted. See [Visitor analytics](#visitor-analytics) |
+| `NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG` | no | Production only. Cloudflare Web Analytics site tag, the `token` value of its snippet: page views of the public pages. Leave it empty for Preview so staging isn't counted. See [Visitor analytics](#visitor-analytics) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **yes**, mark Sensitive | Service role key |
 | `DATABASE_URL` / `DIRECT_URL` | **yes**, mark Sensitive | Pooler strings, see `.env.example` |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | **yes**, mark Sensitive | One key per environment |
@@ -295,8 +295,8 @@ Locally and in CI there is no site key and the local Supabase stack keeps its ca
 
 Cloudflare Web Analytics counts page views of the public pages: landing, pricing, guide, sign-up and the legal pages (KRB-255). It is free with no cap and sets no cookie. The app pages never load it. Vercel Web Analytics was set aside because it bills every event on the Pro plan.
 
-1. **Cloudflare**: **Analytics & Logs > Web Analytics > Add a site**. Hostname `kolabreport.com`, manual setup (the DNS is at GoDaddy, so Cloudflare does not proxy the site). Copy the `token` value of the snippet, not the whole snippet.
-2. **Vercel**, **Settings > Environment Variables**: `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` = the token, for **Production** only, not marked Sensitive (the build inlines it). The token is public: it ends up in every page.
+1. **Cloudflare**: **Analytics & Logs > Web Analytics > Add a site**. Hostname `kolabreport.com`, manual setup (the DNS is at GoDaddy, so Cloudflare does not proxy the site). Copy the `token` value of the snippet, not the whole snippet. Cloudflare also calls it the site tag. The variable is not named `..._TOKEN` because `scripts/check-public-env.mjs` refuses public names that look like secrets.
+2. **Vercel**, **Settings > Environment Variables**: `NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG` = that value, for **Production** only, not marked Sensitive (the build inlines it). It is public: it ends up in every page.
 3. Release with a tag. The build adds the beacon to the public pages and allows `static.cloudflareinsights.com` and `cloudflareinsights.com` in the CSP (`src/lib/security/csp.mjs`).
 4. Open `https://kolabreport.com/fr` in a private window. Page views show in Cloudflare after a few minutes. An ad blocker hides the visit, so the count is a floor.
 

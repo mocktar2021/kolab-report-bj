@@ -51,7 +51,7 @@ describe("contentSecurityPolicy", () => {
   it("allows the analytics beacon only with a token (KRB-255)", () => {
     const policy = directives({
       NEXT_PUBLIC_SUPABASE_URL: SUPABASE,
-      NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN: "abc123",
+      NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG: "abc123",
     });
     expect(policy.get("script-src")).toContain(WEB_ANALYTICS_SCRIPT_ORIGIN);
     // The beacon reports there, and the service worker fetches the script.
@@ -59,7 +59,7 @@ describe("contentSecurityPolicy", () => {
       expect.arrayContaining([WEB_ANALYTICS_SCRIPT_ORIGIN, WEB_ANALYTICS_REPORT_ORIGIN]),
     );
     expect(policy.get("frame-src")).toEqual(["'none'"]);
-    expect(contentSecurityPolicy({ NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN: " " })).not.toContain(
+    expect(contentSecurityPolicy({ NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG: " " })).not.toContain(
       "cloudflareinsights",
     );
   });

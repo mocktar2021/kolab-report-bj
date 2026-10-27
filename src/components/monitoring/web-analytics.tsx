@@ -14,12 +14,12 @@ import { WEB_ANALYTICS_SCRIPT_ORIGIN } from "@/lib/security/csp.mjs";
  * navigation from an app page, and the beacon would then report the address
  * the browser first loaded, an app page.
  *
- * Nothing without NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN: local, CI, previews
+ * Nothing without NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG: local, CI, previews
  * and staging load no beacon. The CSP allows Cloudflare only in that case
  * (src/lib/security/csp.mjs).
  */
 export function WebAnalytics() {
-  const token = process.env.NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN?.trim();
+  const token = process.env.NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG?.trim();
   if (!token) return null;
   return (
     <script

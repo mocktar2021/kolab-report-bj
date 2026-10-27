@@ -38,7 +38,7 @@ export function contentSecurityPolicy(env) {
   // The Vercel toolbar on preview deployments (comments, feedback).
   const toolbar = isVercelPreview ? "https://vercel.live" : "";
   const turnstile = env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ? TURNSTILE_ORIGIN : "";
-  const analytics = Boolean(env.NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN?.trim());
+  const analytics = Boolean(env.NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG?.trim());
   const analyticsScript = analytics ? WEB_ANALYTICS_SCRIPT_ORIGIN : "";
   const analyticsReport = analytics ? WEB_ANALYTICS_REPORT_ORIGIN : "";
 

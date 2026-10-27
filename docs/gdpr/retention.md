@@ -92,7 +92,7 @@ Nothing in the repository sets a log retention, so each one is the provider's de
 | Langfuse traces, when tracing is on | Provider default, or the project's own setting |
 | Sentry errors and traces, when `NEXT_PUBLIC_SENTRY_DSN` is set | Plan default: errors 30 days on Developer and 90 days on Team and Business, traces 30 days (https://docs.sentry.io/security-legal-pii/security/data-retention-periods/) |
 | LLM provider logs of API calls | Per the provider's terms, **to confirm** |
-| Cloudflare Web Analytics page views of the public pages, when `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` is set | Unsampled 7 days, then a sample of about 10% (https://developers.cloudflare.com/web-analytics/faq/) |
+| Cloudflare Web Analytics page views of the public pages, when `NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG` is set | Unsampled 7 days, then a sample of about 10% (https://developers.cloudflare.com/web-analytics/faq/) |
 
 ## Backups
 
