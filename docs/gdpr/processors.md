@@ -12,6 +12,7 @@ These are the services that receive personal data from KolabReport. For report c
 | Langfuse | Traces of AI calls, only with `AI_TRACING=true` | EU (Ireland) with the default `https://cloud.langfuse.com` | Only if tracing is turned on |
 | Sentry | Error monitoring, only with `NEXT_PUBLIC_SENTRY_DSN` set | EU data storage location (`de.sentry.io`), US company | To sign / to confirm, before the DSN is set on production |
 | Cloudflare R2 | Off-site copy of the Storage files, only once the `backup-storage.yml` secrets are set | EU jurisdiction bucket | To sign / to confirm, before the job runs on production |
+| Cloudflare Web Analytics | Page views of the public pages, only with `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` set (KRB-255) | Cloudflare's global network, US company | Same Cloudflare DPA as R2, see [Cloudflare Web Analytics](#cloudflare-web-analytics) |
 | GitHub | Runs the nightly backup jobs and keeps the encrypted database dump 14 days, only once their secrets are set | Not chosen, US company | To confirm for this account's plan |
 | FedaPay | Payment of the offers by mobile money and card, once billing is launched (KRB-179); the sandbox account on staging before that | To confirm | To confirm, see [FedaPay](#fedapay) |
 
@@ -88,6 +89,14 @@ The Vercel AI SDK talks to Anthropic (`@ai-sdk/anthropic`) or OpenAI (`@ai-sdk/o
 - **Region**: the organization is created with the EU data storage location, so events, releases and source maps stay in the EU (API at `de.sentry.io`). Per https://docs.sentry.io/organization/data-storage-location/, some account data stays in the US whatever the region: users, tokens, DSN keys, project settings. Sentry is Functional Software, Inc., a US company.
 - **DPA**: https://sentry.io/legal/dpa/ (version 5.1.0 of May 29, 2024 on 2026-10-14, with Standard Contractual Clauses). Subprocessors: https://sentry.io/legal/subprocessors/
 - **Status**: to sign / to confirm before the DSN is set on production.
+
+## Cloudflare Web Analytics
+
+- **When**: only in a build with `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN`, so production only. `src/components/monitoring/web-analytics.tsx`.
+- **Receives**: on a full load of a public page (landing, pricing, guide, sign-up, legal pages), the page address, the referrer, the user agent and load timings. The app pages never load the beacon, and it counts no client-side navigation (`spa: false`). Cloudflare receives the IP address with the request, uses it for the country and does not store it (https://developers.cloudflare.com/speed/observatory/rum-beacon/). No cookie, no `localStorage`.
+- **Region**: processed at the nearest Cloudflare data center, so possibly outside the EU and Benin.
+- **DPA**: the Cloudflare customer DPA, as for R2 below.
+- **Status**: to confirm with the R2 one.
 
 ## Backups
 

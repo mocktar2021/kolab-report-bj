@@ -9,6 +9,7 @@ import { ProgressShowcase } from "@/components/landing/progress-showcase";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { WorkspaceBento } from "@/components/landing/workspace-bento";
+import { WebAnalytics } from "@/components/monitoring/web-analytics";
 import { prelaunchUntil } from "@/lib/launch";
 
 // Public landing page. It reads no cookies or search params, so it is
@@ -66,6 +67,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
         <CallToAction />
       </main>
       <SiteFooter />
+      <WebAnalytics />
     </div>
   );
 }

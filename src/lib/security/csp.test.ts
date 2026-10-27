@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { contentSecurityPolicy, TURNSTILE_ORIGIN } from "./csp.mjs";
+import {
+  contentSecurityPolicy,
+  TURNSTILE_ORIGIN,
+  WEB_ANALYTICS_REPORT_ORIGIN,
+  WEB_ANALYTICS_SCRIPT_ORIGIN,
+} from "./csp.mjs";
 
 const SUPABASE = "https://abcdefghijklmnop.supabase.co";
 const SITE_KEY = "0x4AAAAAAAexample";
@@ -24,6 +29,7 @@ describe("contentSecurityPolicy", () => {
     expect(policy.get("frame-src")).toEqual(["'none'"]);
     expect(policy.get("frame-ancestors")).toEqual(["'none'"]);
     expect(contentSecurityPolicy({})).not.toContain(TURNSTILE_ORIGIN);
+    expect(contentSecurityPolicy({})).not.toContain("cloudflareinsights");
   });
 
   it("allows the Turnstile script, its iframe and the service worker's fetch of the script", () => {
@@ -40,6 +46,22 @@ describe("contentSecurityPolicy", () => {
 
   it("treats a blank site key as no captcha", () => {
     expect(contentSecurityPolicy({ NEXT_PUBLIC_TURNSTILE_SITE_KEY: "  " })).not.toContain(TURNSTILE_ORIGIN);
+  });
+
+  it("allows the analytics beacon only with a token (KRB-255)", () => {
+    const policy = directives({
+      NEXT_PUBLIC_SUPABASE_URL: SUPABASE,
+      NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN: "abc123",
+    });
+    expect(policy.get("script-src")).toContain(WEB_ANALYTICS_SCRIPT_ORIGIN);
+    // The beacon reports there, and the service worker fetches the script.
+    expect(policy.get("connect-src")).toEqual(
+      expect.arrayContaining([WEB_ANALYTICS_SCRIPT_ORIGIN, WEB_ANALYTICS_REPORT_ORIGIN]),
+    );
+    expect(policy.get("frame-src")).toEqual(["'none'"]);
+    expect(contentSecurityPolicy({ NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN: " " })).not.toContain(
+      "cloudflareinsights",
+    );
   });
 
   it("allows the Vercel toolbar on preview deployments only", () => {
