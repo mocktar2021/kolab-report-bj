@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
+import { WebAnalytics } from "@/components/monitoring/web-analytics";
 import { getPathname } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 
@@ -34,6 +35,7 @@ export async function PublicPageShell({ locale, children }: { locale: Locale; ch
         {children}
       </main>
       <SiteFooter sectionBase={landing} />
+      <WebAnalytics />
     </div>
   );
 }

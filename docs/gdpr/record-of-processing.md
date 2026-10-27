@@ -7,7 +7,7 @@ This is the Article 30 record for KolabReport. It lists each processing activity
 | Organization keeping the record | Mocktar Technologies, établissement, C 1357 Houeyiho, 07BP91 Cotonou, République du Bénin. RCCM COTONOU N° RB/COT/26 A 119654, IFU 1200900488800. Same details as `src/content/legal/publisher.ts`. |
 | Contact for data protection | support@mocktar.com |
 | EU representative, DPO | **To confirm** whether either is needed |
-| Last updated | 2026-10-23 |
+| Last updated | 2026-10-27 |
 | Database, Auth and Storage | Supabase, region EU West Paris (`eu-west-3`), per `docs/deployment.md` |
 | App server | Vercel, functions in `cdg1` (Paris), per `vercel.json` |
 
@@ -167,6 +167,20 @@ Not masked: names of people, postal addresses, other identity or tax numbers, da
 | Transfers outside the EU | Resend is a US company. See [`processors.md`](processors.md#resend). |
 | Retention | Until the launch e-mail goes out, then 30 days at most: the operator deletes the contacts of the segment in Resend ([`docs/operations/launch.md`](../operations/launch.md)). See [`retention.md`](retention.md#launch-reminder). |
 | Security measures | The form only works in production before the launch (`isPrelaunch` in `src/lib/launch.ts`). A hidden field catches bots that fill every field, and the address is checked before it is sent. No e-mail goes out when someone signs up to the list, so the form can't be used to send mail to a stranger. |
+
+## 11. Audience of the public pages
+
+| Field | Entry |
+| --- | --- |
+| Role | Controller (assumption to confirm) |
+| Purpose | Count visits to the public pages and see where visitors come from, for example after a LinkedIn post or an e-mail (KRB-255) |
+| Legal basis (proposed) | Legitimate interest, Article 6(1)(f): knowing the audience of the site. No cookie and nothing read from or stored in the browser's storage. |
+| Data subjects | Visitors of the landing, pricing, guide, sign-up and legal pages |
+| Data categories | Page address, referrer, user agent (browser, system, device type), load timings, country derived from the IP address. Nothing in the app's database. |
+| Recipients | Cloudflare Web Analytics. See [`processors.md`](processors.md#cloudflare-web-analytics). |
+| Transfers outside the EU | Cloudflare is a US company and processes the beacon at the nearest data center |
+| Retention | Cloudflare keeps the visits unsampled 7 days, then a sample of about 10% (https://developers.cloudflare.com/web-analytics/faq/). See [`retention.md`](retention.md#logs). |
+| Security measures | Loaded only with `NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG`, only on the public pages, never on the app pages that show report content. The CSP allows Cloudflare's two origins only in that build (`src/lib/security/csp.mjs`). |
 
 ## Measures that apply to every activity
 

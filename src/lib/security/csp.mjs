@@ -4,6 +4,12 @@
 /** Cloudflare Turnstile serves its script and its iframe from here (KRB-58). */
 export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
+/** Cloudflare Web Analytics serves its beacon script from here (KRB-255). */
+export const WEB_ANALYTICS_SCRIPT_ORIGIN = "https://static.cloudflareinsights.com";
+
+/** And the beacon sends its page views here. */
+export const WEB_ANALYTICS_REPORT_ORIGIN = "https://cloudflareinsights.com";
+
 /**
  * Content-Security-Policy for every page. Scripts stay limited to this origin
  * (plus inline ones: Next.js, the theme and sidebar scripts), data only goes
@@ -13,6 +19,10 @@ export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
  * needs its script and its iframe from challenges.cloudflare.com. Every page
  * allows them: a client-side navigation from the landing page to the sign-in
  * page keeps the landing page's policy.
+ *
+ * Cloudflare Web Analytics, only in builds that have a token
+ * (src/components/monitoring/web-analytics.tsx), needs its script and the
+ * address its beacon reports to. For the same reason, every page allows them.
  *
  * @param {Record<string, string | undefined>} env
  */
@@ -28,12 +38,22 @@ export function contentSecurityPolicy(env) {
   // The Vercel toolbar on preview deployments (comments, feedback).
   const toolbar = isVercelPreview ? "https://vercel.live" : "";
   const turnstile = env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ? TURNSTILE_ORIGIN : "";
+  const analytics = Boolean(env.NEXT_PUBLIC_CF_WEB_ANALYTICS_SITE_TAG?.trim());
+  const analyticsScript = analytics ? WEB_ANALYTICS_SCRIPT_ORIGIN : "";
+  const analyticsReport = analytics ? WEB_ANALYTICS_REPORT_ORIGIN : "";
 
   const directives = {
     "default-src": ["'self'"],
     // Next.js inlines its bootstrap scripts. Nonces would need every page to
     // render per request, including the static landing and sign-in pages.
-    "script-src": ["'self'", "'unsafe-inline'", isDev ? "'unsafe-eval'" : "", toolbar, turnstile],
+    "script-src": [
+      "'self'",
+      "'unsafe-inline'",
+      isDev ? "'unsafe-eval'" : "",
+      toolbar,
+      turnstile,
+      analyticsScript,
+    ],
     "style-src": ["'self'", "'unsafe-inline'", toolbar],
     "img-src": [
       "'self'",
@@ -53,8 +73,11 @@ export function contentSecurityPolicy(env) {
       // Once the service worker controls a page, it fetches the Turnstile
       // script for it, and a worker's fetch() follows connect-src of the
       // policy sent with /sw.js, which is this one. Without it the widget
-      // fails on every visit after the first one (KRB-242).
+      // fails on every visit after the first one (KRB-242). Same for the
+      // analytics beacon script.
       turnstile,
+      analyticsScript,
+      analyticsReport,
     ],
     "frame-src": toolbar || turnstile ? [toolbar, turnstile] : ["'none'"],
     "worker-src": ["'self'"],

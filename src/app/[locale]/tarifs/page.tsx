@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
+import { WebAnalytics } from "@/components/monitoring/web-analytics";
 import { Extras, PlanGrid } from "@/components/pricing/plans";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { Button } from "@/components/ui/button";
@@ -111,6 +112,7 @@ export default async function PricingPage({ params }: Props) {
         </section>
       </main>
       <SiteFooter sectionBase={landing} />
+      <WebAnalytics />
     </div>
   );
 }

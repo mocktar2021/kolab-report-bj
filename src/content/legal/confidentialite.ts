@@ -8,7 +8,7 @@ const CONTROLLER = "Responsable de traitement";
 const PROCESSOR = "Sous-traitant de l'organisation cliente";
 
 export const confidentialite: LegalDocument = {
-  updatedAt: "2026-10-26",
+  updatedAt: "2026-10-27",
   intro: [
     "Cette politique explique quelles données personnelles KolabReport traite, pourquoi, avec qui elles sont partagées, combien de temps elles sont gardées et comment exercer vos droits. Elle s'applique au site, à l'application KolabReport et aux e-mails qu'ils envoient.",
   ],
@@ -50,6 +50,7 @@ export const confidentialite: LegalDocument = {
               ],
               ["Membres des espaces, rôles et invitations", PROCESSOR, "L'organisation cliente"],
               ["Rappel de lancement : l'adresse e-mail laissée sur le site", CONTROLLER, PUBLISHER.name],
+              ["Mesure d'audience des pages publiques du site", CONTROLLER, PUBLISHER.name],
             ],
           },
         },
@@ -72,6 +73,7 @@ export const confidentialite: LegalDocument = {
             "**Échanges avec le support** : les messages que vous nous envoyez et nos réponses.",
             "**Rappel de lancement** : l'adresse e-mail que vous laissez sur le site avant l'ouverture des inscriptions, pour recevoir un e-mail à l'ouverture.",
             "**Journaux techniques** : requêtes reçues par les serveurs et erreurs de l'application.",
+            "**Mesure d'audience** : sur les pages publiques du site, l'adresse de la page, le site d'où vous venez, le pays, le navigateur, le type d'appareil et les temps de chargement, sans cookie (voir [Cookies et stockage local](#cookies)).",
           ],
         },
         `Les numéros de carte et les codes mobile money sont saisis chez FedaPay : ${PUBLISHER.name} ne les reçoit pas.`,
@@ -114,6 +116,10 @@ export const confidentialite: LegalDocument = {
               [
                 "Mesurer la qualité des brouillons IA (acceptation, modifications, notes) pour améliorer les modèles de prompts",
                 "Intérêt légitime",
+              ],
+              [
+                "Compter les visites des pages publiques du site et savoir d'où viennent les visiteurs",
+                `Intérêt légitime de ${PUBLISHER.name} à connaître la fréquentation de son site`,
               ],
               ["Répondre à vos demandes au support", "Exécution du contrat ou intérêt légitime"],
               [
@@ -203,9 +209,9 @@ export const confidentialite: LegalDocument = {
               ],
               [
                 "[Cloudflare](https://www.cloudflare.com)",
-                "Copie de sauvegarde des fichiers (R2), lorsqu'elle est activée. Vérification anti-robot (Turnstile) sur l'inscription, la connexion et la demande de nouveau mot de passe, lorsqu'elle est activée",
-                "Copie des livrables et des exports. Pour Turnstile : adresse IP et signaux techniques du navigateur, sans cookie publicitaire",
-                "Union européenne pour R2. Turnstile : réseau mondial de Cloudflare, société établie aux États-Unis",
+                "Copie de sauvegarde des fichiers (R2), lorsqu'elle est activée. Vérification anti-robot (Turnstile) sur l'inscription, la connexion et la demande de nouveau mot de passe, lorsqu'elle est activée. Mesure d'audience des pages publiques (Web Analytics), lorsqu'elle est activée",
+                "Copie des livrables et des exports. Pour Turnstile : adresse IP et signaux techniques du navigateur, sans cookie publicitaire. Pour Web Analytics : adresse de la page publique, site d'origine, navigateur, type d'appareil et temps de chargement. Cloudflare en déduit le pays avec l'adresse IP, qu'il ne conserve pas",
+                "Union européenne pour R2. Turnstile et Web Analytics : réseau mondial de Cloudflare, société établie aux États-Unis",
               ],
               [
                 "[GitHub](https://github.com)",
@@ -289,6 +295,10 @@ export const confidentialite: LegalDocument = {
                 "La durée fixée par chaque prestataire. Pour Sentry, 30 à 90 jours selon l'offre.",
               ],
               [
+                "Mesure d'audience",
+                "Cloudflare garde le détail des visites 7 jours, puis seulement un échantillon pour les statistiques.",
+              ],
+              [
                 "Sauvegardes",
                 "La copie chiffrée de la base de données est gardée 14 jours. Un fichier supprimé disparaît de toutes les copies dans un délai d'environ 32 jours.",
               ],
@@ -357,7 +367,7 @@ export const confidentialite: LegalDocument = {
       id: "cookies",
       title: "Cookies et stockage local",
       body: [
-        "KolabReport utilise uniquement les cookies et le stockage local nécessaires au service. Il n'y a ni cookie publicitaire, ni mesure d'audience, ni bouton de réseau social. Ces éléments ne demandent donc pas votre consentement préalable.",
+        "KolabReport utilise uniquement les cookies et le stockage local nécessaires au service. Il n'y a ni cookie publicitaire, ni cookie de mesure d'audience, ni bouton de réseau social. Ces éléments ne demandent donc pas votre consentement préalable.",
         {
           table: {
             caption: "Cookies et stockage local utilisés par KolabReport",
@@ -392,6 +402,7 @@ export const confidentialite: LegalDocument = {
           },
         },
         "Les polices de caractères sont servies par KolabReport lui-même : votre navigateur ne contacte pas Google.",
+        "Les pages publiques du site (accueil, tarifs, guide, inscription et pages légales) chargent Cloudflare Web Analytics pour compter les visites. Ce script ne dépose aucun cookie et n'écrit rien dans votre navigateur. Il envoie à Cloudflare l'adresse de la page, le site d'où vous venez, votre navigateur, votre type d'appareil et des temps de chargement. Cloudflare en déduit le pays avec votre adresse IP, qu'il ne conserve pas. Il ne vous suit pas d'une visite à l'autre et ne sert pas à la publicité. Les pages de l'application ne le chargent pas.",
         "Lorsque la vérification anti-robot est activée, les formulaires d'inscription, de connexion et de demande de nouveau mot de passe chargent Cloudflare Turnstile. Turnstile lit des signaux techniques du navigateur pour distinguer une personne d'un robot. Il sert à la sécurité du service, ne sert pas à la publicité et ne demande donc pas de consentement.",
         "Vous pouvez effacer ces éléments dans les réglages de votre navigateur. Sans le cookie de session, vous ne pouvez pas rester connecté.",
       ],
