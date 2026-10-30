@@ -43,7 +43,11 @@ export function Hero({ launchAt }: { launchAt?: string }) {
       <EdgeLines side="right" className="top-40 hidden lg:block" />
 
       <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6">
+        {/* The kicker names the reports in the words buyers search with (KRB-261). */}
         <h1 id="hero-title" className={cn(enter, "text-display text-foreground")}>
+          <span className="mb-5 block font-sans text-sm font-medium leading-normal tracking-normal text-muted-foreground">
+            {t("kicker")}
+          </span>
           {t.rich("title", {
             line: (chunks) => <span className="block">{chunks}</span>,
           })}

@@ -21,8 +21,8 @@
     "system": "Système"
   },
   "Landing": {
-    "metaTitle": "KolabReport : rapports d'expertise rédigés en équipe",
-    "metaDescription": "Découpez un rapport d'expertise en sections, attribuez-les à vos experts, recueillez leurs livrables et suivez l'avancement section par section.",
+    "metaTitle": "KolabReport : rapports d'audit et d'évaluation en équipe",
+    "metaDescription": "Cabinets et bureaux d'études : chaque expert rédige sa section, l'IA propose un premier jet, le rapport sort en Word ou PDF. Essai gratuit de {days} jours.",
     "skipToContent": "Aller au contenu principal",
     "nav": {
       "label": "Navigation principale",
@@ -33,6 +33,7 @@
       "signIn": "Se connecter"
     },
     "hero": {
+      "kicker": "Rapports d'audit, d'évaluation et d'étude",
       "title": "<line>Une section par expert.</line> <line>Un seul rapport à livrer.</line>",
       "subtitle": "Attribuez chaque section à un expert, recueillez ses livrables et partez d'un brouillon préparé par l'IA. Vous suivez l'avancement jusqu'au rapport final.",
       "primaryCta": "Se connecter",
@@ -525,8 +526,8 @@
     }
   },
   "Guide": {
-    "metaTitle": "Guide d'utilisation",
-    "metaDescription": "Comment utiliser KolabReport, rôle par rôle : espaces de travail, invitations, plan du rapport, sections, modèles de prompts, brouillons IA, éditeur, exports et abonnement. Avec les questions fréquentes et une version PDF.",
+    "metaTitle": "Guide d'utilisation, rôle par rôle",
+    "metaDescription": "Comment utiliser KolabReport : espaces de travail, sections, livrables, brouillons IA, éditeur, exports Word et PDF, abonnement. Avec une FAQ et un PDF.",
     "eyebrow": "Aide",
     "title": "Guide d'utilisation",
     "updatedAt": "Dernière mise à jour : <time>{date}</time>",
@@ -2084,8 +2085,8 @@
     }
   },
   "Pricing": {
-    "metaTitle": "Tarifs",
-    "metaDescription": "Les offres de KolabReport en FCFA : essai gratuit de 14 jours, Indépendant, Cabinet, Institution, Pass Mission et Pack IA. Les lecteurs sont gratuits sur toutes les offres.",
+    "metaTitle": "Tarifs en FCFA, essai gratuit de {days} jours",
+    "metaDescription": "Indépendant à {independant} et Cabinet à {cabinet} FCFA par mois, Pass Mission à {mission} FCFA pour un rapport. Lecteurs gratuits, paiement par Mobile Money ou carte.",
     "eyebrow": "Tarifs",
     "title": "Des offres claires, en FCFA",
     "subtitle": "Essayez KolabReport {days} jours sans carte bancaire. Payez ensuite au mois, au trimestre ou à l'année, par Mobile Money ou carte bancaire.",

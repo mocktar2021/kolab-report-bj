@@ -10,6 +10,7 @@ import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { WorkspaceBento } from "@/components/landing/workspace-bento";
 import { WebAnalytics } from "@/components/monitoring/web-analytics";
+import { LANDING_META_VALUES } from "@/lib/seo/copy";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { publicPageMetadata } from "@/lib/seo/metadata";
 import { landingJsonLd } from "@/lib/seo/structured-data";
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: "
     locale,
     path: "/",
     title: { absolute: t("metaTitle") },
-    description: t("metaDescription"),
+    description: t("metaDescription", LANDING_META_VALUES),
   });
 }
 

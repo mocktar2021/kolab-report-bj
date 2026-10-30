@@ -18,8 +18,8 @@ function offer(page: Page, name: string) {
 test("/fr/tarifs opens signed out with the offers and prices of the catalogue", async ({ page }) => {
   await page.goto("/fr/tarifs");
   await expect(page).toHaveURL("/fr/tarifs");
-  await expect(page).toHaveTitle("Tarifs · KolabReport");
-  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /lecteurs sont gratuits/);
+  await expect(page).toHaveTitle(`Tarifs en FCFA, essai gratuit de ${TRIAL.days} jours · KolabReport`);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Lecteurs gratuits/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Des offres claires, en FCFA");
   await expect(page.getByText("Prix nets, sans TVA", { exact: true })).toBeVisible();
   await expect(page.getByText("L'année au prix de 10 mois", { exact: true })).toBeVisible();
