@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { GRACE_DAYS, TRIAL, YEAR_PAID_MONTHS } from "@/lib/billing/catalog";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 
 // Public pricing page (KRB-179). Every price and limit comes from the
 // catalogue (src/lib/billing/catalog.ts). It reads no cookies, so it is
@@ -19,7 +20,12 @@ type Props = { params: Promise<{ locale: Locale }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Pricing" });
-  return { title: t("metaTitle"), description: t("metaDescription") };
+  return publicPageMetadata({
+    locale,
+    path: "/tarifs",
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  });
 }
 
 const FACTS = ["members", "payment", "end", "receipt"] as const;

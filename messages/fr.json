@@ -2,7 +2,8 @@
   "Metadata": {
     "title": "KolabReport",
     "titleTemplate": "%s · KolabReport",
-    "description": "Rédigez, consolidez et suivez vos rapports d'experts en équipe, avec l'assistance de l'IA."
+    "description": "Rédigez, consolidez et suivez vos rapports d'experts en équipe, avec l'assistance de l'IA.",
+    "shareImageAlt": "KolabReport : vos rapports à plusieurs experts, rédigés ensemble"
   },
   "Common": {
     "appName": "KolabReport",
@@ -239,6 +240,7 @@
   },
   "Auth": {
     "signInTitle": "Connexion",
+    "signInMetaDescription": "Connectez-vous à KolabReport pour retrouver vos espaces de travail et vos rapports.",
     "signInSubtitle": "Accédez à vos espaces de travail et rapports.",
     "email": "Adresse e-mail",
     "password": "Mot de passe",
@@ -253,6 +255,7 @@
     "haveAccount": "Déjà un compte ?",
     "signInLink": "Se connecter",
     "signUpTitle": "Créer un compte",
+    "signUpMetaDescription": "Créez votre compte KolabReport et essayez-le gratuitement pendant {days} jours avec votre équipe, sans carte bancaire.",
     "signUpSubtitle": "Votre espace pour rédiger des rapports d'expertise en équipe.",
     "fullName": "Nom complet",
     "passwordHint": "{min} caractères minimum, dont au moins une lettre et un chiffre.",

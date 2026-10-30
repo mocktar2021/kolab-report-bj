@@ -5,12 +5,20 @@ import { LaunchPanel } from "@/components/launch/launch-panel";
 import { UntilLaunch } from "@/components/launch/until-launch";
 import { Link } from "@/i18n/navigation";
 import { emailSchema } from "@/lib/auth/schemas";
+import { TRIAL } from "@/lib/billing/catalog";
 import { prelaunchUntil } from "@/lib/launch";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { SignUpForm } from "./sign-up-form";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Auth");
-  return { title: t("signUpTitle") };
+export async function generateMetadata({ params }: { params: Promise<{ locale: "fr" }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Auth" });
+  return publicPageMetadata({
+    locale,
+    path: "/inscription",
+    title: t("signUpTitle"),
+    description: t("signUpMetaDescription", { days: TRIAL.days }),
+  });
 }
 
 export default async function InscriptionPage({

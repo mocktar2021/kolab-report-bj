@@ -4,15 +4,21 @@ import { Download } from "lucide-react";
 import { PublicPageShell } from "@/components/landing/public-page-shell";
 import { Button } from "@/components/ui/button";
 import { GUIDE } from "@/content/guide";
-import { GUIDE_PDF_PATH } from "@/content/guide/pages";
+import { GUIDE_PATH, GUIDE_PDF_PATH } from "@/content/guide/pages";
 import type { Locale } from "@/i18n/routing";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { cn } from "@/lib/utils";
 import { GuideBlocks } from "./guide-blocks";
 
 /** Title and description of the guide, in French. */
 export async function guideMetadata(locale: Locale): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "Guide" });
-  return { title: t("metaTitle"), description: t("metaDescription") };
+  return publicPageMetadata({
+    locale,
+    path: GUIDE_PATH,
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  });
 }
 
 const tocLinkClass =
