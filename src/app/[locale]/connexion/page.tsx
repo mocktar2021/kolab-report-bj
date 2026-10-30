@@ -2,14 +2,22 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Link } from "@/i18n/navigation";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { SignInForm } from "./sign-in-form";
 
 // Reads ?next= and ?erreur= at request time.
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Auth");
-  return { title: t("signInTitle") };
+// The canonical address drops ?next= and ?erreur=, so search engines keep one page.
+export async function generateMetadata({ params }: { params: Promise<{ locale: "fr" }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Auth" });
+  return publicPageMetadata({
+    locale,
+    path: "/connexion",
+    title: t("signInTitle"),
+    description: t("signInMetaDescription"),
+  });
 }
 
 export default async function ConnexionPage({

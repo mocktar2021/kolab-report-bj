@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { NOT_INDEXED } from "@/lib/seo/metadata";
 import { ReloadWhenOnline } from "@/components/pwa/reload-when-online";
 import { Button } from "@/components/ui/button";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Offline");
-  return { title: t("title") };
+  return { title: t("title"), robots: NOT_INDEXED };
 }
 
 // Precached by the service worker and served as the document fallback.

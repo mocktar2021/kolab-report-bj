@@ -10,6 +10,7 @@ import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { WorkspaceBento } from "@/components/landing/workspace-bento";
 import { WebAnalytics } from "@/components/monitoring/web-analytics";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { prelaunchUntil } from "@/lib/launch";
 
 // Public landing page. It reads no cookies or search params, so it is
@@ -25,10 +26,12 @@ import { prelaunchUntil } from "@/lib/launch";
 export async function generateMetadata({ params }: { params: Promise<{ locale: "fr" }> }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Landing" });
-  return {
+  return publicPageMetadata({
+    locale,
+    path: "/",
     title: { absolute: t("metaTitle") },
     description: t("metaDescription"),
-  };
+  });
 }
 
 // Content revealed by motion starts transparent in the server HTML. Without

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
@@ -12,11 +13,16 @@ import { routing } from "@/i18n/routing";
 import { getBillingBanner, getRenewerNames, readWorkspaceBillingState } from "@/lib/billing/banner";
 import { getMyBillingOrganizations } from "@/lib/billing/state";
 import { countUnreadNotifications } from "@/lib/notifications";
+import { NOT_INDEXED } from "@/lib/seo/metadata";
 import { getCurrentProfile } from "@/lib/supabase/user";
 import { CURRENT_WORKSPACE_COOKIE, getCurrentWorkspace, getMyWorkspaces } from "@/lib/workspaces/server";
 
 // Every page under (app) depends on the session and the workspace cookie.
 export const dynamic = "force-dynamic";
+
+// Signed-in pages stay out of search results (KRB-258). The pages below set
+// no robots of their own, so this applies to all of them.
+export const metadata: Metadata = { robots: NOT_INDEXED };
 
 // App shell for signed-in pages. The proxy already sends visitors
 // without a session to /fr/connexion; the redirect here is a second check.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { NOT_INDEXED } from "@/lib/seo/metadata";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Auth");
-  return { title: t("resetTitle") };
+  return { title: t("resetTitle"), robots: NOT_INDEXED };
 }
 
 export default async function ReinitialiserMotDePassePage({ params }: { params: Promise<{ locale: "fr" }> }) {

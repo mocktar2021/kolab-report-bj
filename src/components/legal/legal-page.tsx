@@ -3,13 +3,19 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { PublicPageShell } from "@/components/landing/public-page-shell";
 import type { Locale } from "@/i18n/routing";
 import { LEGAL_DOCUMENTS } from "@/content/legal";
-import type { LegalPageKey } from "@/content/legal/pages";
+import { LEGAL_PAGES, type LegalPageKey } from "@/content/legal/pages";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { LegalBlocks } from "./legal-blocks";
 
 /** Title and description of a legal page, in French. */
 export async function legalMetadata(locale: Locale, page: LegalPageKey): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "Legal.pages" });
-  return { title: t(`${page}.title`), description: t(`${page}.description`) };
+  return publicPageMetadata({
+    locale,
+    path: LEGAL_PAGES[page],
+    title: t(`${page}.title`),
+    description: t(`${page}.description`),
+  });
 }
 
 /**
