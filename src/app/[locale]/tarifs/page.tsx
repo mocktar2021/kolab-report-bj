@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { GRACE_DAYS, TRIAL, YEAR_PAID_MONTHS } from "@/lib/billing/catalog";
+import { PRICING_META_VALUES } from "@/lib/seo/copy";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { publicPageMetadata } from "@/lib/seo/metadata";
 import { pricingJsonLd } from "@/lib/seo/structured-data";
@@ -25,8 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return publicPageMetadata({
     locale,
     path: "/tarifs",
-    title: t("metaTitle"),
-    description: t("metaDescription"),
+    title: t("metaTitle", PRICING_META_VALUES),
+    description: t("metaDescription", PRICING_META_VALUES),
   });
 }
 

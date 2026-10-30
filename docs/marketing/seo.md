@@ -48,9 +48,37 @@ What to expect from Google:
 
 To check the data after a production deploy, paste `https://kolabreport.com/fr` and `https://kolabreport.com/fr/tarifs` into the Rich Results Test (search.google.com/test/rich-results) and the Schema Markup Validator (validator.schema.org). Both are free.
 
+## Target searches (KRB-261)
+
+The searches we want the public pages to answer, in French. They are a first guess from what buyers in Benin, Togo and Côte d'Ivoire call their work: no free tool gave search volumes. Search Console (KRB-260) will show the real queries after a few weeks, and this list changes with it.
+
+| Search | Page |
+| --- | --- |
+| logiciel rapport d'audit | home |
+| rédaction rapport d'audit en équipe | home |
+| rédaction rapport d'évaluation, rapport d'évaluation de projet | home |
+| outil collaboratif rapport cabinet, rédaction collaborative de rapport | home |
+| logiciel bureau d'études rapport, rapport d'étude | home |
+| rédiger un rapport avec l'IA | home |
+| prix logiciel rapport FCFA, abonnement Mobile Money | tarifs |
+| any of the above with Bénin, Cotonou, Togo, Lomé, Côte d'Ivoire or Abidjan | home, tarifs |
+
+We avoid "rapport d'expertise" as a lead term: in French search it mostly means insurance, car and court experts, who are not our buyers.
+
+What each page says:
+
+| Page | Title | Description |
+| --- | --- | --- |
+| Home | KolabReport : rapports d'audit et d'évaluation en équipe | Cabinets et bureaux d'études, one section per expert, the AI first draft, Word and PDF, the free trial |
+| Tarifs | Tarifs en FCFA, essai gratuit de 14 jours | The Indépendant, Cabinet and Pass Mission prices, free readers, Mobile Money |
+| Guide | Guide d'utilisation, rôle par rôle | What the guide covers |
+
+The home headline keeps its line ("Une section par expert. Un seul rapport à livrer."), with a short line above it in the same H1: "Rapports d'audit, d'évaluation et d'étude".
+
+Prices and the trial length in this copy come from the catalogue (`src/lib/seo/copy.ts`). `src/lib/seo/copy.test.ts` fails when a title passes 60 characters or a description 155, the most Google shows in full.
+
 ## Still to do
 
 - KRB-260: verify the site in Google Search Console and Bing Webmaster Tools, then send the sitemap.
-- KRB-261: titles and descriptions for the searches buyers make.
 - KRB-262: one page per use case.
 - KRB-263: free directory listings.

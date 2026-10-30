@@ -23,7 +23,7 @@ const QUESTIONS = [
 test("/fr/guide opens signed out with its parts, its questions and a table of contents", async ({ page }) => {
   await page.goto("/fr/guide");
   await expect(page).toHaveURL("/fr/guide");
-  await expect(page).toHaveTitle("Guide d'utilisation · KolabReport");
+  await expect(page).toHaveTitle("Guide d'utilisation, rôle par rôle · KolabReport");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /\S/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Guide d'utilisation");
   await expect(page.getByText(/^Dernière mise à jour : \d{1,2} \S+ \d{4}$/)).toBeVisible();
