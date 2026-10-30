@@ -77,8 +77,21 @@ The home headline keeps its line ("Une section par expert. Un seul rapport à li
 
 Prices and the trial length in this copy come from the catalogue (`src/lib/seo/copy.ts`). `src/lib/seo/copy.test.ts` fails when a title passes 60 characters or a description 155, the most Google shows in full.
 
+## Use-case pages (KRB-262)
+
+Three public pages, one per kind of report:
+
+| Page | Path | Screenshot |
+| --- | --- | --- |
+| Rapports d'audit | `/fr/solutions/rapport-d-audit` | Report table of contents |
+| Rapports d'évaluation | `/fr/solutions/rapport-d-evaluation` | AI draft |
+| Rapports d'études | `/fr/solutions/rapport-d-etude` | Section deliverables |
+
+Each one says who it is for, shows an example plan with who writes each section, what the AI does with the deliverables, a guide screenshot and the trial button. The landing page links to them between the features and the FAQ, and the footer has a "Cas d'usage" column.
+
+All their text is in `src/content/use-cases/pages.ts`, so it reads as one document. Every claim there matches the guide: when a feature changes, update the guide, then these pages. `pages.test.ts` checks the title and description lengths, French spacing and that each page is in the sitemap. A new use case is one more entry in `USE_CASES`: the route, sitemap, footer and landing cards pick it up.
+
 ## Still to do
 
 - KRB-260: verify the site in Google Search Console and Bing Webmaster Tools, then send the sitemap.
-- KRB-262: one page per use case.
 - KRB-263: free directory listings.

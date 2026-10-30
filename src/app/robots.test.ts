@@ -44,6 +44,9 @@ describe("sitemap.xml", () => {
       expect.arrayContaining([
         "https://kolabreport.com/fr",
         "https://kolabreport.com/fr/tarifs",
+        "https://kolabreport.com/fr/solutions/rapport-d-audit",
+        "https://kolabreport.com/fr/solutions/rapport-d-evaluation",
+        "https://kolabreport.com/fr/solutions/rapport-d-etude",
         "https://kolabreport.com/fr/guide",
         "https://kolabreport.com/fr/inscription",
         "https://kolabreport.com/fr/mentions-legales",
@@ -53,6 +56,6 @@ describe("sitemap.xml", () => {
         "https://kolabreport.com/fr/accord-traitement-donnees",
       ]),
     );
-    expect(urls).toHaveLength(9);
+    expect(urls).toHaveLength(12);
   });
 });

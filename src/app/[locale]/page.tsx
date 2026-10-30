@@ -8,6 +8,7 @@ import { Hero } from "@/components/landing/hero";
 import { ProgressShowcase } from "@/components/landing/progress-showcase";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
+import { UseCaseLinks } from "@/components/landing/use-case-links";
 import { WorkspaceBento } from "@/components/landing/workspace-bento";
 import { WebAnalytics } from "@/components/monitoring/web-analytics";
 import { LANDING_META_VALUES } from "@/lib/seo/copy";
@@ -70,6 +71,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
         <FeatureCards />
         <ProgressShowcase />
         <WorkspaceBento />
+        <UseCaseLinks />
         <Faq />
         <CallToAction />
       </main>

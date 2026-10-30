@@ -1,5 +1,6 @@
 import { GUIDE_PATH } from "@/content/guide/pages";
 import { LEGAL_PAGES } from "@/content/legal/pages";
+import { USE_CASES, solutionPath } from "@/content/use-cases/pages";
 import { routing, type Locale } from "@/i18n/routing";
 
 type Env = Record<string, string | undefined>;
@@ -30,7 +31,14 @@ export function localizedPath(path: string, locale: Locale = routing.defaultLoca
  * They make up the sitemap. Sign-in and password pages are left out on
  * purpose: nobody searches for them.
  */
-export const INDEXED_PATHS = ["/", "/tarifs", GUIDE_PATH, "/inscription", ...Object.values(LEGAL_PAGES)];
+export const INDEXED_PATHS = [
+  "/",
+  "/tarifs",
+  ...USE_CASES.map(({ slug }) => solutionPath(slug)),
+  GUIDE_PATH,
+  "/inscription",
+  ...Object.values(LEGAL_PAGES),
+];
 
 /**
  * What crawlers must not read, without the locale prefix: the signed-in app,

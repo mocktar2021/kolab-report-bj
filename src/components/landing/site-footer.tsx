@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { GUIDE_PATH } from "@/content/guide/pages";
 import { LEGAL_PAGES, LEGAL_PAGE_KEYS } from "@/content/legal/pages";
+import { USE_CASES, solutionPath } from "@/content/use-cases/pages";
 import { Link } from "@/i18n/navigation";
 
 // py-1 gives each link a 30px tall target without changing the rhythm.
@@ -16,11 +17,12 @@ const footerLinkClass =
 export function SiteFooter({ sectionBase = "" }: { sectionBase?: string }) {
   const t = useTranslations("Landing.footer");
   const tLegal = useTranslations("Legal.nav");
+  const tUseCases = useTranslations("UseCases");
   const year = new Date().getFullYear();
 
   return (
     <footer className="border-t print:hidden">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 md:grid-cols-[1.5fr_auto_auto] md:gap-16 lg:py-16">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 md:grid-cols-[1.5fr_auto_auto_auto] md:gap-16 lg:py-16">
         <div className="sm:col-span-2 md:col-span-1">
           <Logo />
           <p className="mt-4 max-w-xs text-small text-muted-foreground">{t("tagline")}</p>
@@ -55,6 +57,20 @@ export function SiteFooter({ sectionBase = "" }: { sectionBase?: string }) {
                 {t("signIn")}
               </Link>
             </li>
+          </ul>
+        </nav>
+        <nav aria-labelledby="footer-use-cases">
+          <h2 id="footer-use-cases" className="font-sans text-sm font-medium text-foreground">
+            {tUseCases("footerTitle")}
+          </h2>
+          <ul className="mt-3 space-y-1">
+            {USE_CASES.map((useCase) => (
+              <li key={useCase.slug}>
+                <Link href={solutionPath(useCase.slug)} prefetch={false} className={footerLinkClass}>
+                  {useCase.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
         <nav aria-labelledby="footer-legal">

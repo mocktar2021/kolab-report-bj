@@ -107,6 +107,7 @@ for (const theme of THEMES) {
         ["/fr/mot-de-passe-oublie", "Mot de passe oublié"],
         ["/fr/hors-ligne", "Vous êtes hors ligne"],
         ["/fr/tarifs", "Des offres claires, en FCFA"],
+        ["/fr/solutions/rapport-d-audit", "Chaque auditeur rédige sa partie, dans le même rapport"],
       ];
       for (const [url, heading] of pages) {
         await test.step(url, async () => {
