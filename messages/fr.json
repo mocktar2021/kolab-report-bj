@@ -2447,5 +2447,22 @@
       "tooManySections": "Le rapport compterait plus de 500 sections. Retirez des éléments du plan.",
       "generic": "Les sections n'ont pas pu être créées. Réessayez."
     }
+  },
+  "UseCases": {
+    "footerTitle": "Cas d'usage",
+    "landing": {
+      "title": "Pour vos rapports d'audit, d'évaluation et d'étude",
+      "subtitle": "Voyez comment une équipe se partage chaque type de rapport, section par section."
+    },
+    "audienceTitle": "Pour qui",
+    "aiTitle": "Ce que fait l'IA avec vos livrables",
+    "whoLabel": "Rédigé par :",
+    "othersTitle": "Les autres rapports",
+    "cta": {
+      "title": "Essayez sur votre prochain rapport",
+      "subtitle": "{days} jours gratuits, sans carte bancaire, avec votre équipe.",
+      "trial": "Essayer gratuitement",
+      "pricing": "Voir les tarifs"
+    }
   }
 }

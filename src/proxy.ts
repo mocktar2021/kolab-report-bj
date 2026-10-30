@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { GUIDE_PATH } from "@/content/guide/pages";
+import { USE_CASES_PATH } from "@/content/use-cases/pages";
 import { LEGAL_PAGES } from "@/content/legal/pages";
 import { routing } from "@/i18n/routing";
 import { incomingRequestId, REQUEST_ID_HEADER } from "@/lib/log/request-id";
@@ -32,6 +33,8 @@ const PUBLIC_PATHS = [
   ...Object.values(LEGAL_PAGES),
   // The user guide (KRB-199), linked from the public footer and the app menu.
   GUIDE_PATH,
+  // One page per kind of report (KRB-262). Signed-in users read them too.
+  USE_CASES_PATH,
 ];
 
 const LOCALE_PREFIX = new RegExp(`^/(${routing.locales.join("|")})(?=/|$)`);
