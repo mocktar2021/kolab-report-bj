@@ -112,6 +112,51 @@ What to look at, once a week the first month, then once a month:
 
 After adding or changing a public page, paste its address into **URL inspection** and click **Request indexing**. Google allows about ten requests a day.
 
-## Still to do
+## Directory listings (KRB-263)
 
-- KRB-263: free directory listings.
+Free listings, so buyers who look for a firm in a directory find KolabReport, and search engines see the same company in several places. Most directories mark their links `nofollow`, so they do little for ranking on their own.
+
+The owner creates each account. Every listing links to `https://kolabreport.com/fr` and copies the name, address, phone and texts below word for word. Search engines compare listings, and a listing that differs from the others makes all of them less trusted.
+
+### What every listing gets
+
+| Field | Value |
+| --- | --- |
+| Company | Mocktar Technologies |
+| Product | KolabReport |
+| Address | C 1357 Houeyiho, 07BP91 Cotonou, République du Bénin |
+| Phone | One business number, written the same way everywhere, starting with +229. None on file yet: the owner picks it. |
+| E-mail | support@mocktar.com |
+| Site | `https://kolabreport.com/fr` |
+| Areas served | Bénin, Togo, Côte d'Ivoire |
+| Logo | `public/icons/icon-512.png`, 512 by 512 |
+| Cover image | `public/og/kolabreport.png`, 1200 by 630 |
+| Photos | Screenshots from `public/guide/`, where a listing takes photos |
+
+The name and address come from `src/content/legal/publisher.ts`, like the legal pages and the structured data. When they change there, update every live listing the same week.
+
+Short text, 120 characters at most. It goes in the LinkedIn tagline and in any slogan or one-line field:
+
+> Rapports d'audit, d'évaluation et d'étude rédigés en équipe, avec l'IA pour le premier jet.
+
+Long text, 750 characters at most, Google's limit and the lowest of the lot:
+
+> KolabReport est un logiciel en ligne pour rédiger en équipe des rapports d'audit, d'évaluation et d'étude. Le chef de mission découpe le rapport en sections et attribue chacune à un expert. Chaque expert dépose ses pièces (Word, Excel, CSV ou PDF), part d'un brouillon préparé par l'IA, le relit et valide son texte. Le chef de mission suit l'avancement de chaque section et exporte le rapport final en Word ou en PDF. KolabReport s'adresse aux cabinets d'audit et de conseil et aux bureaux d'études du Bénin, du Togo et de Côte d'Ivoire. Abonnement en FCFA, paiement par Mobile Money ou carte bancaire. Édité par Mocktar Technologies, à Cotonou.
+
+The long text has no web address, no price and no trial offer: Google refuses a description with any of them. The site has the prices and the trial.
+
+### The listings
+
+In this order. The first two take a few minutes each.
+
+| Listing | Where | How | Status |
+| --- | --- | --- | --- |
+| LinkedIn company page | linkedin.com, **For Business > Create a Company Page**, from the owner's own profile | Page name KolabReport, address `linkedin.com/company/kolabreport` if it is free, industry Software Development, the real company size, type Privately held. Tagline: the short text. **About**: the long text. The logo. | To do |
+| Go Africa Online, Bénin | goafricaonline.com/bj, the free company sign-up | Company Mocktar Technologies, brand KolabReport, the closest software or IT category, then the fields and the long text above and the logo. Decline the paid packs: the free listing is enough. | To do |
+| Google Business Profile | business.google.com | Only if Mocktar Technologies meets clients in person, for example to set up or train a team at their office. Google refuses online-only businesses and can suspend a profile that breaks this rule. If it qualifies: service-area business, address hidden, service areas around Cotonou (Google wants them within about two hours' drive), category Software company, verification by video. | Owner decides |
+| Bing Places | bing.com/forbusiness | A new listing for Mocktar Technologies, software category, address hidden, the three countries as service areas. If the Google profile exists, import it instead of typing. Verify with whichever method Bing offers (phone, e-mail or post). If Benin is not in its country list, skip it. | To do |
+| CCI Bénin | The chamber of commerce, by e-mail or at its office | No public member directory was found online. Ask whether it publishes one that lists software firms, and join it if it is free. | To ask |
+| Go Africa Online, Togo and Côte d'Ivoire | goafricaonline.com/tg and /ci | Skipped. Each country site lists firms at an address in that country. We have none there, and a made-up address breaks the rule above. Add them when there is an office there. | Skipped |
+| CCI Togo, CCI Côte d'Ivoire | | Skipped: the company is not registered in either country. | Skipped |
+
+When a listing goes live, set its status to **Live** with the date, and open its link once to check it lands on `/fr`. When the phone, address or texts change, update every live listing.
