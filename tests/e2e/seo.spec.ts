@@ -37,3 +37,16 @@ test("signed-in pages ask search engines to stay away", async ({ page }) => {
   await page.goto("/fr/mot-de-passe-oublie");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
+
+// KRB-259: the landing and pricing pages describe KolabReport, its prices and their FAQ.
+for (const [path, types] of [
+  ["/fr", ["Organization", "WebSite", "WebApplication", "FAQPage"]],
+  ["/fr/tarifs", ["Organization", "WebApplication", "FAQPage"]],
+] as const) {
+  test(`${path} carries its structured data`, async ({ page }) => {
+    await page.goto(path);
+    const json = await page.locator('script[type="application/ld+json"]').textContent();
+    const graph = JSON.parse(json ?? "{}") as { "@graph": { "@type": string }[] };
+    expect(graph["@graph"].map((node) => node["@type"])).toEqual(types);
+  });
+}
