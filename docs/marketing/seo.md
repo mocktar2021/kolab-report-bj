@@ -100,7 +100,7 @@ Set up on 30 October 2026, with the v1.0.7 release.
 | Google Search Console | search.google.com/search-console, owner: Mocktar's Google account | A **Domain** property for `kolabreport.com`, so it covers `www` and every page under `/fr`. |
 | Verification | GoDaddy, **My Products > kolabreport.com > DNS** | A TXT record on `@` with the value `google-site-verification=...`. Never delete it: Google checks it again and drops the property when it is gone. |
 | Sitemap | Search Console, **Sitemaps** | `https://kolabreport.com/sitemap.xml`. A Domain property needs the full address, not just `sitemap.xml`. |
-| Bing Webmaster Tools | bing.com/webmasters | Imported from Search Console, which brings the verification and the sitemap. |
+| Bing Webmaster Tools | bing.com/webmasters | Imported from Search Console, which brings the verification. The import does not bring the sitemap of a Domain property: it was added by hand in **Sitemaps** with the full address. Bing read the 12 addresses on the first day. |
 
 To give someone else access, use **Settings > Users and permissions** in Search Console. Give **Full** access, not Owner, unless they run the site.
 
