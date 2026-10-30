@@ -119,10 +119,6 @@ const config: Config = {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
         },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
         // Slow drift of the landing illustration cards.
         float: {
           "0%, 100%": { transform: "translateY(0)" },
@@ -132,7 +128,6 @@ const config: Config = {
       animation: {
         shimmer: "shimmer 1.8s ease-in-out infinite",
         "accordion-down": "accordion-down 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-        "accordion-up": "accordion-up 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
         float: "float 9s ease-in-out infinite",
       },
     },

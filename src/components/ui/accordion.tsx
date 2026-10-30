@@ -41,13 +41,16 @@ const AccordionTrigger = React.forwardRef<
 ));
 AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName;
 
+// A closed answer stays in the HTML, hidden, so search engines read the FAQs
+// (KRB-259). Hiding it ends the closing animation, so closing is instant.
 const AccordionContent = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Content
     ref={ref}
-    className="overflow-hidden text-body text-muted-foreground motion-safe:data-[state=closed]:animate-accordion-up motion-safe:data-[state=open]:animate-accordion-down"
+    forceMount
+    className="overflow-hidden text-body text-muted-foreground data-[state=closed]:hidden motion-safe:data-[state=open]:animate-accordion-down"
     {...props}
   >
     <div className={cn("pb-6 pr-12", className)}>{children}</div>

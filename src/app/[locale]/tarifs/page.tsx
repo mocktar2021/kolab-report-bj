@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { GRACE_DAYS, TRIAL, YEAR_PAID_MONTHS } from "@/lib/billing/catalog";
+import { JsonLd } from "@/lib/seo/json-ld";
 import { publicPageMetadata } from "@/lib/seo/metadata";
+import { pricingJsonLd } from "@/lib/seo/structured-data";
 
 // Public pricing page (KRB-179). Every price and limit comes from the
 // catalogue (src/lib/billing/catalog.ts). It reads no cookies, so it is
@@ -33,15 +35,17 @@ const FACTS = ["members", "payment", "end", "receipt"] as const;
 export default async function PricingPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, tLanding] = await Promise.all([
+  const [t, tLanding, jsonLd] = await Promise.all([
     getTranslations({ locale, namespace: "Pricing" }),
     getTranslations({ locale, namespace: "Landing" }),
+    pricingJsonLd(locale),
   ]);
   // The header and footer link to sections of the landing page.
   const landing = getPathname({ href: "/", locale });
 
   return (
     <div className="relative isolate">
+      <JsonLd data={jsonLd} />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-glow [mask-image:linear-gradient(to_bottom,#000_45%,transparent)]"

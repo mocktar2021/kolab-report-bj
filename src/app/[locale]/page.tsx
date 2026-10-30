@@ -10,7 +10,9 @@ import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteHeader } from "@/components/landing/site-header";
 import { WorkspaceBento } from "@/components/landing/workspace-bento";
 import { WebAnalytics } from "@/components/monitoring/web-analytics";
+import { JsonLd } from "@/lib/seo/json-ld";
 import { publicPageMetadata } from "@/lib/seo/metadata";
+import { landingJsonLd } from "@/lib/seo/structured-data";
 import { prelaunchUntil } from "@/lib/launch";
 
 // Public landing page. It reads no cookies or search params, so it is
@@ -41,10 +43,11 @@ const NO_SCRIPT_REVEAL = "[data-reveal]{opacity:1!important;transform:none!impor
 export default async function LandingPage({ params }: { params: Promise<{ locale: "fr" }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("Landing");
+  const [t, jsonLd] = await Promise.all([getTranslations("Landing"), landingJsonLd(locale)]);
 
   return (
     <div className="relative isolate">
+      <JsonLd data={jsonLd} />
       <noscript>
         <style>{NO_SCRIPT_REVEAL}</style>
       </noscript>
