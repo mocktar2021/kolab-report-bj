@@ -54,11 +54,11 @@ describe("use-case pages", () => {
     }
   });
 
-  it("uses French spacing and no em dash", () => {
-    for (const text of allText(USE_CASES)) {
-      expect(text).not.toContain("—");
-      // A space before : ; ? ! is a no-break space in French.
-      expect(text).not.toMatch(/ [:;?!]/);
-    }
+  it("uses no em dash or en dash", () => {
+    expect(allText(USE_CASES).filter((text) => /[\u2013\u2014\u2015]/.test(text))).toEqual([]);
+  });
+
+  it("puts a no-break space before : ; ? and ! as French does", () => {
+    expect(allText(USE_CASES).filter((text) => / [:;?!]/.test(text))).toEqual([]);
   });
 });
