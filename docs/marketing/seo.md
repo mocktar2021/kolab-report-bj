@@ -91,7 +91,27 @@ Each one says who it is for, shows an example plan with who writes each section,
 
 All their text is in `src/content/use-cases/pages.ts`, so it reads as one document. Every claim there matches the guide: when a feature changes, update the guide, then these pages. `pages.test.ts` checks the title and description lengths, French spacing and that each page is in the sitemap. A new use case is one more entry in `USE_CASES`: the route, sitemap, footer and landing cards pick it up.
 
+## Search Console and Bing (KRB-260)
+
+Set up on 30 October 2026, with the v1.0.7 release.
+
+| What | Where | Detail |
+| --- | --- | --- |
+| Google Search Console | search.google.com/search-console, owner: Mocktar's Google account | A **Domain** property for `kolabreport.com`, so it covers `www` and every page under `/fr`. |
+| Verification | GoDaddy, **My Products > kolabreport.com > DNS** | A TXT record on `@` with the value `google-site-verification=...`. Never delete it: Google checks it again and drops the property when it is gone. |
+| Sitemap | Search Console, **Sitemaps** | `https://kolabreport.com/sitemap.xml`. A Domain property needs the full address, not just `sitemap.xml`. |
+| Bing Webmaster Tools | bing.com/webmasters | Imported from Search Console, which brings the verification. The import does not bring the sitemap of a Domain property: it was added by hand in **Sitemaps** with the full address. Bing read the 12 addresses on the first day. |
+
+To give someone else access, use **Settings > Users and permissions** in Search Console. Give **Full** access, not Owner, unless they run the site.
+
+What to look at, once a week the first month, then once a month:
+
+- **Pages**: how many pages are indexed and why the others are not. All 12 sitemap pages should end up indexed. A signed-in page in the list means a `noindex` or the proxy is wrong.
+- **Performance**: the searches that show the site and the ones that bring clicks. Compare them with the target searches above and update the table and the titles when they differ.
+- **Sitemaps**: the status stays **Success**. "Couldn't fetch" on the first day is common; a red status after that is worth a look.
+
+After adding or changing a public page, paste its address into **URL inspection** and click **Request indexing**. Google allows about ten requests a day.
+
 ## Still to do
 
-- KRB-260: verify the site in Google Search Console and Bing Webmaster Tools, then send the sitemap.
 - KRB-263: free directory listings.
