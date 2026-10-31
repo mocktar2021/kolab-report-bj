@@ -29,7 +29,7 @@ const term = z.string().trim().min(1);
 
 const deliverableSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.guid(),
     fileName: z.string().min(1).max(200),
     kind: z.enum(["document", "spreadsheet", "text"]),
     uploadedAt: z.string().datetime({ offset: true }),

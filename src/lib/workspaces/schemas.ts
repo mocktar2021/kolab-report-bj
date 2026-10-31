@@ -24,7 +24,9 @@ export const sectionInstructionsSchema = z
   .transform((text) => text.replace(/\r\n?/g, "\n"))
   .pipe(z.string().trim().max(4000, "instructionsLength"));
 
-export const uuidSchema = z.string().uuid();
+// Any 8-4-4-4-12 hex id, as Postgres accepts. zod 4's uuid() also checks the
+// version and variant digits and refuses the fixed ids of the seed and tests.
+export const uuidSchema = z.guid();
 
 /** Wizard with a new organization (create_workspace_with_owner). */
 export const createWorkspaceSchema = z.object({
@@ -56,7 +58,7 @@ export const sectionWeightSchema = z
   .string()
   .trim()
   .transform((value) => Number(value.replace(",", ".")))
-  .pipe(z.number({ invalid_type_error: "weightRange" }).min(0.01, "weightRange").max(9999.99, "weightRange"));
+  .pipe(z.number({ error: "weightRange" }).min(0.01, "weightRange").max(9999.99, "weightRange"));
 
 export type WorkspaceFieldErrorKey =
   "nameLength" | "titleLength" | "sectionTitleLength" | "instructionsLength" | "weightRange";

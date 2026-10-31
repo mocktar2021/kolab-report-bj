@@ -84,7 +84,7 @@ const workspacePreviewSchema = z
     organization_id: z.string(),
     organization_name: z.string(),
     billing_mode: z.enum(["subscription", "mission"]),
-    passes: billingTimeLeftSchema.innerType().shape.passes,
+    passes: billingTimeLeftSchema.in.shape.passes,
     reports: countSchema,
     final_reports: countSchema,
     sections: countSchema,
@@ -169,7 +169,7 @@ type RpcResult = PromiseLike<{ data: unknown; error: { message: string } | null 
 async function readPreview<T>(
   fn: string,
   call: (supabase: Client) => RpcResult,
-  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  schema: z.ZodType<T, unknown>,
 ): Promise<T | null> {
   const { data, error } = await call(await createClient());
   if (error) {

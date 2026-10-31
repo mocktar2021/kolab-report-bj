@@ -54,7 +54,7 @@ const saveRequestSchema = z.object({
   workspaceId: idSchema,
   baseId: idSchema.nullable(),
   expectedLatest: z.number().int().positive().nullable(),
-  values: z.record(z.unknown()),
+  values: z.record(z.string(), z.unknown()),
 });
 
 function errorKey(error: { code?: string | null }): PromptActionError {

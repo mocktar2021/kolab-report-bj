@@ -136,9 +136,9 @@ const reorderSchema = z.object({
  * sections at the same time: the last save wins, and live refresh shows it.
  */
 export async function reorderSections(reportId: string, sectionIds: string[]): Promise<ReorderResult> {
-  // Before zod: zod 3 still checks every item of a list over its max, with
-  // one error each. A 2 MB request of a million items took 284 MB
-  // (GHSA-mrhx-c7xc-m3w5, KRB-240).
+  // Before zod: a list over the limit is refused without reading its items.
+  // zod 3 checked every one (GHSA-mrhx-c7xc-m3w5, KRB-240). zod 4 stops at
+  // the length, and this check stays as the cheap first gate.
   if (!Array.isArray(sectionIds) || sectionIds.length > MAX_REORDER_SECTIONS) {
     return { ok: false, error: "invalidInput" };
   }
