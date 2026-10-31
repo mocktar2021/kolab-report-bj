@@ -1,8 +1,8 @@
-import { GROUP_COMPANY, PUBLISHER, SUPPORT_EMAIL } from "./publisher";
+import { GROUP_COMPANY, PUBLISHER, SUPPORT_EMAIL, SUPPORT_PHONE } from "./publisher";
 import type { LegalDocument } from "./types";
 
 export const mentionsLegales: LegalDocument = {
-  updatedAt: "2026-10-14",
+  updatedAt: "2026-10-31",
   intro: [
     "Cette page présente l'éditeur du site et de l'application KolabReport, le directeur de la publication, l'hébergement et les règles de propriété intellectuelle.",
   ],
@@ -21,6 +21,7 @@ export const mentionsLegales: LegalDocument = {
             ["IFU", PUBLISHER.ifu],
             ["Numéro employeur CNSS", PUBLISHER.cnss],
             ["E-mail", SUPPORT_EMAIL],
+            ["Téléphone", SUPPORT_PHONE],
             ["Site du groupe", `[mocktar.com](${PUBLISHER.website})`],
           ],
         },
@@ -35,7 +36,7 @@ export const mentionsLegales: LegalDocument = {
       id: "contact",
       title: "Contact",
       body: [
-        `Pour toute question sur KolabReport, écrivez à ${SUPPORT_EMAIL}.`,
+        `Pour toute question sur KolabReport, écrivez à ${SUPPORT_EMAIL} ou appelez le ${SUPPORT_PHONE}.`,
         "Pour une demande sur vos données personnelles, utilisez la même adresse. La [politique de confidentialité](/confidentialite#exercer-vos-droits) explique comment nous la traitons.",
       ],
     },

@@ -47,6 +47,8 @@ describe("landingJsonLd", () => {
       name: PUBLISHER.name,
       url: PUBLISHER.website,
       email: PUBLISHER.email,
+      telephone: "+229 01 69 70 62 86",
+      contactPoint: { email: PUBLISHER.email, telephone: "+229 01 69 70 62 86" },
       brand: { name: "KolabReport", url: `${BASE}/`, logo: `${BASE}/icons/icon-512.png` },
     });
     expect(node(graph, "WebSite")).toMatchObject({

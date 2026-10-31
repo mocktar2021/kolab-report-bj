@@ -10,6 +10,8 @@ export const PUBLISHER = {
   ifu: "1200900488800",
   cnss: "12009004888001",
   email: "support@mocktar.com",
+  /** The same number on every directory listing (KRB-263). */
+  phone: "+229 01 69 70 62 86",
   director: "Mocktar Adjibade Tairou",
   website: "https://mocktar.com",
   entitiesPage: "https://mocktar.com/fr/legal/entities",
@@ -23,3 +25,6 @@ export const GROUP_COMPANY = {
 
 /** The support address as a rich text link. */
 export const SUPPORT_EMAIL = `[${PUBLISHER.email}](mailto:${PUBLISHER.email})`;
+
+/** The phone number as a rich text link that opens the phone app. No-break spaces keep it on one line. */
+export const SUPPORT_PHONE = `[${PUBLISHER.phone.replaceAll(" ", "\u00a0")}](tel:${PUBLISHER.phone.replaceAll(" ", "")})`;

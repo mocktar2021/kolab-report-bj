@@ -30,7 +30,7 @@ export type LinkTarget =
   | { kind: "page"; path: string; hash: string | null }
   /** A section of the same page: "#cookies". */
   | { kind: "anchor"; hash: string }
-  /** An https:// URL or a mailto: address. */
+  /** An https:// URL, a mailto: address or a tel: number. */
   | { kind: "external"; href: string };
 
 /** What a link in a legal text points to, or null when the href is not allowed. */
@@ -41,5 +41,6 @@ export function linkTarget(href: string): LinkTarget | null {
     return { kind: "page", path, hash: hash || null };
   }
   if (href.startsWith("https://") || href.startsWith("mailto:")) return { kind: "external", href };
+  if (/^tel:\+\d+$/.test(href)) return { kind: "external", href };
   return null;
 }

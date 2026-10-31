@@ -35,6 +35,7 @@ Inline syntax inside every string:
 | `[politique de confidentialité](/confidentialite#cookies)` | A link to another page, path without `/fr` |
 | `[Exercer vos droits](#exercer-vos-droits)` | A link to a section of the same page |
 | `[apdp.bj](https://apdp.bj)`, `[support@mocktar.com](mailto:support@mocktar.com)` | An external link or an e-mail address |
+| `[+229 01 69 70 62 86](tel:+2290169706286)` | A phone number. Use `SUPPORT_PHONE` from `publisher.ts` rather than typing it |
 | `**Compte**` | Bold |
 | `` `kr-espace` `` | Code, for cookie names |
 

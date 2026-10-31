@@ -38,11 +38,13 @@ function organization(base: string): Node {
     name: PUBLISHER.name,
     url: PUBLISHER.website,
     email: PUBLISHER.email,
+    telephone: PUBLISHER.phone,
     address: PUBLISHER.address,
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",
       email: PUBLISHER.email,
+      telephone: PUBLISHER.phone,
       availableLanguage: "fr",
     },
     brand: { "@type": "Brand", name: PRODUCT_NAME, url: `${base}/`, logo: `${base}${LOGO_PATH}` },
