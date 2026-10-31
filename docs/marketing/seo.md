@@ -32,7 +32,7 @@ The home page and the pricing page carry a `<script type="application/ld+json">`
 
 | Node | Pages | Content |
 | --- | --- | --- |
-| `Organization` | both | Mocktar Technologies, its site, support e-mail and address, and the KolabReport brand with its logo. From `src/content/legal/publisher.ts`. |
+| `Organization` | both | Mocktar Technologies, its site, support e-mail, phone and address, and the KolabReport brand with its logo. From `src/content/legal/publisher.ts`. |
 | `WebSite` | home | The site name KolabReport, which Google can show above the result. |
 | `WebApplication` | both | What KolabReport is, and every offer sold online with its price in FCFA, from `src/lib/billing/catalog.ts`. Institution has no price, since it is sold on quote. |
 | `FAQPage` | both | The questions and answers the page shows, from `messages/fr.json`. |
@@ -125,7 +125,7 @@ The owner creates each account. Every listing links to `https://kolabreport.com/
 | Company | Mocktar Technologies |
 | Product | KolabReport |
 | Address | C 1357 Houeyiho, 07BP91 Cotonou, République du Bénin |
-| Phone | One business number, written the same way everywhere, starting with +229. None on file yet: the owner picks it. |
+| Phone | +229 01 69 70 62 86, written this way everywhere. On a form with a separate country field: Bénin (+229), then 01 69 70 62 86. |
 | E-mail | support@mocktar.com |
 | Site | `https://kolabreport.com/fr` |
 | Areas served | Bénin, Togo, Côte d'Ivoire |
@@ -133,7 +133,7 @@ The owner creates each account. Every listing links to `https://kolabreport.com/
 | Cover image | `public/og/kolabreport.png`, 1200 by 630 |
 | Photos | Screenshots from `public/guide/`, where a listing takes photos |
 
-The name and address come from `src/content/legal/publisher.ts`, like the legal pages and the structured data. When they change there, update every live listing the same week.
+The name, address and phone come from `src/content/legal/publisher.ts`, like the legal notice and the structured data. When they change there, update every live listing the same week.
 
 Short text, 120 characters at most. It goes in the LinkedIn tagline and in any slogan or one-line field:
 

@@ -51,16 +51,25 @@ describe("linkTarget", () => {
     expect(linkTarget("#cookies")).toEqual({ kind: "anchor", hash: "cookies" });
   });
 
-  it("accepts https and mailto links", () => {
+  it("accepts https, mailto and tel links", () => {
     expect(linkTarget("https://apdp.bj")).toEqual({ kind: "external", href: "https://apdp.bj" });
     expect(linkTarget("mailto:support@mocktar.com")).toEqual({
       kind: "external",
       href: "mailto:support@mocktar.com",
     });
+    expect(linkTarget("tel:+2290169706286")).toEqual({ kind: "external", href: "tel:+2290169706286" });
   });
 
   it("refuses anything else", () => {
-    for (const href of ["http://example.com", "javascript:alert(1)", "//example.com", "#", "cgu"]) {
+    for (const href of [
+      "http://example.com",
+      "javascript:alert(1)",
+      "//example.com",
+      "#",
+      "cgu",
+      "tel:01 69",
+      "tel:",
+    ]) {
       expect(linkTarget(href), href).toBeNull();
     }
   });

@@ -52,7 +52,7 @@ describe.each(LEGAL_PAGE_KEYS)("legal page %s", (key) => {
     expect(date.getTime()).toBeLessThanOrEqual(Date.now());
   });
 
-  it("links only to existing pages and sections, or to https and mailto addresses", () => {
+  it("links only to existing pages and sections, or to https, mailto and tel addresses", () => {
     const broken: string[] = [];
     for (const text of texts) {
       for (const token of parseRichText(text)) {
@@ -83,5 +83,22 @@ describe.each(LEGAL_PAGE_KEYS)("legal page %s", (key) => {
 
   it("uses no em dash or en dash", () => {
     expect(texts.filter((text) => /[\u2013\u2014\u2015]/.test(text))).toEqual([]);
+  });
+});
+
+describe("mentions légales", () => {
+  it("gives the publisher's phone as a link that opens the phone app", () => {
+    const links = documentTexts(LEGAL_DOCUMENTS.mentionsLegales)
+      .flatMap((text) => parseRichText(text))
+      .filter((token) => token.kind === "link" && token.href.startsWith("tel:"));
+
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      expect(link).toEqual({
+        kind: "link",
+        text: "+229\u00a001\u00a069\u00a070\u00a062\u00a086",
+        href: "tel:+2290169706286",
+      });
+    }
   });
 });
