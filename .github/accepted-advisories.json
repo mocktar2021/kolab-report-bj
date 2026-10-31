@@ -6,13 +6,5 @@
     "reason": "No patched braces exists (3.0.3 is the latest). It comes in through fast-glob and micromatch, which next-pwa calls only inside its webpack hook during next build, with glob patterns written in its own code and in next.config.mjs. No request or user file reaches it, and next-pwa is not part of the server functions or the browser bundle. See docs/security/dependencies.md.",
     "reviewed": "2026-10-14",
     "expires": "2027-01-14"
-  },
-  {
-    "id": "GHSA-mrhx-c7xc-m3w5",
-    "package": "zod",
-    "via": ["zod"],
-    "reason": "Every zod 3 release is affected and the fix is zod 4.6.6, a major upgrade that touches the AI output schemas (KRB-241). zod 3 still checks every item of an array over its max, with one error each: a 2 MB request of a million items took 284 MB. The two server actions that get arrays from the browser, reorderSections and markNotificationsRead, now refuse a list over their limit before zod runs (KRB-240). Other request input reaches zod as strings and fixed objects; the FedaPay webhook checks its signature first. See docs/security/dependencies.md.",
-    "reviewed": "2026-10-23",
-    "expires": "2026-11-30"
   }
 ]

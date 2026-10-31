@@ -120,6 +120,7 @@ export const baselineSchema = z.object({
     redactPii: z.boolean(),
   }),
   templates: z.record(
+    z.string(),
     z.object({
       promptVersion: z.string().min(1),
       model: z.string().min(1),

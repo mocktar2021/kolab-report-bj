@@ -66,7 +66,7 @@ export type AiSettings = {
 
 type Env = Record<string, string | undefined>;
 
-function setting<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: string | undefined, fallback: T): T {
+function setting<T>(schema: z.ZodType<T, unknown>, value: string | undefined, fallback: T): T {
   if (value === undefined || value.trim() === "") return fallback;
   const parsed = schema.safeParse(value.trim());
   return parsed.success ? parsed.data : fallback;

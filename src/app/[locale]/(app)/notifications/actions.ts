@@ -14,8 +14,8 @@ const idsSchema = z.array(uuidSchema).max(MAX_IDS);
  * column users can change.
  */
 export async function markNotificationsRead(ids?: string[]): Promise<{ ok: boolean }> {
-  // Before zod: zod 3 still checks every item of a list over its max, with
-  // one error each (GHSA-mrhx-c7xc-m3w5, KRB-240).
+  // Before zod: a list over the limit is refused without reading its items
+  // (GHSA-mrhx-c7xc-m3w5, KRB-240).
   if (ids !== undefined && (!Array.isArray(ids) || ids.length > MAX_IDS)) return { ok: false };
   const parsed = ids === undefined ? null : idsSchema.safeParse(ids);
   if (parsed && !parsed.success) return { ok: false };

@@ -34,7 +34,7 @@ const optionalNumber = (key: PromptFieldErrorKey, min: number, max: number, inte
     })
     .pipe(
       z
-        .number({ invalid_type_error: key })
+        .number({ error: key })
         .min(min, key)
         .max(max, key)
         .refine((value) => !integer || Number.isInteger(value), key)

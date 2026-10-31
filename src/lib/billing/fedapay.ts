@@ -263,7 +263,7 @@ const tokenSchema = z.object({
 });
 
 function parsed<T>(
-  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  schema: z.ZodType<T, unknown>,
   value: unknown,
   status: number,
   request: string,
@@ -280,7 +280,7 @@ const createInputSchema = z.object({
     .url()
     .refine((value) => /^https?:\/\//.test(value)),
   merchantReference: z.string().regex(MERCHANT_REFERENCE),
-  customMetadata: z.record(z.union([z.string().max(200), z.number()])).optional(),
+  customMetadata: z.record(z.string(), z.union([z.string().max(200), z.number()])).optional(),
   customer: z.object({
     email: z.string().email(),
     firstname: z.string().trim().max(100).optional(),
